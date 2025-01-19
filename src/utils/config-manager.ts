@@ -1,7 +1,7 @@
 import fs from "node:fs"
 import os from "node:os"
 import path from "node:path"
-import type { MCPConfig, StdioConnection } from "../types/registry.js"
+import type { MCPConfig, StdioConnection, ConfiguredServer } from "../types/registry.js"
 
 export interface ClaudeConfig extends MCPConfig {
 	[key: string]: any
@@ -109,7 +109,7 @@ export class ConfigManager {
 
 	static async installServer(
 		id: string,
-		serverConfig: StdioConnection,
+		serverConfig: ConfiguredServer,
 		client: string,
 	): Promise<void> {
 		const normalizedId = ConfigManager.normalizeServerId(id)
@@ -129,7 +129,7 @@ export class ConfigManager {
 		ConfigManager.writeConfig(config, client)
 	}
 
-	static getServerConfig(id: string, client: string): StdioConnection | null {
+	static getServerConfig(id: string, client: string): ConfiguredServer | null {
 		const config = ConfigManager.readConfig(client)
 		return config.mcpServers[id] || null
 	}

@@ -5,6 +5,7 @@ import { uninstall } from "./commands/uninstall.js"
 import { listInstalledServers } from "./commands/installed.js"
 import { get } from "./commands/view.js"
 import { inspect } from "./commands/inspect.js"
+import { run } from "./commands/run.js"
 import type { ValidClient } from "./constants.js"
 import chalk from "chalk"
 
@@ -42,6 +43,13 @@ async function main() {
 			}
 			await get(packageName, client)
 			break
+		case "run":
+			if (!packageName) {
+				console.error("Please provide a server ID to run")
+				process.exit(1)
+			}
+			await run(packageName)
+			break
 		default:
 			console.log("Available commands:")
 			console.log("  install <package>     Install a package")
@@ -50,6 +58,7 @@ async function main() {
 			console.log("  installed             List installed packages")
 			console.log("  view <package>        Get details for a specific package")
 			console.log("  inspect               Inspect installed servers")
+			console.log("  run <server-id>       Run a server")
 			process.exit(1)
 	}
 }

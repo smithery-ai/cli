@@ -23,11 +23,22 @@ export const JSONSchemaSchema: z.ZodType = z.lazy(() =>
 
 export type JSONSchema = z.infer<typeof JSONSchemaSchema>
 
-export const ConnectionDetailsSchema = z.object({
-	type: z.enum(["stdio"]),
-	configSchema: JSONSchemaSchema.optional(),
-	exampleConfig: z.record(z.any()).optional(),
-})
+// Update ConnectionDetailsSchema to handle both STDIO and SSE
+export const ConnectionDetailsSchema = z.union([
+	z.object({
+		type: z.literal("stdio"),
+		configSchema: JSONSchemaSchema.optional(),
+		exampleConfig: z.record(z.any()).optional(),
+		published: z.boolean().optional(),
+		stdioFunction: z.string().optional(),
+	}),
+	z.object({
+		type: z.literal("sse"),
+		deploymentUrl: z.string().url(),
+		configSchema: JSONSchemaSchema.optional(),
+		exampleConfig: z.record(z.any()).optional(),
+	}),
+])
 
 export type ConnectionDetails = z.infer<typeof ConnectionDetailsSchema>
 
@@ -60,5 +71,14 @@ export const StdioConnectionSchema = z.object({
 
 export type StdioConnection = z.infer<typeof StdioConnectionSchema>
 
-// used in POST request and also in local fetch from config file
-export type ConfiguredServer = StdioConnection
+// Add SSE connection type
+export const SSEConnectionSchema = z.object({
+	type: z.literal("sse"),
+	url: z.string().url(),
+	config: z.record(z.any()).optional(),
+})
+
+export type SSEConnection = z.infer<typeof SSEConnectionSchema>
+
+// Update ConfiguredServer to handle both types
+export type ConfiguredServer = StdioConnection | SSEConnection

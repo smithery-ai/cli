@@ -5,6 +5,7 @@ import { getServerConfiguration } from "./registry-utils.js"
 import { promptForRestart } from "./client-utils.js"
 import { collectConfigValues } from "./runtime-utils.js"
 import type { ValidClient } from "../constants.js"
+import type { ConfiguredServer } from "../types/registry.js"
 
 export class ServerManager {
 	private configManager: typeof ConfigManager
@@ -21,23 +22,32 @@ export class ServerManager {
 		return connection
 	}
 
+	private formatServerConfig(
+		serverId: string,
+		userConfig: Record<string, unknown>
+	): ConfiguredServer {
+		return {
+			command: "npx",
+			args: [
+				"-y",
+				"@smithery/cli",
+				"run",
+				serverId,
+				"--config",
+				JSON.stringify(userConfig)
+			]
+		}
+	}
+
 	async installServer(
 		server: ResolvedServer,
 		client: ValidClient,
 	): Promise<void> {
 		const connection = this.validateConnection(server)
 		const values = await collectConfigValues(connection)
-		const serverConfig = await getServerConfiguration(
-			server.id,
-			values,
-			connection.type,
-		)
-
-		if (!serverConfig) {
-			throw new Error(
-				`Unable to fetch server configuration for server ${server.id}`,
-			)
-		}
+		
+		// Instead of getting config from registry, format it for CLI
+		const serverConfig = this.formatServerConfig(server.id, values)
 
 		await this.configManager.installServer(server.id, serverConfig, client)
 		await promptForRestart(client)
