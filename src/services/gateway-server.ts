@@ -10,14 +10,15 @@ import { spawn } from 'child_process'
 import { createSmitheryUrl } from "@smithery/sdk/config.js"
 import { collectConfigValues } from '../utils/runtime-utils.js'
 import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js'
-export const REGISTRY_ENDPOINT = process.env.REGISTRY_ENDPOINT || "https://registry.smithery.ai"
+import { REGISTRY_ENDPOINT } from "../constants.js"
+import { DEFAULT_REQUEST_TIMEOUT_MSEC } from '@modelcontextprotocol/sdk/shared/protocol.js'
 
 export class GatewayServer {
     private server!: Server
     private client: Client
     private handlerManager!: HandlerManager
     private closing = false
-    private requestTimeout = 10000 // 10 seconds default timeout
+    private requestTimeout = DEFAULT_REQUEST_TIMEOUT_MSEC
     
     constructor() {
       this.closing = false
@@ -48,13 +49,12 @@ export class GatewayServer {
       }
     }
   
-    private async setupHandlers(remoteCapabilities: ServerCapabilities): Promise<void> {
+    private async setupHandlers(Capabilities: ServerCapabilities): Promise<void> {
       this.handlerManager = new HandlerManager(
         this.server,
-        this.client,
         this.makeRequest.bind(this)
       )
-      await this.handlerManager.setupHandlers(remoteCapabilities)
+      await this.handlerManager.setupHandlers(Capabilities)
     }
   
     private setupErrorHandling(): void {
@@ -156,28 +156,8 @@ export class GatewayServer {
       
       console.error('[Gateway] Server configuration:', serverConfig)
   
-      console.error('[Gateway] Spawning local STDIO process:', {
-        command: serverConfig.command,
-        args: serverConfig.args,
-        env: Object.fromEntries(
-          Object.entries(serverConfig.env || {}).map(([key, value]) => 
-            [key, key.toLowerCase().includes('key') ? '****' : value]
-          )
-        )
-      })
-  
       const { command, args, env } = serverConfig
       
-      console.error('[Gateway] Spawning local STDIO process:', {
-        command,
-        args,
-        env: Object.fromEntries(
-          Object.entries(env || {}).map(([key, value]) => 
-            [key, key.toLowerCase().includes('key') ? '****' : value]
-          )
-        )
-      })
-  
       const childProcess = spawn(command, args || [], {
         ...serverConfig,
         env: {
@@ -186,16 +166,6 @@ export class GatewayServer {
           ) as Record<string, string>),
           ...serverConfig.env
         }
-      })
-  
-      console.error('[Gateway] Process spawned with:', {
-        command,
-        args,
-        env: Object.fromEntries(
-          Object.entries(env || {}).map(([key, value]) => 
-            [key, key.toLowerCase().includes('key') ? '****' : value]
-          )
-        )
       })
   
       // Connect to the spawned process as a client
@@ -219,7 +189,7 @@ export class GatewayServer {
       const capabilities = this.client.getServerCapabilities() || {}
       console.error('[Gateway] Process server capabilities:', capabilities)
   
-      // Create local STDIO server with same capabilities
+      // Create local proxy STDIO server with same capabilities
       this.server = new Server(
         { name: `smithery-runner-${serverDetails.id}`, version: '1.0.0' },
         { capabilities }

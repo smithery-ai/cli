@@ -7,10 +7,8 @@ import type {
 } from "../types/registry.js"
 import { ConfigManager } from "./config-manager.js"
 import { JSONSchema } from "../types/registry.js"
+import { REGISTRY_ENDPOINT } from "../constants.js"
 dotenv.config()
-
-export const REGISTRY_ENDPOINT = "http://localhost:3000/registry"
-	// process.env.REGISTRY_ENDPOINT || "https://registry.smithery.ai"
 
 export async function fetchServers(
 	client: string,

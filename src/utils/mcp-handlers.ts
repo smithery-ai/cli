@@ -1,6 +1,5 @@
 import { z } from 'zod'
 import { Server } from '@modelcontextprotocol/sdk/server/index.js'
-import { Client } from '@modelcontextprotocol/sdk/client/index.js'
 import {
   ListToolsRequestSchema,
   CallToolRequestSchema,
@@ -25,20 +24,19 @@ import {
 export class HandlerManager {
   constructor(
     private server: Server,
-    private sseClient: Client,
     private makeRequest: <T extends z.ZodType>(request: ClientRequest, schema: T) => Promise<z.infer<T>>
   ) {}
 
-  async setupHandlers(remoteCapabilities: ServerCapabilities): Promise<void> {
-    console.error('[Gateway] Setting up handlers for remote capabilities:', remoteCapabilities)
+  async setupHandlers(Capabilities: ServerCapabilities): Promise<void> {
+    console.error('[Gateway] Setting up handlers for remote capabilities:', Capabilities)
     
-    if (remoteCapabilities.tools) {
+    if (Capabilities.tools) {
       this.setupToolHandlers()
     }
-    if (remoteCapabilities.resources) {
+    if (Capabilities.resources) {
       this.setupResourceHandlers()
     }
-    if (remoteCapabilities.prompts) {
+    if (Capabilities.prompts) {
       this.setupPromptHandlers()
     }
 
