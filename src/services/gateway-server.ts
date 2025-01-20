@@ -6,10 +6,10 @@ import { ClientRequest, ServerCapabilities } from '@modelcontextprotocol/sdk/typ
 import { z } from 'zod'
 import { HandlerManager } from '../utils/mcp-handlers.js'
 import { ResolvedServer, ConfiguredStdioServer } from '../types/registry.js'
-import { spawn } from 'child_process'
+import { spawn, ChildProcessWithoutNullStreams } from 'child_process'
 import { createSmitheryUrl } from "@smithery/sdk/config.js"
 import { collectConfigValues } from '../utils/runtime-utils.js'
-import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js'
+import { StdioClientTransport, getDefaultEnvironment } from '@modelcontextprotocol/sdk/client/stdio.js'
 import { REGISTRY_ENDPOINT } from "../constants.js"
 import { DEFAULT_REQUEST_TIMEOUT_MSEC } from '@modelcontextprotocol/sdk/shared/protocol.js'
 
@@ -157,65 +157,91 @@ export class GatewayServer {
       console.error('[Gateway] Server configuration:', serverConfig)
   
       const { command, args, env } = serverConfig
-      
-      const childProcess = spawn(command, args || [], {
-        ...serverConfig,
-        env: {
-          ...(Object.fromEntries(
-            Object.entries(process.env).filter(([_, v]) => v != null)
-          ) as Record<string, string>),
-          ...serverConfig.env
+      let clientTransport: StdioClientTransport | null = null
+
+      try {
+        // Merge default environment with provided env
+        const defaultEnv = getDefaultEnvironment()
+        const mergedEnv = {
+          ...defaultEnv,
+          ...(env || {})
         }
-      })
-  
-      // Connect to the spawned process as a client
-      this.client = new Client(
-        { name: `smithery-runner-${serverDetails.id}`, version: '1.0.0' },
-        { capabilities: {} }
-      )
-      const processTransport = new StdioClientTransport({
-        command: serverConfig.command,
-        args: serverConfig.args,
-        env: {
-          ...(Object.fromEntries(
-            Object.entries(process.env).filter(([_, v]) => v != null)
-          ) as Record<string, string>),
-          ...serverConfig.env
+
+        // Create client transport
+        clientTransport = new StdioClientTransport({
+          command,
+          args: args || [],
+          env: mergedEnv,
+          stderr: 'pipe'
+        })
+
+        // Set up transport error handling
+        clientTransport.onerror = (error) => {
+          console.error('[Gateway] STDIO transport error:', error)
+          this.cleanup().catch(err => {
+            console.error('[Gateway] Cleanup error during transport error:', err)
+          })
         }
-      })
-      await this.client.connect(processTransport)
-  
-      // Get capabilities from the spawned process
-      const capabilities = this.client.getServerCapabilities() || {}
-      console.error('[Gateway] Process server capabilities:', capabilities)
-  
-      // Create local proxy STDIO server with same capabilities
-      this.server = new Server(
-        { name: `smithery-runner-${serverDetails.id}`, version: '1.0.0' },
-        { capabilities }
-      )
-  
-      // Set up error handling
-      this.setupErrorHandling()
-  
-      // Set up handlers to proxy between local server and spawned process
-      await this.setupHandlers(capabilities)
-  
-      // Connect local STDIO server to handle stdin/stdout
-      const stdioTransport = new StdioServerTransport()
-      await this.server.connect(stdioTransport)
-      console.error('[Gateway] STDIO proxy server ready')
-  
-      // Handle process exit
-      childProcess.on('error', (error) => {
-        console.error('[Gateway] Child process error:', error)
-        process.exit(1)
-      })
-  
-      childProcess.on('exit', (code, signal) => {
-        console.error('[Gateway] Child process exited:', { code, signal })
-        process.exit(code ?? 1)
-      })
+
+        // Connect client to get capabilities
+        await this.client.connect(clientTransport)
+        
+        // Get capabilities from the client
+        const capabilities = this.client.getServerCapabilities() || {}
+        console.error('[Gateway] Child process capabilities:', capabilities)
+
+        // Create server with the discovered capabilities
+        this.server = new Server(
+          { name: `smithery-runner-${serverDetails.id}`, version: '1.0.0' },
+          { capabilities }
+        )
+
+        // Set up error handling
+        this.setupErrorHandling()
+
+        // Set up handlers based on capabilities
+        await this.setupHandlers(capabilities)
+
+        // Create and connect server transport
+        const serverTransport = new StdioServerTransport()
+        await this.server.connect(serverTransport)
+        console.error('[Gateway] STDIO server ready')
+
+        // Handle stderr output
+        if (clientTransport.stderr) {
+          clientTransport.stderr.on('data', (chunk: Buffer) => {
+            console.error('[Gateway] Child process stderr:', chunk.toString())
+          })
+        }
+
+      } catch (error) {
+        console.error('[Gateway] Error during STDIO setup:', error)
+        
+        // Attempt to clean up the transport if it was created
+        if (clientTransport) {
+          try {
+            await clientTransport.close()
+          } catch (closeError) {
+            console.error('[Gateway] Error closing transport during error recovery:', closeError)
+          }
+        }
+        
+        throw error
+      }
+
+      // Add cleanup handler for process termination
+      const cleanupHandler = () => {
+        if (clientTransport && !this.closing) {
+          console.error('[Gateway] Process termination detected, cleaning up...')
+          this.cleanup().catch(err => {
+            console.error('[Gateway] Cleanup error during process termination:', err)
+            process.exit(1)
+          })
+        }
+      }
+
+      process.once('SIGTERM', cleanupHandler)
+      process.once('SIGINT', cleanupHandler)
     }
   
     private async handleSSEConnection(serverDetails: ResolvedServer, config: Record<string, unknown>): Promise<void> {
