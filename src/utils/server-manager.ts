@@ -14,16 +14,9 @@ export class ServerManager {
 		this.configManager = configManager
 	}
 
-<<<<<<< HEAD
-	private validateConnection(server: ResolvedServer): ConnectionDetails {
-		const connection = server.connections?.[0]
-		if (!connection) {
-			throw new Error("No connection configuration found or server has not been deployed.")
-=======
 	private selectPreferredConnection(server: ResolvedServer): ConnectionDetails {
 		if (!server.connections?.length) {
 			throw new Error("No connection configuration found")
->>>>>>> 5fd2f3b (WIP: support for smithery/cli run)
 		}
 		
 		// Prioritize SSE connection if it exists
