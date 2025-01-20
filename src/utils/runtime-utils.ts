@@ -63,6 +63,7 @@ export async function promptForUVInstall(
 
 export async function collectConfigValues(
 	connection: ConnectionDetails,
+	existingValues?: Record<string, unknown>
 ): Promise<Record<string, unknown>> {
 	const promptsMap = new Map<string, PromptInfo & { type?: string }>()
 
@@ -75,7 +76,7 @@ export async function collectConfigValues(
 				const schemaProp = prop as {
 					description?: string
 					default?: unknown
-					type?: string // Add type from JSON Schema
+					type?: string
 				}
 				promptsMap.set(key, {
 					key,
@@ -129,7 +130,23 @@ export async function collectConfigValues(
 		}
 	}
 
-	// Iterate through each configuration prompt
+	// If we have existing values, process them according to schema
+	if (existingValues) {
+		for (const prompt of promptsMap.values()) {
+			const value = existingValues[prompt.key]
+			if (value !== undefined || prompt.default !== undefined) {
+				configValues[prompt.key] = convertValueToType(
+					value ?? prompt.default,
+					prompt.type,
+				)
+			} else if (prompt.required) {
+				throw new Error(`Missing required config value: ${prompt.key}`)
+			}
+		}
+		return configValues
+	}
+
+	// Original prompting logic for installation
 	for (const prompt of promptsMap.values()) {
 		// If env var exists and setting is optional, ask if user wants to reuse it
 		if (process.env[prompt.key] && !prompt.required) {

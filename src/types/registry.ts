@@ -82,3 +82,4 @@ export type SSEConnection = z.infer<typeof SSEConnectionSchema>
 
 // Update ConfiguredServer to handle both types
 export type ConfiguredServer = StdioConnection | SSEConnection
+export type ConfiguredStdioServer = StdioConnection

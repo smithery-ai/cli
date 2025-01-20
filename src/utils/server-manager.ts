@@ -1,7 +1,7 @@
 import type { ResolvedServer } from "../types/registry.js"
 import { ConfigManager } from "./config-manager.js"
 import type { ConnectionDetails } from "../types/registry.js"
-import { getServerConfiguration } from "./registry-utils.js"
+// import { getServerConfiguration } from "./registry-utils.js"
 import { promptForRestart } from "./client-utils.js"
 import { collectConfigValues } from "./runtime-utils.js"
 import type { ValidClient } from "../constants.js"
@@ -14,12 +14,26 @@ export class ServerManager {
 		this.configManager = configManager
 	}
 
+<<<<<<< HEAD
 	private validateConnection(server: ResolvedServer): ConnectionDetails {
 		const connection = server.connections?.[0]
 		if (!connection) {
 			throw new Error("No connection configuration found or server has not been deployed.")
+=======
+	private selectPreferredConnection(server: ResolvedServer): ConnectionDetails {
+		if (!server.connections?.length) {
+			throw new Error("No connection configuration found")
+>>>>>>> 5fd2f3b (WIP: support for smithery/cli run)
 		}
-		return connection
+		
+		// Prioritize SSE connection if it exists
+		const sseConnection = server.connections.find(conn => conn.type === "sse")
+		if (sseConnection) {
+			return sseConnection
+		}
+		
+		// Fall back to first available connection
+		return server.connections[0]
 	}
 
 	private formatServerConfig(
@@ -43,11 +57,11 @@ export class ServerManager {
 		server: ResolvedServer,
 		client: ValidClient,
 	): Promise<void> {
-		const connection = this.validateConnection(server)
-		const values = await collectConfigValues(connection)
+		const connection = this.selectPreferredConnection(server) // checks if it has any connections
+		const configValues = await collectConfigValues(connection) // config values collected from configschema
 		
-		// Instead of getting config from registry, format it for CLI
-		const serverConfig = this.formatServerConfig(server.id, values)
+		// Update: Instead of getting config from registry POST, format it for run command
+		const serverConfig = this.formatServerConfig(server.id, configValues)
 
 		await this.configManager.installServer(server.id, serverConfig, client)
 		await promptForRestart(client)

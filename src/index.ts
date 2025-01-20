@@ -12,11 +12,13 @@ import chalk from "chalk"
 const command = process.argv[2]
 const packageName = process.argv[3]
 const clientFlag = process.argv.indexOf("--client")
-const client =
-	clientFlag !== -1 ? (process.argv[clientFlag + 1] as ValidClient) : "claude"
-if (clientFlag === -1) {
-	console.log(chalk.yellow("Client not provided, defaulting to claude"))
-}
+const configFlag = process.argv.indexOf("--config")
+const client = clientFlag !== -1 ? (process.argv[clientFlag + 1] as ValidClient) : "claude"
+const config = configFlag !== -1 ? JSON.parse(process.argv[configFlag + 1]) : {}
+
+// if (clientFlag === -1) {
+// 	console.log(chalk.yellow("Client not provided, defaulting to claude"))
+// }
 
 async function main() {
 	switch (command) {
@@ -27,6 +29,9 @@ async function main() {
 			if (!packageName) {
 				console.error("Please provide a package name to install")
 				process.exit(1)
+			}
+			if (clientFlag === -1) {
+				console.log(chalk.yellow("Client not provided, defaulting to claude"))
 			}
 			await install(packageName, client)
 			break
@@ -48,7 +53,7 @@ async function main() {
 				console.error("Please provide a server ID to run")
 				process.exit(1)
 			}
-			await run(packageName)
+			await run(packageName, config)
 			break
 		default:
 			console.log("Available commands:")
