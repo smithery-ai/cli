@@ -33,6 +33,9 @@ export class ServerManager {
 		serverId: string,
 		userConfig: Record<string, unknown>,
 	): ConfiguredServer {
+		// Convert config to URL-safe string that's still somewhat readable
+		const encodedConfig = encodeURIComponent(JSON.stringify(userConfig))
+		
 		return {
 			command: "npx",
 			args: [
@@ -41,7 +44,7 @@ export class ServerManager {
 				"run",
 				serverId,
 				"--config",
-				JSON.stringify(userConfig),
+				encodedConfig,
 			],
 		}
 	}
