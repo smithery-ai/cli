@@ -16,12 +16,16 @@ const configFlag = process.argv.indexOf("--config")
 const client =
 	clientFlag !== -1 ? (process.argv[clientFlag + 1] as ValidClient) : "claude"
 const config = configFlag !== -1 
-	? JSON.parse(decodeURIComponent(process.argv[configFlag + 1])) 
+	? JSON.parse(
+		(() => {
+			try {
+				return decodeURIComponent(process.argv[configFlag + 1])
+			} catch {
+				return process.argv[configFlag + 1]
+			}
+		})()
+	) 
 	: {}
-
-// if (clientFlag === -1) {
-// 	console.log(chalk.yellow("Client not provided, defaulting to claude"))
-// }
 
 async function main() {
 	switch (command) {
