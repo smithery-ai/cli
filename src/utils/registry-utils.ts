@@ -124,7 +124,7 @@ export async function resolveServer(
 
 		return result
 	} catch (error) {
-		// console.error('Error resolving server:', error)
+		console.error('Error resolving server:', error)
 		return null
 	}
 }

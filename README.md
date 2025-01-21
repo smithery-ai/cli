@@ -2,6 +2,9 @@
 
 The Smithery registry installer and manager for Model Context Protocol (MCP) servers, designed to be client-agnostic.
 
+## Requirements
+- NodeJS version 18 or above
+
 ## Usage
 
 ```bash

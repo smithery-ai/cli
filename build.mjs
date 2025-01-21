@@ -8,7 +8,7 @@ await esbuild.build({
 	entryPoints: ["src/index.ts"],
 	bundle: true,
 	platform: "node",
-	target: "node16",
+	target: "node18",
 	minify: true,
 	treeShaking: true,
 	outfile: "dist/index.js",
