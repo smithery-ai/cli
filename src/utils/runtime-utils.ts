@@ -65,6 +65,7 @@ export async function collectConfigValues(
 	connection: ConnectionDetails,
 	existingValues?: Record<string, unknown>,
 ): Promise<Record<string, unknown>> {
+	
 	const promptsMap = new Map<string, PromptInfo & { type?: string }>()
 
 	// Process config schema if it exists
@@ -125,6 +126,9 @@ export async function collectConfigValues(
 					.split(",")
 					.map((item) => item.trim())
 					.filter((item) => item !== "") // Remove empty items
+			case "string":
+				// Strip both single and double quotes from the string
+				return String(value).replace(/^['"](.*)['"]$/, "$1")
 			default:
 				return value
 		}
@@ -134,11 +138,13 @@ export async function collectConfigValues(
 	if (existingValues) {
 		for (const prompt of promptsMap.values()) {
 			const value = existingValues[prompt.key]
+			
 			if (value !== undefined || prompt.default !== undefined) {
-				configValues[prompt.key] = convertValueToType(
+				const convertedValue = convertValueToType(
 					value ?? prompt.default,
 					prompt.type,
 				)
+				configValues[prompt.key] = convertedValue
 			} else if (prompt.required) {
 				throw new Error(`Missing required config value: ${prompt.key}`)
 			}
