@@ -9,7 +9,8 @@
 		"forceConsistentCasingInFileNames": true,
 		"outDir": "./dist",
 		"rootDir": "./src",
-		"types": ["node"]
+		"types": ["node"],
+		"noEmit": true
 	},
 	"include": ["src/**/*"],
 	"exclude": ["node_modules", "dist"]

@@ -1,7 +1,7 @@
 import fs from "node:fs"
 import os from "node:os"
 import path from "node:path"
-import type { MCPConfig, StdioConnection, ConfiguredServer } from "../types/registry.js"
+import type { MCPConfig, ConfiguredServer } from "../types/registry.js"
 
 export interface ClaudeConfig extends MCPConfig {
 	[key: string]: any

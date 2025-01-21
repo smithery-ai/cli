@@ -63,7 +63,7 @@ export async function promptForUVInstall(
 
 export async function collectConfigValues(
 	connection: ConnectionDetails,
-	existingValues?: Record<string, unknown>
+	existingValues?: Record<string, unknown>,
 ): Promise<Record<string, unknown>> {
 	const promptsMap = new Map<string, PromptInfo & { type?: string }>()
 

@@ -13,7 +13,8 @@ const command = process.argv[2]
 const packageName = process.argv[3]
 const clientFlag = process.argv.indexOf("--client")
 const configFlag = process.argv.indexOf("--config")
-const client = clientFlag !== -1 ? (process.argv[clientFlag + 1] as ValidClient) : "claude"
+const client =
+	clientFlag !== -1 ? (process.argv[clientFlag + 1] as ValidClient) : "claude"
 const config = configFlag !== -1 ? JSON.parse(process.argv[configFlag + 1]) : {}
 
 // if (clientFlag === -1) {

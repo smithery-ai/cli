@@ -18,20 +18,20 @@ export class ServerManager {
 		if (!server.connections?.length) {
 			throw new Error("No connection configuration found")
 		}
-		
+
 		// Prioritize SSE connection if it exists
-		const sseConnection = server.connections.find(conn => conn.type === "sse")
+		const sseConnection = server.connections.find((conn) => conn.type === "sse")
 		if (sseConnection) {
 			return sseConnection
 		}
-		
+
 		// Fall back to first available connection
 		return server.connections[0]
 	}
 
 	private formatServerConfig(
 		serverId: string,
-		userConfig: Record<string, unknown>
+		userConfig: Record<string, unknown>,
 	): ConfiguredServer {
 		return {
 			command: "npx",
@@ -41,8 +41,8 @@ export class ServerManager {
 				"run",
 				serverId,
 				"--config",
-				JSON.stringify(userConfig)
-			]
+				JSON.stringify(userConfig),
+			],
 		}
 	}
 
@@ -52,7 +52,7 @@ export class ServerManager {
 	): Promise<void> {
 		const connection = this.selectPreferredConnection(server) // checks if it has any connections
 		const configValues = await collectConfigValues(connection) // config values collected from configschema
-		
+
 		// Update: Instead of getting config from registry POST, format it for run command
 		const serverConfig = this.formatServerConfig(server.id, configValues)
 
