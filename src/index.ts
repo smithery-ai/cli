@@ -15,16 +15,15 @@ const clientFlag = process.argv.indexOf("--client")
 const configFlag = process.argv.indexOf("--config")
 const client =
 	clientFlag !== -1 ? (process.argv[clientFlag + 1] as ValidClient) : "claude"
-const config = configFlag !== -1 
-	? JSON.parse(
-		(() => {
-			try {
-				return decodeURIComponent(process.argv[configFlag + 1])
-			} catch {
-				return process.argv[configFlag + 1]
-			}
-		})()
-	) 
+const config = configFlag !== -1
+	?
+	(() => {
+		let config = JSON.parse(process.argv[configFlag + 1])
+		if (typeof config === 'string') {
+			config = JSON.parse(config)
+		}
+		return config
+	})()
 	: {}
 
 async function main() {

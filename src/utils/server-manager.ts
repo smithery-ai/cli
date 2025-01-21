@@ -34,7 +34,7 @@ export class ServerManager {
 		userConfig: Record<string, unknown>,
 	): ConfiguredServer {
 		// Convert config to URL-safe string that's still somewhat readable
-		const encodedConfig = encodeURIComponent(JSON.stringify(userConfig))
+		const encodedConfig = JSON.stringify(JSON.stringify(userConfig))
 		
 		return {
 			command: "npx",
