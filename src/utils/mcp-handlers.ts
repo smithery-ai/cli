@@ -93,12 +93,8 @@ export class HandlerManager {
 			async (request) => {
 				if (this.context.isReconnecting) {
 					return {
-						resources: [ // send a dummy response during reconnection
-							{
-								uri: "file:///dummy/dummy.log",
-								name: "Dummy Resource",
-								mimeType: "text/plain"
-							}
+						resources: [ // send empty response during reconnection
+							{}
 						]
 					}
 				}
