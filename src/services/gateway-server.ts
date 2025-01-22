@@ -7,7 +7,7 @@ import type {
 	ServerCapabilities,
 } from "@modelcontextprotocol/sdk/types.js"
 import type { z } from "zod"
-import { HandlerManager } from "../utils/mcp-handlers.js"
+import { HandlerManager, type ServerContext } from "../utils/mcp-handlers.js"
 import type {
 	ResolvedServer,
 	ConfiguredStdioServer,
@@ -27,6 +27,14 @@ export class GatewayServer {
 	private handlerManager!: HandlerManager
 	private closing = false
 	private requestTimeout = DEFAULT_REQUEST_TIMEOUT_MSEC
+	private reconnectAttempts = 0
+	private maxReconnectAttempts = 5
+	private baseReconnectDelay = 1000 // 1 second
+	private currentConnectionDetails?: {
+		serverDetails: ResolvedServer
+		config: Record<string, unknown>
+	}
+	private isReconnecting = false
 
 	constructor() {
 		this.closing = false
@@ -61,10 +69,13 @@ export class GatewayServer {
 	}
 
 	private async setupHandlers(Capabilities: ServerCapabilities): Promise<void> {
-		this.handlerManager = new HandlerManager(
-			this.server,
-			this.makeRequest.bind(this),
-		)
+		const context: ServerContext = {
+			server: this.server,
+			makeRequest: this.makeRequest.bind(this),
+			isReconnecting: this.isReconnecting
+		}
+
+		this.handlerManager = new HandlerManager(context)
 		await this.handlerManager.setupHandlers(Capabilities)
 	}
 
@@ -78,12 +89,16 @@ export class GatewayServer {
 			}
 		}
 
-		this.client.onerror = (error) => {
+		this.client.onerror = async (error) => {
 			console.error("[Gateway] SSE client error:", error)
 			if (!this.closing) {
-				this.cleanup().catch((err) => {
-					console.error("[Gateway] Cleanup error during error handling:", err)
-				})
+				// For SSE connections, attempt reconnection before cleanup
+				const reconnected = await this.attemptReconnection();
+				if (!reconnected) {
+					this.cleanup().catch((err) => {
+						console.error("[Gateway] Cleanup error during error handling:", err)
+					})
+				}
 			}
 		}
 
@@ -96,12 +111,16 @@ export class GatewayServer {
 			}
 		}
 
-		this.client.onclose = () => {
+		this.client.onclose = async () => {
 			console.error("[Gateway] SSE client closed")
 			if (!this.closing) {
-				this.cleanup().catch((err) => {
-					console.error("[Gateway] Cleanup error during close:", err)
-				})
+				// For SSE connections, attempt reconnection before cleanup
+				const reconnected = await this.attemptReconnection();
+				if (!reconnected) {
+					this.cleanup().catch((err) => {
+						console.error("[Gateway] Cleanup error during close:", err)
+					})
+				}
 			}
 		}
 
@@ -274,6 +293,9 @@ export class GatewayServer {
 		serverDetails: ResolvedServer,
 		config: Record<string, unknown>,
 	): Promise<void> {
+		// Store connection details for potential reconnection
+		this.currentConnectionDetails = { serverDetails, config };
+
 		// Get SSE connection
 		const sseConnection = serverDetails.connections.find(
 			(conn) => conn.type === "sse",
@@ -296,6 +318,30 @@ export class GatewayServer {
 			const sseTransport = new SSEClientTransport(new URL(connectionUrl))
 			await this.client.connect(sseTransport)
 			console.error("[Gateway] Connected to remote SSE server")
+			
+			// Reset reconnection attempts after successful connection
+			this.reconnectAttempts = 0;
+
+			// Get capabilities
+			const capabilities = this.client.getServerCapabilities() || {}
+			console.error("[Gateway] Remote server capabilities:", capabilities)
+
+			// Create server with the discovered capabilities
+			this.server = new Server(
+				{ name: `smithery-runner-${serverDetails.id}`, version: "1.0.0" },
+				{ capabilities },
+			)
+
+			// Set up error handling
+			this.setupErrorHandling()
+
+			// Set up handlers based on remote capabilities
+			await this.setupHandlers(capabilities)
+
+			// Finally connect local STDIO server
+			const stdioTransport = new StdioServerTransport()
+			await this.server.connect(stdioTransport)
+			console.error("[Gateway] STDIO server ready")
 		} catch (sseError) {
 			console.error("[Gateway] Failed to connect to SSE server:", {
 				url: connectionUrl,
@@ -305,27 +351,52 @@ export class GatewayServer {
 			})
 			throw sseError
 		}
+	}
 
-		// Get capabilities
-		const capabilities = this.client.getServerCapabilities() || {}
-		console.error("[Gateway] Remote server capabilities:", capabilities)
+	private async attemptReconnection(): Promise<boolean> {
+		if (this.closing || !this.currentConnectionDetails) {
+			return false
+		}
 
-		// Create server with the discovered capabilities
-		this.server = new Server(
-			{ name: `smithery-runner-${serverDetails.id}`, version: "1.0.0" },
-			{ capabilities },
+		if (this.reconnectAttempts >= this.maxReconnectAttempts) {
+			console.error('[Gateway] Max reconnection attempts reached')
+			return false
+		}
+
+		const delay = Math.min(
+			this.baseReconnectDelay * Math.pow(2, this.reconnectAttempts),
+			30000 // max 30 seconds
 		)
 
-		// Set up error handling
-		this.setupErrorHandling()
+		console.error(
+			`[Gateway] Attempting reconnection in ${delay}ms (attempt ${
+				this.reconnectAttempts + 1
+			}/${this.maxReconnectAttempts})`
+		)
 
-		// Set up handlers based on remote capabilities
-		await this.setupHandlers(capabilities)
+		await new Promise(resolve => setTimeout(resolve, delay))
+		this.reconnectAttempts++
 
-		// Finally connect local STDIO server
-		const stdioTransport = new StdioServerTransport()
-		await this.server.connect(stdioTransport)
-		console.error("[Gateway] STDIO server ready")
+		this.isReconnecting = true
+
+		try {
+			await this.handleSSEConnection(
+				this.currentConnectionDetails.serverDetails,
+				this.currentConnectionDetails.config
+			)
+			console.error('[Gateway] Successfully reconnected')
+			this.reconnectAttempts = 0
+			this.isReconnecting = false
+			return true
+		} catch (error) {
+			console.error('[Gateway] Reconnection failed:', error)
+			this.isReconnecting = false
+			return false
+		}
+	}
+
+	public get reconnecting(): boolean {
+		return this.isReconnecting;
 	}
 
 	async run(
