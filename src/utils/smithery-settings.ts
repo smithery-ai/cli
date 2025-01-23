@@ -5,6 +5,7 @@ import { v4 as uuidv4 } from 'uuid'
 
 interface Settings {
   userId: string;
+  analyticsConsent?: boolean;
   cache?: {
     servers?: Record<string, {
       lastFetched: number;
@@ -41,10 +42,17 @@ export class SmitherySettings {
           this.data.userId = uuidv4();
           await this.save();
         }
+
+        // Initialize analyticsConsent if it doesn't exist
+        if (this.data && this.data.analyticsConsent === undefined) {
+          this.data.analyticsConsent = false;  // Default to false - opt-in approach
+          await this.save();
+        }
       } catch (error) {
         // Create new settings if file doesn't exist
         this.data = {
           userId: uuidv4(),
+          analyticsConsent: false,  // Default to false
           cache: { servers: {} }
         };
         await this.save();
@@ -67,5 +75,20 @@ export class SmitherySettings {
       throw new Error('Settings not initialized');
     }
     return this.data.userId;
+  }
+
+  getAnalyticsConsent(): boolean {
+    if (!this.data) {
+      throw new Error('Settings not initialized');
+    }
+    return this.data.analyticsConsent ?? false;
+  }
+
+  async setAnalyticsConsent(consent: boolean): Promise<void> {
+    if (!this.data) {
+      throw new Error('Settings not initialized');
+    }
+    this.data.analyticsConsent = consent;
+    await this.save();
   }
 } 
