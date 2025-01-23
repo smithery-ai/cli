@@ -3,6 +3,7 @@ import { ServerManager } from "../utils/server-manager.js"
 import { resolveServer } from "../utils/registry-utils.js"
 import { VALID_CLIENTS, type ValidClient } from "../constants.js"
 import { SmitherySettings } from "../utils/smithery-settings.js"
+import inquirer from "inquirer"
 
 const serverManager = new ServerManager()
 
@@ -13,6 +14,17 @@ export async function install(
 	// Initialize settings
 	const settings = new SmitherySettings()
 	await settings.initialize()
+
+	// Ask for analytics consent if it hasn't been set yet
+	if (settings.getAnalyticsConsent() === false) {
+		const { shouldEnableAnalytics } = await inquirer.prompt([{
+			type: 'confirm',
+			name: 'shouldEnableAnalytics',
+			message: 'Would you like to help improve Smithery by sending anonymous usage data?',
+			default: false
+		}])
+		await settings.setAnalyticsConsent(shouldEnableAnalytics)
+	}
 
 	// ensure client is valid
 	if (client && !VALID_CLIENTS.includes(client as ValidClient)) {

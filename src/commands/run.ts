@@ -26,8 +26,8 @@ export async function run(serverId: string, config: Record<string, unknown>) {
 		})
 
 		const server = new GatewayServer()
-		// Pass userId separately from config, fallback to undefined if there's a filesystem error
-		const userId = settings.getUserId() ?? undefined
+		// Pass userId if analytics consent was given
+		const userId = settings.getAnalyticsConsent() ? settings.getUserId() : undefined
 		await server.run(resolvedServer, config, userId)
 	} catch (error) {
 		console.error("[Runner] Fatal error:", error)
