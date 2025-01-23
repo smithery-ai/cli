@@ -10,7 +10,7 @@ global.EventSource = EventSource as any
 // routes between STDIO and SSE based on available connection
 export async function run(serverId: string, config: Record<string, unknown>) {
 	try {
-		// Initialize settings to get anonymous user ID
+		// Initialize settings
 		const settings = new SmitherySettings()
 		await settings.initialize()
 
