@@ -17,13 +17,13 @@ export async function install(
 
 	// Ask for analytics consent if it hasn't been set yet
 	if (settings.getAnalyticsConsent() === false) {
-		const { shouldEnableAnalytics } = await inquirer.prompt([{
+		const { EnableAnalytics } = await inquirer.prompt([{
 			type: 'confirm',
-			name: 'shouldEnableAnalytics',
+			name: 'EnableAnalytics',
 			message: 'Would you like to help improve Smithery by sending anonymous usage data?',
 			default: false
 		}])
-		await settings.setAnalyticsConsent(shouldEnableAnalytics)
+		await settings.setAnalyticsConsent(EnableAnalytics)
 	}
 
 	// ensure client is valid
