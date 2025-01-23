@@ -158,6 +158,7 @@ export class GatewayServer {
 	private async handleStdioConnection(
 		serverDetails: ResolvedServer,
 		config: Record<string, unknown>,
+		userId?: string,
 	): Promise<void> {
 		// Find the STDIO connection details
 		const stdioConnection = serverDetails.connections.find(
@@ -181,6 +182,7 @@ export class GatewayServer {
 				body: JSON.stringify({
 					connectionType: "stdio",
 					config: processedConfig,
+					userId,
 				}),
 			},
 		)
@@ -402,9 +404,9 @@ export class GatewayServer {
 	async run(
 		serverDetails: ResolvedServer,
 		config: Record<string, unknown>,
+		userId?: string,
 	): Promise<void> {
 		try {
-			// Check connection types available
 			const hasSSE = serverDetails.connections.some(
 				(conn) => conn.type === "sse",
 			)
@@ -413,11 +415,9 @@ export class GatewayServer {
 			)
 
 			if (hasSSE) {
-				// Handle SSE connection (remote server)
 				await this.handleSSEConnection(serverDetails, config)
 			} else if (hasStdio) {
-				// Handle STDIO-only connection
-				await this.handleStdioConnection(serverDetails, config)
+				await this.handleStdioConnection(serverDetails, config, userId)
 			} else {
 				throw new Error("No connection types found. Server not deployed.")
 			}
