@@ -2,6 +2,7 @@
 import { EventSource } from "eventsource"
 import { GatewayServer } from "../services/gateway-server.js"
 import { resolveServer } from "../utils/registry-utils.js"
+import { SmitherySettings } from "../utils/smithery-settings.js"
 
 global.EventSource = EventSource as any
 
@@ -9,6 +10,10 @@ global.EventSource = EventSource as any
 // routes between STDIO and SSE based on available connection
 export async function run(serverId: string, config: Record<string, unknown>) {
 	try {
+		// Initialize settings to get anonymous user ID
+		const settings = new SmitherySettings()
+		await settings.initialize()
+
 		// Look up server details from registry
 		const resolvedServer = await resolveServer(serverId)
 		if (!resolvedServer) {
@@ -21,7 +26,9 @@ export async function run(serverId: string, config: Record<string, unknown>) {
 		})
 
 		const server = new GatewayServer()
-		await server.run(resolvedServer, config)
+		// Pass userId separately from config, fallback to undefined if there's a filesystem error
+		const userId = settings.getUserId() ?? undefined
+		await server.run(resolvedServer, config, userId)
 	} catch (error) {
 		console.error("[Runner] Fatal error:", error)
 		process.exit(1)
