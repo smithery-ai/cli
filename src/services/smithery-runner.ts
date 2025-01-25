@@ -1,42 +1,34 @@
-import { Client } from "@modelcontextprotocol/sdk/client/index.js"
-import { SSEClientTransport } from "@modelcontextprotocol/sdk/client/sse.js"
 import {
 	StdioClientTransport,
 	getDefaultEnvironment,
 } from "@modelcontextprotocol/sdk/client/stdio.js"
-import { Server } from "@modelcontextprotocol/sdk/server/index.js"
-import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js"
-import { DEFAULT_REQUEST_TIMEOUT_MSEC } from "@modelcontextprotocol/sdk/shared/protocol.js"
 import {
 	CallToolRequestSchema,
 	type JSONRPCMessage,
 	type ClientRequest,
 	type ServerCapabilities,
 } from "@modelcontextprotocol/sdk/types.js"
-import { createSmitheryUrl } from "@smithery/sdk/config.js"
-import type { z } from "zod"
-import { ANALYTICS_ENDPOINT, REGISTRY_ENDPOINT } from "../constants.js"
 import type {
 	ConfiguredStdioServer,
 	ResolvedServer,
 } from "../types/registry.js"
+import { Client } from "@modelcontextprotocol/sdk/client/index.js"
+import { Server } from "@modelcontextprotocol/sdk/server/index.js"
+import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js"
+import type { z } from "zod"
 import { HandlerManager, type ServerContext } from "../utils/mcp-handlers.js"
 import { collectConfigValues } from "../utils/runtime-utils.js"
-
 import { pick } from "lodash"
-export class GatewayServer {
+import { SSERunner } from "./sse-runner.js"
+import { DEFAULT_REQUEST_TIMEOUT_MSEC } from "@modelcontextprotocol/sdk/shared/protocol.js"
+import { ANALYTICS_ENDPOINT, REGISTRY_ENDPOINT } from "../constants.js"
+
+export class SmitheryRunner {
 	private server!: Server
 	private client: Client
 	private handlerManager!: HandlerManager
 	private closing = false
 	private requestTimeout = DEFAULT_REQUEST_TIMEOUT_MSEC
-	private reconnectAttempts = 0
-	private maxReconnectAttempts = 5
-	private baseReconnectDelay = 1000 // 1 second
-	private currentConnectionDetails?: {
-		serverDetails: ResolvedServer
-		config: Record<string, unknown>
-	}
 	private isReconnecting = false
 
 	constructor() {
@@ -95,13 +87,9 @@ export class GatewayServer {
 		this.client.onerror = async (error) => {
 			console.error("[Gateway] SSE client error:", error)
 			if (!this.closing) {
-				// For SSE connections, attempt reconnection before cleanup
-				const reconnected = await this.attemptReconnection()
-				if (!reconnected) {
-					this.cleanup().catch((err) => {
-						console.error("[Gateway] Cleanup error during error handling:", err)
-					})
-				}
+				this.cleanup().catch((err) => {
+					console.error("[Gateway] Cleanup error during error handling:", err)
+				})
 			}
 		}
 
@@ -117,13 +105,9 @@ export class GatewayServer {
 		this.client.onclose = async () => {
 			console.error("[Gateway] SSE client closed")
 			if (!this.closing) {
-				// For SSE connections, attempt reconnection before cleanup
-				const reconnected = await this.attemptReconnection()
-				if (!reconnected) {
-					this.cleanup().catch((err) => {
-						console.error("[Gateway] Cleanup error during close:", err)
-					})
-				}
+				this.cleanup().catch((err) => {
+					console.error("[Gateway] Cleanup error during close:", err)
+				})
 			}
 		}
 
@@ -324,119 +308,6 @@ export class GatewayServer {
 		process.once("SIGINT", cleanupHandler)
 	}
 
-	private async handleSSEConnection(
-		serverDetails: ResolvedServer,
-		config: Record<string, unknown>,
-	): Promise<void> {
-		// Store connection details for potential reconnection
-		this.currentConnectionDetails = { serverDetails, config }
-
-		// Get SSE connection
-		const sseConnection = serverDetails.connections.find(
-			(conn) => conn.type === "sse",
-		)
-		if (!sseConnection?.deploymentUrl) {
-			throw new Error("SSE connection missing deployment URL")
-		}
-
-		// Add /sse to the deployment URL before creating the Smithery URL
-		const sseUrl = new URL("/sse", sseConnection.deploymentUrl).toString()
-		const connectionUrl = createSmitheryUrl(sseUrl, config || {})
-
-		console.error(
-			"[Gateway] Attempting to connect to SSE server at:",
-			connectionUrl,
-		)
-
-		try {
-			// Connect SSE client first to discover capabilities
-			const sseTransport = new SSEClientTransport(new URL(connectionUrl))
-			await this.client.connect(sseTransport)
-			console.error("[Gateway] Connected to remote SSE server")
-
-			// Reset reconnection attempts after successful connection
-			this.reconnectAttempts = 0
-
-			// Get capabilities
-			const capabilities = this.client.getServerCapabilities() || {}
-			console.error("[Gateway] Remote server capabilities:", capabilities)
-
-			// Create server with the discovered capabilities
-			this.server = new Server(
-				{
-					name: `smithery-runner-${serverDetails.qualifiedName}`,
-					version: "1.0.0",
-				},
-				{ capabilities },
-			)
-
-			// Set up error handling
-			this.setupErrorHandling()
-
-			// Set up handlers based on remote capabilities
-			await this.setupHandlers(capabilities)
-
-			// Finally connect local STDIO server
-			const stdioTransport = new StdioServerTransport()
-			await this.server.connect(stdioTransport)
-			console.error("[Gateway] STDIO server ready")
-		} catch (sseError) {
-			console.error("[Gateway] Failed to connect to SSE server:", {
-				url: connectionUrl,
-				error: sseError,
-				status: (sseError as any)?.status,
-				message: (sseError as any)?.message,
-			})
-			throw sseError
-		}
-	}
-
-	private async attemptReconnection(): Promise<boolean> {
-		if (this.closing || !this.currentConnectionDetails) {
-			return false
-		}
-
-		if (this.reconnectAttempts >= this.maxReconnectAttempts) {
-			console.error("[Gateway] Max reconnection attempts reached")
-			return false
-		}
-
-		const delay = Math.min(
-			this.baseReconnectDelay * Math.pow(2, this.reconnectAttempts),
-			30000, // max 30 seconds
-		)
-
-		console.error(
-			`[Gateway] Attempting reconnection in ${delay}ms (attempt ${
-				this.reconnectAttempts + 1
-			}/${this.maxReconnectAttempts})`,
-		)
-
-		await new Promise((resolve) => setTimeout(resolve, delay))
-		this.reconnectAttempts++
-
-		this.isReconnecting = true
-
-		try {
-			await this.handleSSEConnection(
-				this.currentConnectionDetails.serverDetails,
-				this.currentConnectionDetails.config,
-			)
-			console.error("[Gateway] Successfully reconnected")
-			this.reconnectAttempts = 0
-			this.isReconnecting = false
-			return true
-		} catch (error) {
-			console.error("[Gateway] Reconnection failed:", error)
-			this.isReconnecting = false
-			return false
-		}
-	}
-
-	public get reconnecting(): boolean {
-		return this.isReconnecting
-	}
-
 	async run(
 		serverDetails: ResolvedServer,
 		config: Record<string, unknown>,
@@ -445,22 +316,44 @@ export class GatewayServer {
 		try {
 			const hasSSE = serverDetails.connections.some(
 				(conn) => conn.type === "sse",
-			)
+			);
 			const hasStdio = serverDetails.connections.some(
 				(conn) => conn.type === "stdio",
-			)
+			);
 
 			if (hasSSE) {
-				await this.handleSSEConnection(serverDetails, config)
+				const sseConnection = serverDetails.connections.find(
+					(conn) => conn.type === "sse",
+				);
+				if (!sseConnection?.deploymentUrl) {
+					throw new Error("SSE connection missing deployment URL");
+				}
+
+				const runner = new SSERunner(sseConnection.deploymentUrl, config);
+				await runner.connect();
+
+				process.stdin.on("data", (data) => runner.processMessage(data));
+				
+				process.on("SIGINT", () => {
+					console.error("Shutting down SSE Runner...");
+					runner.cleanup();
+					process.exit(0);
+				});
+				
+				process.on("SIGTERM", () => {
+					console.error("Shutting down SSE Runner...");
+					runner.cleanup();
+					process.exit(0);
+				});
+
 			} else if (hasStdio) {
-				await this.handleStdioConnection(serverDetails, config, userId)
+				await this.handleStdioConnection(serverDetails, config, userId);
 			} else {
-				throw new Error("No connection types found. Server not deployed.")
+				throw new Error("No connection types found. Server not deployed.");
 			}
 		} catch (error) {
-			console.error("[Gateway] Setup error:", error)
-			await this.cleanup()
-			throw error
+			console.error("[Gateway] Setup error:", error);
+			throw error;
 		}
 	}
 }

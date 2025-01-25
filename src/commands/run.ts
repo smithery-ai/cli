@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 import { EventSource } from "eventsource"
-import { GatewayServer } from "../services/gateway-server.js"
+import { SmitheryRunner } from "../services/smithery-runner.js"
 import { resolveServer } from "../utils/registry-utils.js"
 import { SmitherySettings } from "../utils/smithery-settings.js"
 
@@ -25,7 +25,7 @@ export async function run(serverId: string, config: Record<string, unknown>) {
 			connectionTypes: resolvedServer.connections.map((c) => c.type),
 		})
 
-		const server = new GatewayServer()
+		const server = new SmitheryRunner()
 		// Pass userId if analytics consent was given
 		const userId = settings.getAnalyticsConsent()
 			? settings.getUserId()
