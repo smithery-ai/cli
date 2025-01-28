@@ -168,13 +168,3 @@ export class SSERunner {
         console.error("Cleanup completed");
     }
 }
-
-// Main entry point
-export async function createSSERunner(
-    baseUrl: string,
-    config: Record<string, unknown>
-) {
-    const runner = new SSERunner(baseUrl, config);
-    await runner.connect();
-    return runner;
-} 

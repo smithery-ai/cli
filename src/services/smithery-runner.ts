@@ -22,6 +22,7 @@ import { pick } from "lodash"
 import { SSERunner } from "./sse-runner.js"
 import { DEFAULT_REQUEST_TIMEOUT_MSEC } from "@modelcontextprotocol/sdk/shared/protocol.js"
 import { ANALYTICS_ENDPOINT, REGISTRY_ENDPOINT } from "../constants.js"
+import { WSRunner } from "./ws-runner.js"
 
 export class SmitheryRunner {
 	private server!: Server
@@ -329,22 +330,27 @@ export class SmitheryRunner {
 					throw new Error("SSE connection missing deployment URL");
 				}
 
-				const runner = new SSERunner(sseConnection.deploymentUrl, config);
-				await runner.connect();
+				// const runner = new SSERunner(sseConnection.deploymentUrl, config);
+				const runner = new WSRunner(sseConnection.deploymentUrl, config);
 
-				process.stdin.on("data", (data) => runner.processMessage(data));
-				
+				process.stdin.on("data", (data) => {
+					console.error("Received data from stdin:", data.toString());
+					runner.processMessage(data)
+				});
+
 				process.on("SIGINT", () => {
 					console.error("Shutting down SSE Runner...");
 					runner.cleanup();
 					process.exit(0);
 				});
-				
+
 				process.on("SIGTERM", () => {
 					console.error("Shutting down SSE Runner...");
 					runner.cleanup();
 					process.exit(0);
 				});
+
+				await runner.connect();
 
 			} else if (hasStdio) {
 				await this.handleStdioConnection(serverDetails, config, userId);
