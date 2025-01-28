@@ -1,147 +1,117 @@
-import { WebSocketClientTransport } from "@modelcontextprotocol/sdk/client/websocket.js";
-import { createSmitheryUrl } from "@smithery/sdk/config.js";
+import { WebSocketClientTransport } from "@modelcontextprotocol/sdk/client/websocket.js"
+import { createSmitheryUrl } from "@smithery/sdk/config.js"
 
-export class WSRunner {
-    private transport: WebSocketClientTransport | null = null;
-    private isReady: boolean = false;
-    private messageQueue: Buffer[] = [];
-    private reconnectAttempts: number = 0;
-    private readonly MAX_RECONNECT_ATTEMPTS = 3;
-    private readonly RECONNECT_DELAY = 1000; // 1 second
-    private lastParsedMessage: any = null;
+type Config = Record<string, unknown>
+type Cleanup = () => Promise<void>
 
-    constructor(
-        private baseUrl: string,
-        private config: Record<string, unknown>
-    ) { }
+const MAX_RETRIES = 3
+const RETRY_DELAY = 1000
 
-    async connect(): Promise<void> {
-        if (this.transport) {
-            console.error("Closing existing WebSocket connection");
-            await this.transport.close();
-        }
+const createTransport = (
+	baseUrl: string,
+	config: Config,
+): WebSocketClientTransport => {
+	const wsUrl = new URL("/ws", baseUrl.replace(/^http/, "ws")).toString()
+	return new WebSocketClientTransport(createSmitheryUrl(wsUrl, config))
+}
 
-        // Convert http(s):// to ws(s)://
-        // const wsBaseUrl = this.baseUrl.replace(/^http/, 'ws');
-        // const wsUrl = new URL("/ws", wsBaseUrl).toString();
-        const wsUrl = 'ws://localhost:8080/ws'
-        const connectionUrl = createSmitheryUrl(wsUrl, this.config);
+export const createWSRunner = async (
+	baseUrl: string,
+	config: Config,
+): Promise<Cleanup> => {
+	let retryCount = 0
+	let stdinBuffer = ""
+	let isReady = false
 
-        console.error(`Connecting to WebSocket endpoint: ${connectionUrl}`);
+	const transport = createTransport(baseUrl, config)
 
-        this.transport = new WebSocketClientTransport(connectionUrl);
+	const handleError = (error: Error, context: string) => {
+		console.error(`${context}:`, error.message)
+		return error
+	}
 
-        this.transport.onclose = () => {
-            console.error("WebSocket connection closed");
-            this.isReady = false;
-            this.handleConnectionClosed();
-        };
+	const processMessage = async (data: Buffer) => {
+		stdinBuffer += data.toString("utf8")
 
-        this.transport.onerror = (error) => {
-            console.error(`WebSocket connection error: ${error.message}`);
-            this.handleConnectionError(error);
-        };
+		if (!isReady) return // Wait for connection to be established
 
-        this.transport.onmessage = (message) => {
-            try {
-                this.lastParsedMessage = message;
-                console.log(JSON.stringify(message)); // Send to stdout for consumption
-            } catch (error) {
-                console.error(`Error handling message: ${error}`);
-                console.error(`Raw message data: ${JSON.stringify(message)}`);
-                console.log(JSON.stringify(message)); // Still send to stdout even if handling fails
-            }
-        };
+		const lines = stdinBuffer.split(/\r?\n/)
+		stdinBuffer = lines.pop() ?? ""
 
-        // Start the transport
-        await this.transport.start()
-        this.isReady = true;
-        this.processQueuedMessages();
-    }
+		for (const line of lines.filter(Boolean)) {
+			try {
+				await transport.send(JSON.parse(line))
+			} catch (error) {
+				if (error instanceof Error && error.message.includes("CLOSED")) {
+					throw new Error("WebSocket closed")
+				}
+				handleError(error as Error, "Failed to send message")
+			}
+		}
+	}
 
-    private async processQueuedMessages(): Promise<void> {
-        while (this.messageQueue.length > 0) {
-            const message = this.messageQueue.shift();
-            if (message) {
-                await this.processMessage(message);
-            }
-        }
-    }
-    private handleConnectionError(error: Error): void {
-        console.error(`Connection error details: ${error.message}`);
-        this.reconnect();
-    }
+	const setupTransport = async () => {
+		console.error(`Connecting to WebSocket endpoint: ${baseUrl}`)
 
-    private handleConnectionClosed(): void {
-        console.error("Connection closed, attempting reconnect");
-        this.reconnect();
-    }
+		transport.onclose = async () => {
+			console.error("WebSocket connection closed")
+			isReady = false
 
-    private async reconnect(): Promise<void> {
-        if (this.reconnectAttempts >= this.MAX_RECONNECT_ATTEMPTS) {
-            console.error(`Max reconnection attempts (${this.MAX_RECONNECT_ATTEMPTS}) reached, exiting...`);
-            console.error(`Last parsed message: ${JSON.stringify(this.lastParsedMessage, null, 2)}`);
-            process.exit(1);
-            return;
-        }
+			if (retryCount++ < MAX_RETRIES) {
+				await new Promise((resolve) => setTimeout(resolve, RETRY_DELAY))
+				await setupTransport()
+			} else {
+				console.error(`Max reconnection attempts (${MAX_RETRIES}) reached`)
+				process.exit(1)
+			}
+		}
 
-        this.reconnectAttempts++;
-        this.isReady = false;
+		transport.onerror = (error) => {
+			handleError(error, "WebSocket connection error")
+			process.exit(1)
+		}
 
-        try {
-            await new Promise(resolve => setTimeout(resolve, this.RECONNECT_DELAY));
-            await this.connect();
-        } catch (error) {
-            console.error(`Reconnection failed: ${error}`);
-            console.error(`Last parsed message before failure: ${JSON.stringify(this.lastParsedMessage, null, 2)}`);
-        }
-    }
+		transport.onmessage = (message) => {
+			try {
+				console.log(JSON.stringify(message))
+			} catch (error) {
+				handleError(error as Error, "Error handling message")
+				console.error("Raw message data:", JSON.stringify(message))
+				console.log(JSON.stringify(message))
+			}
+		}
 
-    async processMessage(input: Buffer): Promise<void> {
-        if (!this.isReady || !this.transport) {
-            this.messageQueue.push(input);
-            return;
-        }
+		await transport.start()
+		isReady = true
+		// Release buffered messages
+		await processMessage(Buffer.from(""))
+	}
 
-        const message = input.toString();
-        try {
-            // Try to parse the entire message first
-            JSON.parse(message);
-        } catch (error) {
-            // If parsing fails, it might be multiple JSON objects
-            console.error(`Note: Message contains multiple JSON objects or is malformed`);
-        }
+	const cleanup = async () => {
+		console.error("Starting cleanup...")
+		await transport
+			.close()
+			.catch((error) => handleError(error, "Error during cleanup"))
+		console.error("Cleanup completed")
+	}
 
-        // Split by newlines and process each message separately
-        const messages = message
-            .split('\n')
-            .filter(msg => msg.trim())
-            .map(msg => msg.trim());
+	const handleExit = async () => {
+		console.error("Shutting down WS Runner...")
+		await cleanup()
+		process.exit(0)
+	}
 
-        for (const msgStr of messages) {
-            try {
-                // Validate each individual message is valid JSON before sending
-                const jsonMessage = JSON.parse(msgStr);
+	// Setup event handlers
+	process.on("SIGINT", handleExit)
+	process.on("SIGTERM", handleExit)
+	process.stdin.on("data", (data) =>
+		processMessage(data).catch((error) =>
+			handleError(error, "Error processing message"),
+		),
+	)
 
-                await this.transport.send(jsonMessage);
-            } catch (error) {
-                console.error(`Failed to send message: ${error}`);
-                if (error instanceof Error && error.message.includes('CLOSED')) {
-                    console.error("WebSocket closed - attempting reconnect");
-                    this.reconnect();
-                    break;
-                }
-            }
-        }
-    }
+	// Start the transport
+	await setupTransport()
 
-    cleanup(): void {
-        console.error("Starting cleanup...");
-        if (this.transport) {
-            this.transport.close().catch(error => {
-                console.error(`Error during cleanup: ${error}`);
-            });
-        }
-        console.error("Cleanup completed");
-    }
+	return cleanup
 }
