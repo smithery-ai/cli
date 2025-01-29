@@ -23,7 +23,7 @@ export const createWSRunner = async (
 	let stdinBuffer = ""
 	let isReady = false
 
-	const transport = createTransport(baseUrl, config)
+	let transport = createTransport(baseUrl, config)
 
 	const handleError = (error: Error, context: string) => {
 		console.error(`${context}:`, error.message)
@@ -55,10 +55,15 @@ export const createWSRunner = async (
 
 		transport.onclose = async () => {
 			console.error("WebSocket connection closed")
+			// Retry connection
 			isReady = false
 
 			if (retryCount++ < MAX_RETRIES) {
-				await new Promise((resolve) => setTimeout(resolve, RETRY_DELAY))
+				await new Promise((resolve) =>
+					setTimeout(resolve, RETRY_DELAY * Math.pow(2, retryCount)),
+				)
+				// Create new transport
+				transport = createTransport(baseUrl, config)
 				await setupTransport()
 			} else {
 				console.error(`Max reconnection attempts (${MAX_RETRIES}) reached`)
@@ -73,6 +78,13 @@ export const createWSRunner = async (
 
 		transport.onmessage = (message) => {
 			try {
+				// If we receive an error, close the connection
+				if ("error" in message) {
+					transport.onerror?.(
+						new Error(`WebSocket error: ${JSON.stringify(message.error)}`),
+					)
+				}
+
 				console.log(JSON.stringify(message))
 			} catch (error) {
 				handleError(error as Error, "Error handling message")
