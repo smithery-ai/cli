@@ -19,10 +19,10 @@ export class ServerManager {
 			throw new Error("No connection configuration found")
 		}
 
-		// Prioritize SSE connection if it exists
-		const sseConnection = server.connections.find((conn) => conn.type === "ws")
-		if (sseConnection) {
-			return sseConnection
+		// Prioritize deployed connection if it exists
+		const deployedConnection = server.connections.find((conn) => conn.type === "ws")
+		if (deployedConnection) {
+			return deployedConnection
 		}
 
 		// Fall back to first available connection

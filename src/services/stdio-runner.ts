@@ -84,7 +84,7 @@ export class StdioRunner {
 		}
 
 		this.client.onerror = async (error) => {
-			console.error("[Gateway] SSE client error:", error)
+			console.error("[Gateway] client error:", error)
 			if (!this.closing) {
 				this.cleanup().catch((err) => {
 					console.error("[Gateway] Cleanup error during error handling:", err)
@@ -102,7 +102,7 @@ export class StdioRunner {
 		}
 
 		this.client.onclose = async () => {
-			console.error("[Gateway] SSE client closed")
+			console.error("[Gateway] client closed")
 			if (!this.closing) {
 				this.cleanup().catch((err) => {
 					console.error("[Gateway] Cleanup error during close:", err)
@@ -124,7 +124,7 @@ export class StdioRunner {
 
 		try {
 			if (this.client) {
-				console.error("[Gateway] Closing SSE client...")
+				console.error("[Gateway] Closing client...")
 				await this.client.close()
 			}
 

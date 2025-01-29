@@ -47,11 +47,11 @@ export async function install(
 		process.exit(1)
 	}
 
-	const hasRemoteSSE = server.connections.some(
+	const hasRemote = server.connections.some(
 		(conn) => conn.type === "ws" && "deploymentUrl" in conn,
 	)
-	if (hasRemoteSSE) {
-		console.log(chalk.blue("Installing remote SSE server..."))
+	if (hasRemote) {
+		console.log(chalk.blue("Installing remote server..."))
 	}
 
 	// install server using the serverManager instance

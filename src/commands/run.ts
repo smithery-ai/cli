@@ -4,7 +4,7 @@ import { resolveServer } from "../utils/registry-utils.js"
 import { SmitherySettings } from "../utils/smithery-settings.js"
 
 // takes server id and config json to run server
-// routes between STDIO and SSE based on available connection
+// routes between STDIO and WS based on available connection
 export async function run(
 	qualifiedName: string,
 	config: Record<string, unknown>,

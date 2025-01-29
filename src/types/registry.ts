@@ -23,7 +23,6 @@ export const JSONSchemaSchema: z.ZodType = z.lazy(() =>
 
 export type JSONSchema = z.infer<typeof JSONSchemaSchema>
 
-// Update ConnectionDetailsSchema to handle both STDIO and SSE
 export const ConnectionDetailsSchema = z.union([
 	z.object({
 		type: z.literal("stdio"),
@@ -71,15 +70,14 @@ export const StdioConnectionSchema = z.object({
 
 export type StdioConnection = z.infer<typeof StdioConnectionSchema>
 
-// Add SSE connection type
-export const SSEConnectionSchema = z.object({
+export const WSConnectionSchema = z.object({
 	type: z.literal("ws"),
 	url: z.string().url(),
 	config: z.record(z.any()).optional(),
 })
 
-export type SSEConnection = z.infer<typeof SSEConnectionSchema>
+export type WSConnection = z.infer<typeof WSConnectionSchema>
 
 // Update ConfiguredServer to handle both types
-export type ConfiguredServer = StdioConnection | SSEConnection
+export type ConfiguredServer = StdioConnection | WSConnection
 export type ConfiguredStdioServer = StdioConnection

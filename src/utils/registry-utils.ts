@@ -34,7 +34,7 @@ export async function fetchServers(
 	}
 }
 
-interface SSEConfigResponse {
+interface WSConfigResponse {
 	configSchema: JSONSchema
 }
 
@@ -45,10 +45,8 @@ export async function resolveServer(
 	try {
 		const isInstalled = ConfigManager.isServerInstalled(serverId, client)
 		const response = await fetch(`${REGISTRY_ENDPOINT}/servers/${serverId}`)
-		// console.error(`\nRegistry response for ${serverId}:`, response.status)
 
 		if (!response.ok) {
-			// console.log(`Server not found in registry. Is installed: ${isInstalled}`)
 			if (isInstalled) {
 				return {
 					qualifiedName: serverId,
@@ -62,11 +60,6 @@ export async function resolveServer(
 		}
 
 		const registryServer: RegistryServer = await response.json()
-		// console.log('\nRegistry server details:', {
-		// 	qualifiedName: registryServer.qualifiedName,
-		// 	displayName: registryServer.displayName,
-		// 	connectionTypes: registryServer.connections.map(c => c.type)
-		// })
 
 		// Process connections and normalize structure
 		const processedConnections = await Promise.all(
@@ -74,36 +67,24 @@ export async function resolveServer(
 				// console.log(`\nProcessing connection type: ${connection.type}`)
 
 				if (connection.type === "ws" && connection.deploymentUrl) {
-					// console.log(`Fetching SSE config from: ${connection.deploymentUrl}`)
 					try {
 						const configResponse = await fetch(
 							`${connection.deploymentUrl}/.well-known/mcp/smithery.json`,
 						)
-						// console.log('SSE config response:', configResponse.status)
 
 						if (configResponse.ok) {
-							const sseConfig: SSEConfigResponse = await configResponse.json()
-							// console.log('SSE config schema received:', {
-							// 	hasSchema: !!sseConfig.configSchema,
-							// 	schemaProperties: Object.keys(sseConfig.configSchema?.properties || {})
-							// })
+							const wsConfig: WSConfigResponse = await configResponse.json()
 
 							return {
 								type: "ws" as const,
 								deploymentUrl: connection.deploymentUrl,
-								configSchema: sseConfig.configSchema,
+								configSchema: wsConfig.configSchema,
 								exampleConfig: connection.exampleConfig,
 							}
 						}
 					} catch (error) {
-						// console.warn(`Failed to fetch SSE config schema: ${error}`)
 					}
 				}
-				// STDIO connections already have the right structure
-				// console.log('STDIO connection schema:', {
-				// 	hasSchema: !!connection.configSchema,
-				// 	schemaProperties: Object.keys(connection.configSchema?.properties || {})
-				// })
 				return connection
 			}),
 		)
@@ -115,12 +96,6 @@ export async function resolveServer(
 			isInstalled,
 			client,
 		}
-		// console.log('\nFinal resolved server:', {
-		// 	id: result.id,
-		// 	name: result.name,
-		// 	connectionCount: result.connections.length,
-		// 	connectionTypes: result.connections.map(c => c.type)
-		// })
 
 		return result
 	} catch (error) {
@@ -171,7 +146,7 @@ export async function getServerConfiguration(
 }
 
 /**
- * Checks if a server has a deployed SSE endpoint
+ * Checks if a server has a deployed endpoint
  * Returns the deployment URL if available, null otherwise
  */
 export async function getServerDeploymentUrl(
