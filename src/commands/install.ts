@@ -48,7 +48,7 @@ export async function install(
 	}
 
 	const hasRemoteSSE = server.connections.some(
-		(conn) => conn.type === "sse" && "deploymentUrl" in conn,
+		(conn) => conn.type === "ws" && "deploymentUrl" in conn,
 	)
 	if (hasRemoteSSE) {
 		console.log(chalk.blue("Installing remote SSE server..."))

@@ -33,7 +33,7 @@ export const ConnectionDetailsSchema = z.union([
 		stdioFunction: z.string().optional(),
 	}),
 	z.object({
-		type: z.literal("sse"),
+		type: z.literal("ws"),
 		deploymentUrl: z.string().url(),
 		configSchema: JSONSchemaSchema.optional(),
 		exampleConfig: z.record(z.any()).optional(),
@@ -73,7 +73,7 @@ export type StdioConnection = z.infer<typeof StdioConnectionSchema>
 
 // Add SSE connection type
 export const SSEConnectionSchema = z.object({
-	type: z.literal("sse"),
+	type: z.literal("ws"),
 	url: z.string().url(),
 	config: z.record(z.any()).optional(),
 })

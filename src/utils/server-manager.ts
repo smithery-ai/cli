@@ -20,7 +20,7 @@ export class ServerManager {
 		}
 
 		// Prioritize SSE connection if it exists
-		const sseConnection = server.connections.find((conn) => conn.type === "sse")
+		const sseConnection = server.connections.find((conn) => conn.type === "ws")
 		if (sseConnection) {
 			return sseConnection
 		}

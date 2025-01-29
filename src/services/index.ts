@@ -11,19 +11,19 @@ export async function pickServerAndRun(
 	userId?: string,
 ): Promise<void> {
 	// TODO: Change to WS
-	const hasSSE = serverDetails.connections.some((conn) => conn.type === "sse")
+	const hasWS = serverDetails.connections.some((conn) => conn.type === "ws")
 	const hasStdio = serverDetails.connections.some(
 		(conn) => conn.type === "stdio",
 	)
 
-	if (hasSSE) {
-		const sseConnection = serverDetails.connections.find(
-			(conn) => conn.type === "sse",
+	if (hasWS) {
+		const wsConnection = serverDetails.connections.find(
+			(conn) => conn.type === "ws",
 		)
-		if (!sseConnection?.deploymentUrl) {
+		if (!wsConnection?.deploymentUrl) {
 			throw new Error("Missing deployment URL")
 		}
-		await startWSRunner(sseConnection.deploymentUrl, config)
+		await startWSRunner(wsConnection.deploymentUrl, config)
 	} else if (hasStdio) {
 		const runner = new StdioRunner()
 		await runner.connect(serverDetails, config, userId)

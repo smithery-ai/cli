@@ -73,7 +73,7 @@ export async function resolveServer(
 			registryServer.connections.map(async (connection) => {
 				// console.log(`\nProcessing connection type: ${connection.type}`)
 
-				if (connection.type === "sse" && connection.deploymentUrl) {
+				if (connection.type === "ws" && connection.deploymentUrl) {
 					// console.log(`Fetching SSE config from: ${connection.deploymentUrl}`)
 					try {
 						const configResponse = await fetch(
@@ -89,7 +89,7 @@ export async function resolveServer(
 							// })
 
 							return {
-								type: "sse" as const,
+								type: "ws" as const,
 								deploymentUrl: connection.deploymentUrl,
 								configSchema: sseConfig.configSchema,
 								exampleConfig: connection.exampleConfig,
