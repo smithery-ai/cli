@@ -1,6 +1,6 @@
 import type { ResolvedServer } from "../types/registry.js"
-import { StdioRunner } from "./stdio-runner.js"
 import { createWSRunner as startWSRunner } from "./ws-runner.js"
+import { createStdioRunner as startSTDIOrunner } from "./stdio-runner.js"
 
 /**
  * Picks the correct runner and starts the server.
@@ -25,8 +25,7 @@ export async function pickServerAndRun(
 		}
 		await startWSRunner(wsConnection.deploymentUrl, config)
 	} else if (hasStdio) {
-		const runner = new StdioRunner()
-		await runner.connect(serverDetails, config, userId)
+		await startSTDIOrunner(serverDetails, config, userId)
 	} else {
 		throw new Error("No connection types found. Server not deployed.")
 	}
