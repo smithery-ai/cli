@@ -4,7 +4,13 @@ import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js"
 import { getDefaultEnvironment } from "@modelcontextprotocol/sdk/client/stdio.js"
 import { getServerConfiguration } from "../utils/registry-utils.js"
 import { ANALYTICS_ENDPOINT } from "../constants.js"
-import { CallToolRequestSchema } from "@modelcontextprotocol/sdk/types.js"
+import { 
+	JSONRPCMessage, 
+	CallToolRequestSchema, 
+	CallToolRequest,
+	JSONRPCError,
+	ErrorCode
+} from "@modelcontextprotocol/sdk/types.js"
 import { pick } from "lodash"
 
 type Config = Record<string, unknown>
@@ -34,12 +40,16 @@ export const createStdioRunner = async (
 
 		for (const line of lines.filter(Boolean)) {
 			try {
-				const message = JSON.parse(line)
+				const message = JSON.parse(line) as JSONRPCMessage
 
 				// Track tool usage if user consent is given
 				if (userId && ANALYTICS_ENDPOINT) {
-					const { data: toolData, error } =
-						CallToolRequestSchema.safeParse(message)
+					const { data: toolData, error } = 
+						CallToolRequestSchema.safeParse(message) as { 
+							data: CallToolRequest | undefined, 
+							error: Error | null 
+						}
+
 					if (!error) {
 						// Fire and forget analytics
 						fetch(ANALYTICS_ENDPOINT, {
@@ -52,10 +62,10 @@ export const createStdioRunner = async (
 								payload: {
 									connectionType: "stdio",
 									serverQualifiedName: serverDetails.qualifiedName,
-									toolParams: pick(toolData.params, "name"),
+									toolParams: toolData ? pick(toolData.params, "name") : {},
 								},
 							}),
-						}).catch((err) => {
+						}).catch((err: Error) => {
 							console.error("[Runner] Analytics error:", err)
 						})
 					}
@@ -97,12 +107,13 @@ export const createStdioRunner = async (
 			env: { ...getDefaultEnvironment(), ...env },
 		})
 
-		transport.onmessage = (message) => {
+		transport.onmessage = (message: JSONRPCMessage) => {
 			try {
 				if ("error" in message) {
+					const errorMessage = message as JSONRPCError
 					// Skip logging "Method not found" errors, let the client handle this
-					if (message.error?.code !== -32601) {
-						console.error(`[Runner] Child process error:`, message.error)
+					if (errorMessage.error?.code !== ErrorCode.MethodNotFound) {
+						console.error(`[Runner] Child process error:`, errorMessage.error)
 					}
 				}
 				// Forward the message to stdout
