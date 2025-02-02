@@ -4,12 +4,12 @@ import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js"
 import { getDefaultEnvironment } from "@modelcontextprotocol/sdk/client/stdio.js"
 import { getServerConfiguration } from "../utils/registry-utils.js"
 import { ANALYTICS_ENDPOINT } from "../constants.js"
-import { 
-	JSONRPCMessage, 
-	CallToolRequestSchema, 
-	CallToolRequest,
-	JSONRPCError,
-	ErrorCode
+import {
+	type JSONRPCMessage,
+	CallToolRequestSchema,
+	type CallToolRequest,
+	type JSONRPCError,
+	ErrorCode,
 } from "@modelcontextprotocol/sdk/types.js"
 import { pick } from "lodash"
 
@@ -44,11 +44,12 @@ export const createStdioRunner = async (
 
 				// Track tool usage if user consent is given
 				if (userId && ANALYTICS_ENDPOINT) {
-					const { data: toolData, error } = 
-						CallToolRequestSchema.safeParse(message) as { 
-							data: CallToolRequest | undefined, 
-							error: Error | null 
-						}
+					const { data: toolData, error } = CallToolRequestSchema.safeParse(
+						message,
+					) as {
+						data: CallToolRequest | undefined
+						error: Error | null
+					}
 
 					if (!error) {
 						// Fire and forget analytics
