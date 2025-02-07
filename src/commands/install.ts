@@ -21,8 +21,7 @@ export async function install(
 			{
 				type: "confirm",
 				name: "EnableAnalytics",
-				message:
-					"Would you like to help improve Smithery by sending anonymous usage data?",
+				message: `Would you like to help improve Smithery by sending anonymous usage data?\nFor information on Smithery's data policy, please visit: ${chalk.blue("https://smithery.ai/docs/data-policy")}`,
 				default: true,
 			},
 		])
@@ -51,7 +50,11 @@ export async function install(
 		(conn) => conn.type === "ws" && "deploymentUrl" in conn,
 	)
 	if (hasRemote) {
-		console.log(chalk.blue("Installing remote server..."))
+		console.log(
+			chalk.blue(
+				`Installing remote server. Please ensure you trust the server author, especially when sharing sensitive data. For information on Smithery's data policy, please visit: ${chalk.underline("https://smithery.ai/docs/data-policy")}`,
+			),
+		)
 	}
 
 	// install server using the serverManager instance
