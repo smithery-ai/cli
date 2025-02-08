@@ -102,9 +102,37 @@ export const createStdioRunner = async (
 
 		const { command, args = [], env = {} } = serverConfig
 
+		// Windows-specific path resolution
+		let finalCommand = command
+		let finalArgs = args
+
+		if (process.platform === 'win32') {
+			try {
+				// Use path.isAbsolute() to check if it's a full path
+				const path = require('path')
+				if (!path.isAbsolute(command)) {
+					const { execSync } = require('child_process')
+					finalCommand = execSync(`where ${command}`, { encoding: 'utf8' }).split('\n')[0].trim()
+				}
+
+				// Handle spaces in paths on Windows by using process.execPath (node.exe)
+				if (finalCommand.includes(' ')) {
+					finalArgs = [finalCommand, ...args]
+					finalCommand = process.execPath
+				}
+			} catch (error) {
+				console.error('[Runner] Could not resolve full path for command:', command, error)
+				// Fallback to original command
+				finalCommand = command
+				finalArgs = args
+			}
+		}
+
+		console.error('[Runner] Executing:', { command: finalCommand, args: finalArgs })
+
 		transport = new StdioClientTransport({
-			command: command,
-			args: args,
+			command: finalCommand,
+			args: finalArgs,
 			env: { ...getDefaultEnvironment(), ...env },
 		})
 
