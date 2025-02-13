@@ -53,7 +53,7 @@ export class ConfigManager {
 				"cline_mcp_settings.json",
 			),
 			// NOTE: to be updated to 'windsurf' after transition
-			windsurf: path.join(baseDir, ".codeium", "windsurf-next", "mcp_config.json"),
+			windsurf: path.join(homeDir, ".codeium", "windsurf-next", "mcp_config.json"),
 		}
 
 		ConfigManager.configPath = clientPaths.claude
