@@ -15,7 +15,8 @@
 		"extract": "node --loader ts-node/esm src/extractors/modelcontextprotocol-extractor.ts",
 		"test:uninstall": "node --loader ts-node/esm src/index.ts uninstall",
 		"prepare": "npm run build",
-		"check": "npx @biomejs/biome check --write --unsafe"
+		"check": "npx @biomejs/biome check --write --unsafe",
+		"test": "jest"
 	},
 	"bin": {
 		"cli": "dist/index.js"
@@ -41,7 +42,10 @@
 		"esbuild": "^0.24.0",
 		"ts-node": "^10.9.1",
 		"tsx": "^4.19.2",
-		"typescript": "^5.0.0"
+		"typescript": "^5.0.0",
+		"@types/jest": "^29.5.12",
+		"jest": "^29.7.0",
+		"ts-jest": "^29.1.2"
 	},
 	"files": [
 		"dist",
