@@ -3,7 +3,7 @@ import os from "node:os"
 import path from "node:path"
 import type { MCPConfig, ConfiguredServer } from "../types/registry.js"
 
-export interface ClaudeConfig extends MCPConfig {
+export interface ClientConfig extends MCPConfig {
 	[key: string]: any
 }
 
@@ -72,15 +72,16 @@ export class ConfigManager {
 		)
 	}
 
-	static readConfig(client: string): MCPConfig {
+	static readConfig(client: string): ClientConfig {
 		try {
 			const configPath = ConfigManager.getConfigPath(client)
 			if (!fs.existsSync(configPath)) {
 				return { mcpServers: {} }
 			}
 			const rawConfig = JSON.parse(fs.readFileSync(configPath, "utf8"))
-
+			
 			return {
+				...rawConfig,
 				mcpServers: rawConfig.mcpServers || {},
 			}
 		} catch (error) {
@@ -88,7 +89,7 @@ export class ConfigManager {
 		}
 	}
 
-	static writeConfig(config: MCPConfig, client?: string): void {
+	static writeConfig(config: ClientConfig, client?: string): void {
 		const configPath = ConfigManager.getConfigPath(client)
 		const configDir = path.dirname(configPath)
 		if (!fs.existsSync(configDir)) {
@@ -96,10 +97,24 @@ export class ConfigManager {
 		}
 
 		if (!config.mcpServers || typeof config.mcpServers !== "object") {
-			throw new Error("Invalid config structure")
+			throw new Error("Invalid mcpServers structure")
 		}
 
-		fs.writeFileSync(configPath, JSON.stringify(config, null, 2))
+		let existingConfig: ClientConfig = { mcpServers: {} }
+		try {
+			if (fs.existsSync(configPath)) {
+				existingConfig = JSON.parse(fs.readFileSync(configPath, "utf8"))
+			}
+		} catch (error) {
+			// If reading fails, continue with empty existing config
+		}
+
+		const mergedConfig = {
+			...existingConfig,
+			...config,
+		}
+
+		fs.writeFileSync(configPath, JSON.stringify(mergedConfig, null, 2))
 	}
 
 	static isServerInstalled(id: string, client: string): boolean {
