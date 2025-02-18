@@ -8,6 +8,7 @@ import type {
 import { ConfigManager } from "./config-manager.js"
 import type { JSONSchema } from "../types/registry.js"
 import { REGISTRY_ENDPOINT } from "../constants.js"
+import fetch from "cross-fetch"
 dotenv.config()
 
 export async function fetchServers(
