@@ -52,7 +52,8 @@ export class ConfigManager {
 				"settings",
 				"cline_mcp_settings.json",
 			),
-			windsurf: path.join(homeDir, ".codeium", "windsurf", "mcp_config.json")
+			windsurf: path.join(homeDir, ".codeium", "windsurf", "mcp_config.json"),
+			witsy: path.join(baseDir, "Witsy", "settings.json"),
 		}
 
 		ConfigManager.configPath = clientPaths.claude
