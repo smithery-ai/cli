@@ -3,6 +3,7 @@ import { promisify } from "node:util"
 import inquirer from "inquirer"
 import chalk from "chalk"
 import type { ConnectionDetails } from "../types/registry.js"
+import { VALID_CLIENTS, type ValidClient } from "../constants.js"
 
 interface PromptInfo {
 	key: string
@@ -212,4 +213,39 @@ export async function collectConfigValues(
 	}
 
 	return configValues
+}
+
+export async function promptForClient(
+	message = "Select a client:",
+): Promise<ValidClient> {
+	const { selectedClient } = await inquirer.prompt([
+		{
+			type: "list",
+			name: "selectedClient",
+			message,
+			choices: [
+				...VALID_CLIENTS,
+				{
+					name: chalk.red("✖ exit"),
+					value: "exit",
+					short: "Exit",
+				},
+			],
+		},
+	])
+
+	if (selectedClient === "exit") {
+		process.exit(0)
+	}
+
+	if (!VALID_CLIENTS.includes(selectedClient as ValidClient)) {
+		console.error(
+			chalk.red(
+				`Invalid client: ${selectedClient}\nValid clients are: ${VALID_CLIENTS.join(", ")}`,
+			),
+		)
+		process.exit(1)
+	}
+
+	return selectedClient as ValidClient
 }
