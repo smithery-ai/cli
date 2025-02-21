@@ -6,7 +6,7 @@ import type { ValidClient } from "../constants.js"
 
 export type ActionHandler = {
 	onInstall?: (server: ResolvedServer) => Promise<void>
-	onUninstall?: (server: ResolvedServer) => Promise<void>
+	onUninstall?: (server: ResolvedServer, client: ValidClient) => Promise<void>
 	onBack?: () => Promise<void>
 }
 
@@ -32,10 +32,12 @@ export async function handleServerAction(
 		case "uninstall":
 			if (await confirmUninstall(server.name)) {
 				await serverManager.uninstallServer(server.qualifiedName, client)
-				console.log(chalk.green(`Successfully uninstalled ${server.name}`))
+				console.log(
+					chalk.green(`Successfully uninstalled ${server.name} for ${client}`),
+				)
 				server.isInstalled = false
 				if (handlers.onUninstall) {
-					await handlers.onUninstall(server)
+					await handlers.onUninstall(server, client)
 				}
 				return // Exit after successful uninstallation
 			} else {
