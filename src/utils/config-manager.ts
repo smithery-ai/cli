@@ -52,7 +52,7 @@ export class ConfigManager {
 				"settings",
 				"cline_mcp_settings.json",
 			),
-			windsurf: path.join(homeDir, ".codeium", "windsurf", "mcp_config.json")
+			windsurf: path.join(homeDir, ".codeium", "windsurf", "mcp_config.json"),
 		}
 
 		ConfigManager.configPath = clientPaths.claude
@@ -79,7 +79,7 @@ export class ConfigManager {
 				return { mcpServers: {} }
 			}
 			const rawConfig = JSON.parse(fs.readFileSync(configPath, "utf8"))
-			
+
 			return {
 				...rawConfig,
 				mcpServers: rawConfig.mcpServers || {},

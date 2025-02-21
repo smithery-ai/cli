@@ -1,11 +1,10 @@
-import type { ResolvedServer } from "../types/registry.js"
-import { ConfigManager } from "./config-manager.js"
-import type { ConnectionDetails } from "../types/registry.js"
-// import { getServerConfiguration } from "./registry-utils.js"
-import { promptForRestart } from "./client-utils.js"
-import { collectConfigValues } from "./runtime-utils.js"
-import type { ValidClient } from "../constants.js"
-import type { ConfiguredServer } from "../types/registry.js"
+import type { ResolvedServer } from "../types/registry"
+import { ConfigManager } from "./config-manager"
+import type { ConnectionDetails } from "../types/registry"
+import { promptForRestart } from "./client-utils"
+import { collectConfigValues } from "./runtime-utils"
+import type { ValidClient } from "../constants"
+import type { ConfiguredServer } from "../types/registry"
 
 export class ServerManager {
 	private configManager: typeof ConfigManager
