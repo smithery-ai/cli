@@ -62,10 +62,6 @@ async function main() {
 				console.error("Please provide a package ID to get details")
 				process.exit(1)
 			}
-			if (!client) {
-				console.error("Please specify a client using --client")
-				process.exit(1)
-			}
 			await get(packageName, client)
 			break
 		case "run":

@@ -5,7 +5,7 @@ import { displayServerDetails } from "../utils/server-display.js"
 import { VALID_CLIENTS, type ValidClient } from "../constants.js"
 import { promptForClient } from "../utils/runtime-utils.js"
 
-export async function get(serverId: string, client: ValidClient) {
+export async function get(serverId: string, client?: ValidClient) {
 	try {
 		// ensure client is valid
 		if (client && !VALID_CLIENTS.includes(client as ValidClient)) {
