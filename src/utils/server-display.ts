@@ -14,9 +14,9 @@ export function formatServerChoice(
 ): ServerChoice {
 	const prefix = showInstallStatus ? (server.isInstalled ? "✓ " : "  ") : ""
 	return {
-		name: `${prefix}${server.name} | ${server.qualifiedName}`,
+		name: `${prefix}${server.qualifiedName}`,
 		value: server,
-		short: server.name,
+		short: server.qualifiedName,
 	}
 }
 
@@ -52,10 +52,11 @@ export function createListChoices(
 export function printServerListHeader(
 	count: number,
 	type: "all" | "installed" = "all",
+	client?: string,
 ) {
 	console.log(
 		chalk.bold.cyan(
-			`\n📦 ${type === "installed" ? "Installed Servers" : "Available Servers"}`,
+			`\n${type === "installed" ? "Installed Servers" : "Available Servers"}${client ? ` for ${chalk.bold(client)}` : ""}`,
 		),
 	)
 	console.log(
@@ -71,19 +72,18 @@ export async function displayServerDetails(
 ): Promise<"install" | "uninstall" | "back" | "exit"> {
 	console.log(`\n${chalk.bold.cyan("Server Details:")}`)
 	console.log(chalk.bold("ID:          ") + server.qualifiedName)
-	console.log(chalk.bold("Name:        ") + server.name)
 
 	const choices = [
 		{
 			name: server.isInstalled
-				? chalk.yellow("🔄 Reinstall this server")
-				: chalk.yellow("📦 Install this server"),
+				? chalk.green("Reinstall this server")
+				: chalk.yellow("Install this server"),
 			value: "install",
 		},
 		...(server.isInstalled
 			? [
 					{
-						name: chalk.yellow("🗑️  Uninstall this server"),
+						name: chalk.red("Uninstall this server"),
 						value: "uninstall",
 					},
 				]
