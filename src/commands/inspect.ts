@@ -6,34 +6,46 @@ import {
 import { ConfigManager } from "../utils/config-manager.js"
 import { createListChoices } from "../utils/server-display.js"
 import inquirer from "inquirer"
-import { VALID_CLIENTS, type ValidClient } from "../constants.js"
+import type { ValidClient } from "../constants.js"
+import { printServerListHeader } from "../utils/server-display.js"
+import { promptForClient } from "../utils/runtime-utils.js"
 
-export async function inspect(client: ValidClient): Promise<void> {
+process.removeAllListeners("warning")
+
+export async function inspect(initialClient?: ValidClient): Promise<void> {
 	try {
-		// ensure client is valid
-		if (client && !VALID_CLIENTS.includes(client as ValidClient)) {
-			console.error(
-				chalk.red(
-					`Invalid client: ${client}\nValid clients are: ${VALID_CLIENTS.join(", ")}`,
-				),
-			)
-			process.exit(1)
-		}
-
-		const installedIds = ConfigManager.getInstalledServerIds(client)
-
-		if (installedIds.length === 0) {
-			console.log(chalk.yellow("\nNo MCP servers are currently installed."))
-			return
-		}
-
-		const config = ConfigManager.readConfig(client)
-
+		let currentClient = initialClient
 		while (true) {
+			/* Select client */
+			if (!currentClient) {
+				currentClient = await promptForClient()
+			}
+
+			const installedIds = ConfigManager.getInstalledServerIds(
+				currentClient as ValidClient,
+			)
+
+			if (installedIds.length === 0) {
+				console.log(chalk.yellow("\nNo MCP servers are currently installed."))
+				return
+			}
+
+			/* Read client config */
+			const ClientConfig = ConfigManager.readConfig(
+				currentClient as ValidClient,
+			)
+			const Servers = ClientConfig.mcpServers
+
+			printServerListHeader(
+				Object.keys(Servers).length,
+				"installed",
+				currentClient,
+			)
+
 			const choices = createListChoices(
 				installedIds.map((id) => ({
 					qualifiedName: id,
-					name: ConfigManager.denormalizeServerId(id),
+					name: id,
 					isInstalled: true,
 					connections: [],
 				})),
@@ -41,6 +53,7 @@ export async function inspect(client: ValidClient): Promise<void> {
 				true,
 			)
 
+			/* Prompt for selection */
 			const { selectedId } = await inquirer.prompt([
 				{
 					type: "list",
@@ -54,16 +67,22 @@ export async function inspect(client: ValidClient): Promise<void> {
 				process.exit(0)
 			}
 
+			if (selectedId === "back") {
+				currentClient = undefined // Reset client to trigger selection
+				continue
+			}
+
 			if (!selectedId) {
 				return
 			}
 
+			/* Connect and inspect */
 			console.log(chalk.blue("\nConnecting to server..."))
-			const connectionConfig = config.mcpServers[selectedId.id]
+			const connectionConfig = Servers[selectedId.qualifiedName]
 
 			if ("command" in connectionConfig) {
 				const client = await createServerConnection(
-					selectedId.id,
+					selectedId.qualifiedName,
 					connectionConfig,
 				)
 				const result = await inspectServer(client)
