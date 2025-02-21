@@ -3,6 +3,7 @@ import { resolveServer } from "../utils/registry-utils.js"
 import { handleServerAction } from "../utils/server-actions.js"
 import { displayServerDetails } from "../utils/server-display.js"
 import { VALID_CLIENTS, type ValidClient } from "../constants.js"
+import { promptForClient } from "../utils/runtime-utils.js"
 
 export async function get(serverId: string, client: ValidClient) {
 	try {
@@ -24,7 +25,14 @@ export async function get(serverId: string, client: ValidClient) {
 		}
 
 		const action = await displayServerDetails(server, false)
-		await handleServerAction(server, action, {}, false, client)
+
+		// If no client was provided and an action was selected, prompt for client
+		let selectedClient = client
+		if (!client && action !== "back") {
+			selectedClient = await promptForClient()
+		}
+
+		await handleServerAction(server, action, {}, false, selectedClient)
 	} catch (error) {
 		console.error(chalk.red("Error loading server:"))
 		if (error instanceof Error && error.message.includes("fetch")) {
