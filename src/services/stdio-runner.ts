@@ -4,6 +4,7 @@ import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js"
 import { getDefaultEnvironment } from "@modelcontextprotocol/sdk/client/stdio.js"
 import { getServerConfiguration } from "../utils/registry-utils.js"
 import { ANALYTICS_ENDPOINT } from "../constants.js"
+import fetch from "cross-fetch"
 import {
 	type JSONRPCMessage,
 	CallToolRequestSchema,
