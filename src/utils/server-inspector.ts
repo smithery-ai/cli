@@ -126,6 +126,7 @@ export async function inspectServer(client: Client) {
 			return null
 		}
 		if (selected === "exit") {
+			await client.close()
 			return "exit"
 		}
 
@@ -171,6 +172,7 @@ export async function inspectServer(client: Client) {
 		])
 
 		if (action === "exit") {
+			await client.close()
 			return "exit"
 		}
 	}
