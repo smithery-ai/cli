@@ -81,3 +81,8 @@ export type WSConnection = z.infer<typeof WSConnectionSchema>
 // Update ConfiguredServer to handle both types
 export type ConfiguredServer = StdioConnection | WSConnection
 export type ConfiguredStdioServer = StdioConnection
+
+// Server Configuration key value pairs
+export interface ServerConfig {
+	[key: string]: unknown
+}

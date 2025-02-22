@@ -1,12 +1,12 @@
 #!/usr/bin/env node
 
-import { install } from "./commands/install.js"
+import { installServer } from "./install.js"
 import { uninstall } from "./commands/uninstall.js"
 import { listInstalledServers } from "./commands/installed.js"
 import { get } from "./commands/view.js"
 import { inspect } from "./commands/inspect.js"
 import { run } from "./commands/run.js"
-import type { ValidClient } from "./constants.js"
+import { type ValidClient, VALID_CLIENTS } from "./constants.js"
 import chalk from "chalk"
 
 const command = process.argv[2]
@@ -14,7 +14,18 @@ const packageName = process.argv[3]
 const clientFlag = process.argv.indexOf("--client")
 const configFlag = process.argv.indexOf("--config")
 const client =
-	clientFlag !== -1 ? (process.argv[clientFlag + 1] as ValidClient) : "claude"
+	clientFlag !== -1
+		? (() => {
+				const requestedClient = process.argv[clientFlag + 1]
+				if (!VALID_CLIENTS.includes(requestedClient as ValidClient)) {
+					console.error(
+						`Invalid client "${requestedClient}". Valid options are: ${VALID_CLIENTS.join(", ")}`,
+					)
+					process.exit(1)
+				}
+				return requestedClient as ValidClient
+			})()
+		: "claude"
 const config =
 	configFlag !== -1
 		? (() => {
@@ -39,7 +50,7 @@ async function main() {
 			if (clientFlag === -1) {
 				console.log(chalk.yellow("Client not provided, defaulting to claude"))
 			}
-			await install(packageName, client)
+			await installServer(packageName, client)
 			break
 		case "uninstall":
 			await uninstall(packageName, client)
