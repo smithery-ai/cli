@@ -87,10 +87,7 @@ export class SmitherySettings {
 
 		try {
 			try {
-				const content = await fs.readFile(
-					this.settingsPath,
-					"utf-8",
-				)
+				const content = await fs.readFile(this.settingsPath, "utf-8")
 				this.data = JSON.parse(content)
 
 				// Ensure userId exists in loaded data
@@ -165,10 +162,7 @@ export class SmitherySettings {
 	}
 
 	private async save(): Promise<void> {
-		await fs.writeFile(
-			this.settingsPath,
-			JSON.stringify(this.data, null, 2),
-		)
+		await fs.writeFile(this.settingsPath, JSON.stringify(this.data, null, 2))
 	}
 
 	getUserId(): string {

@@ -80,7 +80,7 @@ export class ConfigManager {
 				return { mcpServers: {} }
 			}
 			const rawConfig = JSON.parse(fs.readFileSync(configPath, "utf8"))
-			
+
 			return {
 				...rawConfig,
 				mcpServers: rawConfig.mcpServers || {},
