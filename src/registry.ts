@@ -6,7 +6,7 @@ import {
 	type ServerConfig,
 	type RegistryServer,
 } from "./types/registry"
-import { type WSConnection, WSConnectionSchema } from "./types/registry"
+import { type WSConnection } from "./types/registry"
 
 dotenvConfig()
 
@@ -57,17 +57,12 @@ export const resolvePackage = async (
 export const fetchConnection = async (
 	packageName: string,
 	config: ServerConfig,
-): Promise<StdioConnection | WSConnection> => {
+): Promise<StdioConnection> => {
 	const endpoint = getEndpoint()
 
 	try {
-		const server = await resolvePackage(packageName)
-
-		/* Find WS connection if available */
-		const wsConnection = server.connections.find((conn) => conn.type === "ws")
-
 		const requestBody = {
-			connectionType: wsConnection ? "ws" : "stdio",
+			connectionType: "stdio",
 			config,
 		}
 
@@ -92,9 +87,7 @@ export const fetchConnection = async (
 			throw new Error("Invalid registry response format")
 		}
 
-		return wsConnection
-			? WSConnectionSchema.parse(data.result)
-			: StdioConnectionSchema.parse(data.result)
+		return StdioConnectionSchema.parse(data.result)
 	} catch (error) {
 		if (error instanceof Error) {
 			throw new Error(`Failed to fetch server connection: ${error.message}`)
