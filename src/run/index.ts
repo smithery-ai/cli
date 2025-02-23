@@ -13,7 +13,10 @@ export async function run(
 	config: Record<string, unknown>,
 ) {
 	try {
-		await initializeSettings()
+		const settingsResult = await initializeSettings()
+		if (!settingsResult.success) {
+			console.warn("[Runner] Settings initialization warning:", settingsResult.error)
+		}
 		
 		const resolvedServer = await resolvePackage(qualifiedName)
 
@@ -26,8 +29,7 @@ export async function run(
 			connectionTypes: resolvedServer.connections.map((c) => c.type),
 		})
 
-		// Pass userId if analytics consent was given
-		const userId = getAnalyticsConsent() ? getUserId() : undefined
+		const userId = settingsResult.success && getAnalyticsConsent() ? getUserId() : undefined
 		await pickServerAndRun(resolvedServer, config, userId)
 	} catch (error) {
 		console.error("[Runner] Fatal error:", error)
