@@ -13,19 +13,18 @@ const command = process.argv[2]
 const packageName = process.argv[3]
 const clientFlag = process.argv.indexOf("--client")
 const configFlag = process.argv.indexOf("--config")
-const client =
-	clientFlag !== -1
-		? (() => {
-				const requestedClient = process.argv[clientFlag + 1]
-				if (!VALID_CLIENTS.includes(requestedClient as ValidClient)) {
-					console.error(
-						`Invalid client "${requestedClient}". Valid options are: ${VALID_CLIENTS.join(", ")}`,
-					)
-					process.exit(1)
-				}
-				return requestedClient as ValidClient
-			})()
-		: "claude"
+const client = (() => {
+	if (clientFlag === -1) {
+		console.error(chalk.yellow(`Please specify a client using --client. Valid options are: ${VALID_CLIENTS.join(", ")}`))
+		process.exit(1)
+	}
+	const requestedClient = process.argv[clientFlag + 1]
+	if (!VALID_CLIENTS.includes(requestedClient as ValidClient)) {
+		console.error(chalk.yellow(`Invalid client "${requestedClient}". Valid options are: ${VALID_CLIENTS.join(", ")}`))
+		process.exit(1)
+	}
+	return requestedClient as ValidClient
+})()
 const config =
 	configFlag !== -1
 		? (() => {
@@ -46,9 +45,6 @@ async function main() {
 			if (!packageName) {
 				console.error("Please provide a package name to install")
 				process.exit(1)
-			}
-			if (clientFlag === -1) {
-				console.log(chalk.yellow("Client not provided, defaulting to claude"))
 			}
 			await installServer(packageName, client)
 			break
