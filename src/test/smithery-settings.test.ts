@@ -26,8 +26,8 @@ describe("SmitherySettings", () => {
 		settings = new SmitherySettings()
 		// Clear all mocks before each test
 		jest.clearAllMocks()
-		// Reset static property
-		SmitherySettings.setCustomConfigPath(null)
+		// Reset static property using type assertion
+		;(SmitherySettings as any).customConfigPath = null
 	})
 
 	it("should handle non-writable path by prompting for custom path", async () => {
@@ -85,8 +85,8 @@ describe("SmitherySettings", () => {
 
 		const customPath = "/custom/path"
 
-		// Set custom path BEFORE creating instance
-		SmitherySettings.setCustomConfigPath(customPath)
+		// Set custom path BEFORE creating instance using type assertion
+		;(SmitherySettings as any).customConfigPath = customPath
 		settings = new SmitherySettings() // Create new instance after setting path
 		;(inquirer.prompt as unknown as jest.Mock)
 			.mockResolvedValueOnce({ action: "custom" })
