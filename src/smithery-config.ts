@@ -2,11 +2,10 @@ import { homedir, platform } from "node:os"
 import { join } from "node:path"
 import { promises as fs } from "node:fs"
 import { v4 as uuidv4 } from "uuid"
-import inquirer from "inquirer"
 
 interface Settings {
 	userId: string
-	analyticsConsent?: boolean
+	analyticsConsent: boolean
 	cache?: {
 		servers?: Record<
 			string,
@@ -18,164 +17,168 @@ interface Settings {
 	}
 }
 
-let customConfigPath: string | null = null
+interface SettingsResult {
+	success: boolean
+	data?: Settings
+	error?: string
+}
+
 let settingsData: Settings | null = null
+let isInitialized = false
 
-function getSettingsPath(): string {
-	if (customConfigPath) return customConfigPath
+/* Default settings with consent as false */
+const createDefaultSettings = (): Settings => ({
+	userId: uuidv4(),
+	analyticsConsent: false,
+	cache: { servers: {} }
+})
 
-	const envPath = process.env.SMITHERY_CONFIG_PATH
-	if (envPath) return envPath
+const getSettingsPath = (): string => {
+	if (process.env.SMITHERY_CONFIG_PATH) return process.env.SMITHERY_CONFIG_PATH
 
-	switch (platform()) {
-		case "win32":
-			return join(
-				process.env.APPDATA || join(homedir(), "AppData", "Roaming"),
-				"smithery",
-			)
-		case "darwin":
-			return join(homedir(), "Library", "Application Support", "smithery")
-		default:
-			return join(homedir(), ".config", "smithery")
+	const paths = {
+		win32: () => join(
+			process.env.APPDATA || join(homedir(), "AppData", "Roaming"),
+			"smithery"
+		),
+		darwin: () => join(homedir(), "Library", "Application Support", "smithery"),
+		default: () => join(homedir(), ".config", "smithery")
 	}
+
+	return (paths[platform() as keyof typeof paths] || paths.default)()
 }
 
-async function handleCustomPath(): Promise<void> {
-	const { customPath } = await inquirer.prompt([
-		{
-			type: "input",
-			name: "customPath",
-			message: 'Enter custom writable directory path (or "skip"):',
-			validate: async (input: string) => {
-				if (input.toLowerCase() === "skip") return true
-				try {
-					await fs.access(input, fs.constants.W_OK)
-					return true
-				} catch (error) {
-					return `Path "${input}" is not writable. Please try another location, or type "skip" to continue without saving settings.`
+const validateSettings = (settings: unknown): settings is Settings => {
+	if (!settings || typeof settings !== 'object') return false
+	const { userId, analyticsConsent } = settings as Partial<Settings>
+	return typeof userId === 'string' && typeof analyticsConsent === 'boolean'
+}
+
+// Enhance the error message helper to handle both read and write scenarios
+const getPermissionErrorMessage = (path: string, operation: 'read' | 'write'): string => {
+	return `Permission denied: Cannot ${operation} settings at ${path}
+Fix with: chmod 700 "${path}"
+Or use: export SMITHERY_CONFIG_PATH="/custom/path"
+Running in memory-only mode (settings won't persist).`
+}
+
+/* Save settings with error handling */
+const saveSettings = async (settings: Settings, path: string): Promise<SettingsResult> => {
+	try {
+		// Ensure directory exists
+		try {
+			await fs.mkdir(path, { recursive: true })
+		} catch (error) {
+			if (error instanceof Error && 'code' in error && error.code === 'EACCES') {
+				return {
+					success: false,
+					error: getPermissionErrorMessage(path, 'write')
 				}
-			},
-		},
-	])
-
-	if (customPath.toLowerCase() === "skip") {
-		settingsData = { userId: uuidv4(), analyticsConsent: false }
-		console.warn("⚠️ Running in memory-only mode - settings will not be saved")
-		return
-	}
-
-	customConfigPath = customPath
-
-	try {
-		const exportCmd =
-			platform() === "win32"
-				? `$env:SMITHERY_CONFIG_PATH="${customConfigPath}"`
-				: `export SMITHERY_CONFIG_PATH="${customConfigPath}"`
-		const profileFile =
-			platform() === "win32"
-				? join(homedir(), "Documents", "WindowsPowerShell", "profile.ps1")
-				: join(homedir(), ".bashrc")
-
-		await fs.appendFile(profileFile, `\n${exportCmd}\n`)
-		console.log(`Added to ${profileFile}. Restart your shell to apply.`)
-	} catch (error) {
-		console.log(
-			`\n⚠️ Note: Add this line to your shell profile to persist the config path:\nexport SMITHERY_CONFIG_PATH="${customConfigPath}"`,
-		)
-	}
-}
-
-async function saveSettings(): Promise<void> {
-	const settingsPath = join(getSettingsPath(), "settings.json")
-	await fs.writeFile(settingsPath, JSON.stringify(settingsData, null, 2))
-}
-
-export async function initializeSettings(): Promise<void> {
-	const settingsPath = join(getSettingsPath(), "settings.json")
-
-	try {
-		await fs.mkdir(getSettingsPath(), { recursive: true })
-	} catch (error: unknown) {
-		if (
-			typeof error === "object" &&
-			error &&
-			"code" in error &&
-			error.code === "EACCES"
-		) {
-			const { action } = await inquirer.prompt([
-				{
-					type: "list",
-					name: "action",
-					message: "Default config directory not writable. Choose action:",
-					choices: [
-						{ name: "Specify custom path", value: "custom" },
-						{ name: "Continue without saving settings", value: "skip" },
-					],
-				},
-			])
-
-			switch (action) {
-				case "custom":
-					await handleCustomPath()
-					break
-				case "skip":
-					settingsData = { userId: uuidv4(), analyticsConsent: false }
-					console.warn(
-						"⚠️ Running in memory-only mode - settings will not be saved",
-					)
-					return
 			}
-		} else {
-			throw error
+			throw error // Re-throw other errors to be caught below
+		}
+		
+		const settingsPath = join(path, "settings.json")
+		await fs.writeFile(settingsPath, JSON.stringify(settings, null, 2))
+		return { success: true, data: settings }
+	} catch (error) {
+		const isPermissionError = error instanceof Error && 'code' in error && error.code === 'EACCES'
+		return { 
+			success: false, 
+			error: isPermissionError
+				? getPermissionErrorMessage(path, 'write')
+				: `Failed to save settings: ${error instanceof Error ? error.message : String(error)}`
 		}
 	}
+}
 
+// Load settings with error handling
+const loadSettings = async (path: string): Promise<SettingsResult> => {
 	try {
+		const settingsPath = join(path, "settings.json")
 		try {
 			const content = await fs.readFile(settingsPath, "utf-8")
-			settingsData = JSON.parse(content)
-
-			if (settingsData && !settingsData.userId) {
-				settingsData.userId = uuidv4()
-				await saveSettings()
+			const parsed = JSON.parse(content)
+			
+			if (!validateSettings(parsed)) {
+				const fixed = { ...createDefaultSettings(), ...parsed }
+				await saveSettings(fixed, path)
+				return { success: true, data: fixed }
 			}
-
-			if (settingsData && settingsData.analyticsConsent === undefined) {
-				settingsData.analyticsConsent = false
-				await saveSettings()
-			}
+			
+			return { success: true, data: parsed }
 		} catch (error) {
-			settingsData = {
-				userId: uuidv4(),
-				analyticsConsent: false,
-				cache: { servers: {} },
+			if (error instanceof Error && 'code' in error) {
+				if (error.code === 'ENOENT') {
+					const defaultSettings = createDefaultSettings()
+					const saveResult = await saveSettings(defaultSettings, path)
+					return saveResult
+				}
+				if (error.code === 'EACCES') {
+					return {
+						success: false,
+						error: getPermissionErrorMessage(path, 'read')
+					}
+				}
 			}
-			await saveSettings()
+			throw error // Re-throw other errors to be caught below
 		}
 	} catch (error) {
-		console.error("Failed to initialize settings:", error)
-		throw error
+		return { 
+			success: false, 
+			error: `Failed to load settings: ${error instanceof Error ? error.message : String(error)}`
+		}
 	}
 }
 
-export function getUserId(): string {
-	if (!settingsData) {
-		throw new Error("Settings not initialized")
+// Initialize settings with better error handling
+export const initializeSettings = async (): Promise<SettingsResult> => {
+	try {
+		const settingsPath = getSettingsPath()
+		await fs.mkdir(settingsPath, { recursive: true })
+		
+		const result = await loadSettings(settingsPath)
+		if (result.success && result.data) {
+			settingsData = result.data
+		}
+		isInitialized = true
+		return result
+	} catch (error) {
+		// Fallback to in-memory settings if file operations fail
+		settingsData = createDefaultSettings()
+		isInitialized = true
+		return { 
+			success: true, 
+			data: settingsData,
+			error: `Warning: Running in memory-only mode - ${error instanceof Error ? error.message : String(error)}`
+		}
 	}
-	return settingsData.userId
 }
 
-export function getAnalyticsConsent(): boolean {
-	if (!settingsData) {
-		throw new Error("Settings not initialized")
+// Safe getters with proper error handling
+export const getUserId = (): string => {
+	if (!isInitialized) {
+		initializeSettings()
 	}
-	return settingsData.analyticsConsent ?? false
+	return settingsData?.userId || createDefaultSettings().userId
 }
 
-export async function setAnalyticsConsent(consent: boolean): Promise<void> {
-	if (!settingsData) {
-		throw new Error("Settings not initialized")
+export const getAnalyticsConsent = (): boolean => {
+	if (!isInitialized) {
+		initializeSettings()
 	}
+	return settingsData?.analyticsConsent || false
+}
+
+// Safe setter with proper error handling
+export const setAnalyticsConsent = async (consent: boolean): Promise<SettingsResult> => {
+	if (!isInitialized) {
+		initializeSettings()
+	}
+	if (!settingsData) {
+		settingsData = createDefaultSettings()
+	}
+	
 	settingsData.analyticsConsent = consent
-	await saveSettings()
+	return await saveSettings(settingsData, getSettingsPath())
 }
