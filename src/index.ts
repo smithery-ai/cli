@@ -5,7 +5,7 @@ import { uninstall } from "./commands/uninstall.js"
 import { listInstalledServers } from "./commands/installed.js"
 import { get } from "./commands/view.js"
 import { inspect } from "./commands/inspect.js"
-import { run } from "./commands/run.js"
+import { run } from "./run/index.js" // use new run function
 import { type ValidClient, VALID_CLIENTS } from "./constants.js"
 import chalk from "chalk"
 
