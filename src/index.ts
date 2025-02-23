@@ -13,18 +13,30 @@ const command = process.argv[2]
 const packageName = process.argv[3]
 const clientFlag = process.argv.indexOf("--client")
 const configFlag = process.argv.indexOf("--config")
-const client = (() => {
+
+const validateClient = (command: string, clientFlag: number): ValidClient | undefined => {
+	/* Run command doesn't need client validation */
+	if (command === "run") {
+		return undefined;
+	}
+
+	/* For other commands, client is required */
 	if (clientFlag === -1) {
 		console.error(chalk.yellow(`Please specify a client using --client. Valid options are: ${VALID_CLIENTS.join(", ")}`))
 		process.exit(1)
 	}
+
+	/* only accept valid clients */
 	const requestedClient = process.argv[clientFlag + 1]
 	if (!VALID_CLIENTS.includes(requestedClient as ValidClient)) {
 		console.error(chalk.yellow(`Invalid client "${requestedClient}". Valid options are: ${VALID_CLIENTS.join(", ")}`))
 		process.exit(1)
 	}
-	return requestedClient as ValidClient
-})()
+
+	return requestedClient as ValidClient;
+}
+
+const client = validateClient(command, clientFlag);
 const config =
 	configFlag !== -1
 		? (() => {
@@ -39,27 +51,27 @@ const config =
 async function main() {
 	switch (command) {
 		case "inspect":
-			await inspect(client)
+			await inspect(client!)
 			break
 		case "install":
 			if (!packageName) {
 				console.error("Please provide a package name to install")
 				process.exit(1)
 			}
-			await installServer(packageName, client)
+			await installServer(packageName, client!)
 			break
 		case "uninstall":
-			await uninstall(packageName, client)
+			await uninstall(packageName, client!)
 			break
 		case "installed":
-			await listInstalledServers(client)
+			await listInstalledServers(client!)
 			break
 		case "view":
 			if (!packageName) {
 				console.error("Please provide a package ID to get details")
 				process.exit(1)
 			}
-			await get(packageName, client)
+			await get(packageName, client!)
 			break
 		case "run":
 			if (!packageName) {
