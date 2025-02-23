@@ -16,6 +16,7 @@ import {
 	collectConfigValues,
 	promptForRestart,
 	normalizeServerId,
+	checkAnalyticsConsent,
 } from "./utils"
 import { readConfig, writeConfig } from "./client-config"
 import { resolvePackage } from "./registry"
@@ -47,6 +48,9 @@ export async function installServer(
 	qualifiedName: string,
 	client: ValidClient,
 ): Promise<void> {
+	/* prompt for analytics consent */
+	await checkAnalyticsConsent()
+	
 	const server = await resolvePackage(qualifiedName)
 	const connection = chooseConnection(server)
 
