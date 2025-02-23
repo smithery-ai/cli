@@ -19,7 +19,7 @@ import {
 	promptForRestart,
 	normalizeServerId,
 } from "./utils"
-import { readConfig, writeConfig } from "./config"
+import { readConfig, writeConfig } from "./client-config"
 import { resolvePackage } from "./registry"
 import chalk from "chalk"
 
@@ -28,18 +28,31 @@ function chooseConnection(server: RegistryServer): ConnectionDetails {
 		throw new Error("No connection configuration found")
 	}
 
-	const priorityOrder = ["ws", "npx", "uvx", "docker"]
+	/* Prioritise WebSocket connection */
+	const wsConnection = server.connections.find(conn => conn.type === "ws")
+	if (wsConnection) return wsConnection
 
+	/* For stdio connections, prioritize published ones first */
+	const stdioConnections = server.connections.filter(conn => conn.type === "stdio")
+	const priorityOrder = ["npx", "uvx", "docker"]
+
+	/* Try published connections first */
 	for (const priority of priorityOrder) {
-		const connection = server.connections.find((conn) =>
-			priority === "ws"
-				? conn.type === "ws"
-				: conn.type === "stdio" && conn.stdioFunction?.startsWith(priority),
+		const connection = stdioConnections.find(
+			conn => conn.stdioFunction?.startsWith(priority) && conn.published
 		)
 		if (connection) return connection
 	}
 
-	/* fallback to first available connection if non available */
+	/* Try unpublished connections */
+	for (const priority of priorityOrder) {
+		const connection = stdioConnections.find(
+			conn => conn.stdioFunction?.startsWith(priority)
+		)
+		if (connection) return connection
+	}
+
+	/* Fallback to first available connection if none match criteria */
 	return server.connections[0]
 }
 
@@ -92,7 +105,7 @@ export async function installServer(
 	const normalizedName =
 		normalizeServerId(
 			qualifiedName,
-		) /* normaise because some clients doesn't do well slashes */
+		) /* normalise because some clients don't do well with slashes */
 	config.mcpServers[normalizedName] = serverConfig
 	writeConfig(config, client)
 	console.log(
