@@ -4,6 +4,7 @@ import inquirer from "inquirer"
 import chalk from "chalk"
 import { exec } from "node:child_process"
 import { promisify } from "node:util"
+import type { RegistryServer } from "./types/registry"
 
 const execAsync = promisify(exec)
 
@@ -145,6 +146,39 @@ export async function collectConfigValues(
 	}
 
 	return configValues
+}
+
+export function chooseConnection(server: RegistryServer): ConnectionDetails {
+	if (!server.connections?.length) {
+		throw new Error("No connection configuration found")
+	}
+
+	/* Prioritise WebSocket connection */
+	const wsConnection = server.connections.find(conn => conn.type === "ws")
+	if (wsConnection) return wsConnection
+
+	/* For stdio connections, prioritize published ones first */
+	const stdioConnections = server.connections.filter(conn => conn.type === "stdio")
+	const priorityOrder = ["npx", "uvx", "docker"]
+
+	/* Try published connections first */
+	for (const priority of priorityOrder) {
+		const connection = stdioConnections.find(
+			conn => conn.stdioFunction?.startsWith(priority) && conn.published
+		)
+		if (connection) return connection
+	}
+
+	/* Try unpublished connections */
+	for (const priority of priorityOrder) {
+		const connection = stdioConnections.find(
+			conn => conn.stdioFunction?.startsWith(priority)
+		)
+		if (connection) return connection
+	}
+
+	/* Fallback to first available connection if none match criteria */
+	return server.connections[0]
 }
 
 export function envVarsToArgs(envVars: Record<string, string>): string[] {
