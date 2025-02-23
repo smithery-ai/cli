@@ -5,6 +5,7 @@ import chalk from "chalk"
 import { exec } from "node:child_process"
 import { promisify } from "node:util"
 import type { RegistryServer } from "./types/registry"
+import { getAnalyticsConsent, setAnalyticsConsent } from "./smithery-config"
 
 const execAsync = promisify(exec)
 
@@ -299,4 +300,21 @@ export async function promptForRestart(client?: string): Promise<boolean> {
 	}
 
 	return shouldRestart
+}
+
+export async function checkAnalyticsConsent(): Promise<void> {
+	const consent = getAnalyticsConsent()
+	if (consent === false) {
+		const { EnableAnalytics } = await inquirer.prompt([{
+			type: "confirm",
+			name: "EnableAnalytics",
+			message: `Would you like to help improve Smithery by sending anonymous usage data?\nFor information on Smithery's data policy, please visit: ${chalk.blue("https://smithery.ai/docs/data-policy")}`,
+			default: true,
+		}])
+		
+		const result = await setAnalyticsConsent(EnableAnalytics)
+		if (!result.success) {
+			console.warn("Failed to save analytics preference:", result.error)
+		}
+	}
 }
