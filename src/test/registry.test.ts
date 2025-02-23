@@ -43,7 +43,7 @@ describe("registry", () => {
 						}),
 				})
 			}
-			if (url === "http://test-registry.com/servers/test-ws-server") {
+			if (url === "https://registry.smithery.ai/servers/test-ws-server") {
 				return Promise.resolve({
 					ok: true,
 					json: () =>
@@ -60,7 +60,7 @@ describe("registry", () => {
 			return Promise.reject(new Error(`Unexpected URL: ${url}`))
 		})
 
-		await fetchConnection("test-ws-server", {}, "http://test-registry.com")
+		await fetchConnection("test-ws-server", {})
 
 		// Verify the well-known endpoint was called
 		expect(mockFetch).toHaveBeenCalledWith(
@@ -69,7 +69,7 @@ describe("registry", () => {
 
 		// Verify the registry endpoint was called
 		expect(mockFetch).toHaveBeenCalledWith(
-			"http://test-registry.com/servers/test-ws-server",
+			"https://registry.smithery.ai/servers/test-ws-server",
 			expect.objectContaining({
 				method: "POST",
 				headers: { "Content-Type": "application/json" },

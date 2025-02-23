@@ -3,7 +3,7 @@
 import { installServer } from "../install"
 import { resolvePackage } from "../registry"
 import { collectConfigValues } from "../utils"
-import { readConfig, writeConfig } from "../config"
+import { readConfig, writeConfig } from "../client-config"
 import type { ValidClient } from "../constants"
 import chalk from "chalk"
 

@@ -186,4 +186,8 @@ export class SmitherySettings {
 		this.data.analyticsConsent = consent
 		await this.save()
 	}
+
+	public static setCustomConfigPath(path: string | null): void {
+		SmitherySettings.CUSTOM_CONFIG_PATH = path
+	}
 }
