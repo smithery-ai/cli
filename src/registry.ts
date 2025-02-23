@@ -1,4 +1,4 @@
-import fetch from "node-fetch"
+import fetch from "cross-fetch" /* some runtimes use node <18 causing fetch not defined issue */
 import { config as dotenvConfig } from "dotenv"
 import {
 	type StdioConnection,
@@ -8,25 +8,21 @@ import {
 } from "./types/registry"
 import { type WSConnection, WSConnectionSchema } from "./types/registry"
 
-// Load environment variables from .env file
 dotenvConfig()
 
-const getEndpoint = (customEndpoint?: string): string => {
-	const endpoint =
-		customEndpoint ||
-		process.env.REGISTRY_ENDPOINT ||
-		"https://registry.smithery.ai"
+const getEndpoint = (): string => {
+	const endpoint = process.env.REGISTRY_ENDPOINT || "https://registry.smithery.ai"
 	if (!endpoint) {
 		throw new Error("REGISTRY_ENDPOINT environment variable is not set")
 	}
 	return endpoint
 }
 
+/* Get server details from registry */
 export const resolvePackage = async (
 	packageName: string,
-	customEndpoint?: string,
 ): Promise<RegistryServer> => {
-	const endpoint = getEndpoint(customEndpoint)
+	const endpoint = getEndpoint()
 
 	try {
 		const response = await fetch(`${endpoint}/servers/${packageName}`, {
@@ -37,7 +33,7 @@ export const resolvePackage = async (
 		})
 
 		if (!response.ok) {
-			const errorData = await response.json().catch(() => null)
+			const errorData = await response.json().catch(() => null) as { error?: string }
 			const errorMessage = errorData?.error || (await response.text())
 
 			if (response.status === 404) {
@@ -49,7 +45,7 @@ export const resolvePackage = async (
 			)
 		}
 
-		return await response.json()
+		return (await response.json()) as RegistryServer
 	} catch (error) {
 		if (error instanceof Error) {
 			throw error // Pass through our custom errors without wrapping
@@ -61,31 +57,14 @@ export const resolvePackage = async (
 export const fetchConnection = async (
 	packageName: string,
 	config: ServerConfig,
-	customEndpoint?: string,
 ): Promise<StdioConnection | WSConnection> => {
-	const endpoint = getEndpoint(customEndpoint)
+	const endpoint = getEndpoint()
 
 	try {
-		const server = await resolvePackage(packageName, customEndpoint)
+		const server = await resolvePackage(packageName)
 
-		// Find WS connection if available
+		/* Find WS connection if available */
 		const wsConnection = server.connections.find((conn) => conn.type === "ws")
-
-		// If WS connection exists and has deploymentUrl, fetch the config schema
-		if (wsConnection?.type === "ws" && wsConnection.deploymentUrl) {
-			try {
-				const configResponse = await fetch(
-					`${wsConnection.deploymentUrl}/.well-known/mcp/smithery.json`,
-				)
-
-				if (configResponse.ok) {
-					const wsConfig = await configResponse.json()
-					wsConnection.configSchema = wsConfig.configSchema
-				}
-			} catch (error) {
-				console.warn(`Failed to fetch WS config schema: ${error}`)
-			}
-		}
 
 		const requestBody = {
 			connectionType: wsConnection ? "ws" : "stdio",
@@ -107,10 +86,10 @@ export const fetchConnection = async (
 			)
 		}
 
-		const data = await response.json()
+		const data = await response.json() as { success: boolean; result?: StdioConnection | WSConnection }
 
 		if (!data.success || !data.result) {
-			throw new Error("Invalid server response format")
+			throw new Error("Invalid registry response format")
 		}
 
 		return wsConnection
@@ -118,7 +97,7 @@ export const fetchConnection = async (
 			: StdioConnectionSchema.parse(data.result)
 	} catch (error) {
 		if (error instanceof Error) {
-			throw new Error(`Failed to fetch server metadata: ${error.message}`)
+			throw new Error(`Failed to fetch server connection: ${error.message}`)
 		}
 		throw error
 	}
