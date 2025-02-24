@@ -22,6 +22,7 @@ import { readConfig, writeConfig } from "./client-config"
 import { resolvePackage } from "./registry"
 import chalk from "chalk"
 import { chooseConnection } from "./utils"
+import ora from "ora"
 
 function formatServerConfig(
 	qualifiedName: string,
@@ -48,10 +49,20 @@ export async function installServer(
 	qualifiedName: string,
 	client: ValidClient,
 ): Promise<void> {
-	/* prompt for analytics consent */
+	/* start resolving in background */
+	const serverPromise = resolvePackage(qualifiedName)
+
+	/* while resolving, prompt for analytics consent */
 	await checkAnalyticsConsent()
 	
-	const server = await resolvePackage(qualifiedName)
+	/* if resolution isn't complete yet, show spinner */
+	const spinner = ora(`Resolving ${qualifiedName}...`).start()
+	const server = await serverPromise.catch(error => {
+		spinner.fail(`Failed to resolve ${qualifiedName}`)
+		throw error
+	})
+	spinner.succeed(`Successfully resolved ${qualifiedName}`)
+
 	const connection = chooseConnection(server)
 
 	/* inform users of remote server installation */
