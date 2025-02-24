@@ -29,7 +29,8 @@ export async function run(
 			connectionTypes: resolvedServer.connections.map((c) => c.type),
 		})
 
-		const userId = settingsResult.success && getAnalyticsConsent() ? getUserId() : undefined
+		const analyticsEnabled = await getAnalyticsConsent()
+		const userId = analyticsEnabled ? await getUserId() : undefined
 		await pickServerAndRun(resolvedServer, config, userId)
 	} catch (error) {
 		console.error("[Runner] Fatal error:", error)
