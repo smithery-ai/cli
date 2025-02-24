@@ -54,8 +54,8 @@ export class ConfigManager {
 			),
 			windsurf: path.join(homeDir, ".codeium", "windsurf", "mcp_config.json"),
 			witsy: path.join(baseDir, "Witsy", "settings.json"),
+			enconvo: path.join(homeDir, ".config", "enconvo", "mcp_config.json")
 		}
-
 		ConfigManager.configPath = clientPaths.claude
 		ConfigManager.clientPaths = clientPaths
 	}
