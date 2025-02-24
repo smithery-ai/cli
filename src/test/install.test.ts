@@ -13,10 +13,22 @@ jest.mock("../utils", () => ({
 	collectConfigValues: jest.fn(),
 	promptForRestart: jest.fn(),
 }))
-jest.mock("../config")
+jest.mock("../client-config")
+jest.mock("ora", () => {
+	const mockOra = () => ({
+		start: () => ({
+			succeed: jest.fn(),
+			fail: jest.fn(),
+		}),
+	})
+	return mockOra
+})
 
 describe("installServer", () => {
 	const testClient: ValidClient = "claude"
+	const mockExit = jest.spyOn(process, 'exit').mockImplementation((number) => {
+		throw new Error('process.exit: ' + number)
+	})
 
 	beforeEach(() => {
 		jest.clearAllMocks()
@@ -164,14 +176,12 @@ describe("installServer", () => {
 		)
 	})
 
-	test("throws error when resolvePackage fails", async () => {
-		;(resolvePackage as jest.Mock).mockRejectedValue(
-			new Error("Package not found"),
-		)
-
-		await expect(installServer("invalid-server", testClient)).rejects.toThrow(
-			"Package not found",
-		)
+	test("should handle package not found error", async () => {
+		const error = new Error("Package not found")
+		;(resolvePackage as jest.Mock).mockRejectedValue(error)
+		
+		await expect(installServer("invalid-server", testClient)).rejects.toThrow()
+		expect(mockExit).toHaveBeenCalledWith(1)
 	})
 
 	test("throws error when collectConfigValues fails", async () => {
@@ -190,8 +200,43 @@ describe("installServer", () => {
 			new Error("Config collection failed"),
 		)
 
-		await expect(installServer("test-server", testClient)).rejects.toThrow(
-			"Config collection failed",
-		)
+		await expect(installServer("test-server", testClient)).rejects.toThrow()
+		expect(mockExit).toHaveBeenCalledWith(1)
 	})
+
+	test("completes installation when analytics check fails", async () => {
+		// Setup mocks
+		const mockServer = {
+			qualifiedName: "test-server",
+			displayName: "Test Server",
+			connections: [
+				{
+					type: "stdio" as const,
+					stdioFunction: "npx",
+					configSchema: {},
+				},
+			],
+		};
+		(resolvePackage as jest.Mock).mockResolvedValue(mockServer);
+		(collectConfigValues as jest.Mock).mockResolvedValue({ key: "value" });
+		(readConfig as jest.Mock).mockReturnValue({ mcpServers: {} });
+		
+		// Mock analytics failure
+		const mockCheckAnalytics = jest.spyOn(require("../utils"), "checkAnalyticsConsent")
+			.mockRejectedValue(new Error("Analytics config failed"));
+		const consoleWarnSpy = jest.spyOn(console, "warn").mockImplementation();
+
+		// Execute
+		await installServer("test-server", testClient);
+
+		// Verify
+		expect(mockCheckAnalytics).toHaveBeenCalled();
+		expect(consoleWarnSpy).toHaveBeenCalledWith(
+			expect.stringContaining("[Analytics] Failed to check consent:"),
+			"Analytics config failed"
+		);
+		// Installation should still complete
+		expect(writeConfig).toHaveBeenCalled();
+		expect(mockExit).not.toHaveBeenCalled();
+	});
 })
