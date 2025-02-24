@@ -6,6 +6,7 @@ import { v4 as uuidv4 } from "uuid"
 interface Settings {
 	userId: string
 	analyticsConsent: boolean
+	askedConsent: boolean
 	cache?: {
 		servers?: Record<
 			string,
@@ -26,10 +27,11 @@ interface SettingsResult {
 let settingsData: Settings | null = null
 let isInitialized = false
 
-/* Default settings with consent as false */
+/* Default settings with consent and hasAskedConsent as false */
 const createDefaultSettings = (): Settings => ({
 	userId: uuidv4(),
 	analyticsConsent: false,
+	askedConsent: false,
 	cache: { servers: {} }
 })
 
@@ -50,8 +52,10 @@ const getSettingsPath = (): string => {
 
 const validateSettings = (settings: unknown): settings is Settings => {
 	if (!settings || typeof settings !== 'object') return false
-	const { userId, analyticsConsent } = settings as Partial<Settings>
-	return typeof userId === 'string' && typeof analyticsConsent === 'boolean'
+	const { userId, analyticsConsent, askedConsent } = settings as Partial<Settings>
+	return typeof userId === 'string' && 
+		   typeof analyticsConsent === 'boolean' &&
+		   typeof askedConsent === 'boolean'
 }
 
 // Enhance the error message helper to handle both read and write scenarios
@@ -102,6 +106,9 @@ const loadSettings = async (path: string): Promise<SettingsResult> => {
 			
 			if (!validateSettings(parsed)) {
 				const fixed = { ...createDefaultSettings(), ...parsed }
+				if (fixed.analyticsConsent) {
+					fixed.askedConsent = true
+				}
 				await saveSettings(fixed, path)
 				return { success: true, data: fixed }
 			}
@@ -133,9 +140,12 @@ const loadSettings = async (path: string): Promise<SettingsResult> => {
 
 // Initialize settings with better error handling
 export const initializeSettings = async (): Promise<SettingsResult> => {
+	if (isInitialized && settingsData) {
+		return { success: true, data: settingsData };
+	}
+
 	try {
 		const settingsPath = getSettingsPath()
-		await fs.mkdir(settingsPath, { recursive: true })
 		
 		const result = await loadSettings(settingsPath)
 		if (result.success && result.data) {
@@ -156,29 +166,38 @@ export const initializeSettings = async (): Promise<SettingsResult> => {
 }
 
 // Safe getters with proper error handling
-export const getUserId = (): string => {
-	if (!isInitialized) {
-		initializeSettings()
-	}
+export const getUserId = async (): Promise<string> => {
+	await initializeSettings()
 	return settingsData?.userId || createDefaultSettings().userId
 }
 
-export const getAnalyticsConsent = (): boolean => {
-	if (!isInitialized) {
-		initializeSettings()
+export const getAnalyticsConsent = async (): Promise<boolean> => {
+	const result = await initializeSettings()
+	if (!result.success || !result.data) {
+		// If we can't load settings, default to false
+		console.warn('[Config] Failed to load analytics settings:', result.error)
+		return false
 	}
-	return settingsData?.analyticsConsent || false
+	return result.data.analyticsConsent
 }
 
 // Safe setter with proper error handling
 export const setAnalyticsConsent = async (consent: boolean): Promise<SettingsResult> => {
-	if (!isInitialized) {
-		initializeSettings()
-	}
-	if (!settingsData) {
-		settingsData = createDefaultSettings()
+	const initResult = await initializeSettings()
+	if (!initResult.success || !initResult.data) {
+		return initResult
 	}
 	
-	settingsData.analyticsConsent = consent
+	settingsData = {
+		...initResult.data,
+		analyticsConsent: consent,
+		askedConsent: true
+	}
+	
 	return await saveSettings(settingsData, getSettingsPath())
+}
+
+export const hasAskedConsent = async (): Promise<boolean> => {
+	await initializeSettings()
+	return settingsData?.askedConsent || false
 }
