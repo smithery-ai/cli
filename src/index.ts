@@ -1,9 +1,7 @@
 #!/usr/bin/env node
 
 import { installServer } from "./install.js"
-import { uninstall } from "./commands/uninstall.js"
-// import { listInstalledServers } from "./commands/installed.js"
-// import { get } from "./commands/view.js"
+import { uninstallServer } from "./uninstall.js"
 import { inspectServer } from "./inspect.js"
 import { run } from "./run/index.js" // use new run function
 import { type ValidClient, VALID_CLIENTS } from "./constants.js"
@@ -72,7 +70,7 @@ async function main() {
 			await installServer(packageName, client!)
 			break
 		case "uninstall":
-			await uninstall(packageName, client!)
+			await uninstallServer(packageName, client!)
 			break
 		case "run":
 			if (!packageName) {
