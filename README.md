@@ -1,4 +1,4 @@
-# Smithery CLI ![NPM Version](https://img.shields.io/npm/v/%40smithery%2Fcli)
+# Smithery CLI ![NPM Version](https://img.shields.io/npm/v/%40smithery%2Fcli) ![NPM Downloads](https://img.shields.io/npm/dt/%40smithery%2Fcli)
 
 The Smithery registry installer and manager for Model Context Protocol (MCP) servers, designed to be client-agnostic.
 
@@ -13,38 +13,33 @@ npx @smithery/cli <command>
 
 ### Available Commands
 
-- `installed` - List installed servers (interactive browser)
-- `install <server>` - Install a server
-  - `--client <name>` - Specify LLM client (e.g. claude)
-- `uninstall <server>` - Remove an installed server
-- `view <server>` - Show server details
-- `inspect` - Interactive server inspection tool
+- `install <package>` - Install a package
+  - `--client <name>` - Specify the AI client
+- `uninstall <package>` - Uninstall a package
+  - `--client <name>` - Specify the AI client
+- `inspect <server-id>` - Inspect a server interactively
+- `run <server-id>` - Run a server
+  - `--config <json>` - Provide configuration for the server
 
 ### Examples
 
 ```bash
-# Browse installed servers
-npx @smithery/cli installed
-
-# Install a server (defaults to --client claude)
-npx @smithery/cli install mcp-obsidian
-
-# Install for specific client
+# Install a server (requires --client flag)
 npx @smithery/cli install mcp-obsidian --client claude
 
-# View server details
-npx @smithery/cli view mcp-obsidian
-
 # Remove a server
-npx @smithery/cli uninstall mcp-obsidian
+npx @smithery/cli uninstall mcp-obsidian --client claude
 
-# Inspect installed servers
-npx @smithery/cli inspect
+# Inpsect a specific server from smithery's registry
+npx @smithery/cli inspect mcp-obsidian
+
+# Run a server with configuration
+npx @smithery/cli run mcp-obsidian --config '"{\\"key\\":\\"value\\"}"'
 ```
 
 ### Important Notes
 
-- Remember to restart Claude after uninstalling server
+- Remember to restart your AI client after installing or uninstalling servers
 - Use the `inspect` command for interactive server testing
 - Run without arguments to see the help menu
 
@@ -74,13 +69,13 @@ This guide will help you get started with developing for @smithery/cli.
 
 ```bash
 # List all servers
-npx . list
+npx . <command>
 
-# Get details about a specific server
-npx . get <server-id>
+# Inspect a specific server
+npx . inspect <server-id>
 
 # Install a server
-npx . install <server-name>
+npx . install <server-name> --client <client-name>
 ```
 
 ## Contributing
