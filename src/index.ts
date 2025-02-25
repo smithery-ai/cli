@@ -2,9 +2,9 @@
 
 import { installServer } from "./install.js"
 import { uninstall } from "./commands/uninstall.js"
-import { listInstalledServers } from "./commands/installed.js"
-import { get } from "./commands/view.js"
-import { inspect } from "./commands/inspect.js"
+// import { listInstalledServers } from "./commands/installed.js"
+// import { get } from "./commands/view.js"
+import { inspectServer } from "./inspect.js"
 import { run } from "./run/index.js" // use new run function
 import { type ValidClient, VALID_CLIENTS } from "./constants.js"
 import chalk from "chalk"
@@ -15,8 +15,8 @@ const clientFlag = process.argv.indexOf("--client")
 const configFlag = process.argv.indexOf("--config")
 
 const validateClient = (command: string, clientFlag: number): ValidClient | undefined => {
-	/* Run command doesn't need client validation */
-	if (command === "run") {
+	/* Run and inspect commands don't need client validation */
+	if (command === "run" || command === "inspect") {
 		return undefined;
 	}
 
@@ -51,7 +51,7 @@ const config =
 async function main() {
 	switch (command) {
 		case "inspect":
-			await inspect(client!)
+			await inspectServer(packageName)
 			break
 		case "install":
 			if (!packageName) {
@@ -62,16 +62,6 @@ async function main() {
 			break
 		case "uninstall":
 			await uninstall(packageName, client!)
-			break
-		case "installed":
-			await listInstalledServers(client!)
-			break
-		case "view":
-			if (!packageName) {
-				console.error("Please provide a package ID to get details")
-				process.exit(1)
-			}
-			await get(packageName, client!)
 			break
 		case "run":
 			if (!packageName) {
