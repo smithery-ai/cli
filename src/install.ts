@@ -51,14 +51,14 @@ export async function installServer(
 ): Promise<void> {
 	/* start resolving in background */
 	const serverPromise = resolvePackage(qualifiedName)
-	
+
 	// Add error handling around analytics check
 	try {
 		await checkAnalyticsConsent()
 	} catch (error) {
 		console.warn(
-			chalk.yellow('[Analytics] Failed to check consent:'),
-			error instanceof Error ? error.message : String(error)
+			chalk.yellow("[Analytics] Failed to check consent:"),
+			error instanceof Error ? error.message : String(error),
 		)
 	}
 
@@ -99,7 +99,9 @@ export async function installServer(
 		if (error instanceof Error) {
 			console.error(chalk.red(`Error: ${error.message}`))
 		} else {
-			console.error(chalk.red('An unexpected error occurred during installation'))
+			console.error(
+				chalk.red("An unexpected error occurred during installation"),
+			)
 		}
 		process.exit(1)
 	}

@@ -26,8 +26,8 @@ jest.mock("ora", () => {
 
 describe("installServer", () => {
 	const testClient: ValidClient = "claude"
-	const mockExit = jest.spyOn(process, 'exit').mockImplementation((number) => {
-		throw new Error('process.exit: ' + number)
+	const mockExit = jest.spyOn(process, "exit").mockImplementation((number) => {
+		throw new Error(`process.exit: ${number}`)
 	})
 
 	beforeEach(() => {
@@ -179,7 +179,7 @@ describe("installServer", () => {
 	test("should handle package not found error", async () => {
 		const error = new Error("Package not found")
 		;(resolvePackage as jest.Mock).mockRejectedValue(error)
-		
+
 		await expect(installServer("invalid-server", testClient)).rejects.toThrow()
 		expect(mockExit).toHaveBeenCalledWith(1)
 	})
@@ -216,27 +216,28 @@ describe("installServer", () => {
 					configSchema: {},
 				},
 			],
-		};
-		(resolvePackage as jest.Mock).mockResolvedValue(mockServer);
-		(collectConfigValues as jest.Mock).mockResolvedValue({ key: "value" });
-		(readConfig as jest.Mock).mockReturnValue({ mcpServers: {} });
-		
+		}
+		;(resolvePackage as jest.Mock).mockResolvedValue(mockServer)
+		;(collectConfigValues as jest.Mock).mockResolvedValue({ key: "value" })
+		;(readConfig as jest.Mock).mockReturnValue({ mcpServers: {} })
+
 		// Mock analytics failure
-		const mockCheckAnalytics = jest.spyOn(require("../utils"), "checkAnalyticsConsent")
-			.mockRejectedValue(new Error("Analytics config failed"));
-		const consoleWarnSpy = jest.spyOn(console, "warn").mockImplementation();
+		const mockCheckAnalytics = jest
+			.spyOn(require("../utils"), "checkAnalyticsConsent")
+			.mockRejectedValue(new Error("Analytics config failed"))
+		const consoleWarnSpy = jest.spyOn(console, "warn").mockImplementation()
 
 		// Execute
-		await installServer("test-server", testClient);
+		await installServer("test-server", testClient)
 
 		// Verify
-		expect(mockCheckAnalytics).toHaveBeenCalled();
+		expect(mockCheckAnalytics).toHaveBeenCalled()
 		expect(consoleWarnSpy).toHaveBeenCalledWith(
 			expect.stringContaining("[Analytics] Failed to check consent:"),
-			"Analytics config failed"
-		);
+			"Analytics config failed",
+		)
 		// Installation should still complete
-		expect(writeConfig).toHaveBeenCalled();
-		expect(mockExit).not.toHaveBeenCalled();
-	});
+		expect(writeConfig).toHaveBeenCalled()
+		expect(mockExit).not.toHaveBeenCalled()
+	})
 })

@@ -22,34 +22,36 @@ export async function uninstallServer(
 	client: ValidClient,
 ): Promise<void> {
 	const spinner = ora(`Uninstalling ${qualifiedName}...`).start()
-	
+
 	try {
 		/* read config from client */
 		const config = readConfig(client)
 		const normalizedName = normalizeServerId(qualifiedName)
-		
+
 		/* check if server exists in config */
 		if (!config.mcpServers[normalizedName]) {
 			spinner.fail(`Server ${qualifiedName} is not installed for ${client}`)
 			return
 		}
-		
+
 		/* remove server from config */
 		delete config.mcpServers[normalizedName]
 		writeConfig(config, client)
-		
+
 		spinner.succeed(`Successfully uninstalled ${qualifiedName}`)
 		console.log(
-			chalk.green(`${qualifiedName} successfully uninstalled from ${client}`)
+			chalk.green(`${qualifiedName} successfully uninstalled from ${client}`),
 		)
-		
+
 		await promptForRestart(client)
 	} catch (error) {
 		spinner.fail(`Failed to uninstall ${qualifiedName}`)
 		if (error instanceof Error) {
 			console.error(chalk.red(`Error: ${error.message}`))
 		} else {
-			console.error(chalk.red('An unexpected error occurred during uninstallation'))
+			console.error(
+				chalk.red("An unexpected error occurred during uninstallation"),
+			)
 		}
 		process.exit(1)
 	}

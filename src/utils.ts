@@ -5,7 +5,12 @@ import chalk from "chalk"
 import { exec } from "node:child_process"
 import { promisify } from "node:util"
 import type { RegistryServer } from "./types/registry"
-import { getAnalyticsConsent, setAnalyticsConsent, hasAskedConsent, initializeSettings } from "./smithery-config"
+import {
+	getAnalyticsConsent,
+	setAnalyticsConsent,
+	hasAskedConsent,
+	initializeSettings,
+} from "./smithery-config"
 
 const execAsync = promisify(exec)
 
@@ -155,25 +160,27 @@ export function chooseConnection(server: RegistryServer): ConnectionDetails {
 	}
 
 	/* Prioritise WebSocket connection */
-	const wsConnection = server.connections.find(conn => conn.type === "ws")
+	const wsConnection = server.connections.find((conn) => conn.type === "ws")
 	if (wsConnection) return wsConnection
 
 	/* For stdio connections, prioritize published ones first */
-	const stdioConnections = server.connections.filter(conn => conn.type === "stdio")
+	const stdioConnections = server.connections.filter(
+		(conn) => conn.type === "stdio",
+	)
 	const priorityOrder = ["npx", "uvx", "docker"]
 
 	/* Try published connections first */
 	for (const priority of priorityOrder) {
 		const connection = stdioConnections.find(
-			conn => conn.stdioFunction?.startsWith(priority) && conn.published
+			(conn) => conn.stdioFunction?.startsWith(priority) && conn.published,
 		)
 		if (connection) return connection
 	}
 
 	/* Try unpublished connections */
 	for (const priority of priorityOrder) {
-		const connection = stdioConnections.find(
-			conn => conn.stdioFunction?.startsWith(priority)
+		const connection = stdioConnections.find((conn) =>
+			conn.stdioFunction?.startsWith(priority),
 		)
 		if (connection) return connection
 	}
@@ -306,7 +313,7 @@ export async function checkAnalyticsConsent(): Promise<void> {
 	// Initialize settings and handle potential failures
 	const initResult = await initializeSettings()
 	if (!initResult.success) {
-		console.warn('[Analytics] Failed to initialize settings:', initResult.error)
+		console.warn("[Analytics] Failed to initialize settings:", initResult.error)
 		return // Exit early if we can't initialize settings
 	}
 
@@ -315,25 +322,29 @@ export async function checkAnalyticsConsent(): Promise<void> {
 	if (consent) return
 
 	const askedConsent = await hasAskedConsent()
-	
+
 	/* Only ask if we haven't asked before and consent is false */
 	if (!askedConsent) {
 		try {
-			const { EnableAnalytics } = await inquirer.prompt([{
-				type: "confirm",
-				name: "EnableAnalytics",
-				message: `Would you like to help improve Smithery by sending anonymous usage data?\nFor information on Smithery's data policy, please visit: ${chalk.blue("https://smithery.ai/docs/data-policy")}`,
-				default: true,
-			}])
-			
+			const { EnableAnalytics } = await inquirer.prompt([
+				{
+					type: "confirm",
+					name: "EnableAnalytics",
+					message: `Would you like to help improve Smithery by sending anonymous usage data?\nFor information on Smithery's data policy, please visit: ${chalk.blue("https://smithery.ai/docs/data-policy")}`,
+					default: true,
+				},
+			])
+
 			const result = await setAnalyticsConsent(EnableAnalytics)
 			if (!result.success) {
-				console.warn('[Smithery] Failed to save preference:', result.error)
+				console.warn("[Smithery] Failed to save preference:", result.error)
 			}
 		} catch (error) {
 			// Handle potential inquirer errors
-			console.warn('[Smithery] Failed to prompt for consent:', 
-				error instanceof Error ? error.message : String(error))
+			console.warn(
+				"[Smithery] Failed to prompt for consent:",
+				error instanceof Error ? error.message : String(error),
+			)
 		}
 	}
 }

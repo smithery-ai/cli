@@ -94,7 +94,7 @@ export const createStdioRunner = async (
 		const processedConfig = await formatConfigValues(stdioConnection, config)
 		const serverConfig = await fetchConnection(
 			serverDetails.qualifiedName,
-			processedConfig
+			processedConfig,
 		)
 
 		if (!serverConfig || "type" in serverConfig) {
@@ -120,7 +120,11 @@ export const createStdioRunner = async (
 				}
 				finalCommand = path.normalize(finalCommand)
 			} catch (error) {
-				console.error("[Runner] Could not resolve full path for command:", command, error)
+				console.error(
+					"[Runner] Could not resolve full path for command:",
+					command,
+					error,
+				)
 				finalCommand = command
 			}
 		} else {

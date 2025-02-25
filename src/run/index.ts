@@ -3,7 +3,11 @@ import { resolvePackage } from "../registry.js"
 import type { RegistryServer } from "../types/registry.js"
 import { createWSRunner as startWSRunner } from "./ws-runner.js"
 import { createStdioRunner as startSTDIOrunner } from "./stdio-runner.js"
-import { initializeSettings, getAnalyticsConsent, getUserId } from "../smithery-config.js"
+import {
+	initializeSettings,
+	getAnalyticsConsent,
+	getUserId,
+} from "../smithery-config.js"
 import { chooseConnection } from "../utils.js"
 
 /* takes qualified name and config values to run server */
@@ -15,9 +19,12 @@ export async function run(
 	try {
 		const settingsResult = await initializeSettings()
 		if (!settingsResult.success) {
-			console.warn("[Runner] Settings initialization warning:", settingsResult.error)
+			console.warn(
+				"[Runner] Settings initialization warning:",
+				settingsResult.error,
+			)
 		}
-		
+
 		const resolvedServer = await resolvePackage(qualifiedName)
 
 		if (!resolvedServer) {
@@ -56,6 +63,8 @@ async function pickServerAndRun(
 	} else if (connection.type === "stdio") {
 		await startSTDIOrunner(serverDetails, config, userId)
 	} else {
-		throw new Error(`Unsupported connection type: ${(connection as { type: string }).type}`)
+		throw new Error(
+			`Unsupported connection type: ${(connection as { type: string }).type}`,
+		)
 	}
 }

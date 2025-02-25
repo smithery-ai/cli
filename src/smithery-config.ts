@@ -32,34 +32,41 @@ const createDefaultSettings = (): Settings => ({
 	userId: uuidv4(),
 	analyticsConsent: false,
 	askedConsent: false,
-	cache: { servers: {} }
+	cache: { servers: {} },
 })
 
 const getSettingsPath = (): string => {
 	if (process.env.SMITHERY_CONFIG_PATH) return process.env.SMITHERY_CONFIG_PATH
 
 	const paths = {
-		win32: () => join(
-			process.env.APPDATA || join(homedir(), "AppData", "Roaming"),
-			"smithery"
-		),
+		win32: () =>
+			join(
+				process.env.APPDATA || join(homedir(), "AppData", "Roaming"),
+				"smithery",
+			),
 		darwin: () => join(homedir(), "Library", "Application Support", "smithery"),
-		default: () => join(homedir(), ".config", "smithery")
+		default: () => join(homedir(), ".config", "smithery"),
 	}
 
 	return (paths[platform() as keyof typeof paths] || paths.default)()
 }
 
 const validateSettings = (settings: unknown): settings is Settings => {
-	if (!settings || typeof settings !== 'object') return false
-	const { userId, analyticsConsent, askedConsent } = settings as Partial<Settings>
-	return typeof userId === 'string' && 
-		   typeof analyticsConsent === 'boolean' &&
-		   typeof askedConsent === 'boolean'
+	if (!settings || typeof settings !== "object") return false
+	const { userId, analyticsConsent, askedConsent } =
+		settings as Partial<Settings>
+	return (
+		typeof userId === "string" &&
+		typeof analyticsConsent === "boolean" &&
+		typeof askedConsent === "boolean"
+	)
 }
 
 // Enhance the error message helper to handle both read and write scenarios
-const getPermissionErrorMessage = (path: string, operation: 'read' | 'write'): string => {
+const getPermissionErrorMessage = (
+	path: string,
+	operation: "read" | "write",
+): string => {
 	return `Permission denied: Cannot ${operation} settings at ${path}
 Fix with: chmod 700 "${path}"
 Or use: export SMITHERY_CONFIG_PATH="/custom/path"
@@ -67,31 +74,39 @@ Running in memory-only mode (settings won't persist).`
 }
 
 /* Save settings with error handling */
-const saveSettings = async (settings: Settings, path: string): Promise<SettingsResult> => {
+const saveSettings = async (
+	settings: Settings,
+	path: string,
+): Promise<SettingsResult> => {
 	try {
 		// Ensure directory exists
 		try {
 			await fs.mkdir(path, { recursive: true })
 		} catch (error) {
-			if (error instanceof Error && 'code' in error && error.code === 'EACCES') {
+			if (
+				error instanceof Error &&
+				"code" in error &&
+				error.code === "EACCES"
+			) {
 				return {
 					success: false,
-					error: getPermissionErrorMessage(path, 'write')
+					error: getPermissionErrorMessage(path, "write"),
 				}
 			}
 			throw error // Re-throw other errors to be caught below
 		}
-		
+
 		const settingsPath = join(path, "settings.json")
 		await fs.writeFile(settingsPath, JSON.stringify(settings, null, 2))
 		return { success: true, data: settings }
 	} catch (error) {
-		const isPermissionError = error instanceof Error && 'code' in error && error.code === 'EACCES'
-		return { 
-			success: false, 
+		const isPermissionError =
+			error instanceof Error && "code" in error && error.code === "EACCES"
+		return {
+			success: false,
 			error: isPermissionError
-				? getPermissionErrorMessage(path, 'write')
-				: `Failed to save settings: ${error instanceof Error ? error.message : String(error)}`
+				? getPermissionErrorMessage(path, "write")
+				: `Failed to save settings: ${error instanceof Error ? error.message : String(error)}`,
 		}
 	}
 }
@@ -103,7 +118,7 @@ const loadSettings = async (path: string): Promise<SettingsResult> => {
 		try {
 			const content = await fs.readFile(settingsPath, "utf-8")
 			const parsed = JSON.parse(content)
-			
+
 			if (!validateSettings(parsed)) {
 				const fixed = { ...createDefaultSettings(), ...parsed }
 				if (fixed.analyticsConsent) {
@@ -112,28 +127,28 @@ const loadSettings = async (path: string): Promise<SettingsResult> => {
 				await saveSettings(fixed, path)
 				return { success: true, data: fixed }
 			}
-			
+
 			return { success: true, data: parsed }
 		} catch (error) {
-			if (error instanceof Error && 'code' in error) {
-				if (error.code === 'ENOENT') {
+			if (error instanceof Error && "code" in error) {
+				if (error.code === "ENOENT") {
 					const defaultSettings = createDefaultSettings()
 					const saveResult = await saveSettings(defaultSettings, path)
 					return saveResult
 				}
-				if (error.code === 'EACCES') {
+				if (error.code === "EACCES") {
 					return {
 						success: false,
-						error: getPermissionErrorMessage(path, 'read')
+						error: getPermissionErrorMessage(path, "read"),
 					}
 				}
 			}
 			throw error // Re-throw other errors to be caught below
 		}
 	} catch (error) {
-		return { 
-			success: false, 
-			error: `Failed to load settings: ${error instanceof Error ? error.message : String(error)}`
+		return {
+			success: false,
+			error: `Failed to load settings: ${error instanceof Error ? error.message : String(error)}`,
 		}
 	}
 }
@@ -141,12 +156,12 @@ const loadSettings = async (path: string): Promise<SettingsResult> => {
 // Initialize settings with better error handling
 export const initializeSettings = async (): Promise<SettingsResult> => {
 	if (isInitialized && settingsData) {
-		return { success: true, data: settingsData };
+		return { success: true, data: settingsData }
 	}
 
 	try {
 		const settingsPath = getSettingsPath()
-		
+
 		const result = await loadSettings(settingsPath)
 		if (result.success && result.data) {
 			settingsData = result.data
@@ -157,10 +172,10 @@ export const initializeSettings = async (): Promise<SettingsResult> => {
 		// Fallback to in-memory settings if file operations fail
 		settingsData = createDefaultSettings()
 		isInitialized = true
-		return { 
-			success: true, 
+		return {
+			success: true,
 			data: settingsData,
-			error: `Warning: Running in memory-only mode - ${error instanceof Error ? error.message : String(error)}`
+			error: `Warning: Running in memory-only mode - ${error instanceof Error ? error.message : String(error)}`,
 		}
 	}
 }
@@ -175,25 +190,27 @@ export const getAnalyticsConsent = async (): Promise<boolean> => {
 	const result = await initializeSettings()
 	if (!result.success || !result.data) {
 		// If we can't load settings, default to false
-		console.warn('[Config] Failed to load analytics settings:', result.error)
+		console.warn("[Config] Failed to load analytics settings:", result.error)
 		return false
 	}
 	return result.data.analyticsConsent
 }
 
 // Safe setter with proper error handling
-export const setAnalyticsConsent = async (consent: boolean): Promise<SettingsResult> => {
+export const setAnalyticsConsent = async (
+	consent: boolean,
+): Promise<SettingsResult> => {
 	const initResult = await initializeSettings()
 	if (!initResult.success || !initResult.data) {
 		return initResult
 	}
-	
+
 	settingsData = {
 		...initResult.data,
 		analyticsConsent: consent,
-		askedConsent: true
+		askedConsent: true,
 	}
-	
+
 	return await saveSettings(settingsData, getSettingsPath())
 }
 

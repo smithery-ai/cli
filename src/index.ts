@@ -14,29 +14,40 @@ const packageName = process.argv[3]
 const clientFlag = process.argv.indexOf("--client")
 const configFlag = process.argv.indexOf("--config")
 
-const validateClient = (command: string, clientFlag: number): ValidClient | undefined => {
+const validateClient = (
+	command: string,
+	clientFlag: number,
+): ValidClient | undefined => {
 	/* Run and inspect commands don't need client validation */
 	if (command === "run" || command === "inspect") {
-		return undefined;
+		return undefined
 	}
 
 	/* For other commands, client is required */
 	if (clientFlag === -1) {
-		console.error(chalk.yellow(`Please specify a client using --client. Valid options are: ${VALID_CLIENTS.join(", ")}`))
+		console.error(
+			chalk.yellow(
+				`Please specify a client using --client. Valid options are: ${VALID_CLIENTS.join(", ")}`,
+			),
+		)
 		process.exit(1)
 	}
 
 	/* only accept valid clients */
 	const requestedClient = process.argv[clientFlag + 1]
 	if (!VALID_CLIENTS.includes(requestedClient as ValidClient)) {
-		console.error(chalk.yellow(`Invalid client "${requestedClient}". Valid options are: ${VALID_CLIENTS.join(", ")}`))
+		console.error(
+			chalk.yellow(
+				`Invalid client "${requestedClient}". Valid options are: ${VALID_CLIENTS.join(", ")}`,
+			),
+		)
 		process.exit(1)
 	}
 
-	return requestedClient as ValidClient;
+	return requestedClient as ValidClient
 }
 
-const client = validateClient(command, clientFlag);
+const client = validateClient(command, clientFlag)
 const config =
 	configFlag !== -1
 		? (() => {

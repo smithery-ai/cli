@@ -6,12 +6,13 @@ import {
 	type ServerConfig,
 	type RegistryServer,
 } from "./types/registry"
-import { type WSConnection } from "./types/registry"
+import type { WSConnection } from "./types/registry"
 
 dotenvConfig()
 
 const getEndpoint = (): string => {
-	const endpoint = process.env.REGISTRY_ENDPOINT || "https://registry.smithery.ai"
+	const endpoint =
+		process.env.REGISTRY_ENDPOINT || "https://registry.smithery.ai"
 	if (!endpoint) {
 		throw new Error("REGISTRY_ENDPOINT environment variable is not set")
 	}
@@ -33,7 +34,9 @@ export const resolvePackage = async (
 		})
 
 		if (!response.ok) {
-			const errorData = await response.json().catch(() => null) as { error?: string }
+			const errorData = (await response.json().catch(() => null)) as {
+				error?: string
+			}
 			const errorMessage = errorData?.error || (await response.text())
 
 			if (response.status === 404) {
@@ -81,7 +84,10 @@ export const fetchConnection = async (
 			)
 		}
 
-		const data = await response.json() as { success: boolean; result?: StdioConnection | WSConnection }
+		const data = (await response.json()) as {
+			success: boolean
+			result?: StdioConnection | WSConnection
+		}
 
 		if (!data.success || !data.result) {
 			throw new Error("Invalid registry response format")
