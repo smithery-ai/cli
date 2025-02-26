@@ -6,6 +6,7 @@ import { collectConfigValues } from "../utils"
 import { readConfig, writeConfig } from "../client-config"
 import type { ValidClient } from "../constants"
 import chalk from "chalk"
+import * as logger from "../logger"
 
 jest.mock("../registry")
 jest.mock("../utils", () => ({
@@ -14,6 +15,7 @@ jest.mock("../utils", () => ({
 	promptForRestart: jest.fn(),
 }))
 jest.mock("../client-config")
+jest.mock("../logger")
 jest.mock("ora", () => {
 	const mockOra = () => ({
 		start: () => ({
@@ -32,6 +34,8 @@ describe("installServer", () => {
 
 	beforeEach(() => {
 		jest.clearAllMocks()
+		// Mock the verbose function to prevent test output pollution
+		jest.spyOn(logger, "verbose").mockImplementation(() => {})
 	})
 
 	test("installs stdio server successfully", async () => {
@@ -239,5 +243,35 @@ describe("installServer", () => {
 		// Installation should still complete
 		expect(writeConfig).toHaveBeenCalled()
 		expect(mockExit).not.toHaveBeenCalled()
+	})
+	
+	test("verbose logging is called with appropriate messages", async () => {
+		// Setup mocks
+		const mockServer = {
+			qualifiedName: "test-server",
+			displayName: "Test Server",
+			connections: [
+				{
+					type: "stdio" as const,
+					stdioFunction: "npx",
+					configSchema: {},
+				},
+			],
+		}
+		;(resolvePackage as jest.Mock).mockResolvedValue(mockServer)
+		;(collectConfigValues as jest.Mock).mockResolvedValue({ key: "value" })
+		;(readConfig as jest.Mock).mockReturnValue({ mcpServers: {} })
+		
+		// Reset the mock to track calls
+		jest.spyOn(logger, "verbose").mockClear()
+		
+		// Execute
+		await installServer("test-server", testClient)
+		
+		// Verify verbose was called with expected messages
+		expect(logger.verbose).toHaveBeenCalledWith(expect.stringContaining("Starting installation"))
+		expect(logger.verbose).toHaveBeenCalledWith(expect.stringContaining("Resolving package"))
+		expect(logger.verbose).toHaveBeenCalledWith(expect.stringContaining("Checking analytics consent"))
+		// We don't need to check every call, just ensure it's being used
 	})
 })

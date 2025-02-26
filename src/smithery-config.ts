@@ -2,6 +2,7 @@ import { homedir, platform } from "node:os"
 import { join } from "node:path"
 import { promises as fs } from "node:fs"
 import { v4 as uuidv4 } from "uuid"
+import { verbose } from "./logger"
 
 interface Settings {
 	userId: string
@@ -78,11 +79,17 @@ const saveSettings = async (
 	settings: Settings,
 	path: string,
 ): Promise<SettingsResult> => {
+	verbose(`Saving settings to ${path}`)
+	verbose(`Settings data: ${JSON.stringify(settings, null, 2)}`)
+	
 	try {
 		// Ensure directory exists
 		try {
+			verbose(`Ensuring directory exists: ${path}`)
 			await fs.mkdir(path, { recursive: true })
+			verbose(`Directory check completed`)
 		} catch (error) {
+			verbose(`Directory creation error: ${JSON.stringify(error)}`)
 			if (
 				error instanceof Error &&
 				"code" in error &&
@@ -97,9 +104,12 @@ const saveSettings = async (
 		}
 
 		const settingsPath = join(path, "settings.json")
+		verbose(`Writing settings to file: ${settingsPath}`)
 		await fs.writeFile(settingsPath, JSON.stringify(settings, null, 2))
+		verbose(`Settings successfully written`)
 		return { success: true, data: settings }
 	} catch (error) {
+		verbose(`Settings save error: ${JSON.stringify(error)}`)
 		const isPermissionError =
 			error instanceof Error && "code" in error && error.code === "EACCES"
 		return {
@@ -113,26 +123,37 @@ const saveSettings = async (
 
 // Load settings with error handling
 const loadSettings = async (path: string): Promise<SettingsResult> => {
+	verbose(`Loading settings from ${path}`)
+	
 	try {
 		const settingsPath = join(path, "settings.json")
+		verbose(`Reading settings file: ${settingsPath}`)
+		
 		try {
 			const content = await fs.readFile(settingsPath, "utf-8")
+			verbose(`Settings file content loaded`)
 			const parsed = JSON.parse(content)
+			verbose(`Settings parsed: ${JSON.stringify(parsed, null, 2)}`)
 
 			if (!validateSettings(parsed)) {
+				verbose(`Settings validation failed, fixing settings`)
 				const fixed = { ...createDefaultSettings(), ...parsed }
 				if (fixed.analyticsConsent) {
 					fixed.askedConsent = true
 				}
+				verbose(`Fixed settings: ${JSON.stringify(fixed, null, 2)}`)
 				await saveSettings(fixed, path)
 				return { success: true, data: fixed }
 			}
 
 			return { success: true, data: parsed }
 		} catch (error) {
+			verbose(`Settings read error: ${JSON.stringify(error)}`)
 			if (error instanceof Error && "code" in error) {
 				if (error.code === "ENOENT") {
+					verbose(`Settings file not found, creating default settings`)
 					const defaultSettings = createDefaultSettings()
+					verbose(`Default settings: ${JSON.stringify(defaultSettings, null, 2)}`)
 					const saveResult = await saveSettings(defaultSettings, path)
 					return saveResult
 				}
@@ -146,6 +167,7 @@ const loadSettings = async (path: string): Promise<SettingsResult> => {
 			throw error // Re-throw other errors to be caught below
 		}
 	} catch (error) {
+		verbose(`Settings load error: ${JSON.stringify(error)}`)
 		return {
 			success: false,
 			error: `Failed to load settings: ${error instanceof Error ? error.message : String(error)}`,

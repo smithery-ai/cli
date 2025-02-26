@@ -1,16 +1,21 @@
 #!/usr/bin/env node
 
-import { installServer } from "./install.js"
-import { uninstallServer } from "./uninstall.js"
-import { inspectServer } from "./inspect.js"
-import { run } from "./run/index.js" // use new run function
-import { type ValidClient, VALID_CLIENTS } from "./constants.js"
+import { installServer } from "./install"
+import { uninstallServer } from "./uninstall"
+import { inspectServer } from "./inspect"
+import { run } from "./run/index" // use new run function
+import { type ValidClient, VALID_CLIENTS } from "./constants"
 import chalk from "chalk"
+import { setVerbose } from "./logger"
 
 const command = process.argv[2]
 const packageName = process.argv[3]
 const clientFlag = process.argv.indexOf("--client")
 const configFlag = process.argv.indexOf("--config")
+const verboseFlag = process.argv.includes("--verbose")
+
+// Set verbose mode based on flag
+setVerbose(verboseFlag)
 
 const validateClient = (
 	command: string,
@@ -88,6 +93,7 @@ async function main() {
 			console.log("  view <package>        Get details for a specific package")
 			console.log("  inspect               Inspect installed servers")
 			console.log("  run <server-id>       Run a server")
+			console.log("  --verbose             Show detailed logs")
 			process.exit(1)
 	}
 }
