@@ -20,6 +20,7 @@ npx @smithery/cli <command>
 - `inspect <server-id>` - Inspect a server interactively
 - `run <server-id>` - Run a server
   - `--config <json>` - Provide configuration for the server
+- `--verbose` - Show detailed logs for debugging
 
 ### Examples
 
@@ -35,6 +36,9 @@ npx @smithery/cli inspect mcp-obsidian
 
 # Run a server with configuration
 npx @smithery/cli run mcp-obsidian --config '"{\\"key\\":\\"value\\"}"'
+
+# Install with verbose logging for debugging
+npx @smithery/cli install mcp-obsidian --client claude --verbose
 ```
 
 ### Important Notes
@@ -42,6 +46,7 @@ npx @smithery/cli run mcp-obsidian --config '"{\\"key\\":\\"value\\"}"'
 - Remember to restart your AI client after installing or uninstalling servers
 - Use the `inspect` command for interactive server testing
 - Run without arguments to see the help menu
+- Use `--verbose` flag for detailed logs when troubleshooting
 
 ## Development
 
@@ -76,6 +81,9 @@ npx . inspect <server-id>
 
 # Install a server
 npx . install <server-name> --client <client-name>
+
+# Run with verbose logging
+npx . <command> --verbose
 ```
 
 ## Contributing
