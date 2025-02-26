@@ -51,7 +51,7 @@ export async function installServer(
 	client: ValidClient,
 ): Promise<void> {
 	verbose(`Starting installation of ${qualifiedName} for client ${client}`)
-	
+
 	/* start resolving in background */
 	verbose(`Resolving package: ${qualifiedName}`)
 	const serverPromise = resolvePackage(qualifiedName)
@@ -96,7 +96,7 @@ export async function installServer(
 		/* collect config values from user */
 		const configValues = await collectConfigValues(connection)
 		verbose(`Collected config values: ${JSON.stringify(configValues, null, 2)}`)
-		
+
 		verbose("Formatting server configuration...")
 		const serverConfig = formatServerConfig(qualifiedName, configValues)
 		verbose(`Formatted server config: ${JSON.stringify(serverConfig, null, 2)}`)
@@ -107,13 +107,13 @@ export async function installServer(
 		verbose("Normalizing server ID...")
 		const normalizedName = normalizeServerId(qualifiedName)
 		verbose(`Normalized server ID: ${normalizedName}`)
-		
+
 		verbose("Updating client configuration...")
 		config.mcpServers[normalizedName] = serverConfig
 		verbose("Writing updated configuration...")
 		writeConfig(config, client)
 		verbose("Configuration successfully written")
-		
+
 		console.log(
 			chalk.green(`${qualifiedName} successfully installed for ${client}`),
 		)
@@ -122,7 +122,9 @@ export async function installServer(
 		verbose("Installation process completed")
 	} catch (error) {
 		spinner.fail(`Failed to install ${qualifiedName}`)
-		verbose(`Installation error: ${error instanceof Error ? error.stack : JSON.stringify(error)}`)
+		verbose(
+			`Installation error: ${error instanceof Error ? error.stack : JSON.stringify(error)}`,
+		)
 		if (error instanceof Error) {
 			console.error(chalk.red(`Error: ${error.message}`))
 		} else {

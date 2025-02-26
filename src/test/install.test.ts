@@ -244,7 +244,7 @@ describe("installServer", () => {
 		expect(writeConfig).toHaveBeenCalled()
 		expect(mockExit).not.toHaveBeenCalled()
 	})
-	
+
 	test("verbose logging is called with appropriate messages", async () => {
 		// Setup mocks
 		const mockServer = {
@@ -261,17 +261,23 @@ describe("installServer", () => {
 		;(resolvePackage as jest.Mock).mockResolvedValue(mockServer)
 		;(collectConfigValues as jest.Mock).mockResolvedValue({ key: "value" })
 		;(readConfig as jest.Mock).mockReturnValue({ mcpServers: {} })
-		
+
 		// Reset the mock to track calls
 		jest.spyOn(logger, "verbose").mockClear()
-		
+
 		// Execute
 		await installServer("test-server", testClient)
-		
+
 		// Verify verbose was called with expected messages
-		expect(logger.verbose).toHaveBeenCalledWith(expect.stringContaining("Starting installation"))
-		expect(logger.verbose).toHaveBeenCalledWith(expect.stringContaining("Resolving package"))
-		expect(logger.verbose).toHaveBeenCalledWith(expect.stringContaining("Checking analytics consent"))
+		expect(logger.verbose).toHaveBeenCalledWith(
+			expect.stringContaining("Starting installation"),
+		)
+		expect(logger.verbose).toHaveBeenCalledWith(
+			expect.stringContaining("Resolving package"),
+		)
+		expect(logger.verbose).toHaveBeenCalledWith(
+			expect.stringContaining("Checking analytics consent"),
+		)
 		// We don't need to check every call, just ensure it's being used
 	})
 })

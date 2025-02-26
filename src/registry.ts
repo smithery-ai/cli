@@ -54,11 +54,15 @@ export const resolvePackage = async (
 		}
 
 		verbose("Successfully received server data from registry")
-		const data = await response.json() as RegistryServer
-		verbose(`Server ${packageName} resolved with ${data.connections.length} connection options`)
+		const data = (await response.json()) as RegistryServer
+		verbose(
+			`Server ${packageName} resolved with ${data.connections.length} connection options`,
+		)
 		return data
 	} catch (error) {
-		verbose(`Package resolution error: ${error instanceof Error ? error.message : String(error)}`)
+		verbose(
+			`Package resolution error: ${error instanceof Error ? error.message : String(error)}`,
+		)
 		if (error instanceof Error) {
 			throw error // Pass through our custom errors without wrapping
 		}
@@ -72,7 +76,9 @@ export const fetchConnection = async (
 ): Promise<StdioConnection> => {
 	const endpoint = getEndpoint()
 	verbose(`Fetching connection for ${packageName} from registry at ${endpoint}`)
-	verbose(`Connection config provided (keys: ${Object.keys(config).join(", ")})`)
+	verbose(
+		`Connection config provided (keys: ${Object.keys(config).join(", ")})`,
+	)
 
 	try {
 		const requestBody = {
@@ -112,7 +118,9 @@ export const fetchConnection = async (
 
 		return StdioConnectionSchema.parse(data.result)
 	} catch (error) {
-		verbose(`Connection fetch error: ${error instanceof Error ? error.message : String(error)}`)
+		verbose(
+			`Connection fetch error: ${error instanceof Error ? error.message : String(error)}`,
+		)
 		if (error instanceof Error) {
 			throw new Error(`Failed to fetch server connection: ${error.message}`)
 		}

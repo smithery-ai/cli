@@ -54,15 +54,16 @@ const clientPaths: { [key: string]: string } = {
 export function getConfigPath(client?: string): string {
 	const normalizedClient = client?.toLowerCase() || "claude"
 	verbose(`Getting config path for client: ${normalizedClient}`)
-	
-	const configPath = clientPaths[normalizedClient] ||
+
+	const configPath =
+		clientPaths[normalizedClient] ||
 		path.join(
 			path.dirname(clientPaths.claude),
 			"..",
 			client || "claude",
 			`${normalizedClient}_config.json`,
 		)
-	
+
 	verbose(`Config path resolved to: ${configPath}`)
 	return configPath
 }
@@ -72,12 +73,12 @@ export function readConfig(client: string): ClientConfig {
 	try {
 		const configPath = getConfigPath(client)
 		verbose(`Checking if config file exists at: ${configPath}`)
-		
+
 		if (!fs.existsSync(configPath)) {
 			verbose(`Config file not found, returning default empty config`)
 			return { mcpServers: {} }
 		}
-		
+
 		verbose(`Reading config file content`)
 		const rawConfig = JSON.parse(fs.readFileSync(configPath, "utf8"))
 		verbose(`Config loaded successfully: ${JSON.stringify(rawConfig, null, 2)}`)
@@ -87,18 +88,20 @@ export function readConfig(client: string): ClientConfig {
 			mcpServers: rawConfig.mcpServers || {},
 		}
 	} catch (error) {
-		verbose(`Error reading config: ${error instanceof Error ? error.stack : JSON.stringify(error)}`)
+		verbose(
+			`Error reading config: ${error instanceof Error ? error.stack : JSON.stringify(error)}`,
+		)
 		return { mcpServers: {} }
 	}
 }
 
 export function writeConfig(config: ClientConfig, client?: string): void {
-	verbose(`Writing config for client: ${client || 'default'}`)
+	verbose(`Writing config for client: ${client || "default"}`)
 	verbose(`Config data: ${JSON.stringify(config, null, 2)}`)
-	
+
 	const configPath = getConfigPath(client)
 	const configDir = path.dirname(configPath)
-	
+
 	verbose(`Ensuring config directory exists: ${configDir}`)
 	if (!fs.existsSync(configDir)) {
 		verbose(`Creating directory: ${configDir}`)
@@ -115,10 +118,14 @@ export function writeConfig(config: ClientConfig, client?: string): void {
 		if (fs.existsSync(configPath)) {
 			verbose(`Reading existing config file for merging`)
 			existingConfig = JSON.parse(fs.readFileSync(configPath, "utf8"))
-			verbose(`Existing config loaded: ${JSON.stringify(existingConfig, null, 2)}`)
+			verbose(
+				`Existing config loaded: ${JSON.stringify(existingConfig, null, 2)}`,
+			)
 		}
 	} catch (error) {
-		verbose(`Error reading existing config for merge: ${error instanceof Error ? error.message : String(error)}`)
+		verbose(
+			`Error reading existing config for merge: ${error instanceof Error ? error.message : String(error)}`,
+		)
 		// If reading fails, continue with empty existing config
 	}
 

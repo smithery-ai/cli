@@ -1,13 +1,13 @@
-import chalk from "chalk";
+import chalk from "chalk"
 
-let isVerbose = false;
+let isVerbose = false
 
 export function setVerbose(value: boolean): void {
-  isVerbose = value;
+	isVerbose = value
 }
 
 export function verbose(message: string): void {
-  if (isVerbose) {
-    console.log(chalk.gray(`[verbose] ${message}`));
-  }
-} 
+	if (isVerbose) {
+		console.log(chalk.gray(`[verbose] ${message}`))
+	}
+}

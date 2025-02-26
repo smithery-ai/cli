@@ -81,7 +81,7 @@ const saveSettings = async (
 ): Promise<SettingsResult> => {
 	verbose(`Saving settings to ${path}`)
 	verbose(`Settings data: ${JSON.stringify(settings, null, 2)}`)
-	
+
 	try {
 		// Ensure directory exists
 		try {
@@ -124,11 +124,11 @@ const saveSettings = async (
 // Load settings with error handling
 const loadSettings = async (path: string): Promise<SettingsResult> => {
 	verbose(`Loading settings from ${path}`)
-	
+
 	try {
 		const settingsPath = join(path, "settings.json")
 		verbose(`Reading settings file: ${settingsPath}`)
-		
+
 		try {
 			const content = await fs.readFile(settingsPath, "utf-8")
 			verbose(`Settings file content loaded`)
@@ -153,7 +153,9 @@ const loadSettings = async (path: string): Promise<SettingsResult> => {
 				if (error.code === "ENOENT") {
 					verbose(`Settings file not found, creating default settings`)
 					const defaultSettings = createDefaultSettings()
-					verbose(`Default settings: ${JSON.stringify(defaultSettings, null, 2)}`)
+					verbose(
+						`Default settings: ${JSON.stringify(defaultSettings, null, 2)}`,
+					)
 					const saveResult = await saveSettings(defaultSettings, path)
 					return saveResult
 				}
