@@ -12,6 +12,6 @@
 		"types": ["node"],
 		"noEmit": true
 	},
-	"include": ["src/**/*"],
+	"include": ["src/**/*", "scripts/package-platform.js"],
 	"exclude": ["node_modules", "dist"]
 }
