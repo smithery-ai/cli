@@ -29,12 +29,12 @@ jobs:
     strategy:
       matrix:
         include:
-          # - os: ubuntu-latest
-          #   asset_name: smithery-linux
-          #   asset_path: ./dist/smithery-linux
-          # - os: windows-latest
-          #   asset_name: smithery-windows.exe
-          #   asset_path: ./dist/smithery-win.exe
+          - os: ubuntu-latest
+            asset_name: smithery-linux
+            asset_path: ./dist/smithery-linux
+          - os: windows-latest
+            asset_name: smithery-windows.exe
+            asset_path: ./dist/smithery-win.exe
           - os: macos-latest
             asset_name: smithery-darwin
             asset_path: ./dist/bin/smithery-cli-darwin
