@@ -51,66 +51,11 @@ jobs:
       - name: Install dependencies
         run: npm ci
         
-      - name: Build (non-Windows)
-        if: matrix.os != 'windows-latest'
+      - name: Build
         run: npm run build
         
-      - name: Build (Windows)
-        if: matrix.os == 'windows-latest'
-        shell: powershell
-        run: |
-          # Compile TypeScript first
-          npx tsc
-          
-          # Create a Windows-compatible build script
-          $buildScript = @"
-          import * as esbuild from 'esbuild';
-          import { readFileSync } from 'fs';
-          import path from 'path';
-          
-          async function build() {
-              try {
-                  const pkg = JSON.parse(readFileSync('./package.json', 'utf8'));
-                  
-                  // Bundle the application
-                  await esbuild.build({
-                      entryPoints: ['./dist/index.js'],
-                      bundle: true,
-                      platform: 'node',
-                      target: 'node20',
-                      outfile: './dist/index.js',
-                      banner: {
-                          js: '#!/usr/bin/env node',
-                      },
-                      external: Object.keys(pkg.dependencies || {}).concat(Object.keys(pkg.peerDependencies || {})),
-                  });
-          
-                  console.log('Build completed successfully');
-              } catch (error) {
-                  console.error('Build failed:', error);
-                  process.exit(1);
-              }
-          }
-          
-          build();
-          "@
-          
-          # Write the modified build script to a file
-          $buildScript | Out-File -FilePath "windows-build.mjs" -Encoding utf8
-          
-          # Run the modified build script
-          node windows-build.mjs
-        
       - name: Package binaries
-        run: |
-          if [ "${{ matrix.os }}" == "windows-latest" ]; then
-            npm run package:clean && npm run package:config && npm run package:blob && npm run package:win
-          elif [ "${{ matrix.os }}" == "ubuntu-latest" ]; then
-            npm run package:clean && npm run package:config && npm run package:blob && npm run package:linux
-          elif [ "${{ matrix.os }}" == "macos-latest" ]; then
-            npm run package:clean && npm run package:config && npm run package:blob && npm run package:mac
-          fi
-        shell: bash
+        run: npm run package
         
       - name: Upload Binary
         uses: actions/upload-release-asset@v1
