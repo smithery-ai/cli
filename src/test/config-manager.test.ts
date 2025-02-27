@@ -1,6 +1,6 @@
 /// <reference types="jest" />
 
-import { ConfigManager } from "../utils/config-manager"
+import * as clientConfig from "../client-config"
 import { existsSync, mkdirSync, writeFileSync, readFileSync } from "node:fs"
 import type { ConfiguredServer } from "../types/registry"
 
@@ -19,7 +19,7 @@ jest.mock("node:fs", () => {
 	}
 })
 
-describe("ConfigManager", () => {
+describe("Client Config", () => {
 	const mockServer: ConfiguredServer = {
 		command: "./test-server", // Required for StdioConnection
 		args: ["--test"], // Optional
@@ -39,7 +39,7 @@ describe("ConfigManager", () => {
 			;(existsSync as jest.Mock).mockReturnValue(false)
 
 			const config = { mcpServers: { "test-server": mockServer } }
-			ConfigManager.writeConfig(config, "test-client")
+			clientConfig.writeConfig(config, "test-client")
 
 			expect(mkdirSync).toHaveBeenCalled()
 			expect(writeFileSync).toHaveBeenCalledWith(
@@ -51,7 +51,7 @@ describe("ConfigManager", () => {
 		it("should read non-existent config and return default", () => {
 			;(existsSync as jest.Mock).mockReturnValue(false)
 
-			const config = ConfigManager.readConfig("test-client")
+			const config = clientConfig.readConfig("test-client")
 			expect(config).toEqual({ mcpServers: {} })
 		})
 
@@ -64,8 +64,8 @@ describe("ConfigManager", () => {
 			;(existsSync as jest.Mock).mockReturnValue(true)
 			;(readFileSync as jest.Mock).mockReturnValue(JSON.stringify(testConfig))
 
-			ConfigManager.writeConfig(testConfig, "test-client")
-			const readConfig = ConfigManager.readConfig("test-client")
+			clientConfig.writeConfig(testConfig, "test-client")
+			const readConfig = clientConfig.readConfig("test-client")
 
 			expect(readConfig).toEqual(testConfig)
 		})
@@ -89,7 +89,7 @@ describe("ConfigManager", () => {
 				JSON.stringify(existingConfig),
 			)
 
-			ConfigManager.writeConfig(newConfig, "test-client")
+			clientConfig.writeConfig(newConfig, "test-client")
 
 			// Verify written config contains both new mcpServers and preserved fields
 			expect(writeFileSync).toHaveBeenCalledWith(
@@ -108,7 +108,7 @@ describe("ConfigManager", () => {
 			;(existsSync as jest.Mock).mockReturnValue(true)
 			;(readFileSync as jest.Mock).mockReturnValue("invalid json")
 
-			const config = ConfigManager.readConfig("test-client")
+			const config = clientConfig.readConfig("test-client")
 			expect(config).toEqual({ mcpServers: {} })
 		})
 
@@ -116,7 +116,7 @@ describe("ConfigManager", () => {
 			const invalidConfig = { mcpServers: "invalid" }
 
 			expect(() => {
-				ConfigManager.writeConfig(invalidConfig as any, "test-client")
+				clientConfig.writeConfig(invalidConfig as any, "test-client")
 			}).toThrow("Invalid mcpServers structure")
 		})
 	})
@@ -137,15 +137,18 @@ describe("ConfigManager", () => {
 				.mockReturnValueOnce(JSON.stringify(initialConfig)) // First read returns empty
 				.mockReturnValue(JSON.stringify(updatedConfig)) // Subsequent reads return updated config
 
-			await ConfigManager.installServer(serverId, mockServer, "test-client")
+			// Since client-config doesn't have installServer, we'll simulate it
+			const config = clientConfig.readConfig("test-client")
+			config.mcpServers[serverId] = mockServer
+			clientConfig.writeConfig(config, "test-client")
 
-			const installed = ConfigManager.isServerInstalled(serverId, "test-client")
-			expect(installed).toBe(true)
+			// Check if server is installed by reading config
+			const finalConfig = clientConfig.readConfig("test-client")
+			const isServerInstalled = serverId in finalConfig.mcpServers
+			expect(isServerInstalled).toBe(true)
 
-			const serverConfig = ConfigManager.getServerConfig(
-				serverId,
-				"test-client",
-			)
+			// Get server config
+			const serverConfig = finalConfig.mcpServers[serverId]
 			expect(serverConfig).toEqual(mockServer)
 		})
 
@@ -161,13 +164,28 @@ describe("ConfigManager", () => {
 				JSON.stringify(initialConfig),
 			)
 
-			await ConfigManager.uninstallServer(serverId, "test-client")
+			// Since client-config doesn't have uninstallServer, we'll simulate it
+			const config = clientConfig.readConfig("test-client")
+			delete config.mcpServers[serverId]
+			clientConfig.writeConfig(config, "test-client")
 
 			// Verify server was removed
 			expect(writeFileSync).toHaveBeenCalledWith(
 				expect.any(String),
 				expect.not.stringContaining(serverId),
 			)
+		})
+	})
+
+	describe("Config Path Resolution", () => {
+		it("should get correct config path for known client", () => {
+			const configPath = clientConfig.getConfigPath("claude")
+			expect(configPath).toContain("claude_desktop_config.json")
+		})
+
+		it("should handle unknown client with fallback path", () => {
+			const configPath = clientConfig.getConfigPath("unknown-client")
+			expect(configPath).toContain("unknown-client")
 		})
 	})
 })

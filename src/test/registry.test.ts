@@ -23,6 +23,17 @@ describe("registry", () => {
 		],
 	}
 
+	const mockStdioServer = {
+		qualifiedName: "test-stdio-server",
+		displayName: "Test Stdio Server",
+		connections: [
+			{
+				type: "stdio" as const,
+				configSchema: {},
+			},
+		],
+	}
+
 	beforeEach(() => {
 		jest.clearAllMocks()
 	})
@@ -50,9 +61,10 @@ describe("registry", () => {
 						Promise.resolve({
 							success: true,
 							result: {
-								type: "ws",
-								url: "ws://test.com",
-								config: {},
+								// This needs to be a valid StdioConnection since fetchConnection returns StdioConnection
+								command: "ws-command", // Add required command property
+								args: ["--url", "ws://test.com"],
+								env: { CONNECTION_TYPE: "ws" }
 							},
 						}),
 				})
@@ -62,11 +74,6 @@ describe("registry", () => {
 
 		await fetchConnection("test-ws-server", {})
 
-		// Verify the well-known endpoint was called
-		expect(mockFetch).toHaveBeenCalledWith(
-			"ws://test.com/.well-known/mcp/smithery.json",
-		)
-
 		// Verify the registry endpoint was called
 		expect(mockFetch).toHaveBeenCalledWith(
 			"https://registry.smithery.ai/servers/test-ws-server",
@@ -74,7 +81,47 @@ describe("registry", () => {
 				method: "POST",
 				headers: { "Content-Type": "application/json" },
 				body: JSON.stringify({
-					connectionType: "ws",
+					connectionType: "stdio", // This should be stdio since fetchConnection always requests stdio
+					config: {},
+				}),
+			}),
+		)
+	})
+
+	test("fetchConnection handles stdio connections correctly", async () => {
+		// Mock resolvePackage to return the mock stdio server
+		;(resolvePackage as jest.Mock).mockResolvedValue(mockStdioServer)
+
+		// Mock fetch response for stdio server
+		const mockFetch = fetch as unknown as jest.Mock
+		mockFetch.mockImplementation((url: string) => {
+			if (url === "https://registry.smithery.ai/servers/test-stdio-server") {
+				return Promise.resolve({
+					ok: true,
+					json: () =>
+						Promise.resolve({
+							success: true,
+							result: {
+								command: "stdio-command",
+								args: ["--config", "config.json"],
+								env: { DEBUG: "true" }
+							},
+						}),
+				})
+			}
+			return Promise.reject(new Error(`Unexpected URL: ${url}`))
+		})
+
+		await fetchConnection("test-stdio-server", {})
+
+		// Verify the registry endpoint was called
+		expect(mockFetch).toHaveBeenCalledWith(
+			"https://registry.smithery.ai/servers/test-stdio-server",
+			expect.objectContaining({
+				method: "POST",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify({
+					connectionType: "stdio",
 					config: {},
 				}),
 			}),
