@@ -20,9 +20,9 @@
 		"package:clean": "rimraf sea-config.json sea-prep.blob",
 		"package:config": "npm run build && node -e \"require('fs').writeFileSync('sea-config.json', JSON.stringify({main:'dist/index.js',output:'sea-prep.blob',disableExperimentalSEAWarning:true}, null, 2))\"",
 		"package:blob": "node --experimental-sea-config sea-config.json",
-		"package:win": "rimraf dist/bin && node -e \"require('fs').mkdirSync('dist/bin', { recursive: true })\" && node -e \"require('fs').copyFileSync(process.execPath, 'dist/bin/smithery-cli-win.exe')\" && npx postject dist/bin/smithery-cli-win.exe NODE_SEA_BLOB sea-prep.blob --sentinel-fuse NODE_SEA_FUSE_fce680ab2cc467b6e072b8b5df1996b2",
-		"package:linux": "mkdir -p dist/bin && cp $(command -v node) dist/bin/smithery-cli-linux && npx postject dist/bin/smithery-cli-linux NODE_SEA_BLOB sea-prep.blob --sentinel-fuse NODE_SEA_FUSE_fce680ab2cc467b6e072b8b5df1996b2 && chmod +x dist/bin/smithery-cli-linux",
-		"package:mac": "mkdir -p dist/bin && cp $(command -v node) dist/bin/smithery-cli-darwin && codesign --remove-signature dist/bin/smithery-cli-darwin && npx postject dist/bin/smithery-cli-darwin NODE_SEA_BLOB sea-prep.blob --sentinel-fuse NODE_SEA_FUSE_fce680ab2cc467b6e072b8b5df1996b2 --macho-segment-name NODE_SEA && chmod +x dist/bin/smithery-cli-darwin && codesign --sign - dist/bin/smithery-cli-darwin",
+		"package:win": "rimraf dist/bin && node -e \"require('fs').mkdirSync('dist/bin', { recursive: true })\" && node -e \"require('fs').copyFileSync(process.execPath, 'dist/bin/smithery-win.exe')\" && npx postject dist/bin/smithery-win.exe NODE_SEA_BLOB sea-prep.blob --sentinel-fuse NODE_SEA_FUSE_fce680ab2cc467b6e072b8b5df1996b2",
+		"package:linux": "mkdir -p dist/bin && cp $(command -v node) dist/bin/smithery-linux && npx postject dist/bin/smithery-linux NODE_SEA_BLOB sea-prep.blob --sentinel-fuse NODE_SEA_FUSE_fce680ab2cc467b6e072b8b5df1996b2 && chmod +x dist/bin/smithery-linux",
+		"package:mac": "mkdir -p dist/bin && cp $(command -v node) dist/bin/smithery-darwin && codesign --remove-signature dist/bin/smithery-darwin && npx postject dist/bin/smithery-darwin NODE_SEA_BLOB sea-prep.blob --sentinel-fuse NODE_SEA_FUSE_fce680ab2cc467b6e072b8b5df1996b2 --macho-segment-name NODE_SEA && chmod +x dist/bin/smithery-darwin && codesign --sign - dist/bin/smithery-darwin",
 		"package": "npm run package:clean && npm run package:config && npm run package:blob && tsx scripts/package-platform.ts"
 	},
 	"bin": {

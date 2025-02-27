@@ -37,7 +37,7 @@ jobs:
             asset_path: ./dist/smithery-win.exe
           - os: macos-latest
             asset_name: smithery-darwin
-            asset_path: ./dist/bin/smithery-cli-darwin
+            asset_path: ./dist/bin/smithery-darwin
     
     runs-on: ${{ matrix.os }}
     steps:
