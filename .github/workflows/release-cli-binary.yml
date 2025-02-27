@@ -55,7 +55,15 @@ jobs:
         run: npm run build
         
       - name: Package binaries
-        run: npm run package
+        run: |
+          if [ "${{ matrix.os }}" == "windows-latest" ]; then
+            npm run package:clean && npm run package:config && npm run package:blob && npm run package:win
+          elif [ "${{ matrix.os }}" == "ubuntu-latest" ]; then
+            npm run package:clean && npm run package:config && npm run package:blob && npm run package:linux
+          elif [ "${{ matrix.os }}" == "macos-latest" ]; then
+            npm run package:clean && npm run package:config && npm run package:blob && npm run package:mac
+          fi
+        shell: bash
         
       - name: Upload Binary
         uses: actions/upload-release-asset@v1
