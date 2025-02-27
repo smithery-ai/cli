@@ -9,6 +9,11 @@ dist/
 build/
 *.tsbuildinfo
 
+# SEA packaging artifacts
+sea-config.json
+sea-prep.blob
+dist/bin/
+
 # Environment variables
 .env
 .env.local
