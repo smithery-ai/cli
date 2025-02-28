@@ -1,6 +1,8 @@
-import { WebSocketClientTransport } from "@modelcontextprotocol/sdk/client/websocket.js"
-import { createSmitheryUrl } from "@smithery/sdk/config.js"
+// import { WebSocketClientTransport } from "@modelcontextprotocol/sdk/client/websocket.js"
+// import { createSmitheryUrl } from "@smithery/sdk/config.js"
 import WebSocket from "ws"
+import { Transport } from "@modelcontextprotocol/sdk/shared/transport.js"
+import { ProxyTransport } from "./proxy-transport"
 
 global.WebSocket = WebSocket as any
 
@@ -10,13 +12,11 @@ type Cleanup = () => Promise<void>
 const MAX_RETRIES = 3
 const RETRY_DELAY = 1000
 
-const createTransport = (
-	baseUrl: string,
-	config: Config,
-): WebSocketClientTransport => {
-	const wsUrl = `${baseUrl.replace(/^http/, "ws")}${baseUrl.endsWith("/") ? "" : "/"}ws`
-	const url = createSmitheryUrl(wsUrl, config)
-	return new WebSocketClientTransport(url)
+const createTransport = (baseUrl: string, config: Config): Transport => {
+	return new ProxyTransport(baseUrl, config, {
+		idleTimeout: 5 * 60 * 1000, // 5 minutes
+		maxBuffer: 100,
+	})
 }
 
 export const createWSRunner = async (
