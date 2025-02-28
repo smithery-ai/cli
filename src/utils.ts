@@ -11,6 +11,7 @@ import {
 	hasAskedConsent,
 	initializeSettings,
 } from "./smithery-config"
+import ora from "ora"
 
 const execAsync = promisify(exec)
 
@@ -347,4 +348,55 @@ export async function checkAnalyticsConsent(): Promise<void> {
 			)
 		}
 	}
+}
+
+export async function checkUVInstalled(): Promise<boolean> {
+	try {
+		await execAsync('uvx --version');
+		return true;
+	} catch (error) {
+		return false;
+	}
+}
+
+export async function promptForUVInstall(): Promise<boolean> {
+	const { shouldInstall } = await inquirer.prompt<{ shouldInstall: boolean }>([{
+		type: 'confirm',
+		name: 'shouldInstall',
+		message: 'UV package manager is required for Python MCP servers. Would you like to install it?',
+		default: true
+	}]);
+
+	if (!shouldInstall) {
+		console.warn(chalk.yellow('UV installation was declined. You can install it manually from https://astral.sh/uv'));
+		return false;
+	}
+
+	const spinner = ora('Installing UV package manager...').start();
+	try {
+		if (process.platform === 'win32') {
+			await execAsync('powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"');
+		} else {
+			try {
+				await execAsync('curl -LsSf https://astral.sh/uv/install.sh | sh');
+			} catch {
+				await execAsync('wget -qO- https://astral.sh/uv/install.sh | sh');
+			}
+		}
+		
+		spinner.succeed('✓ UV installed successfully');
+		return true;
+	} catch (error) {
+		spinner.fail('Failed to install UV. You can install it manually from https://astral.sh/uv');
+		return false;
+	}
+}
+
+export function isUVRequired(connection: ConnectionDetails): boolean {
+	// Check for stdio connection with uvx in stdioFunction
+	if (connection.type === 'stdio' && connection.stdioFunction?.includes('uvx')) {
+		return true
+	}
+	
+	return false
 }
