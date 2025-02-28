@@ -17,6 +17,9 @@ import {
 	promptForRestart,
 	normalizeServerId,
 	checkAnalyticsConsent,
+	isUVRequired,
+	checkUVInstalled,
+	promptForUVInstall,
 } from "./utils"
 import { readConfig, writeConfig } from "./client-config"
 import { resolvePackage } from "./registry"
@@ -79,6 +82,18 @@ export async function installServer(
 		verbose("Choosing connection type...")
 		const connection = chooseConnection(server)
 		verbose(`Selected connection: ${JSON.stringify(connection, null, 2)}`)
+
+		/* Check if UV is required and install if needed */
+		if (isUVRequired(connection)) {
+			verbose("UV installation check required")
+			const uvInstalled = await checkUVInstalled()
+			if (!uvInstalled) {
+				const installed = await promptForUVInstall()
+				if (!installed) {
+					console.warn(chalk.yellow("UV is not installed. The server might fail to launch."))
+				}
+			}
+		}
 
 		/* inform users of remote server installation */
 		const remote = server.connections.some(
