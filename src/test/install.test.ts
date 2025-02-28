@@ -7,6 +7,7 @@ import { readConfig, writeConfig } from "../client-config"
 import type { ValidClient } from "../constants"
 import chalk from "chalk"
 import * as logger from "../logger"
+import { isUVRequired, checkUVInstalled, promptForUVInstall } from "../utils"
 
 jest.mock("../registry")
 jest.mock("../utils", () => ({
@@ -279,5 +280,63 @@ describe("installServer", () => {
 			expect.stringContaining("Checking analytics consent"),
 		)
 		// We don't need to check every call, just ensure it's being used
+	})
+
+	test("continues installation with warning when UV is required but declined", async () => {
+		const mockServer = {
+			qualifiedName: "test-server",
+			displayName: "Test Server",
+			connections: [{
+				type: "stdio" as const,
+				stdioFunction: "uvx some-command",
+				configSchema: {},
+			}],
+		}
+		
+		// Mock UV-related functions
+		jest.spyOn(require("../utils"), "isUVRequired").mockReturnValue(true)
+		jest.spyOn(require("../utils"), "checkUVInstalled").mockResolvedValue(false)
+		jest.spyOn(require("../utils"), "promptForUVInstall").mockResolvedValue(false)
+		
+		;(resolvePackage as jest.Mock).mockResolvedValue(mockServer)
+		;(collectConfigValues as jest.Mock).mockResolvedValue({ key: "value" })
+		;(readConfig as jest.Mock).mockReturnValue({ mcpServers: {} })
+		
+		const consoleWarnSpy = jest.spyOn(console, "warn").mockImplementation()
+
+		await installServer("test-server", testClient)
+
+		// Verify warning was shown but installation completed
+		expect(consoleWarnSpy).toHaveBeenCalledWith(chalk.yellow("UV is not installed. The server might fail to launch."))
+		expect(writeConfig).toHaveBeenCalled()
+	})
+
+	test("continues installation with warning when UV installation fails", async () => {
+		const mockServer = {
+			qualifiedName: "test-server",
+			displayName: "Test Server",
+			connections: [{
+				type: "stdio" as const,
+				stdioFunction: "uvx some-command",
+				configSchema: {},
+			}],
+		}
+		
+		// Mock UV-related functions
+		jest.spyOn(require("../utils"), "isUVRequired").mockReturnValue(true)
+		jest.spyOn(require("../utils"), "checkUVInstalled").mockResolvedValue(false)
+		jest.spyOn(require("../utils"), "promptForUVInstall").mockResolvedValue(false) // Installation failed
+		
+		;(resolvePackage as jest.Mock).mockResolvedValue(mockServer)
+		;(collectConfigValues as jest.Mock).mockResolvedValue({ key: "value" })
+		;(readConfig as jest.Mock).mockReturnValue({ mcpServers: {} })
+		
+		const consoleWarnSpy = jest.spyOn(console, "warn").mockImplementation()
+
+		await installServer("test-server", testClient)
+
+		// Verify warning was shown but installation completed
+		expect(consoleWarnSpy).toHaveBeenCalledWith(chalk.yellow("UV is not installed. The server might fail to launch."))
+		expect(writeConfig).toHaveBeenCalled()
 	})
 })
