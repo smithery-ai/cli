@@ -103,6 +103,7 @@ export const createWSRunner = async (
 
 		await transport.start()
 		isReady = true
+		console.error("WebSocket connection established successfully")
 		// Release buffered messages
 		await processMessage(Buffer.from(""))
 	}
