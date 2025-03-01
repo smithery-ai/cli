@@ -7,22 +7,46 @@ import { run } from "./run/index" // use new run function
 import { type ValidClient, VALID_CLIENTS } from "./constants"
 import chalk from "chalk"
 import { setVerbose } from "./logger"
+import { list } from "./list"
 
 const command = process.argv[2]
-const packageName = process.argv[3]
+const argument = process.argv[3]
 const clientFlag = process.argv.indexOf("--client")
 const configFlag = process.argv.indexOf("--config")
 const verboseFlag = process.argv.includes("--verbose")
+const helpFlag = process.argv.includes("--help")
 
 // Set verbose mode based on flag
 setVerbose(verboseFlag)
+
+const showHelp = () => {
+	console.log("Available commands:")
+	console.log("  install <server>     Install a package")
+	console.log("    --client <name>    Specify the AI client")
+	console.log("  uninstall <server>   Uninstall a package")
+	console.log("    --client <name>    Specify the AI client")
+	console.log("  inspect <server>     Inspect server from registry")
+	console.log("  run <server>         Run a server")
+	console.log("    --config <json>    Provide configuration as JSON")
+	console.log("  list clients         List available clients")
+	console.log("")
+	console.log("Global options:")
+	console.log("  --help               Show this help message")
+	console.log("  --verbose            Show detailed logs")
+	process.exit(0)
+}
+
+// Show help if --help flag is present or no command is provided
+if (helpFlag || !command) {
+	showHelp()
+}
 
 const validateClient = (
 	command: string,
 	clientFlag: number,
 ): ValidClient | undefined => {
-	/* Run and inspect commands don't need client validation */
-	if (command === "run" || command === "inspect") {
+	/* Run, inspect, and list commands don't need client validation */
+	if (["run", "inspect", "list"].includes(command)) {
 		return undefined
 	}
 
@@ -65,36 +89,38 @@ const config =
 async function main() {
 	switch (command) {
 		case "inspect":
-			await inspectServer(packageName)
-			break
-		case "install":
-			if (!packageName) {
-				console.error("Please provide a package name to install")
+			if (!argument) {
+				console.error("Please provide a server ID to inspect")
 				process.exit(1)
 			}
-			await installServer(packageName, client!)
+			await inspectServer(argument)
+			break
+		case "install":
+			if (!argument) {
+				console.error("Please provide a server ID to install")
+				process.exit(1)
+			}
+			await installServer(argument, client!)
 			break
 		case "uninstall":
-			await uninstallServer(packageName, client!)
+			if (!argument) {
+				console.error("Please provide a server ID to uninstall")
+				process.exit(1)
+			}
+			await uninstallServer(argument, client!)
 			break
 		case "run":
-			if (!packageName) {
+			if (!argument) {
 				console.error("Please provide a server ID to run")
 				process.exit(1)
 			}
-			await run(packageName, config)
+			await run(argument, config)
+			break
+		case "list":
+			await list(argument)
 			break
 		default:
-			console.log("Available commands:")
-			console.log("  install <package>     Install a package")
-			console.log("    --client <name>     Specify the AI client")
-			console.log("  uninstall [package]   Uninstall a package")
-			console.log("  installed             List installed packages")
-			console.log("  view <package>        Get details for a specific package")
-			console.log("  inspect               Inspect installed servers")
-			console.log("  run <server-id>       Run a server")
-			console.log("  --verbose             Show detailed logs")
-			process.exit(1)
+			showHelp()
 	}
 }
 
