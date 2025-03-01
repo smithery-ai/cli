@@ -20,6 +20,8 @@ npx @smithery/cli <command>
 - `inspect <server-id>` - Inspect a server interactively
 - `run <server-id>` - Run a server
   - `--config <json>` - Provide configuration for the server
+- `list clients` - List available clients
+- `--help` - Show help message
 - `--verbose` - Show detailed logs for debugging
 
 ### Examples
@@ -31,11 +33,17 @@ npx @smithery/cli install mcp-obsidian --client claude
 # Remove a server
 npx @smithery/cli uninstall mcp-obsidian --client claude
 
-# Inpsect a specific server from smithery's registry
+# List available clients
+npx @smithery/cli list clients
+
+# Inspect a specific server from smithery's registry
 npx @smithery/cli inspect mcp-obsidian
 
 # Run a server with configuration
 npx @smithery/cli run mcp-obsidian --config '"{\\"key\\":\\"value\\"}"'
+
+# Show help menu
+npx @smithery/cli --help
 
 # Install with verbose logging for debugging
 npx @smithery/cli install mcp-obsidian --client claude --verbose
