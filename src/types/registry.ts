@@ -7,6 +7,7 @@ import { z } from "zod"
 export interface RegistryServer {
 	qualifiedName: string
 	displayName: string
+	remote: boolean
 	connections: Array<ConnectionDetails>
 }
 

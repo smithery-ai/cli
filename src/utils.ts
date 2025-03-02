@@ -155,19 +155,12 @@ export async function collectConfigValues(
 	return configValues
 }
 
-export function chooseConnection(server: RegistryServer): ConnectionDetails {
-	if (!server.connections?.length) {
-		throw new Error("No connection configuration found")
-	}
-
-	/* Prioritise WebSocket connection */
-	const wsConnection = server.connections.find((conn) => conn.type === "ws")
-	if (wsConnection) return wsConnection
-
-	/* For stdio connections, prioritize published ones first */
-	const stdioConnections = server.connections.filter(
+export function chooseStdioConnection(connections: ConnectionDetails[]): ConnectionDetails | null {
+	const stdioConnections = connections.filter(
 		(conn) => conn.type === "stdio",
 	)
+	if (!stdioConnections.length) return null
+
 	const priorityOrder = ["npx", "uvx", "docker"]
 
 	/* Try published connections first */
@@ -186,7 +179,30 @@ export function chooseConnection(server: RegistryServer): ConnectionDetails {
 		if (connection) return connection
 	}
 
-	/* Fallback to first available connection if none match criteria */
+	/* Return first stdio connection if no priority matches */
+	return stdioConnections[0]
+}
+
+export function chooseConnection(server: RegistryServer): ConnectionDetails {
+	if (!server.connections?.length) {
+		throw new Error("No connection configuration found")
+	}
+
+	/* For local servers, try stdio first */
+	if (!server.remote) {
+		const stdioConnection = chooseStdioConnection(server.connections)
+		if (stdioConnection) return stdioConnection
+	}
+
+	/* For remote servers, try WebSocket */
+	const wsConnection = server.connections.find((conn) => conn.type === "ws")
+	if (wsConnection) return wsConnection
+
+	/* If still no connection found, try stdio again for remote servers */
+	const stdioConnection = chooseStdioConnection(server.connections)
+	if (stdioConnection) return stdioConnection
+
+	/* Final fallback to first available connection */
 	return server.connections[0]
 }
 
