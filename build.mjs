@@ -6,6 +6,9 @@ config()
 const define = {}
 
 for (const k in process.env) {
+	/* Skip environment variables that should be evaluated at runtime */
+	if (['HOME', 'USER', 'XDG_CONFIG_HOME'].includes(k)) continue;
+	
 	define[`process.env.${k}`] = JSON.stringify(process.env[k])
 }
 
