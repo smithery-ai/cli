@@ -10,23 +10,23 @@ process.on("warning", (warning) => {
 	console.warn(warning)
 })
 
+import chalk from "chalk"
+import ora from "ora"
+import { readConfig, writeConfig } from "./client-config"
 import type { ValidClient } from "./constants"
+import { verbose } from "./logger"
+import { resolvePackage } from "./registry"
 import type { ConfiguredServer } from "./types/registry"
 import {
-	collectConfigValues,
-	promptForRestart,
-	normalizeServerId,
 	checkAnalyticsConsent,
-	isUVRequired,
 	checkUVInstalled,
+	chooseConnection,
+	collectConfigValues,
+	isUVRequired,
+	normalizeServerId,
+	promptForRestart,
 	promptForUVInstall,
 } from "./utils"
-import { readConfig, writeConfig } from "./client-config"
-import { resolvePackage } from "./registry"
-import chalk from "chalk"
-import { chooseConnection } from "./utils"
-import ora from "ora"
-import { verbose } from "./logger"
 
 function formatServerConfig(
 	qualifiedName: string,
@@ -52,6 +52,7 @@ function formatServerConfig(
 export async function installServer(
 	qualifiedName: string,
 	client: ValidClient,
+	configValues?: Record<string, unknown>,
 ): Promise<void> {
 	verbose(`Starting installation of ${qualifiedName} for client ${client}`)
 
@@ -90,7 +91,11 @@ export async function installServer(
 			if (!uvInstalled) {
 				const installed = await promptForUVInstall()
 				if (!installed) {
-					console.warn(chalk.yellow("UV is not installed. The server might fail to launch."))
+					console.warn(
+						chalk.yellow(
+							"UV is not installed. The server might fail to launch.",
+						),
+					)
 				}
 			}
 		}
@@ -108,12 +113,23 @@ export async function installServer(
 			)
 		}
 
-		/* collect config values from user */
-		const configValues = await collectConfigValues(connection)
-		verbose(`Collected config values: ${JSON.stringify(configValues, null, 2)}`)
+		/* collect config values from user or use provided config */
+		verbose(
+			configValues
+				? "Using provided config values"
+				: "Collecting config values from user",
+		)
+		const collectedConfigValues = await collectConfigValues(
+			connection,
+			configValues,
+		)
+		verbose(`Config values: ${JSON.stringify(collectedConfigValues, null, 2)}`)
 
 		verbose("Formatting server configuration...")
-		const serverConfig = formatServerConfig(qualifiedName, configValues)
+		const serverConfig = formatServerConfig(
+			qualifiedName,
+			collectedConfigValues,
+		)
 		verbose(`Formatted server config: ${JSON.stringify(serverConfig, null, 2)}`)
 
 		/* read config from client */
