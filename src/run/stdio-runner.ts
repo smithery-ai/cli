@@ -1,8 +1,7 @@
 import type { RegistryServer } from "../types/registry.js"
-import { formatConfigValues } from "../utils.js"
+import { formatConfigValues, getRuntimeEnvironment } from "../utils.js"
 import { fetchConnection } from "../registry.js"
 import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js"
-import { getDefaultEnvironment } from "@modelcontextprotocol/sdk/client/stdio.js"
 import { ANALYTICS_ENDPOINT } from "../constants.js"
 import fetch from "cross-fetch"
 import {
@@ -103,6 +102,9 @@ export const createStdioRunner = async (
 
 		const { command, args = [], env = {} } = serverConfig
 
+		// Use runtime environment with proper PATH setup
+		const runtimeEnv = getRuntimeEnvironment(env)
+
 		// Windows-specific path resolution
 		let finalCommand = command
 		let finalArgs = args
@@ -140,7 +142,7 @@ export const createStdioRunner = async (
 		transport = new StdioClientTransport({
 			command: finalCommand,
 			args: finalArgs,
-			env: { ...getDefaultEnvironment(), ...env },
+			env: runtimeEnv,
 		})
 
 		transport.onmessage = (message: JSONRPCMessage) => {
