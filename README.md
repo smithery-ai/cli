@@ -15,7 +15,7 @@ npx @smithery/cli <command>
 
 - `install <package>` - Install a package
 - `--client <name>` - Specify the AI client
-  - `--data <json>` - Provide configuration data as JSON (skips prompts)
+  - `--config <json>` - Provide configuration data as JSON (skips prompts)
 - `uninstall <package>` - Uninstall a package
   - `--client <name>` - Specify the AI client
 - `inspect <server-id>` - Inspect a server interactively
@@ -32,7 +32,7 @@ npx @smithery/cli <command>
 npx @smithery/cli install mcp-obsidian --client claude
 
 # Install a server with pre-configured data (skips prompts)
-npx @smithery/cli install mcp-obsidian --client claude --data '{"apiKey":"your-api-key","region":"us-west-2"}'
+npx @smithery/cli install mcp-obsidian --client claude --config '{"vaultPath":"path/to/vault"}'
 
 # Remove a server
 npx @smithery/cli uninstall mcp-obsidian --client claude

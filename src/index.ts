@@ -13,7 +13,6 @@ const command = process.argv[2]
 const argument = process.argv[3]
 const clientFlag = process.argv.indexOf("--client")
 const configFlag = process.argv.indexOf("--config")
-const dataFlag = process.argv.indexOf("--data")
 const verboseFlag = process.argv.includes("--verbose")
 const helpFlag = process.argv.includes("--help")
 
@@ -24,7 +23,7 @@ const showHelp = () => {
 	console.log("Available commands:")
 	console.log("  install <server>     Install a package")
 	console.log("    --client <name>    Specify the AI client")
-	console.log("    --data <json>    Provide configuration data as JSON (skips prompts)")
+	console.log("    --config <json>    Provide configuration data as JSON (skips prompts)")
 	console.log("  uninstall <server>   Uninstall a package")
 	console.log("  inspect <server>     Inspect server from registry")
 	console.log("  run <server>         Run a server")
@@ -87,18 +86,6 @@ const config =
 			})()
 		: {}
 
-// Parse the data flag if present
-const data =
-	dataFlag !== -1
-		? (() => {
-			let data = JSON.parse(process.argv[dataFlag + 1])
-			if (typeof data === "string") {
-				data = JSON.parse(data)
-			}
-			return data
-		})()
-		: {}
-
 async function main() {
 	switch (command) {
 		case "inspect":
@@ -116,7 +103,7 @@ async function main() {
 			await installServer(
 				argument,
 				client!,
-				dataFlag !== -1 ? data : (configFlag !== -1 ? config : undefined),
+				configFlag !== -1 ? config : undefined,
 			)
 			break
 		case "uninstall":
