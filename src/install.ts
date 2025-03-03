@@ -26,6 +26,9 @@ import {
 	normalizeServerId,
 	promptForRestart,
 	promptForUVInstall,
+	checkBunInstalled,
+	promptForBunInstall,
+	isBunRequired,
 } from "./utils"
 
 function formatServerConfig(
@@ -94,6 +97,22 @@ export async function installServer(
 					console.warn(
 						chalk.yellow(
 							"UV is not installed. The server might fail to launch.",
+						),
+					)
+				}
+			}
+		}
+
+		/* Check if Bun is required and install if needed */
+		if (isBunRequired(connection)) {
+			verbose("Bun installation check required")
+			const bunInstalled = await checkBunInstalled()
+			if (!bunInstalled) {
+				const installed = await promptForBunInstall()
+				if (!installed) {
+					console.warn(
+						chalk.yellow(
+							"Bun is not installed. The server might fail to launch.",
 						),
 					)
 				}
