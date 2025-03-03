@@ -11,7 +11,8 @@ process.on("warning", (warning) => {
 })
 
 import type { ValidClient } from "./constants"
-import { normalizeServerId, promptForRestart } from "./utils"
+import { promptForRestart } from "./utils/client"
+import { normalizeServerId } from "./utils/config"
 import { readConfig, writeConfig } from "./client-config"
 import chalk from "chalk"
 import ora from "ora"

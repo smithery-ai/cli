@@ -18,7 +18,7 @@ import inquirer from "inquirer"
 import chalk from "chalk"
 import ora from "ora"
 import { resolvePackage } from "./registry"
-import { chooseConnection, collectConfigValues } from "./utils"
+import { chooseConnection, collectConfigValues } from "./utils/config"
 
 async function createClient() {
 	const client = new Client(

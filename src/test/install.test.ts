@@ -2,17 +2,23 @@
 
 import { installServer } from "../install"
 import { resolvePackage } from "../registry"
-import { collectConfigValues } from "../utils"
+import { collectConfigValues } from "../utils/config"
 import { readConfig, writeConfig } from "../client-config"
 import type { ValidClient } from "../constants"
 import chalk from "chalk"
 import * as logger from "../logger"
-import { isUVRequired, checkUVInstalled, promptForUVInstall } from "../utils"
 
 jest.mock("../registry")
-jest.mock("../utils", () => ({
-	...jest.requireActual("../utils"),
+jest.mock("../utils/config", () => ({
 	collectConfigValues: jest.fn(),
+	chooseConnection: jest.fn(),
+	normalizeServerId: jest.fn(id => id),
+	denormalizeServerId: jest.fn(id => id),
+	envVarsToArgs: jest.fn(),
+	formatConfigValues: jest.fn(),
+	chooseStdioConnection: jest.fn(),
+}))
+jest.mock("../utils/client", () => ({
 	promptForRestart: jest.fn(),
 }))
 jest.mock("../client-config")
@@ -26,6 +32,19 @@ jest.mock("ora", () => {
 	})
 	return mockOra
 })
+jest.mock("../utils/analytics", () => ({
+	checkAnalyticsConsent: jest.fn(),
+}))
+jest.mock("../utils/runtime", () => ({
+	isUVRequired: jest.fn(),
+	checkUVInstalled: jest.fn(),
+	promptForUVInstall: jest.fn(),
+	isBunRequired: jest.fn(),
+	checkBunInstalled: jest.fn(),
+	promptForBunInstall: jest.fn(),
+	getRuntimePath: jest.fn(),
+	getRuntimeEnvironment: jest.fn(),
+}))
 
 describe("installServer", () => {
 	const testClient: ValidClient = "claude"
@@ -228,7 +247,7 @@ describe("installServer", () => {
 
 		// Mock analytics failure
 		const mockCheckAnalytics = jest
-			.spyOn(require("../utils"), "checkAnalyticsConsent")
+			.spyOn(require("../utils/analytics"), "checkAnalyticsConsent")
 			.mockRejectedValue(new Error("Analytics config failed"))
 		const consoleWarnSpy = jest.spyOn(console, "warn").mockImplementation()
 
@@ -294,9 +313,9 @@ describe("installServer", () => {
 		}
 		
 		// Mock UV-related functions
-		jest.spyOn(require("../utils"), "isUVRequired").mockReturnValue(true)
-		jest.spyOn(require("../utils"), "checkUVInstalled").mockResolvedValue(false)
-		jest.spyOn(require("../utils"), "promptForUVInstall").mockResolvedValue(false)
+		jest.spyOn(require("../utils/runtime"), "isUVRequired").mockReturnValue(true)
+		jest.spyOn(require("../utils/runtime"), "checkUVInstalled").mockResolvedValue(false)
+		jest.spyOn(require("../utils/runtime"), "promptForUVInstall").mockResolvedValue(false)
 		
 		;(resolvePackage as jest.Mock).mockResolvedValue(mockServer)
 		;(collectConfigValues as jest.Mock).mockResolvedValue({ key: "value" })
@@ -323,9 +342,9 @@ describe("installServer", () => {
 		}
 		
 		// Mock UV-related functions
-		jest.spyOn(require("../utils"), "isUVRequired").mockReturnValue(true)
-		jest.spyOn(require("../utils"), "checkUVInstalled").mockResolvedValue(false)
-		jest.spyOn(require("../utils"), "promptForUVInstall").mockResolvedValue(false) // Installation failed
+		jest.spyOn(require("../utils/runtime"), "isUVRequired").mockReturnValue(true)
+		jest.spyOn(require("../utils/runtime"), "checkUVInstalled").mockResolvedValue(false)
+		jest.spyOn(require("../utils/runtime"), "promptForUVInstall").mockResolvedValue(false) // Installation failed
 		
 		;(resolvePackage as jest.Mock).mockResolvedValue(mockServer)
 		;(collectConfigValues as jest.Mock).mockResolvedValue({ key: "value" })

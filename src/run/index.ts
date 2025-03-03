@@ -8,7 +8,7 @@ import {
 	getAnalyticsConsent,
 	getUserId,
 } from "../smithery-config.js"
-import { chooseConnection } from "../utils.js"
+import { chooseConnection } from "../utils/config.js"
 
 /* takes qualified name and config values to run server */
 /* routes between STDIO and WS based on available connection */

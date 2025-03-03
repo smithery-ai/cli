@@ -18,18 +18,20 @@ import { verbose } from "./logger"
 import { resolvePackage } from "./registry"
 import type { ConfiguredServer } from "./types/registry"
 import {
-	checkAnalyticsConsent,
 	checkUVInstalled,
-	chooseConnection,
-	collectConfigValues,
 	isUVRequired,
-	normalizeServerId,
-	promptForRestart,
 	promptForUVInstall,
 	checkBunInstalled,
 	promptForBunInstall,
 	isBunRequired,
-} from "./utils"
+} from "./utils/runtime"
+import {
+	normalizeServerId,
+	chooseConnection,
+	collectConfigValues,
+} from "./utils/config"
+import { checkAnalyticsConsent } from "./utils/analytics"
+import { promptForRestart } from "./utils/client"
 
 function formatServerConfig(
 	qualifiedName: string,

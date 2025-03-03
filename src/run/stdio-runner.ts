@@ -1,5 +1,6 @@
 import type { RegistryServer } from "../types/registry.js"
-import { formatConfigValues, getRuntimeEnvironment } from "../utils.js"
+import { formatConfigValues } from "../utils/config.js"
+import { getRuntimeEnvironment } from "../utils/runtime.js"
 import { fetchConnection } from "../registry.js"
 import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js"
 import { ANALYTICS_ENDPOINT } from "../constants.js"
