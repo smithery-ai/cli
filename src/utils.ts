@@ -5,6 +5,7 @@ import chalk from "chalk"
 import { exec } from "node:child_process"
 import { promisify } from "node:util"
 import type { RegistryServer } from "./types/registry"
+import { getDefaultEnvironment } from "@modelcontextprotocol/sdk/client/stdio.js"
 import {
 	getAnalyticsConsent,
 	setAnalyticsConsent,
@@ -155,10 +156,10 @@ export async function collectConfigValues(
 	return configValues
 }
 
-export function chooseStdioConnection(connections: ConnectionDetails[]): ConnectionDetails | null {
-	const stdioConnections = connections.filter(
-		(conn) => conn.type === "stdio",
-	)
+export function chooseStdioConnection(
+	connections: ConnectionDetails[],
+): ConnectionDetails | null {
+	const stdioConnections = connections.filter((conn) => conn.type === "stdio")
 	if (!stdioConnections.length) return null
 
 	const priorityOrder = ["npx", "uvx", "docker"]
@@ -368,51 +369,95 @@ export async function checkAnalyticsConsent(): Promise<void> {
 
 export async function checkUVInstalled(): Promise<boolean> {
 	try {
-		await execAsync('uvx --version');
-		return true;
+		await execAsync("uvx --version")
+		return true
 	} catch (error) {
-		return false;
+		return false
 	}
 }
 
 export async function promptForUVInstall(): Promise<boolean> {
-	const { shouldInstall } = await inquirer.prompt<{ shouldInstall: boolean }>([{
-		type: 'confirm',
-		name: 'shouldInstall',
-		message: 'UV package manager is required for Python MCP servers. Would you like to install it?',
-		default: true
-	}]);
+	const { shouldInstall } = await inquirer.prompt<{ shouldInstall: boolean }>([
+		{
+			type: "confirm",
+			name: "shouldInstall",
+			message:
+				"UV package manager is required for Python MCP servers. Would you like to install it?",
+			default: true,
+		},
+	])
 
 	if (!shouldInstall) {
-		console.warn(chalk.yellow('UV installation was declined. You can install it manually from https://astral.sh/uv'));
-		return false;
+		console.warn(
+			chalk.yellow(
+				"UV installation was declined. You can install it manually from https://astral.sh/uv",
+			),
+		)
+		return false
 	}
 
-	const spinner = ora('Installing UV package manager...').start();
+	const spinner = ora("Installing UV package manager...").start()
 	try {
-		if (process.platform === 'win32') {
-			await execAsync('powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"');
+		if (process.platform === "win32") {
+			await execAsync(
+				'powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"',
+			)
 		} else {
 			try {
-				await execAsync('curl -LsSf https://astral.sh/uv/install.sh | sh');
+				await execAsync("curl -LsSf https://astral.sh/uv/install.sh | sh")
 			} catch {
-				await execAsync('wget -qO- https://astral.sh/uv/install.sh | sh');
+				await execAsync("wget -qO- https://astral.sh/uv/install.sh | sh")
 			}
 		}
-		
-		spinner.succeed('✓ UV installed successfully');
-		return true;
+
+		spinner.succeed("✓ UV installed successfully")
+		return true
 	} catch (error) {
-		spinner.fail('Failed to install UV. You can install it manually from https://astral.sh/uv');
-		return false;
+		spinner.fail(
+			"Failed to install UV. You can install it manually from https://astral.sh/uv",
+		)
+		return false
 	}
 }
 
 export function isUVRequired(connection: ConnectionDetails): boolean {
 	// Check for stdio connection with uvx in stdioFunction
-	if (connection.type === 'stdio' && connection.stdioFunction?.includes('uvx')) {
+	if (
+		connection.type === "stdio" &&
+		connection.stdioFunction?.includes("uvx")
+	) {
 		return true
 	}
-	
+
 	return false
+}
+
+export function getRuntimePath(): string {
+	const defaultPath = process.env.PATH || ""
+	const paths: string[] = []
+
+	// Add Bun path if available
+	const bunPath =
+		process.env.BUN_INSTALL || (process.env.HOME && `${process.env.HOME}/.bun`)
+	if (bunPath) {
+		paths.push(`${bunPath}/bin`)
+	}
+
+	// Add UV path if available
+	const uvPath = process.env.UV_PATH
+	if (uvPath) {
+		paths.push(uvPath)
+	}
+
+	return [...paths, defaultPath].join(process.platform === "win32" ? ";" : ":")
+}
+
+export function getRuntimeEnvironment(
+	baseEnv: Record<string, string> = {},
+): Record<string, string> {
+	return {
+		...getDefaultEnvironment(),
+		...baseEnv,
+		PATH: getRuntimePath(),
+	}
 }
