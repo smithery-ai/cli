@@ -103,7 +103,8 @@ export async function installServer(
 		/* inform users of remote server installation */
 		const remote = server.connections.some(
 			(conn) => conn.type === "ws" && "deploymentUrl" in conn,
-		)
+		) && server.remote !== false
+
 		if (remote) {
 			verbose("Remote server detected, showing security notice")
 			console.log(

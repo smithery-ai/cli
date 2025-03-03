@@ -432,6 +432,74 @@ export function isUVRequired(connection: ConnectionDetails): boolean {
 	return false
 }
 
+export async function checkBunInstalled(): Promise<boolean> {
+	try {
+		await execAsync("bun --version")
+		return true
+	} catch (error) {
+		return false
+	}
+}
+
+export async function promptForBunInstall(): Promise<boolean> {
+	const { shouldInstall } = await inquirer.prompt<{ shouldInstall: boolean }>([
+		{
+			type: "confirm",
+			name: "shouldInstall",
+			message:
+				"Bun is required for this operation. Would you like to install it?",
+			default: true,
+		},
+	])
+
+	if (!shouldInstall) {
+		console.warn(
+			chalk.yellow(
+				"Bun installation was declined. You can install it manually from https://bun.sh",
+			),
+		)
+		return false
+	}
+
+	try {
+		console.log("Installing Bun...")
+		if (process.platform === "win32") {
+			// Windows installation
+			await execAsync("powershell -c \"irm bun.sh/install.ps1|iex\"")
+		} else {
+			try {
+				console.log("Attempting to install Bun via Homebrew...")
+				await execAsync("brew install oven-sh/bun/bun")
+			} catch (brewError) {
+				console.log("Homebrew installation failed, trying direct installation...")
+				// Fall back to curl method if Homebrew fails
+				await execAsync("curl -fsSL https://bun.sh/install | bash")
+			}
+		}
+		console.log(chalk.green("Bun installed successfully!"))
+		return true
+	} catch (error) {
+		console.error(
+			chalk.red("Failed to install Bun:"),
+			error instanceof Error ? error.message : String(error),
+		)
+		console.log("Please install Bun manually from https://bun.sh")
+		return false
+	}
+}
+
+export function isBunRequired(connection: ConnectionDetails): boolean {
+	// Check for stdio connection with uvx in stdioFunction
+	if (
+		connection.type === "stdio" &&
+		connection.stdioFunction?.includes("bunx")
+	) {
+		return true
+	}
+
+	return false
+}
+
 export function getRuntimePath(): string {
 	const defaultPath = process.env.PATH || ""
 	const paths: string[] = []
