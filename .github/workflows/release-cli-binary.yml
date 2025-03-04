@@ -52,7 +52,7 @@ jobs:
         run: npm ci
         
       - name: Build
-        run: npm run build:cli
+        run: npm run build
         
       - name: Package binaries
         run: npm run package
