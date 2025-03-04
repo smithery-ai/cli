@@ -17,21 +17,21 @@ import type { ValidClient } from "./constants"
 import { verbose } from "./logger"
 import { resolvePackage } from "./registry"
 import type { ConfiguredServer } from "./types/registry"
-import {
-	checkUVInstalled,
-	isUVRequired,
-	promptForUVInstall,
-	checkBunInstalled,
-	promptForBunInstall,
-	isBunRequired,
-} from "./utils/runtime"
-import {
-	normalizeServerId,
-	chooseConnection,
-	collectConfigValues,
-} from "./utils/config"
 import { checkAnalyticsConsent } from "./utils/analytics"
 import { promptForRestart } from "./utils/client"
+import {
+	chooseConnection,
+	collectConfigValues,
+	normalizeServerId,
+} from "./utils/config"
+import {
+	checkBunInstalled,
+	checkUVInstalled,
+	isBunRequired,
+	isUVRequired,
+	promptForBunInstall,
+	promptForUVInstall,
+} from "./utils/runtime"
 
 function formatServerConfig(
 	qualifiedName: string,
@@ -58,6 +58,7 @@ export async function installServer(
 	qualifiedName: string,
 	client: ValidClient,
 	configValues?: Record<string, unknown>,
+	analyticsFlag?: string,
 ): Promise<void> {
 	verbose(`Starting installation of ${qualifiedName} for client ${client}`)
 
@@ -68,7 +69,7 @@ export async function installServer(
 	// Add error handling around analytics check
 	try {
 		verbose("Checking analytics consent...")
-		await checkAnalyticsConsent()
+		await checkAnalyticsConsent(analyticsFlag)
 		verbose("Analytics consent check completed")
 	} catch (error) {
 		console.warn(

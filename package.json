@@ -1,68 +1,68 @@
 {
-	"name": "@smithery/cli",
-	"version": "1.1.40",
-	"type": "commonjs",
-	"private": false,
-	"homepage": "https://smithery.ai/",
-	"description": "A NPX command to install and list Model Context Protocols from Smithery",
-	"main": "dist/index.js",
-	"scripts": {
-		"build": "tsc && node build.mjs && chmod +x dist/index.js",
-		"start": "node dist/index.js",
-		"test:list": "node --loader ts-node/esm src/index.ts list",
-		"test:install": "node --loader ts-node/esm src/index.ts install",
-		"test:installed": "node --loader ts-node/esm src/index.ts installed",
-		"extract": "node --loader ts-node/esm src/extractors/modelcontextprotocol-extractor.ts",
-		"test:uninstall": "node --loader ts-node/esm src/index.ts uninstall",
-		"prepare": "npm run build",
-		"check": "npx @biomejs/biome check --write --unsafe",
-		"test": "jest"
-	},
-	"bin": {
-		"cli": "dist/index.js"
-	},
-	"dependencies": {
-		"@modelcontextprotocol/sdk": "^1.0.3",
-		"@smithery/sdk": "^0.0.22",
-		"chalk": "^4.1.2",
-		"cross-fetch": "^4.1.0",
+  "name": "@smithery/cli",
+  "version": "1.1.40",
+  "type": "commonjs",
+  "private": false,
+  "homepage": "https://smithery.ai/",
+  "description": "A NPX command to install and list Model Context Protocols from Smithery",
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "tsc && node build.mjs && chmod +x dist/index.js",
+    "start": "node dist/index.js",
+    "test:list": "node --loader ts-node/esm src/index.ts list",
+    "test:install": "node --loader ts-node/esm src/index.ts install",
+    "test:installed": "node --loader ts-node/esm src/index.ts installed",
+    "extract": "node --loader ts-node/esm src/extractors/modelcontextprotocol-extractor.ts",
+    "test:uninstall": "node --loader ts-node/esm src/index.ts uninstall",
+    "prepare": "npm run build",
+    "check": "npx @biomejs/biome check --write --unsafe",
+    "test": "jest"
+  },
+  "bin": {
+    "cli": "dist/index.js"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.6.1",
+    "@smithery/sdk": "^0.0.22",
+    "chalk": "^4.1.2",
+    "cross-fetch": "^4.1.0",
 		"inquirer": "^8.2.4",
 		"inquirer-autocomplete-prompt": "^2.0.0",
-		"lodash": "^4.17.21",
-		"ora": "^8.2.0",
-		"ws": "^8.18.0"
-	},
-	"devDependencies": {
+    "lodash": "^4.17.21",
+    "ora": "^8.2.0",
+    "ws": "^8.18.1"
+  },
+  "devDependencies": {
 		"@biomejs/biome": "^1.5.3",
 		"@types/inquirer": "^8.2.4",
-		"@types/inquirer-autocomplete-prompt": "^3.0.3",
-		"@types/jest": "^29.5.12",
-		"@types/json-schema": "^7.0.15",
-		"@types/lodash": "^4.17.14",
-		"@types/node": "^14.18.63",
-		"@types/ws": "^8.5.14",
-		"dotenv": "^16.4.7",
-		"esbuild": "^0.24.0",
-		"jest": "^29.7.0",
-		"ts-jest": "^29.1.2",
-		"ts-node": "^10.9.1",
-		"tsx": "^4.19.2",
-		"typescript": "^5.0.0"
-	},
-	"files": [
-		"dist",
-		"README.md",
-		"package.json"
-	],
-	"exports": {
-		".": {
-			"import": "./dist/index.js"
-		}
-	},
-	"engines": {
-		"node": ">=18.0.0"
-	},
-	"optionalDependencies": {
-		"bufferutil": "^4.0.9"
-	}
+    "@types/inquirer-autocomplete-prompt": "^3.0.3",
+    "@types/jest": "^29.5.14",
+    "@types/json-schema": "^7.0.15",
+    "@types/lodash": "^4.17.16",
+    "@types/node": "^14.18.63",
+    "@types/ws": "^8.5.14",
+    "dotenv": "^16.4.7",
+    "esbuild": "^0.25.0",
+    "jest": "^29.7.0",
+    "ts-jest": "^29.2.6",
+    "ts-node": "^10.9.2",
+    "tsx": "^4.19.3",
+    "typescript": "^5.8.2"
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "package.json"
+  ],
+  "exports": {
+    ".": {
+      "import": "./dist/index.js"
+    }
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "optionalDependencies": {
+    "bufferutil": "^4.0.9"
+  }
 }

@@ -1,18 +1,28 @@
-import inquirer from "inquirer"
 import chalk from "chalk"
+import inquirer from "inquirer"
 import {
 	getAnalyticsConsent,
-	setAnalyticsConsent,
 	hasAskedConsent,
 	initializeSettings,
+	setAnalyticsConsent,
 } from "../smithery-config"
 
-export async function checkAnalyticsConsent(): Promise<void> {
+export async function checkAnalyticsConsent(analyticsFlag?: string): Promise<void> {
 	// Initialize settings and handle potential failures
 	const initResult = await initializeSettings()
 	if (!initResult.success) {
 		console.warn("[Analytics] Failed to initialize settings:", initResult.error)
 		return // Exit early if we can't initialize settings
+	}
+
+	// If analytics flag is provided, set consent accordingly
+	if (analyticsFlag !== undefined) {
+		const enabled = analyticsFlag.toLowerCase() === "true"
+		const result = await setAnalyticsConsent(enabled)
+		if (!result.success) {
+			console.warn("[Smithery] Failed to save analytics preference:", result.error)
+		}
+		return
 	}
 
 	const consent = await getAnalyticsConsent()

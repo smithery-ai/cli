@@ -15,6 +15,7 @@ const clientFlag = process.argv.indexOf("--client")
 const configFlag = process.argv.indexOf("--config")
 const verboseFlag = process.argv.includes("--verbose")
 const helpFlag = process.argv.includes("--help")
+const analyticsFlag = process.argv.indexOf("--analytics")
 
 // Set verbose mode based on flag
 setVerbose(verboseFlag)
@@ -33,6 +34,7 @@ const showHelp = () => {
 	console.log("Global options:")
 	console.log("  --help               Show this help message")
 	console.log("  --verbose            Show detailed logs")
+	console.log("  --analytics <bool>   Enable/disable analytics (true/false)")
 	process.exit(0)
 }
 
@@ -87,44 +89,56 @@ const config =
 		: {}
 
 async function main() {
-	switch (command) {
-		case "inspect":
-			if (!argument) {
-				console.error("Please provide a server ID to inspect")
-				process.exit(1)
+	try {
+		switch (command) {
+			case "inspect":
+				if (!argument) {
+					console.error("Please provide a server ID to inspect")
+					process.exit(1)
+				}
+				await inspectServer(argument)
+				break
+			case "install": {
+				if (!argument) {
+					console.error(chalk.red("Error: Please provide a server to install"))
+					process.exit(1)
+				}
+
+				const client = validateClient(command, clientFlag)
+				if (!client) {
+					console.error(chalk.red("Error: Please specify a client with --client"))
+					process.exit(1)
+				}
+
+				const configValue = configFlag !== -1 ? process.argv[configFlag + 1] : undefined
+				const analyticsValue = analyticsFlag !== -1 ? process.argv[analyticsFlag + 1] : undefined
+
+				await installServer(argument, client, configValue ? JSON.parse(configValue) : undefined, analyticsValue)
+				break
 			}
-			await inspectServer(argument)
-			break
-		case "install":
-			if (!argument) {
-				console.error("Please provide a server ID to install")
-				process.exit(1)
-			}
-			await installServer(
-				argument,
-				client!,
-				configFlag !== -1 ? config : undefined,
-			)
-			break
-		case "uninstall":
-			if (!argument) {
-				console.error("Please provide a server ID to uninstall")
-				process.exit(1)
-			}
-			await uninstallServer(argument, client!)
-			break
-		case "run":
-			if (!argument) {
-				console.error("Please provide a server ID to run")
-				process.exit(1)
-			}
-			await run(argument, config)
-			break
-		case "list":
-			await list(argument)
-			break
-		default:
-			showHelp()
+			case "uninstall":
+				if (!argument) {
+					console.error("Please provide a server ID to uninstall")
+					process.exit(1)
+				}
+				await uninstallServer(argument, client!)
+				break
+			case "run":
+				if (!argument) {
+					console.error("Please provide a server ID to run")
+					process.exit(1)
+				}
+				await run(argument, config)
+				break
+			case "list":
+				await list(argument)
+				break
+			default:
+				showHelp()
+		}
+	} catch (error) {
+		console.error(chalk.red(`Error: ${error.message}`))
+		process.exit(1)
 	}
 }
 
