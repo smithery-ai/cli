@@ -136,7 +136,7 @@ async function main() {
 			default:
 				showHelp()
 		}
-	} catch (error) {
+	} catch (error: any) {
 		console.error(chalk.red(`Error: ${error.message}`))
 		process.exit(1)
 	}
