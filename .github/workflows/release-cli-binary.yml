@@ -1,0 +1,68 @@
+name: CLI Release
+on:
+  push:
+    tags:
+      - 'cli-beta.v*'  # Changed to CLI-specific tag pattern
+
+permissions:
+  contents: write
+
+jobs:
+  create-release:
+    runs-on: ubuntu-latest
+    outputs:
+      upload_url: ${{ steps.create_release.outputs.upload_url }}
+    steps:
+      - name: Create Release
+        id: create_release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ github.ref }}
+          release_name: Beta Release ${{ github.ref }}
+          draft: false
+          prerelease: true  # Mark as prerelease
+
+  build:
+    needs: create-release
+    strategy:
+      matrix:
+        include:
+          - os: ubuntu-latest
+            asset_name: smithery-linux
+            asset_path: ./dist/bin/smithery-linux
+          - os: windows-latest
+            asset_name: smithery.exe
+            asset_path: ./dist/bin/smithery.exe
+          - os: macos-latest
+            asset_name: smithery-darwin
+            asset_path: ./dist/bin/smithery-darwin
+    
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          
+      - name: Install dependencies
+        run: npm ci
+        
+      - name: Build
+        run: npm run build
+        
+      - name: Package binaries
+        run: npm run package
+        
+      - name: Upload Binary
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ needs.create-release.outputs.upload_url }}
+          asset_path: ${{ matrix.asset_path }}
+          asset_name: ${{ matrix.asset_name }}
+          asset_content_type: application/octet-stream 
