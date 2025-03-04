@@ -19,6 +19,7 @@ import chalk from "chalk"
 import ora from "ora"
 import { resolvePackage } from "./registry"
 import { chooseConnection, collectConfigValues } from "./utils/config"
+import { getRuntimeEnvironment } from "./utils/runtime.js"
 
 async function createClient() {
 	const client = new Client(
@@ -245,8 +246,11 @@ export async function inspectServer(qualifiedName: string): Promise<void> {
 
 		// Collect configuration values if needed
 		const configValues = await collectConfigValues(connection)
+		
+		// Get runtime environment
+		const runtimeEnv = getRuntimeEnvironment({})
 
-		// Create appropriate transport
+		// Create appropriate transport with environment variables
 		transport = new StdioClientTransport({
 			command: "npx",
 			args: [
@@ -257,6 +261,7 @@ export async function inspectServer(qualifiedName: string): Promise<void> {
 				"--config",
 				JSON.stringify(JSON.stringify(configValues)),
 			],
+			env: runtimeEnv
 		})
 
 		// Connect to the server and start interactive session
