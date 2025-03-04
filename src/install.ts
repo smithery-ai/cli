@@ -41,7 +41,7 @@ function formatServerConfig(
 	const encodedConfig = JSON.stringify(JSON.stringify(userConfig))
 
 	return {
-		command: "npx",
+		command: "smithery",
 		args: [
 			"-y",
 			"@smithery/cli@latest",
