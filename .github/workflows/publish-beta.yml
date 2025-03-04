@@ -1,0 +1,61 @@
+name: Publish Beta to npm
+
+on:
+  workflow_dispatch:  # Manual trigger only
+    inputs:
+      source_branch:
+        description: 'Branch to publish as beta (default: beta)'
+        required: false
+        default: 'beta'
+        type: string
+
+permissions:
+  contents: write
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  publish-beta:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
+          ref: ${{ github.event.inputs.source_branch }}
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v2
+        with:
+          node-version: '18'
+          registry-url: 'https://registry.npmjs.org'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Create .env file
+        run: |
+          echo "REGISTRY_ENDPOINT=${{ secrets.REGISTRY_ENDPOINT }}" >> .env
+          echo "ANALYTICS_ENDPOINT=${{ secrets.ANALYTICS_ENDPOINT }}" >> .env
+
+      - name: Build project
+        run: npm run build
+
+      - name: Configure Git
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+
+      - name: Bump beta version
+        run: |
+          npm version prerelease --preid=beta -m "chore: bump version to %s [skip ci]"
+          git push origin ${{ github.event.inputs.source_branch }}
+          git push origin --tags
+
+      - name: Publish to npm with beta tag
+        run: npm publish --tag beta --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }} 
