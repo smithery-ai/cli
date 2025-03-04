@@ -248,7 +248,7 @@ export async function inspectServer(qualifiedName: string): Promise<void> {
 
 		// Create appropriate transport
 		transport = new StdioClientTransport({
-			command: "npx",
+			command: "smithery",
 			args: [
 				"-y",
 				"@smithery/cli@latest",

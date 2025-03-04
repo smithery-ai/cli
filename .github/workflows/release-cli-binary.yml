@@ -33,8 +33,8 @@ jobs:
             asset_name: smithery-linux
             asset_path: ./dist/bin/smithery-linux
           - os: windows-latest
-            asset_name: smithery-windows.exe
-            asset_path: ./dist/bin/smithery-win.exe
+            asset_name: smithery.exe
+            asset_path: ./dist/bin/smithery.exe
           - os: macos-latest
             asset_name: smithery-darwin
             asset_path: ./dist/bin/smithery-darwin
