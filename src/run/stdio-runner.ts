@@ -109,34 +109,8 @@ export const createStdioRunner = async (
 		// Log the environment variables being used
 		console.error("[Runner] Using environment:", JSON.stringify(runtimeEnv, null, 2))
 
-		// Windows-specific path resolution
-		let finalCommand = command
-		let finalArgs = args
-
-		if (process.platform === "win32") {
-			try {
-				const path = require("node:path")
-				if (!path.isAbsolute(command)) {
-					const { execSync } = require("node:child_process")
-					finalCommand = execSync(`where "${command}"`, { encoding: "utf8" })
-						.split("\r\n")[0]
-						.trim()
-				} else {
-					finalCommand = command
-				}
-				finalCommand = path.normalize(finalCommand)
-			} catch (error) {
-				console.error(
-					"[Runner] Could not resolve full path for command:",
-					command,
-					error,
-				)
-				finalCommand = command
-			}
-		} else {
-			finalCommand = command
-		}
-		finalArgs = args
+		const finalCommand = command
+		const finalArgs = args
 
 		console.error("[Runner] Executing:", {
 			command: finalCommand,

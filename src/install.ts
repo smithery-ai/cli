@@ -43,8 +43,6 @@ function formatServerConfig(
 	return {
 		command: "smithery",
 		args: [
-			"-y",
-			"@smithery/cli@latest",
 			"run",
 			qualifiedName,
 			"--config",
