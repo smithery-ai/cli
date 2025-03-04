@@ -141,32 +141,13 @@ export function isBunRequired(connection: ConnectionDetails): boolean {
 	return false
 }
 
-export function getRuntimePath(): string {
-	const defaultPath = process.env.PATH || ""
-	const paths: string[] = []
-
-	// Add Bun path if available
-	const bunPath =
-		process.env.BUN_INSTALL || (process.env.HOME && `${process.env.HOME}/.bun`)
-	if (bunPath) {
-		paths.push(`${bunPath}/bin`)
-	}
-
-	// Add UV path if available
-	const uvPath = process.env.UV_PATH
-	if (uvPath) {
-		paths.push(uvPath)
-	}
-
-	return [...paths, defaultPath].join(process.platform === "win32" ? ";" : ":")
-}
-
 export function getRuntimeEnvironment(
 	baseEnv: Record<string, string> = {},
 ): Record<string, string> {
+	const defaultEnv = getDefaultEnvironment();
+	
 	return {
-		...getDefaultEnvironment(),
+		...defaultEnv,
 		...baseEnv,
-		PATH: getRuntimePath(),
 	}
 }

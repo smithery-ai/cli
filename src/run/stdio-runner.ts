@@ -105,6 +105,9 @@ export const createStdioRunner = async (
 
 		// Use runtime environment with proper PATH setup
 		const runtimeEnv = getRuntimeEnvironment(env)
+		
+		// Log the environment variables being used
+		console.error("[Runner] Using environment:", JSON.stringify(runtimeEnv, null, 2))
 
 		// Windows-specific path resolution
 		let finalCommand = command
