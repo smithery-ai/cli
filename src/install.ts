@@ -131,6 +131,13 @@ export async function installServer(
 					`Installing remote server. Please ensure you trust the server author, especially when sharing sensitive data.\nFor information on Smithery's data policy, please visit: ${chalk.underline("https://smithery.ai/docs/data-policy")}`,
 				),
 			)
+		} else {
+			verbose("Local server detected, showing limitation warning")
+			console.log(
+				chalk.yellow(
+					"Note: Smithery runner currently only supports hosted servers. We're actively working on local server support.",
+				),
+			)
 		}
 
 		/* collect config values from user or use provided config */
