@@ -8,6 +8,7 @@
 	"main": "dist/index.js",
 	"scripts": {
 		"build": "tsc && node build.mjs && chmod +x dist/index.js",
+		"build:cli": "tsx scripts/build.ts && chmod +x dist/index.js",
 		"start": "node dist/index.js",
 		"test:list": "node --loader ts-node/esm src/index.ts list",
 		"test:install": "node --loader ts-node/esm src/index.ts install",
