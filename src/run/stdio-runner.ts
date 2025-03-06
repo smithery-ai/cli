@@ -116,10 +116,7 @@ export const createStdioRunner = async (
 		if (finalCommand === 'npx') {
 			console.error('[Runner] Resolving npx path...');
 			finalCommand = await resolveNpxCommand(finalCommand);
-			if (finalCommand === 'npx') {
-				throw new Error('[Runner] Failed to resolve npx to an executable path');
-			}
-			console.error('[Runner] Resolved npx path:', finalCommand);
+			console.error('[Runner] Using npx path:', finalCommand);
 		}
 
 		console.error("[Runner] Executing:", {
