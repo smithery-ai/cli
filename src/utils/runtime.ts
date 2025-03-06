@@ -190,26 +190,35 @@ async function findNpxInNvm(): Promise<string | null> {
 export async function resolveNpxCommand(originalCommand: string): Promise<string> {
 	if (originalCommand !== 'npx') return originalCommand;
 	const isWin = process.platform === 'win32';
-	
-	// 1. Check current node process npx first
+
+	// 1. Try which/where command first
+	try {
+		const { stdout } = await execAsync(isWin ? 'where npx' : 'which npx');
+		const path = stdout.split('\n')[0].trim();
+		if (path) {
+			return path;
+		}
+	} catch (error) {
+		console.error('[Runtime] which/where command failed to find npx');
+	}
+
+	// 2. Check current node process npx
 	const nodeDir = process.execPath.replace(isWin ? /[\/\\]node\.exe$/ : /[\/\\]node$/, '');
 	const nodeDirNpx = isWin ? join(nodeDir, 'npx.cmd') : join(nodeDir, 'npx');
 	try {
 		await access(nodeDirNpx);
-		// console.error(`[Runtime] Resolved npx at: ${nodeDirNpx}`);
 		return nodeDirNpx;
 	} catch {
 		console.error('[Runtime] No npx found in current node directory');
 	}
 
-	// 2. Check NVM path
+	// 3. Check NVM path
 	const nvmPath = await findNpxInNvm();
 	if (nvmPath) {
-		// console.error(`[Runtime] Resolved npx in NVM at: ${nvmPath}`);
 		return nvmPath;
 	}
 
-	// 3. Check additional system paths as fallback
+	// 4. Check additional system paths as fallback
 	const searchPaths: string[] = [];
 	if (isWin) {
 		// Default npm and Node.js paths
@@ -240,7 +249,6 @@ export async function resolveNpxCommand(originalCommand: string): Promise<string
 	);
 	const validPath = results.find(p => p !== null);
 	if (validPath) {
-		// console.error(`[Runtime] Resolved npx at: ${validPath}`);
 		return validPath;
 	}
 
