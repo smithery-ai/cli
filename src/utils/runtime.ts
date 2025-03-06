@@ -193,13 +193,29 @@ export async function resolveNpxCommand(originalCommand: string): Promise<string
 
 	// 1. Try which/where command first
 	try {
-		const { stdout } = await execAsync(isWin ? 'where npx' : 'which npx');
-		const path = stdout.split('\n')[0].trim();
-		if (path) {
-			return path;
-		}
+		const { stdout } = await execAsync(isWin ? 'where npx 2>nul' : 'which npx');
+		const paths = stdout
+			.trim()                     // Remove leading/trailing whitespace first
+			.split(/\r?\n/)            // Split on \n or \r\n
+			.map(p => p.trim())        // Trim each line again for safety
+			.filter(Boolean);          // Remove empty lines
+		
+		// Check all paths concurrently and take first valid one
+		const accessChecks = paths.map(async path => {
+			try {
+				await access(path);
+				return path;
+			} catch (e: unknown) {
+				console.debug(`[Runtime] Path ${path} inaccessible: ${e instanceof Error ? e.message : String(e)}`);
+				return null;
+			}
+		});
+		
+		const results = await Promise.all(accessChecks);
+		const validPath = results.find(p => p !== null);
+		if (validPath) return validPath;
 	} catch (error) {
-		console.error('[Runtime] which/where command failed to find npx');
+		console.error('[Runtime] which/where command failed to find npx:', error);
 	}
 
 	// 2. Check current node process npx
