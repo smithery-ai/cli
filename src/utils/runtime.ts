@@ -200,8 +200,13 @@ export async function resolveNpxCommand(originalCommand: string): Promise<string
 			.map(p => p.trim())        // Trim each line again for safety
 			.filter(Boolean);          // Remove empty lines
 		
+		// On Windows, ensure we only use .cmd paths
+		const filteredPaths = isWin 
+			? paths.filter(p => p.toLowerCase().endsWith('.cmd'))
+			: paths;
+		
 		// Check all paths concurrently and take first valid one
-		const accessChecks = paths.map(async path => {
+		const accessChecks = filteredPaths.map(async path => {
 			try {
 				await access(path);
 				return path;
