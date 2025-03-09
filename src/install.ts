@@ -40,16 +40,28 @@ function formatServerConfig(
 	/* double stringify config to make it shell-safe */
 	const encodedConfig = JSON.stringify(JSON.stringify(userConfig))
 
+	// Base arguments for npx command
+	const npxArgs = [
+		"-y",
+		"@smithery/cli@latest",
+		"run",
+		qualifiedName,
+		"--config",
+		encodedConfig,
+	]
+
+	// Use cmd /c for Windows platforms
+	if (process.platform === 'win32') {
+		return {
+			command: "cmd",
+			args: ["/c", "npx", ...npxArgs],
+		}
+	}
+
+	// Default for non-Windows platforms
 	return {
 		command: "npx",
-		args: [
-			"-y",
-			"@smithery/cli@latest",
-			"run",
-			qualifiedName,
-			"--config",
-			encodedConfig,
-		],
+		args: npxArgs,
 	}
 }
 

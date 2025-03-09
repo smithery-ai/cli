@@ -114,9 +114,16 @@ export const createStdioRunner = async (
 
 		// Resolve npx path upfront if needed
 		if (finalCommand === 'npx') {
-			console.error('[Runner] Resolving npx path...');
-			finalCommand = await resolveNpxCommand(finalCommand);
+			// console.error('[Runner] Resolving npx path...');
+			// finalCommand = await resolveNpxCommand(finalCommand);
 			console.error('[Runner] Using npx path:', finalCommand);
+			
+			// Special handling for Windows platform
+			if (process.platform === 'win32') {
+				console.error('[Runner] Windows platform detected, using cmd /c for npx');
+				finalArgs = ['/c', 'npx', ...finalArgs];
+				finalCommand = 'cmd';
+			}
 		}
 
 		console.error("[Runner] Executing:", {
