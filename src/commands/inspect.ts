@@ -17,9 +17,9 @@ import { isEmpty } from "lodash"
 import inquirer from "inquirer"
 import chalk from "chalk"
 import ora from "ora"
-import { resolvePackage } from "./registry"
-import { chooseConnection, collectConfigValues } from "./utils/config"
-import { getRuntimeEnvironment } from "./utils/runtime.js"
+import { resolvePackage } from "../registry"
+import { chooseConnection, collectConfigValues } from "../utils/config"
+import { getRuntimeEnvironment } from "../utils/runtime.js"
 
 async function createClient() {
 	const client = new Client(

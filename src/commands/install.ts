@@ -12,11 +12,11 @@ process.on("warning", (warning) => {
 
 import chalk from "chalk"
 import ora from "ora"
-import { readConfig, writeConfig } from "./client-config"
-import type { ValidClient } from "./constants"
-import { verbose } from "./logger"
-import { resolvePackage } from "./registry"
-import type { ConfiguredServer } from "./types/registry"
+import { readConfig, writeConfig } from "../client-config"
+import type { ValidClient } from "../constants"
+import { verbose } from "../logger"
+import { resolvePackage } from "../registry"
+import type { ConfiguredServer } from "../types/registry"
 import {
 	checkUVInstalled,
 	isUVRequired,
@@ -24,14 +24,14 @@ import {
 	checkBunInstalled,
 	promptForBunInstall,
 	isBunRequired,
-} from "./utils/runtime"
+} from "../utils/runtime"
 import {
 	normalizeServerId,
 	chooseConnection,
 	collectConfigValues,
-} from "./utils/config"
-import { checkAnalyticsConsent } from "./utils/analytics"
-import { promptForRestart } from "./utils/client"
+} from "../utils/config"
+import { checkAnalyticsConsent } from "../utils/analytics"
+import { promptForRestart } from "../utils/client"
 
 function formatServerConfig(
 	qualifiedName: string,

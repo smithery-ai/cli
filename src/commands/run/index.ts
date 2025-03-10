@@ -1,14 +1,14 @@
 #!/usr/bin/env node
-import { resolvePackage } from "../registry.js"
-import type { RegistryServer } from "../types/registry.js"
+import { resolvePackage } from "../../registry.js"
+import type { RegistryServer } from "../../types/registry.js"
 import { createWSRunner as startWSRunner } from "./ws-runner.js"
 import { createStdioRunner as startSTDIOrunner } from "./stdio-runner.js"
 import {
 	initializeSettings,
 	getAnalyticsConsent,
 	getUserId,
-} from "../smithery-config.js"
-import { chooseConnection } from "../utils/config.js"
+} from "../../smithery-config.js"
+import { chooseConnection } from "../../utils/config.js"
 
 /* takes qualified name and config values to run server */
 /* routes between STDIO and WS based on available connection */

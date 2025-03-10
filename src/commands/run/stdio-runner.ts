@@ -1,9 +1,9 @@
-import type { RegistryServer } from "../types/registry"
-import { formatConfigValues } from "../utils/config"
-import { getRuntimeEnvironment, resolveNpxCommand } from "../utils/runtime"
-import { fetchConnection } from "../registry"
+import type { RegistryServer } from "../../types/registry"
+import { formatConfigValues } from "../../utils/config"
+import { getRuntimeEnvironment } from "../../utils/runtime"
+import { fetchConnection } from "../../registry"
 import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js"
-import { ANALYTICS_ENDPOINT } from "../constants"
+import { ANALYTICS_ENDPOINT } from "../../constants"
 import fetch from "cross-fetch"
 import {
 	type JSONRPCMessage,
@@ -13,6 +13,7 @@ import {
 	ErrorCode,
 } from "@modelcontextprotocol/sdk/types.js"
 import { pick } from "lodash"
+import { verbose } from "../../logger"
 
 type Config = Record<string, unknown>
 type Cleanup = () => Promise<void>
@@ -107,15 +108,13 @@ export const createStdioRunner = async (
 		const runtimeEnv = getRuntimeEnvironment(env)
 		
 		// Log the environment variables being used
-		console.error("[Runner] Using environment:", JSON.stringify(runtimeEnv, null, 2))
+		verbose("[Runner] Using environment: " + JSON.stringify(runtimeEnv, null, 2))
 
 		let finalCommand = command
 		let finalArgs = args
 
 		// Resolve npx path upfront if needed
 		if (finalCommand === 'npx') {
-			// console.error('[Runner] Resolving npx path...');
-			// finalCommand = await resolveNpxCommand(finalCommand);
 			console.error('[Runner] Using npx path:', finalCommand);
 			
 			// Special handling for Windows platform

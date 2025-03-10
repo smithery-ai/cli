@@ -10,10 +10,10 @@ process.on("warning", (warning) => {
 	console.warn(warning)
 })
 
-import type { ValidClient } from "./constants"
-import { promptForRestart } from "./utils/client"
-import { normalizeServerId } from "./utils/config"
-import { readConfig, writeConfig } from "./client-config"
+import type { ValidClient } from "../constants"
+import { promptForRestart } from "../utils/client"
+import { normalizeServerId } from "../utils/config"
+import { readConfig, writeConfig } from "../client-config"
 import chalk from "chalk"
 import ora from "ora"
 

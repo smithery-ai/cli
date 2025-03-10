@@ -1,4 +1,4 @@
-import { VALID_CLIENTS } from "./constants"
+import { VALID_CLIENTS } from "../constants"
 import chalk from "chalk"
 
 export async function list(subcommand: string | undefined) {
