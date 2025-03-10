@@ -14,7 +14,7 @@ npx @smithery/cli <command>
 ### Available Commands
 
 - `install <package>` - Install a package
-- `--client <name>` - Specify the AI client
+  - `--client <name>` - Specify the AI client
   - `--config <json>` - Provide configuration data as JSON (skips prompts)
 - `uninstall <package>` - Uninstall a package
   - `--client <name>` - Specify the AI client
