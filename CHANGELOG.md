@@ -8,4 +8,5 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Changed
 - Refactored command organization by moving command files to dedicated `src/commands/` directory
-- Updated import paths and documentation 
+- Updated import paths and documentation
+- Logging runtime environment details in verbose mode 
