@@ -1,6 +1,6 @@
 /// <reference types="jest" />
 
-import { installServer } from "../install"
+import { installServer } from "../commands/install"
 import { resolvePackage } from "../registry"
 import { collectConfigValues } from "../utils/config"
 import { readConfig, writeConfig } from "../client-config"

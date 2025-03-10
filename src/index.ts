@@ -2,12 +2,12 @@
 
 import chalk from "chalk"
 import { type ValidClient, VALID_CLIENTS } from "./constants"
-import { inspectServer } from "./inspect"
-import { installServer } from "./install"
-import { list } from "./list"
+import { inspectServer } from "./commands/inspect"
+import { installServer } from "./commands/install"
+import { list } from "./commands/list"
 import { setVerbose } from "./logger"
-import { run } from "./run/index"; // use new run function
-import { uninstallServer } from "./uninstall"
+import { run } from "./commands/run/index"; // use new run function
+import { uninstallServer } from "./commands/uninstall"
 
 const command = process.argv[2]
 const argument = process.argv[3]
