@@ -2,7 +2,6 @@
 
 import { createWSRunner } from "../commands/run/ws-runner"
 import { ProxyTransport } from "../commands/run/proxy-transport"
-import WebSocket from "ws"
 
 // Mock the ProxyTransport class
 jest.mock("../commands/run/proxy-transport", () => {
