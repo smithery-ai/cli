@@ -5,6 +5,7 @@ export const VALID_CLIENTS = [
 	"roo-cline",
 	"witsy",
 	"enconvo",
+	"cursor",
 ] as const
 export type ValidClient = (typeof VALID_CLIENTS)[number]
 

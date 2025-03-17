@@ -106,22 +106,26 @@ export const createStdioRunner = async (
 
 		// Use runtime environment with proper PATH setup
 		const runtimeEnv = getRuntimeEnvironment(env)
-		
+
 		// Log the environment variables being used
-		verbose("[Runner] Using environment: " + JSON.stringify(runtimeEnv, null, 2))
+		verbose(
+			`[Runner] Using environment: ${JSON.stringify(runtimeEnv, null, 2)}`,
+		)
 
 		let finalCommand = command
 		let finalArgs = args
 
 		// Resolve npx path upfront if needed
-		if (finalCommand === 'npx') {
-			console.error('[Runner] Using npx path:', finalCommand);
-			
+		if (finalCommand === "npx") {
+			console.error("[Runner] Using npx path:", finalCommand)
+
 			// Special handling for Windows platform
-			if (process.platform === 'win32') {
-				console.error('[Runner] Windows platform detected, using cmd /c for npx');
-				finalArgs = ['/c', 'npx', ...finalArgs];
-				finalCommand = 'cmd';
+			if (process.platform === "win32") {
+				console.error(
+					"[Runner] Windows platform detected, using cmd /c for npx",
+				)
+				finalArgs = ["/c", "npx", ...finalArgs]
+				finalCommand = "cmd"
 			}
 		}
 
@@ -135,10 +139,10 @@ export const createStdioRunner = async (
 				command: finalCommand,
 				args: finalArgs,
 				env: runtimeEnv,
-			});
+			})
 		} catch (error) {
-			console.error('For more help, see: https://smithery.ai/docs/faq/users');
-			throw error;
+			console.error("For more help, see: https://smithery.ai/docs/faq/users")
+			throw error
 		}
 
 		transport.onmessage = (message: JSONRPCMessage) => {

@@ -106,13 +106,15 @@ export async function promptForBunInstall(): Promise<boolean> {
 		console.log("Installing Bun...")
 		if (process.platform === "win32") {
 			// Windows installation
-			await execAsync("powershell -c \"irm bun.sh/install.ps1|iex\"")
+			await execAsync('powershell -c "irm bun.sh/install.ps1|iex"')
 		} else {
 			try {
 				console.log("Attempting to install Bun via Homebrew...")
 				await execAsync("brew install oven-sh/bun/bun")
 			} catch (brewError) {
-				console.log("Homebrew installation failed, trying direct installation...")
+				console.log(
+					"Homebrew installation failed, trying direct installation...",
+				)
 				// Fall back to curl method if Homebrew fails
 				await execAsync("curl -fsSL https://bun.sh/install | bash")
 			}
@@ -144,8 +146,8 @@ export function isBunRequired(connection: ConnectionDetails): boolean {
 export function getRuntimeEnvironment(
 	baseEnv: Record<string, string> = {},
 ): Record<string, string> {
-	const defaultEnv = getDefaultEnvironment();
-	
+	const defaultEnv = getDefaultEnvironment()
+
 	return {
 		...defaultEnv,
 		...baseEnv,

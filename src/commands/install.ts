@@ -51,7 +51,7 @@ function formatServerConfig(
 	]
 
 	// Use cmd /c for Windows platforms
-	if (process.platform === 'win32') {
+	if (process.platform === "win32") {
 		return {
 			command: "cmd",
 			args: ["/c", "npx", ...npxArgs],
@@ -134,9 +134,10 @@ export async function installServer(
 		}
 
 		/* inform users of remote server installation */
-		const remote = server.connections.some(
-			(conn) => conn.type === "ws" && "deploymentUrl" in conn,
-		) && server.remote !== false
+		const remote =
+			server.connections.some(
+				(conn) => conn.type === "ws" && "deploymentUrl" in conn,
+			) && server.remote !== false
 
 		if (remote) {
 			verbose("Remote server detected, showing security notice")

@@ -64,7 +64,7 @@ describe("registry", () => {
 								// This needs to be a valid StdioConnection since fetchConnection returns StdioConnection
 								command: "ws-command", // Add required command property
 								args: ["--url", "ws://test.com"],
-								env: { CONNECTION_TYPE: "ws" }
+								env: { CONNECTION_TYPE: "ws" },
 							},
 						}),
 				})
@@ -104,7 +104,7 @@ describe("registry", () => {
 							result: {
 								command: "stdio-command",
 								args: ["--config", "config.json"],
-								env: { DEBUG: "true" }
+								env: { DEBUG: "true" },
 							},
 						}),
 				})

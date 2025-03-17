@@ -246,7 +246,7 @@ export async function inspectServer(qualifiedName: string): Promise<void> {
 
 		// Collect configuration values if needed
 		const configValues = await collectConfigValues(connection)
-		
+
 		// Get runtime environment
 		const runtimeEnv = getRuntimeEnvironment({})
 
@@ -261,7 +261,7 @@ export async function inspectServer(qualifiedName: string): Promise<void> {
 				"--config",
 				JSON.stringify(JSON.stringify(configValues)),
 			],
-			env: runtimeEnv
+			env: runtimeEnv,
 		})
 
 		// Connect to the server and start interactive session

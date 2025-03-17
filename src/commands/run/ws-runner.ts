@@ -1,7 +1,7 @@
 // import { WebSocketClientTransport } from "@modelcontextprotocol/sdk/client/websocket.js"
 // import { createSmitheryUrl } from "@smithery/sdk/config.js"
 import WebSocket from "ws"
-import { Transport } from "@modelcontextprotocol/sdk/shared/transport.js"
+import type { Transport } from "@modelcontextprotocol/sdk/shared/transport.js"
 import { ProxyTransport } from "./proxy-transport"
 
 global.WebSocket = WebSocket as any

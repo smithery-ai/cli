@@ -4,7 +4,6 @@ import inquirer from "inquirer"
 import chalk from "chalk"
 import type { RegistryServer } from "../types/registry"
 
-
 export async function formatConfigValues(
 	connection: ConnectionDetails /* Server config details */,
 	configValues?: ServerConfig,

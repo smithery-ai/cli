@@ -6,7 +6,7 @@ import { inspectServer } from "./commands/inspect"
 import { installServer } from "./commands/install"
 import { list } from "./commands/list"
 import { setVerbose } from "./logger"
-import { run } from "./commands/run/index"; // use new run function
+import { run } from "./commands/run/index" // use new run function
 import { uninstallServer } from "./commands/uninstall"
 
 const command = process.argv[2]
@@ -23,7 +23,9 @@ const showHelp = () => {
 	console.log("Available commands:")
 	console.log("  install <server>     Install a package")
 	console.log("    --client <name>    Specify the AI client")
-	console.log("    --config <json>    Provide configuration data as JSON (skips prompts)")
+	console.log(
+		"    --config <json>    Provide configuration data as JSON (skips prompts)",
+	)
 	console.log("  uninstall <server>   Uninstall a package")
 	console.log("  inspect <server>     Inspect server from registry")
 	console.log("  run <server>         Run a server")
