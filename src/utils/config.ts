@@ -221,3 +221,12 @@ export function denormalizeServerId(normalizedId: string): string {
 	}
 	return normalizedId
 }
+
+export function getServerName(serverId: string): string {
+	if (serverId.startsWith("@") && serverId.includes("/")) {
+		const slashIndex = serverId.indexOf("/");
+		return serverId.substring(slashIndex + 1);
+	}
+	return serverId;
+}
+

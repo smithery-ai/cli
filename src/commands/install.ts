@@ -29,6 +29,7 @@ import {
 	normalizeServerId,
 	chooseConnection,
 	collectConfigValues,
+	getServerName,
 } from "../utils/config"
 import { checkAnalyticsConsent } from "../utils/analytics"
 import { promptForRestart } from "../utils/client"
@@ -171,11 +172,11 @@ export async function installServer(
 		verbose(`Reading configuration for client: ${client}`)
 		const config = readConfig(client)
 		verbose("Normalizing server ID...")
-		const normalizedName = normalizeServerId(qualifiedName)
-		verbose(`Normalized server ID: ${normalizedName}`)
+		const serverName = getServerName(qualifiedName)
+		verbose(`Normalized server ID: ${serverName}`)
 
 		verbose("Updating client configuration...")
-		config.mcpServers[normalizedName] = serverConfig
+		config.mcpServers[serverName] = serverConfig
 		verbose("Writing updated configuration...")
 		writeConfig(config, client)
 		verbose("Configuration successfully written")
