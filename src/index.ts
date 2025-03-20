@@ -13,6 +13,7 @@ const command = process.argv[2]
 const argument = process.argv[3]
 const clientFlag = process.argv.indexOf("--client")
 const configFlag = process.argv.indexOf("--config")
+const keyFlag = process.argv.indexOf("--key")
 const verboseFlag = process.argv.includes("--verbose")
 const helpFlag = process.argv.includes("--help")
 
@@ -26,10 +27,12 @@ const showHelp = () => {
 	console.log(
 		"    --config <json>    Provide configuration data as JSON (skips prompts)",
 	)
+	console.log("    --key <apikey>     Provide an API key")
 	console.log("  uninstall <server>   Uninstall a package")
 	console.log("  inspect <server>     Inspect server from registry")
 	console.log("  run <server>         Run a server")
 	console.log("    --config <json>    Provide configuration as JSON")
+	console.log("    --key <apikey>     Provide an API key")
 	console.log("  list clients         List available clients")
 	console.log("")
 	console.log("Global options:")
@@ -77,6 +80,7 @@ const validateClient = (
 }
 
 const client = validateClient(command, clientFlag)
+/* config is set to empty if none given */
 const config =
 	configFlag !== -1
 		? (() => {
@@ -87,6 +91,9 @@ const config =
 				return config
 			})()
 		: {}
+
+/* sets to undefined if no key givem */
+const apiKey = keyFlag !== -1 ? process.argv[keyFlag + 1] : undefined
 
 async function main() {
 	switch (command) {
@@ -106,6 +113,7 @@ async function main() {
 				argument,
 				client!,
 				configFlag !== -1 ? config : undefined,
+				apiKey
 			)
 			break
 		case "uninstall":
@@ -120,7 +128,7 @@ async function main() {
 				console.error("Please provide a server ID to run")
 				process.exit(1)
 			}
-			await run(argument, config)
+			await run(argument, config, apiKey)
 			break
 		case "list":
 			await list(argument)
