@@ -8,6 +8,7 @@ import { list } from "./commands/list"
 import { setVerbose } from "./logger"
 import { run } from "./commands/run/index" // use new run function
 import { uninstallServer } from "./commands/uninstall"
+import { ServerConfig } from "./types/registry"
 
 const command = process.argv[2]
 const argument = process.argv[3]
@@ -81,19 +82,25 @@ const validateClient = (
 
 const client = validateClient(command, clientFlag)
 /* config is set to empty if none given */
-const config =
+const config: ServerConfig =
 	configFlag !== -1
 		? (() => {
-				let config = JSON.parse(process.argv[configFlag + 1])
-				if (typeof config === "string") {
-					config = JSON.parse(config)
+				try {
+					let parsedConfig = JSON.parse(process.argv[configFlag + 1])
+					if (typeof parsedConfig === "string") {
+						parsedConfig = JSON.parse(parsedConfig)
+					}
+					return parsedConfig
+				} catch (error) {
+					const errorMessage = error instanceof Error ? error.message : String(error)
+					console.error(chalk.red(`Error parsing config: ${errorMessage}`))
+					process.exit(1)
 				}
-				return config
 			})()
 		: {}
 
-/* sets to undefined if no key givem */
-const apiKey = keyFlag !== -1 ? process.argv[keyFlag + 1] : undefined
+/* sets to undefined if no key given */
+const apiKey: string | undefined = keyFlag !== -1 ? process.argv[keyFlag + 1] : undefined
 
 async function main() {
 	switch (command) {

@@ -3,41 +3,73 @@ import type { ServerConfig } from "../types/registry"
 import inquirer from "inquirer"
 import chalk from "chalk"
 import type { RegistryServer } from "../types/registry"
-import { fetchConfigWithApiKey } from "../registry.js"
+import { fetchConfigWithApiKey } from "../registry"
 
 /**
- * Formats configuration values according to the connection's schema
+ * Formats and validates configuration values according to the connection's schema
+ * 
+ * This function processes configuration values to ensure they match the expected types
+ * defined in the connection schema. It handles type conversions, applies defaults for
+ * non-required fields, and validates that all required fields are present.
+ * 
  * @param connection - Server connection details containing the config schema
- * @param configValues - Optional existing configuration values
- * @returns Formatted configuration values according to schema types
- * @throws Error if a required config value is missing
+ * @param configValues - Optional existing configuration values to format
+ * @returns Formatted configuration values with proper types according to schema
+ * @throws Error if any required config values are missing
  */
 export async function formatConfigValues(
-	connection: ConnectionDetails /* Server config details */,
+	connection: ConnectionDetails,
 	configValues?: ServerConfig,
 ): Promise<ServerConfig> {
 	const formattedValues: ServerConfig = {}
+	const missingRequired: string[] = []
 
 	if (!connection.configSchema?.properties) {
 		return configValues || {}
 	}
 
-	const required = new Set(connection.configSchema.required || [])
+	const required = new Set<string>(connection.configSchema.required || [])
 
+	// First pass: collect all values and track missing required fields
 	for (const [key, prop] of Object.entries(
 		connection.configSchema.properties,
 	)) {
 		const schemaProp = prop as { type?: string; default?: unknown }
 		const value = configValues?.[key]
 
-		if (value !== undefined || schemaProp.default !== undefined) {
-			formattedValues[key] = convertValueToType(
-				value ?? schemaProp.default,
-				schemaProp.type,
-			)
-		} else if (required.has(key)) {
-			throw new Error(`Missing required config value: ${key}`)
+		try {
+			let finalValue;
+			if (value !== undefined) {
+				finalValue = value;
+			} else if (!required.has(key)) {
+				finalValue = schemaProp.default;
+			} else {
+				finalValue = undefined;
+			}
+			
+			if (finalValue === undefined) {
+				if (required.has(key)) {
+					missingRequired.push(key)
+					continue
+				}
+				// Use empty string for optional values without defaults
+				formattedValues[key] = ""
+				continue
+			}
+
+			formattedValues[key] = convertValueToType(finalValue, schemaProp.type)
+		} catch (error) {
+			if (required.has(key)) {
+				missingRequired.push(key)
+			} else {
+				formattedValues[key] = null // Explicit null for invalid optional values
+			}
 		}
+	}
+
+	// After collecting all values, throw error if any required fields are missing
+	if (missingRequired.length > 0) {
+		throw new Error(`Missing required config values: ${missingRequired.join(', ')}`)
 	}
 
 	return formattedValues
@@ -50,24 +82,36 @@ export async function formatConfigValues(
  * @returns The converted value
  */
 function convertValueToType(value: unknown, type: string | undefined): unknown {
-	if (!type || !value) return value
+	if (!type) return value;
+
+	// Helper for throwing standardized errors
+	const invalid = (expected: string) => {
+		throw new Error(`Invalid ${expected} value: ${JSON.stringify(value)}`);
+	};
 
 	switch (type) {
-		case "boolean":
-			return String(value).toLowerCase() === "true"
-		case "number":
-			return Number(value)
-		case "integer":
-			return Number.parseInt(String(value), 10)
+		case "boolean": {
+			const str = String(value).toLowerCase();
+			if (str === "true") return true;
+			if (str === "false") return false;
+			invalid("boolean");
+		}
+		case "number": {
+			const num = Number(value);
+			if (!Number.isNaN(num)) return num;
+			invalid("number");
+		}
+		case "integer": {
+			const num = Number.parseInt(String(value), 10);
+			if (!Number.isNaN(num)) return num;
+			invalid("integer");
+		}
+		case "string":
+			return String(value);
 		case "array":
-			return Array.isArray(value)
-				? value
-				: String(value)
-						.split(",")
-						.map((item) => item.trim())
-						.filter(Boolean)
+			return Array.isArray(value) ? value : String(value).split(",").map(v => v.trim());
 		default:
-			return value
+			return value;
 	}
 }
 
@@ -77,38 +121,41 @@ function convertValueToType(value: unknown, type: string | undefined): unknown {
  * @param savedConfig - Optional saved configuration to validate
  * @returns Object indicating if config is complete and the validated config
  */
-export async function validateSavedConfig(
+export async function validateConfig(
 	connection: ConnectionDetails,
 	savedConfig?: ServerConfig
 ): Promise<{ isValid: boolean; savedConfig?: Record<string, unknown> }> {
-	// If no config schema or properties needed, return true with empty config
+	// If no config schema needed, return early
 	if (!connection.configSchema?.properties) {
-		return { isValid: true, savedConfig: {} }
-	}
-
-	// If config is needed but none provided, return false
-	if (!savedConfig) {
-		return { isValid: false }
+		return { isValid: true, savedConfig: {} };
 	}
 
 	try {
-		const required = new Set(connection.configSchema.required || [])
+		// Always format first to ensure type safety
+		const formattedConfig = await formatConfigValues(connection, savedConfig || {});
 		
-		const hasAllRequired = Array.from(required as Set<string>).every(
-			key => typeof savedConfig === 'object' && savedConfig !== null && key in savedConfig
-		)
+		// Now validate against the formatted config
+		const required = new Set<string>(connection.configSchema.required || []);
+		const hasAllRequired = Array.from(required).every(
+			key => formattedConfig[key] !== undefined
+		);
 
-		if (hasAllRequired) {
-			// Only log if we actually have some config to use
-			// if (Object.keys(savedConfig).length > 0) {
-			// 	console.log(chalk.green("✓ Using saved configuration"))
-			// }
-			return { isValid: true, savedConfig }
-		}
-
-		return { isValid: false, savedConfig }
+		return {
+			isValid: hasAllRequired,
+			savedConfig: formattedConfig
+		};
 	} catch (error) {
-		return { isValid: false }
+		try {
+			// Try to get partial config by ignoring required fields
+			const partialConfig = Object.fromEntries(
+				Object.entries(savedConfig || {})
+					.filter(([_, v]) => v !== undefined)
+			);
+			return { isValid: false, savedConfig: partialConfig };
+		} catch {
+			// If that fails too, return empty config
+			return { isValid: false };
+		}
 	}
 }
 
@@ -122,108 +169,151 @@ export async function validateSavedConfig(
  */
 export async function collectConfigValues(
 	connection: ConnectionDetails,
-	existingValues?: Record<string, unknown>,
+	existingValues?: ServerConfig,
 	apiKey?: string,
 	serverName?: string,
-): Promise<{ configValues: ServerConfig; isSavedConfigValid: boolean }> {
-	if (existingValues) { // if existing values given, pass through
-		return { configValues: existingValues, isSavedConfigValid: false };
-	}
-
+): Promise<{ configValues: ServerConfig; isSavedConfig: boolean }> {
+	// 1. Early exit if no config needed
 	if (!connection.configSchema?.properties) {
-		return { configValues: {}, isSavedConfigValid: false };
+		return { configValues: {}, isSavedConfig: false };
 	}
 
-	// Fetch config first if API key is provided
-	let fetchedConfig: ServerConfig = {}
+	let baseConfig: ServerConfig = {};
+
+	// 2. Validate and process existing values
+	if (existingValues) {
+		const { isValid, savedConfig } = await validateConfig(connection, existingValues);
+		if (isValid) { // if valid, we return formatted existing config
+			return { 
+				configValues: savedConfig!,
+				isSavedConfig: false // Existing values always count as unsaved
+			};
+		}
+		baseConfig = savedConfig || {};
+	}
+
+	let fetchedConfig: ServerConfig = {};
+	// let pureSavedConfig = false;
+
+	// 3. Try fetching remote config
 	if (apiKey && serverName) {
 		try {
-			fetchedConfig = await fetchConfigWithApiKey(serverName, apiKey)
-			// Only log if we actually have some config to use
-			// if (Object.keys(fetchedConfig).length > 0) {
-			// 	console.log(chalk.green("✓ Loaded saved configuration"))
-			// }
-		} catch (error) {
-			// Only warn if the server actually needs configuration
-			if (connection.configSchema?.required?.length || 
-				Object.keys(connection.configSchema?.properties || {}).length > 0) {
-				console.warn(chalk.yellow("Could not load saved configuration, will prompt for values"))
+			fetchedConfig = await fetchConfigWithApiKey(serverName, apiKey);
+			const { isValid, savedConfig } = await validateConfig(connection, fetchedConfig);
+			
+			if (isValid) {
+				// If no existing values, return saved config as is
+				if (!existingValues) {
+					return {
+						configValues: savedConfig!,
+						isSavedConfig: true // Pure saved config with no modifications
+					};
+				}
+
+				// Merge with existing values (existing takes priority)
+				const mergedConfig = { ...savedConfig, ...baseConfig };
+				const mergedValidation = await validateConfig(connection, mergedConfig);
+				
+				if (mergedValidation.isValid) {
+					return {
+						configValues: mergedValidation.savedConfig!,
+						isSavedConfig: false // Modified with existing values
+					};
+				}
+				// pureSavedConfig = false;
 			}
+		} catch (error) {
+			console.warn(chalk.yellow("Failed to fetch saved configuration"));
 		}
 	}
 
-	// Then validate it
-	const { isValid, savedConfig: validatedConfig } = await validateSavedConfig(
-		connection,
-		fetchedConfig
-	)
+	// 4. If both existing and fetched are invalid, prepare combined base config 
+	// and prompt for missing values
+	const combinedConfig = { ...baseConfig, ...fetchedConfig };
+	const required = new Set<string>(connection.configSchema.required || []);
+	const properties = connection.configSchema.properties;
 
-	// If saved config is valid, return it with flag
-	if (isValid && validatedConfig) {
-		return { configValues: validatedConfig, isSavedConfigValid: true };
-	}
-
-	// Otherwise, collect missing values
-	const configValues: ServerConfig = { ...(validatedConfig || {}) }
-
-	const required = new Set(connection.configSchema.required || [])
-	const properties = connection.configSchema.properties
-
-	// Check which values we still need to collect
+	// 5. Collect missing values
 	for (const [key, prop] of Object.entries(properties)) {
 		const schemaProp = prop as {
-			description?: string
-			default?: unknown
-			type?: string
-		}
+			description?: string;
+			default?: unknown;
+			type?: string;
+		};
 
-		// If we already have this value from saved config, use it
-		if (fetchedConfig[key] !== undefined) {
-			configValues[key] = fetchedConfig[key]
-			continue
-		}
+		// Skip if value already exists
+		if (combinedConfig[key] !== undefined) continue;
 
-		// Prompt for any values not already set (both required and optional)
-		if (configValues[key] === undefined) {
-			const requiredText = required.has(key) ? chalk.red(" (required)") : " (optional)"
-			
-			const promptType = key.toLowerCase().includes("key")
-				? "password"
-				: schemaProp.type === "boolean"
-					? "confirm"
-					: schemaProp.type === "array"
-						? "input"
-						: schemaProp.type === "number" || schemaProp.type === "integer"
-							? "number"
-							: "input"
-
-			const { value } = await inquirer.prompt([
-				{
-					type: promptType,
-					name: "value",
-					message: `${schemaProp.description || `Enter value for ${key}`}${requiredText}${
-						schemaProp.type === "array" ? " (comma-separated)" : ""
-					}`,
-					default: schemaProp.default,
-					mask: promptType === "password" ? "*" : undefined,
-					validate: (input: string | number) => {
-						if (required.has(key) && !input) return false
-						if (schemaProp.type === "number" || schemaProp.type === "integer") {
-							return !Number.isNaN(Number(input)) || "Please enter a valid number"
-						}
-						return true
-					},
-				},
-			])
-
-			if (value !== undefined || schemaProp.default !== undefined) {
-				configValues[key] = value ?? schemaProp.default
-			}
-		}
+		// Prompt for missing value
+		const value = await promptForConfigValue(key, schemaProp, required);
+		combinedConfig[key] = value !== undefined ? value : schemaProp.default;
 	}
 
-	// Return collected values but flag that they're not completely from saved config
-	return { configValues: { ...fetchedConfig, ...configValues }, isSavedConfigValid: false };
+	// 6. Final validation and formatting
+	try {
+		const formatted = await formatConfigValues(connection, combinedConfig);
+		return {
+			configValues: formatted,
+			isSavedConfig: false // True only if pure saved config existed but couldn't be merged
+		};
+	} catch (error) {
+		const errorMessage = error instanceof Error ? error.message : 'Unknown configuration error';
+		console.error(chalk.red("Configuration error:"), errorMessage);
+		return {
+			configValues: combinedConfig,
+			isSavedConfig: false
+		};
+	}
+}
+
+/**
+ * Prompts the user for a config value based on schema property
+ * @param key - The configuration key
+ * @param schemaProp - The schema property details
+ * @param required - Set of required field names
+ * @returns The collected value from user input
+ */
+async function promptForConfigValue(
+	key: string,
+	schemaProp: {
+		description?: string;
+		default?: unknown;
+		type?: string;
+	},
+	required: Set<string>
+): Promise<unknown> {
+	const requiredText = required.has(key) ? chalk.red(" (required)") : " (optional)";
+	
+	const promptType = key.toLowerCase().includes("key")
+		? "password"
+		: schemaProp.type === "boolean"
+			? "confirm"
+			: schemaProp.type === "array"
+				? "input"
+				: schemaProp.type === "number" || schemaProp.type === "integer"
+					? "number"
+					: "input";
+
+	const { value } = await inquirer.prompt([
+		{
+			type: promptType,
+			name: "value",
+			message: `${schemaProp.description || `Enter value for ${key}`}${requiredText}${
+				schemaProp.type === "array" ? " (comma-separated)" : ""
+			}`,
+			default: schemaProp.default,
+			mask: promptType === "password" ? "*" : undefined,
+			validate: (input: string | number) => {
+				if (required.has(key) && !input) return false;
+				if (schemaProp.type === "number" || schemaProp.type === "integer") {
+					return !Number.isNaN(Number(input)) || "Please enter a valid number";
+				}
+				return true;
+			},
+		},
+	]);
+
+	return value;
 }
 
 /**
@@ -342,4 +432,3 @@ export function getServerName(serverId: string): string {
 	}
 	return serverId;
 }
-

@@ -16,7 +16,7 @@ import { readConfig, writeConfig } from "../client-config"
 import type { ValidClient } from "../constants"
 import { verbose } from "../logger"
 import { resolvePackage } from "../registry"
-import type { ConfiguredServer } from "../types/registry"
+import type { ConfiguredServer, ServerConfig } from "../types/registry"
 import {
 	checkUVInstalled,
 	isUVRequired,
@@ -35,21 +35,19 @@ import { promptForRestart } from "../utils/client"
 
 function formatServerConfig(
 	qualifiedName: string,
-	userConfig: Record<string, unknown>,
+	userConfig: ServerConfig,
 	apiKey?: string,
-	configNeeded: boolean = true
+	configNeeded: boolean = true // whether config flag is needed
 ): ConfiguredServer {
 	// Base arguments for npx command
 	const npxArgs = ["-y", "@smithery/cli@latest", "run", qualifiedName]
 
-	// Add API key if provided
+	// Always add API key if provided
 	if (apiKey) {
 		npxArgs.push("--key", apiKey)
 	}
 
-	// Only add config if there are values to pass AND 
-	// api key is invalid or has invalid configuration
-	if (Object.keys(userConfig).length > 0 && configNeeded) {
+	if ((!apiKey || configNeeded)) {
 		/* double stringify config to make it shell-safe */
 		const encodedConfig = JSON.stringify(JSON.stringify(userConfig))
 		npxArgs.push("--config", encodedConfig)
@@ -85,7 +83,7 @@ export async function installServer(
 	qualifiedName: string,
 	client: ValidClient,
 	configValues?: Record<string, unknown>,
-	apiKey?: string
+	apiKey?: string // api key is essentially a longer term goal to abstract away user passed config
 ): Promise<void> {
 	verbose(`Starting installation of ${qualifiedName} for client ${client}`)
 
@@ -167,24 +165,24 @@ export async function installServer(
 		/* collect config values from user or use provided config */
 		verbose(
 			configValues
-				? "Using provided config values"
-				: "Collecting config values from user",
+				? "Using provided config values" // provided values always override others
+				: "Collecting config values", // from user or from saved config
 		)
-		const { configValues: collectedConfigValues, isSavedConfigValid } = await collectConfigValues(
-			connection, // connection details
-			configValues, // given config values, can be undefined
-			apiKey, // given api key, can be undefined
+		const { configValues: collectedConfigValues, isSavedConfig } = await collectConfigValues(
+			connection, 
+			configValues,
+			apiKey, 
 			qualifiedName
 		)
 		verbose(`Config values: ${JSON.stringify(collectedConfigValues, null, 2)}`)
-		verbose(`Is from saved config: ${isSavedConfigValid}`)
+		verbose(`Is from saved config: ${isSavedConfig}`)
 
 		verbose("Formatting server configuration...")
 		const serverConfig = formatServerConfig(
 			qualifiedName,
 			collectedConfigValues,
 			apiKey,
-			!isSavedConfigValid // Only include config if saved config not valid
+			!isSavedConfig // Only include config if saved config not valid
 		)
 		verbose(`Formatted server config: ${JSON.stringify(serverConfig, null, 2)}`)
 

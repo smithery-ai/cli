@@ -7,7 +7,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## [1.1.49] - 2025-03-25
 
 ### Added
-- Support for `--key` flag to authenticate and use servers through smithery
+- Initial support for `--key` flag to authenticate and use servers through smithery (preparatory work, not yet functional)
+
+### Changed
+- Enhanced server configuration with improved validation
 
 ## [1.1.48] - 2025-03-17
 
