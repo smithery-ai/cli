@@ -245,7 +245,7 @@ export async function inspectServer(qualifiedName: string): Promise<void> {
 		const connection = chooseConnection(server)
 
 		// Collect configuration values if needed
-		const configValues = await collectConfigValues(connection)
+		const { configValues } = await collectConfigValues(connection)
 
 		// Get runtime environment
 		const runtimeEnv = getRuntimeEnvironment({})

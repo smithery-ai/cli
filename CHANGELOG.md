@@ -4,7 +4,12 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
-## [1.1.49] - 2025-03-25
+## [1.1.50] - 2025-03-22
+
+### Fixed
+- Updated `inspectServer` function to properly handle changes in configuration collection
+
+## [1.1.49] - 2025-03-21
 
 ### Added
 - Initial support for `--key` flag to authenticate and use servers through smithery (preparatory work, not yet functional)
