@@ -4,6 +4,13 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [1.1.51] - 2025-03-25
+
+### Changed
+- Refactored the install command for better code organization and maintainability
+- Enhanced API key handling to improve backward compatibility and isolate functions when API key is provided
+- Optimized registry to reduce database calls by returning both server details and saved configuration in a single request
+
 ## [1.1.50] - 2025-03-22
 
 ### Fixed

@@ -15,63 +15,25 @@ import ora from "ora"
 import { readConfig, writeConfig } from "../client-config"
 import type { ValidClient } from "../constants"
 import { verbose } from "../logger"
-import { resolvePackage } from "../registry"
-import type { ConfiguredServer, ServerConfig } from "../types/registry"
+import { resolvePackage, fetchConfigWithApiKey } from "../registry.js"
 import {
-	checkUVInstalled,
-	isUVRequired,
-	promptForUVInstall,
-	checkBunInstalled,
-	promptForBunInstall,
-	isBunRequired,
+	ensureUVInstalled,
+	ensureBunInstalled,
+	checkAndNotifyRemoteServer,
 } from "../utils/runtime"
 import {
 	chooseConnection,
 	collectConfigValues,
 	getServerName,
+	formatServerConfig,
 } from "../utils/config"
 import { checkAnalyticsConsent } from "../utils/analytics"
 import { promptForRestart } from "../utils/client"
 
-function formatServerConfig(
-	qualifiedName: string,
-	userConfig: ServerConfig,
-	apiKey?: string,
-	configNeeded: boolean = true // whether config flag is needed
-): ConfiguredServer {
-	// Base arguments for npx command
-	const npxArgs = ["-y", "@smithery/cli@latest", "run", qualifiedName]
-
-	// Always add API key if provided
-	if (apiKey) {
-		npxArgs.push("--key", apiKey)
-	}
-
-	if ((!apiKey || configNeeded)) {
-		/* double stringify config to make it shell-safe */
-		const encodedConfig = JSON.stringify(JSON.stringify(userConfig))
-		npxArgs.push("--config", encodedConfig)
-	}
-
-	// Use cmd /c for Windows platforms
-	if (process.platform === "win32") {
-		return {
-			command: "cmd",
-			args: ["/c", "npx", ...npxArgs],
-		}
-	}
-
-	// Default for non-Windows platforms
-	return {
-		command: "npx",
-		args: npxArgs,
-	}
-}
-
 /**
- * Installs and configures a Smithery server for a specified client. 
+ * Installs and configures a Smithery server for a specified client.
  * Prompts for config values if config not given OR saved config not valid
- * 
+ *
  * @param {string} qualifiedName - The fully qualified name of the server package to install
  * @param {ValidClient} client - The client to install the server for
  * @param {Record<string, unknown>} [configValues] - Optional configuration values for the server
@@ -83,15 +45,37 @@ export async function installServer(
 	qualifiedName: string,
 	client: ValidClient,
 	configValues?: Record<string, unknown>,
-	apiKey?: string // api key is essentially a longer term goal to abstract away user passed config
+	apiKey?: string,
 ): Promise<void> {
 	verbose(`Starting installation of ${qualifiedName} for client ${client}`)
 
 	/* start resolving in background */
 	verbose(`Resolving package: ${qualifiedName}`)
-	const serverPromise = resolvePackage(qualifiedName)
 
-	// Add error handling around analytics check
+	// Resolve server based on whether an API key is provided
+	let serverPromise: Promise<any>
+	let savedConfig = undefined
+
+	if (apiKey) {
+		verbose("API key provided, fetching server details and saved config")
+		serverPromise = fetchConfigWithApiKey(qualifiedName, apiKey)
+			.then((result) => {
+				savedConfig = result.config
+				return result.server
+			})
+			.catch((error) => {
+				console.warn(
+					chalk.yellow("[Install] Failed to fetch config with API key:"),
+					error instanceof Error ? error.message : String(error),
+				)
+				// Fall back to standard resolution
+				verbose("Falling back to standard package resolution")
+				return resolvePackage(qualifiedName)
+			})
+	} else {
+		serverPromise = resolvePackage(qualifiedName)
+	}
+
 	try {
 		verbose("Checking analytics consent...")
 		await checkAnalyticsConsent()
@@ -115,74 +99,37 @@ export async function installServer(
 		const connection = chooseConnection(server)
 		verbose(`Selected connection: ${JSON.stringify(connection, null, 2)}`)
 
-		/* Check if UV is required and install if needed */
-		if (isUVRequired(connection)) {
-			verbose("UV installation check required")
-			const uvInstalled = await checkUVInstalled()
-			if (!uvInstalled) {
-				const installed = await promptForUVInstall()
-				if (!installed) {
-					console.warn(
-						chalk.yellow(
-							"UV is not installed. The server might fail to launch.",
-						),
-					)
-				}
-			}
-		}
-
-		/* Check if Bun is required and install if needed */
-		if (isBunRequired(connection)) {
-			verbose("Bun installation check required")
-			const bunInstalled = await checkBunInstalled()
-			if (!bunInstalled) {
-				const installed = await promptForBunInstall()
-				if (!installed) {
-					console.warn(
-						chalk.yellow(
-							"Bun is not installed. The server might fail to launch.",
-						),
-					)
-				}
-			}
-		}
+		/* Check for required runtimes and install if needed */
+		await ensureUVInstalled(connection)
+		await ensureBunInstalled(connection)
 
 		/* inform users of remote server installation */
-		const remote =
-			server.connections.some(
-				(conn) => conn.type === "ws" && "deploymentUrl" in conn,
-			) && server.remote !== false
+		checkAndNotifyRemoteServer(server)
 
-		if (remote) {
-			verbose("Remote server detected, showing security notice")
-			console.log(
-				chalk.blue(
-					`Installing remote server. Please ensure you trust the server author, especially when sharing sensitive data.\nFor information on Smithery's data policy, please visit: ${chalk.underline("https://smithery.ai/docs/data-policy")}`,
-				),
-			)
-		}
+		// Merge configs, with user-provided values taking precedence
+		const mergedConfigValues = savedConfig
+			? { ...(savedConfig as Record<string, unknown>), ...(configValues || {}) }
+			: configValues
 
-		/* collect config values from user or use provided config */
-		verbose(
-			configValues
-				? "Using provided config values" // provided values always override others
-				: "Collecting config values", // from user or from saved config
+		// Get the validated config values, prompt if additional values are needed
+		const collectedConfigValues = await collectConfigValues(
+			connection,
+			mergedConfigValues,
 		)
-		const { configValues: collectedConfigValues, isSavedConfig } = await collectConfigValues(
-			connection, 
-			configValues,
-			apiKey, 
-			qualifiedName
-		)
+
+		// Determine if we need to pass config flag
+		// If user provided config values, always use them
+		const configFlagNeeded = !!configValues
+
 		verbose(`Config values: ${JSON.stringify(collectedConfigValues, null, 2)}`)
-		verbose(`Is from saved config: ${isSavedConfig}`)
+		verbose(`Using config flag: ${configFlagNeeded}`)
 
 		verbose("Formatting server configuration...")
 		const serverConfig = formatServerConfig(
 			qualifiedName,
 			collectedConfigValues,
 			apiKey,
-			!isSavedConfig // Only include config if saved config not valid
+			configFlagNeeded, // Only include config if it differs from saved config
 		)
 		verbose(`Formatted server config: ${JSON.stringify(serverConfig, null, 2)}`)
 

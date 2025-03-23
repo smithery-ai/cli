@@ -139,15 +139,15 @@ export const fetchConnection = async (
 }
 
 /**
- * Fetches saved server configuration using an API key
+ * Fetches saved server configuration and server details using an API key
  * @param serverName The qualified name of the server
  * @param apiKey The user's API key
- * @returns {Promise<ServerConfig>} The saved configuration for the server as a JSON record
+ * @returns {Promise<{config: ServerConfig, server: RegistryServer}>} The saved configuration and server details
  */
 export const fetchConfigWithApiKey = async (
 	serverName: string,
 	apiKey: string,
-): Promise<ServerConfig> => {
+): Promise<{ config: ServerConfig; server: RegistryServer }> => {
 	const endpoint = getEndpoint()
 	verbose(`Fetching configuration for ${serverName} using API key`)
 
@@ -156,29 +156,37 @@ export const fetchConfigWithApiKey = async (
 		const response = await fetch(`${endpoint}/configs/${serverName}`, {
 			method: "GET",
 			headers: {
-				"Authorization": `Bearer ${apiKey}`,
+				Authorization: `Bearer ${apiKey}`,
 				"Content-Type": "application/json",
 			},
 		})
 		verbose(`Response status: ${response.status}`)
 
 		if (!response.ok) {
-			const errorData = (await response.json().catch(() => null)) as {
-				error?: string
+			let errorMessage: string
+			try {
+				const errorData = (await response.clone().json()) as { error?: string }
+				errorMessage = errorData?.error || "Unknown error"
+			} catch (e) {
+				// If parsing as JSON fails, use text() on the original response
+				errorMessage = await response.text()
 			}
-			const errorMessage = errorData?.error || (await response.text())
 			verbose(`Error response: ${errorMessage}`)
 
 			if (response.status === 404) {
-				throw new Error(`Configuration for "${serverName}" not found`)
+				throw new Error(`Server "${serverName}" not found`)
 			}
-			
+
 			if (response.status === 401) {
-				throw new Error(`Invalid or expired API key`)
+				throw new Error(`API key required or invalid`)
 			}
 
 			if (response.status === 400) {
 				throw new Error(`Invalid server name`)
+			}
+
+			if (response.status === 500) {
+				throw new Error(`Internal server error: ${errorMessage}`)
 			}
 
 			throw new Error(
@@ -187,17 +195,23 @@ export const fetchConfigWithApiKey = async (
 		}
 
 		verbose("Successfully received configuration data")
-		const data = await response.json() as {
+		const data = (await response.json()) as {
 			success: boolean
 			config: ServerConfig
+			server: RegistryServer
 		}
-		
-		if (!data.success || !data.config) {
+
+		if (!data.success || !data.config || !data.server) {
 			throw new Error("Invalid response format")
 		}
-		
-		verbose(`Configuration for ${serverName} retrieved successfully`)
-		return data.config
+
+		verbose(
+			`Configuration and server details for ${serverName} retrieved successfully`,
+		)
+		return {
+			config: data.config,
+			server: data.server,
+		}
 	} catch (error) {
 		verbose(
 			`Configuration fetch error: ${error instanceof Error ? error.message : String(error)}`,

@@ -5,6 +5,7 @@ import { exec } from "node:child_process"
 import { promisify } from "node:util"
 import { getDefaultEnvironment } from "@modelcontextprotocol/sdk/client/stdio.js"
 import ora from "ora"
+import { verbose } from "../logger"
 
 const execAsync = promisify(exec)
 
@@ -152,4 +153,76 @@ export function getRuntimeEnvironment(
 		...defaultEnv,
 		...baseEnv,
 	}
+}
+
+/**
+ * Ensures UV is installed if required by the connection
+ * @param connection The connection details to check
+ * @returns Promise<void>
+ */
+export async function ensureUVInstalled(
+	connection: ConnectionDetails,
+): Promise<void> {
+	if (isUVRequired(connection)) {
+		verbose("UV installation check required")
+		const uvInstalled = await checkUVInstalled()
+		if (!uvInstalled) {
+			const installed = await promptForUVInstall()
+			if (!installed) {
+				console.warn(
+					chalk.yellow("UV is not installed. The server might fail to launch."),
+				)
+			}
+		}
+	}
+}
+
+/**
+ * Ensures Bun is installed if required by the connection
+ * @param connection The connection details to check
+ * @returns Promise<void>
+ */
+export async function ensureBunInstalled(
+	connection: ConnectionDetails,
+): Promise<void> {
+	if (isBunRequired(connection)) {
+		verbose("Bun installation check required")
+		const bunInstalled = await checkBunInstalled()
+		if (!bunInstalled) {
+			const installed = await promptForBunInstall()
+			if (!installed) {
+				console.warn(
+					chalk.yellow(
+						"Bun is not installed. The server might fail to launch.",
+					),
+				)
+			}
+		}
+	}
+}
+
+/**
+ * Checks if the server is a remote server and displays a security notice if needed
+ * @param server The server information containing connection details
+ * @returns boolean indicating if the server is remote
+ */
+export function checkAndNotifyRemoteServer(server: {
+	connections: ConnectionDetails[]
+	remote?: boolean
+}): boolean {
+	const remote =
+		server.connections.some(
+			(conn) => conn.type === "ws" && "deploymentUrl" in conn,
+		) && server.remote !== false
+
+	if (remote) {
+		verbose("Remote server detected, showing security notice")
+		console.log(
+			chalk.blue(
+				`Installing remote server. Please ensure you trust the server author, especially when sharing sensitive data.\nFor information on Smithery's data policy, please visit: ${chalk.underline("https://smithery.ai/docs/data-policy")}`,
+			),
+		)
+	}
+
+	return remote
 }

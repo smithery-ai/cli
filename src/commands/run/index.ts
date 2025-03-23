@@ -9,11 +9,11 @@ import {
 	getUserId,
 } from "../../smithery-config.js"
 import { chooseConnection } from "../../utils/config.js"
-import { ServerConfig } from "../../types/registry.js"
+import type { ServerConfig } from "../../types/registry.js"
 
 /**
  * Runs a server with the specified configuration
- * 
+ *
  * @param {string} qualifiedName - The qualified name of the server to run
  * @param {ServerConfig} config - Configuration values for the server
  * @param {string} [apiKey] - Optional API key to fetch saved configuration
@@ -23,7 +23,7 @@ import { ServerConfig } from "../../types/registry.js"
 export async function run(
 	qualifiedName: string,
 	config: ServerConfig,
-	apiKey?: string
+	apiKey?: string,
 ) {
 	try {
 		const settingsResult = await initializeSettings()
@@ -34,19 +34,27 @@ export async function run(
 			)
 		}
 
-		// If API key is provided, fetch saved config and merge with provided config
+		let resolvedServer: RegistryServer | null = null
 		let finalConfig = config
+
+		// If API key is provided, fetch both config and server info in one call
 		if (apiKey) {
 			try {
-				const savedConfig = await fetchConfigWithApiKey(qualifiedName, apiKey)
-				finalConfig = { ...savedConfig, ...config } // Provided config takes precedence
+				const result = await fetchConfigWithApiKey(qualifiedName, apiKey)
+				resolvedServer = result.server
+				finalConfig = { ...result.config, ...config } // Merge configs, with local config taking precedence
+				console.error("[Runner] Using saved configuration")
 			} catch (error) {
-				console.warn("[Runner] Failed to fetch saved config:", error)
-				// Continue with provided config if fetch fails
+				console.error("[Runner] Failed to fetch config with API key:", error)
+				console.error("[Runner] Falling back to standard resolution")
+				resolvedServer = null // Ensure we do a fresh resolution below
 			}
 		}
 
-		const resolvedServer = await resolvePackage(qualifiedName)
+		// If we still don't have a server (either no API key or API key fetch failed)
+		if (!resolvedServer) {
+			resolvedServer = await resolvePackage(qualifiedName)
+		}
 
 		if (!resolvedServer) {
 			throw new Error(`Could not resolve server: ${qualifiedName}`)
@@ -68,7 +76,7 @@ export async function run(
 
 /**
  * Picks the correct runner and starts the server based on available connection types.
- * 
+ *
  * @param {RegistryServer} serverDetails - Details of the server to run, including connection options
  * @param {ServerConfig} config - Configuration values for the server
  * @param {string} [userId] - Optional user ID for analytics tracking

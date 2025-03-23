@@ -8,7 +8,7 @@ import { list } from "./commands/list"
 import { setVerbose } from "./logger"
 import { run } from "./commands/run/index" // use new run function
 import { uninstallServer } from "./commands/uninstall"
-import { ServerConfig } from "./types/registry"
+import type { ServerConfig } from "./types/registry"
 
 const command = process.argv[2]
 const argument = process.argv[3]
@@ -92,7 +92,8 @@ const config: ServerConfig =
 					}
 					return parsedConfig
 				} catch (error) {
-					const errorMessage = error instanceof Error ? error.message : String(error)
+					const errorMessage =
+						error instanceof Error ? error.message : String(error)
 					console.error(chalk.red(`Error parsing config: ${errorMessage}`))
 					process.exit(1)
 				}
@@ -100,7 +101,8 @@ const config: ServerConfig =
 		: {}
 
 /* sets to undefined if no key given */
-const apiKey: string | undefined = keyFlag !== -1 ? process.argv[keyFlag + 1] : undefined
+const apiKey: string | undefined =
+	keyFlag !== -1 ? process.argv[keyFlag + 1] : undefined
 
 async function main() {
 	switch (command) {
@@ -120,7 +122,7 @@ async function main() {
 				argument,
 				client!,
 				configFlag !== -1 ? config : undefined,
-				apiKey
+				apiKey,
 			)
 			break
 		case "uninstall":

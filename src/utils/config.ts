@@ -1,17 +1,16 @@
 import type { ConnectionDetails } from "../types/registry"
-import type { ServerConfig } from "../types/registry"
+import type { ConfiguredServer, ServerConfig } from "../types/registry"
 import inquirer from "inquirer"
 import chalk from "chalk"
 import type { RegistryServer } from "../types/registry"
-import { fetchConfigWithApiKey } from "../registry"
 
 /**
  * Formats and validates configuration values according to the connection's schema
- * 
+ *
  * This function processes configuration values to ensure they match the expected types
  * defined in the connection schema. It handles type conversions, applies defaults for
  * non-required fields, and validates that all required fields are present.
- * 
+ *
  * @param connection - Server connection details containing the config schema
  * @param configValues - Optional existing configuration values to format
  * @returns Formatted configuration values with proper types according to schema
@@ -38,15 +37,15 @@ export async function formatConfigValues(
 		const value = configValues?.[key]
 
 		try {
-			let finalValue;
+			let finalValue: unknown
 			if (value !== undefined) {
-				finalValue = value;
+				finalValue = value
 			} else if (!required.has(key)) {
-				finalValue = schemaProp.default;
+				finalValue = schemaProp.default
 			} else {
-				finalValue = undefined;
+				finalValue = undefined
 			}
-			
+
 			if (finalValue === undefined) {
 				if (required.has(key)) {
 					missingRequired.push(key)
@@ -69,7 +68,9 @@ export async function formatConfigValues(
 
 	// After collecting all values, throw error if any required fields are missing
 	if (missingRequired.length > 0) {
-		throw new Error(`Missing required config values: ${missingRequired.join(', ')}`)
+		throw new Error(
+			`Missing required config values: ${missingRequired.join(", ")}`,
+		)
 	}
 
 	return formattedValues
@@ -82,36 +83,43 @@ export async function formatConfigValues(
  * @returns The converted value
  */
 function convertValueToType(value: unknown, type: string | undefined): unknown {
-	if (!type) return value;
+	if (!type) return value
 
 	// Helper for throwing standardized errors
 	const invalid = (expected: string) => {
-		throw new Error(`Invalid ${expected} value: ${JSON.stringify(value)}`);
-	};
+		throw new Error(`Invalid ${expected} value: ${JSON.stringify(value)}`)
+	}
 
 	switch (type) {
 		case "boolean": {
-			const str = String(value).toLowerCase();
-			if (str === "true") return true;
-			if (str === "false") return false;
-			invalid("boolean");
+			const str = String(value).toLowerCase()
+			if (str === "true") return true
+			if (str === "false") return false
+			invalid("boolean")
+			return null // Add this to avoid fallthrough (will never be reached)
 		}
 		case "number": {
-			const num = Number(value);
-			if (!Number.isNaN(num)) return num;
-			invalid("number");
+			const num = Number(value)
+			if (!Number.isNaN(num)) return num
+			invalid("number")
+			return null // Add this to prevent fallthrough
 		}
 		case "integer": {
-			const num = Number.parseInt(String(value), 10);
-			if (!Number.isNaN(num)) return num;
-			invalid("integer");
+			const num = Number.parseInt(String(value), 10)
+			if (!Number.isNaN(num)) return num
+			invalid("integer")
+			return null // Add this to prevent fallthrough
 		}
 		case "string":
-			return String(value);
+			return String(value)
 		case "array":
-			return Array.isArray(value) ? value : String(value).split(",").map(v => v.trim());
+			return Array.isArray(value)
+				? value
+				: String(value)
+						.split(",")
+						.map((v) => v.trim())
 		default:
-			return value;
+			return value
 	}
 }
 
@@ -123,38 +131,40 @@ function convertValueToType(value: unknown, type: string | undefined): unknown {
  */
 export async function validateConfig(
 	connection: ConnectionDetails,
-	savedConfig?: ServerConfig
+	savedConfig?: ServerConfig,
 ): Promise<{ isValid: boolean; savedConfig?: Record<string, unknown> }> {
 	// If no config schema needed, return early
 	if (!connection.configSchema?.properties) {
-		return { isValid: true, savedConfig: {} };
+		return { isValid: true, savedConfig: {} }
 	}
 
 	try {
 		// Always format first to ensure type safety
-		const formattedConfig = await formatConfigValues(connection, savedConfig || {});
-		
+		const formattedConfig = await formatConfigValues(
+			connection,
+			savedConfig || {},
+		)
+
 		// Now validate against the formatted config
-		const required = new Set<string>(connection.configSchema.required || []);
+		const required = new Set<string>(connection.configSchema.required || [])
 		const hasAllRequired = Array.from(required).every(
-			key => formattedConfig[key] !== undefined
-		);
+			(key) => formattedConfig[key] !== undefined,
+		)
 
 		return {
 			isValid: hasAllRequired,
-			savedConfig: formattedConfig
-		};
+			savedConfig: formattedConfig,
+		}
 	} catch (error) {
 		try {
 			// Try to get partial config by ignoring required fields
 			const partialConfig = Object.fromEntries(
-				Object.entries(savedConfig || {})
-					.filter(([_, v]) => v !== undefined)
-			);
-			return { isValid: false, savedConfig: partialConfig };
+				Object.entries(savedConfig || {}).filter(([_, v]) => v !== undefined),
+			)
+			return { isValid: false, savedConfig: partialConfig }
 		} catch {
 			// If that fails too, return empty config
-			return { isValid: false };
+			return { isValid: false }
 		}
 	}
 }
@@ -163,106 +173,58 @@ export async function validateConfig(
  * Collects configuration values from saved config or user input
  * @param connection - Server connection details containing the config schema
  * @param existingValues - Optional existing values to use instead of prompting
- * @param apiKey - Optional API key to fetch saved config from registry
- * @param serverName - Optional server name to fetch saved config
- * @returns Object containing collected config values and validation status
+ * @returns Object containing collected config values
  */
 export async function collectConfigValues(
 	connection: ConnectionDetails,
 	existingValues?: ServerConfig,
-	apiKey?: string,
-	serverName?: string,
-): Promise<{ configValues: ServerConfig; isSavedConfig: boolean }> {
+): Promise<ServerConfig> {
 	// 1. Early exit if no config needed
 	if (!connection.configSchema?.properties) {
-		return { configValues: {}, isSavedConfig: false };
+		return {}
 	}
 
-	let baseConfig: ServerConfig = {};
+	let baseConfig: ServerConfig = {}
 
 	// 2. Validate and process existing values
 	if (existingValues) {
-		const { isValid, savedConfig } = await validateConfig(connection, existingValues);
-		if (isValid) { // if valid, we return formatted existing config
-			return { 
-				configValues: savedConfig!,
-				isSavedConfig: false // Existing values always count as unsaved
-			};
+		const { isValid, savedConfig } = await validateConfig(
+			connection,
+			existingValues,
+		)
+		if (isValid) {
+			return savedConfig!
 		}
-		baseConfig = savedConfig || {};
+		baseConfig = savedConfig || {}
 	}
 
-	let fetchedConfig: ServerConfig = {};
-	// let pureSavedConfig = false;
+	// 3. Collect missing values
+	const required = new Set<string>(connection.configSchema.required || [])
+	const properties = connection.configSchema.properties
 
-	// 3. Try fetching remote config
-	if (apiKey && serverName) {
-		try {
-			fetchedConfig = await fetchConfigWithApiKey(serverName, apiKey);
-			const { isValid, savedConfig } = await validateConfig(connection, fetchedConfig);
-			
-			if (isValid) {
-				// If no existing values, return saved config as is
-				if (!existingValues) {
-					return {
-						configValues: savedConfig!,
-						isSavedConfig: true // Pure saved config with no modifications
-					};
-				}
-
-				// Merge with existing values (existing takes priority)
-				const mergedConfig = { ...savedConfig, ...baseConfig };
-				const mergedValidation = await validateConfig(connection, mergedConfig);
-				
-				if (mergedValidation.isValid) {
-					return {
-						configValues: mergedValidation.savedConfig!,
-						isSavedConfig: false // Modified with existing values
-					};
-				}
-				// pureSavedConfig = false;
-			}
-		} catch (error) {
-			console.warn(chalk.yellow("Failed to fetch saved configuration"));
-		}
-	}
-
-	// 4. If both existing and fetched are invalid, prepare combined base config 
-	// and prompt for missing values
-	const combinedConfig = { ...baseConfig, ...fetchedConfig };
-	const required = new Set<string>(connection.configSchema.required || []);
-	const properties = connection.configSchema.properties;
-
-	// 5. Collect missing values
 	for (const [key, prop] of Object.entries(properties)) {
 		const schemaProp = prop as {
-			description?: string;
-			default?: unknown;
-			type?: string;
-		};
+			description?: string
+			default?: unknown
+			type?: string
+		}
 
 		// Skip if value already exists
-		if (combinedConfig[key] !== undefined) continue;
+		if (baseConfig[key] !== undefined) continue
 
 		// Prompt for missing value
-		const value = await promptForConfigValue(key, schemaProp, required);
-		combinedConfig[key] = value !== undefined ? value : schemaProp.default;
+		const value = await promptForConfigValue(key, schemaProp, required)
+		baseConfig[key] = value !== undefined ? value : schemaProp.default
 	}
 
-	// 6. Final validation and formatting
+	// 4. Final validation and formatting
 	try {
-		const formatted = await formatConfigValues(connection, combinedConfig);
-		return {
-			configValues: formatted,
-			isSavedConfig: false // True only if pure saved config existed but couldn't be merged
-		};
+		return await formatConfigValues(connection, baseConfig)
 	} catch (error) {
-		const errorMessage = error instanceof Error ? error.message : 'Unknown configuration error';
-		console.error(chalk.red("Configuration error:"), errorMessage);
-		return {
-			configValues: combinedConfig,
-			isSavedConfig: false
-		};
+		const errorMessage =
+			error instanceof Error ? error.message : "Unknown configuration error"
+		console.error(chalk.red("Configuration error:"), errorMessage)
+		return baseConfig
 	}
 }
 
@@ -276,14 +238,16 @@ export async function collectConfigValues(
 async function promptForConfigValue(
 	key: string,
 	schemaProp: {
-		description?: string;
-		default?: unknown;
-		type?: string;
+		description?: string
+		default?: unknown
+		type?: string
 	},
-	required: Set<string>
+	required: Set<string>,
 ): Promise<unknown> {
-	const requiredText = required.has(key) ? chalk.red(" (required)") : " (optional)";
-	
+	const requiredText = required.has(key)
+		? chalk.red(" (required)")
+		: " (optional)"
+
 	const promptType = key.toLowerCase().includes("key")
 		? "password"
 		: schemaProp.type === "boolean"
@@ -292,7 +256,7 @@ async function promptForConfigValue(
 				? "input"
 				: schemaProp.type === "number" || schemaProp.type === "integer"
 					? "number"
-					: "input";
+					: "input"
 
 	const { value } = await inquirer.prompt([
 		{
@@ -304,16 +268,16 @@ async function promptForConfigValue(
 			default: schemaProp.default,
 			mask: promptType === "password" ? "*" : undefined,
 			validate: (input: string | number) => {
-				if (required.has(key) && !input) return false;
+				if (required.has(key) && !input) return false
 				if (schemaProp.type === "number" || schemaProp.type === "integer") {
-					return !Number.isNaN(Number(input)) || "Please enter a valid number";
+					return !Number.isNaN(Number(input)) || "Please enter a valid number"
 				}
-				return true;
+				return true
 			},
 		},
-	]);
+	])
 
-	return value;
+	return value
 }
 
 /**
@@ -427,8 +391,51 @@ export function denormalizeServerId(normalizedId: string): string {
  */
 export function getServerName(serverId: string): string {
 	if (serverId.startsWith("@") && serverId.includes("/")) {
-		const slashIndex = serverId.indexOf("/");
-		return serverId.substring(slashIndex + 1);
+		const slashIndex = serverId.indexOf("/")
+		return serverId.substring(slashIndex + 1)
 	}
-	return serverId;
+	return serverId
+}
+
+/**
+ * Formats server configuration into a standardized command structure
+ * @param qualifiedName - The fully qualified name of the server package
+ * @param userConfig - The user configuration for the server
+ * @param apiKey - Optional API key
+ * @param configNeeded - Whether the config flag is needed (defaults to true)
+ * @returns Configured server with command and arguments
+ */
+export function formatServerConfig(
+	qualifiedName: string,
+	userConfig: ServerConfig,
+	apiKey?: string,
+	configNeeded = true, // whether config flag is needed
+): ConfiguredServer {
+	// Base arguments for npx command
+	const npxArgs = ["-y", "@smithery/cli@latest", "run", qualifiedName]
+
+	// Always add API key if provided
+	if (apiKey) {
+		npxArgs.push("--key", apiKey)
+	}
+
+	if (!apiKey || configNeeded) {
+		/* double stringify config to make it shell-safe */
+		const encodedConfig = JSON.stringify(JSON.stringify(userConfig))
+		npxArgs.push("--config", encodedConfig)
+	}
+
+	// Use cmd /c for Windows platforms
+	if (process.platform === "win32") {
+		return {
+			command: "cmd",
+			args: ["/c", "npx", ...npxArgs],
+		}
+	}
+
+	// Default for non-Windows platforms
+	return {
+		command: "npx",
+		args: npxArgs,
+	}
 }
