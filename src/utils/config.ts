@@ -419,7 +419,13 @@ export function formatServerConfig(
 		npxArgs.push("--key", apiKey)
 	}
 
-	if (!apiKey || configNeeded) {
+	/**
+	 * Add config flag in these scenarios:
+	 * 1. api key is not given OR config is needed (configNeeded prop)
+	 * 2. config is not empty
+	 */
+	const isEmptyConfig = Object.keys(userConfig).length === 0
+	if (!isEmptyConfig && (!apiKey || configNeeded)) {
 		/* double stringify config to make it shell-safe */
 		const encodedConfig = JSON.stringify(JSON.stringify(userConfig))
 		npxArgs.push("--config", encodedConfig)
