@@ -7,7 +7,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## [1.1.53] - 2025-03-28
 
 ### Changed
-- Updated server configuration handling to skip the `--config` flag when configuration is empty, resulting in cleaner command execution
+- Updated server configuration handling to skip the `--config` flag when configuration is empty, for cleaner command execution
 
 ## [1.1.52] - 2025-03-27
 
