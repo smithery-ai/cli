@@ -20,6 +20,7 @@ import ora from "ora"
 import { resolvePackage } from "../registry"
 import { chooseConnection, collectConfigValues } from "../utils/config"
 import { getRuntimeEnvironment } from "../utils/runtime.js"
+import { verbose } from "../logger"
 
 async function createClient() {
 	const client = new Client(
@@ -245,7 +246,9 @@ export async function inspectServer(qualifiedName: string): Promise<void> {
 		const connection = chooseConnection(server)
 
 		// Collect configuration values if needed
-		const { configValues } = await collectConfigValues(connection)
+		const configValues = await collectConfigValues(connection)
+
+		verbose(`Collected Configuration Values: ${JSON.stringify(configValues, null, 2)}`);
 
 		// Get runtime environment
 		const runtimeEnv = getRuntimeEnvironment({})
