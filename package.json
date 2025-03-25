@@ -7,7 +7,7 @@
 	"description": "A NPX command to install and list Model Context Protocols from Smithery",
 	"main": "dist/index.js",
 	"scripts": {
-		"build": "tsc && node build.mjs && chmod +x dist/index.js",
+		"build": "tsx scripts/build.ts",
 		"start": "node dist/index.js",
 		"test:list": "node --loader ts-node/esm src/index.ts list",
 		"test:install": "node --loader ts-node/esm src/index.ts install",
@@ -16,7 +16,14 @@
 		"test:uninstall": "node --loader ts-node/esm src/index.ts uninstall",
 		"prepare": "npm run build",
 		"check": "npx @biomejs/biome check --write --unsafe",
-		"test": "jest"
+		"test": "jest",
+		"package:clean": "rimraf sea-config.json sea-prep.blob",
+		"package:config": "npm run build && node -e \"require('fs').writeFileSync('sea-config.json', JSON.stringify({main:'dist/index.js',output:'sea-prep.blob',disableExperimentalSEAWarning:true}, null, 2))\"",
+		"package:blob": "node --experimental-sea-config sea-config.json",
+		"package:win": "rimraf dist/bin && node -e \"require('fs').mkdirSync('dist/bin', { recursive: true })\" && node -e \"require('fs').copyFileSync(process.execPath, 'dist/bin/smithery.exe')\" && npx postject dist/bin/smithery.exe NODE_SEA_BLOB sea-prep.blob --sentinel-fuse NODE_SEA_FUSE_fce680ab2cc467b6e072b8b5df1996b2",
+		"package:linux": "mkdir -p dist/bin && cp $(command -v node) dist/bin/smithery-linux && npx postject dist/bin/smithery-linux NODE_SEA_BLOB sea-prep.blob --sentinel-fuse NODE_SEA_FUSE_fce680ab2cc467b6e072b8b5df1996b2 && chmod +x dist/bin/smithery-linux",
+		"package:mac": "mkdir -p dist/bin && cp $(command -v node) dist/bin/smithery-darwin && codesign --remove-signature dist/bin/smithery-darwin && npx postject dist/bin/smithery-darwin NODE_SEA_BLOB sea-prep.blob --sentinel-fuse NODE_SEA_FUSE_fce680ab2cc467b6e072b8b5df1996b2 --macho-segment-name NODE_SEA && chmod +x dist/bin/smithery-darwin && codesign --sign - dist/bin/smithery-darwin",
+		"package": "npm run package:clean && npm run package:config && npm run package:blob && tsx scripts/package-platform.ts"
 	},
 	"bin": {
 		"cli": "dist/index.js"
@@ -44,6 +51,8 @@
 		"dotenv": "^16.4.7",
 		"esbuild": "^0.24.0",
 		"jest": "^29.7.0",
+		"postject": "^1.0.0-alpha.6",
+		"rimraf": "^5.0.0",
 		"ts-jest": "^29.1.2",
 		"ts-node": "^10.9.1",
 		"tsx": "^4.19.2",

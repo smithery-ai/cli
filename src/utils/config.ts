@@ -411,12 +411,12 @@ export function formatServerConfig(
 	apiKey?: string,
 	configNeeded = true, // whether config flag is needed
 ): ConfiguredServer {
-	// Base arguments for npx command
-	const npxArgs = ["-y", "@smithery/cli@latest", "run", qualifiedName]
+	// Base arguments for smithery command
+	const args = ["run", qualifiedName]
 
 	// Always add API key if provided
 	if (apiKey) {
-		npxArgs.push("--key", apiKey)
+		args.push("--key", apiKey)
 	}
 
 	/**
@@ -428,20 +428,12 @@ export function formatServerConfig(
 	if (!isEmptyConfig && (!apiKey || configNeeded)) {
 		/* double stringify config to make it shell-safe */
 		const encodedConfig = JSON.stringify(JSON.stringify(userConfig))
-		npxArgs.push("--config", encodedConfig)
+		args.push("--config", encodedConfig)
 	}
 
-	// Use cmd /c for Windows platforms
-	if (process.platform === "win32") {
-		return {
-			command: "cmd",
-			args: ["/c", "npx", ...npxArgs],
-		}
-	}
-
-	// Default for non-Windows platforms
+	// Use smithery directly without platform-specific handling
 	return {
-		command: "npx",
-		args: npxArgs,
+		command: "smithery",
+		args,
 	}
 }
