@@ -1,24 +1,23 @@
-import { config } from "dotenv"
-import * as esbuild from "esbuild"
+import * as esbuild from 'esbuild';
+import path from 'path';
 
-// Load environment variables into a define object
-config()
-const define = {}
+async function build() {
+    try {
+        // Bundle the application
+        await esbuild.build({
+            entryPoints: [path.join(__dirname, '../src/index.ts')],
+            bundle: true,
+            platform: 'node',
+            target: 'node20',
+            outfile: 'dist/index.js',
+            format: 'cjs',
+        });
 
-for (const k in process.env) {
-	/* Skip environment variables that should be evaluated at runtime */
-	if (["HOME", "USER", "XDG_CONFIG_HOME"].includes(k)) continue
-
-	define[`process.env.${k}`] = JSON.stringify(process.env[k])
+        console.log('Build completed successfully');
+    } catch (error) {
+        console.error('Build failed:', error);
+        process.exit(1);
+    }
 }
 
-await esbuild.build({
-	entryPoints: ["src/index.ts"],
-	bundle: true,
-	platform: "node",
-	target: "node18",
-	minify: true,
-	treeShaking: true,
-	outfile: "dist/index.js",
-	define,
-})
+build(); 
