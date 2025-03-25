@@ -74,12 +74,12 @@ export const createWSRunner = async (
 		}
 
 		transport.onerror = (error) => {
-			if (error.message.includes('502')) {
-				console.error('Server returned 502, attempting to reconnect...')
+			if (error.message.includes("502")) {
+				console.error("Server returned 502, attempting to reconnect...")
 				// Don't exit - let the connection close naturally
 				return
 			}
-			
+
 			handleError(error, "WebSocket connection error")
 			process.exit(1)
 		}
@@ -87,20 +87,24 @@ export const createWSRunner = async (
 		transport.onmessage = (message) => {
 			try {
 				if ("error" in message) {
-					console.error(`[Runner] WebSocket error: ${JSON.stringify(message.error)}`)
-					
+					console.error(
+						`[Runner] WebSocket error: ${JSON.stringify(message.error)}`,
+					)
+
 					// Handle connection error
 					if (message.error.code === -32000) {
 						// Connection closed error
-						console.error('[Runner] Connection closed by server - attempting to reconnect...')
+						console.error(
+							"[Runner] Connection closed by server - attempting to reconnect...",
+						)
 						transport.close() // This will trigger onclose handler and retry logic
 						return
 					}
-					
+
 					// Handle message errors
 					if (
 						message.error.code === -32602 || // InvalidParams
-						message.error.code === -32600    // InvalidRequest
+						message.error.code === -32600 // InvalidRequest
 					) {
 						console.error(`[Runner] Protocol error: ${message.error.message}`)
 					}

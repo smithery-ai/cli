@@ -248,7 +248,9 @@ export async function inspectServer(qualifiedName: string): Promise<void> {
 		// Collect configuration values if needed
 		const configValues = await collectConfigValues(connection)
 
-		verbose(`Collected Configuration Values: ${JSON.stringify(configValues, null, 2)}`);
+		verbose(
+			`Collected Configuration Values: ${JSON.stringify(configValues, null, 2)}`,
+		)
 
 		// Get runtime environment
 		const runtimeEnv = getRuntimeEnvironment({})
