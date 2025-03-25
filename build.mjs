@@ -1,23 +1,21 @@
-import * as esbuild from 'esbuild';
-import path from 'path';
+import { config } from "dotenv"
+import * as esbuild from "esbuild"
 
-async function build() {
-    try {
-        // Bundle the application
-        await esbuild.build({
-            entryPoints: [path.join(__dirname, '../src/index.ts')],
-            bundle: true,
-            platform: 'node',
-            target: 'node20',
-            outfile: 'dist/index.js',
-            format: 'cjs',
-        });
+// Load environment variables into a define object
+config()
+const define = {}
 
-        console.log('Build completed successfully');
-    } catch (error) {
-        console.error('Build failed:', error);
-        process.exit(1);
-    }
+for (const k in process.env) {
+	define[`process.env.${k}`] = JSON.stringify(process.env[k])
 }
 
-build(); 
+await esbuild.build({
+	entryPoints: ["src/index.ts"],
+	bundle: true,
+	platform: "node",
+	target: "node18",
+	minify: true,
+	treeShaking: true,
+	outfile: "dist/index.js",
+	define,
+})
