@@ -1,6 +1,7 @@
 import WebSocket from "ws"
 import type { Transport } from "@modelcontextprotocol/sdk/shared/transport.js"
 import { ProxyTransport } from "./proxy-transport"
+import { type JSONRPCMessage, type JSONRPCError } from "@modelcontextprotocol/sdk/types.js"
 
 global.WebSocket = WebSocket as any
 
@@ -84,15 +85,16 @@ export const createWSRunner = async (
 			process.exit(1)
 		}
 
-		transport.onmessage = (message) => {
+		transport.onmessage = (message: JSONRPCMessage) => {
 			try {
 				if ("error" in message) {
+					const errorMessage = message as JSONRPCError
 					console.error(
-						`[Runner] WebSocket error: ${JSON.stringify(message.error)}`,
+						`[Runner] WebSocket error: ${JSON.stringify(errorMessage.error)}`,
 					)
 
 					// Handle connection error
-					if (message.error.code === -32000) {
+					if (errorMessage.error.code === -32000) {
 						// Connection closed error
 						console.error(
 							"[Runner] Connection closed by server - attempting to reconnect...",
@@ -103,10 +105,10 @@ export const createWSRunner = async (
 
 					// Handle message errors
 					if (
-						message.error.code === -32602 || // InvalidParams
-						message.error.code === -32600 // InvalidRequest
+						errorMessage.error.code === -32602 || // InvalidParams
+						errorMessage.error.code === -32600 // InvalidRequest
 					) {
-						console.error(`[Runner] Protocol error: ${message.error.message}`)
+						console.error(`[Runner] Protocol error: ${errorMessage.error.message}`)
 					}
 				}
 
