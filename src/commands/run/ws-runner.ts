@@ -1,5 +1,3 @@
-// import { WebSocketClientTransport } from "@modelcontextprotocol/sdk/client/websocket.js"
-// import { createSmitheryUrl } from "@smithery/sdk/config.js"
 import WebSocket from "ws"
 import type { Transport } from "@modelcontextprotocol/sdk/shared/transport.js"
 import { ProxyTransport } from "./proxy-transport"
@@ -76,6 +74,12 @@ export const createWSRunner = async (
 		}
 
 		transport.onerror = (error) => {
+			if (error.message.includes('502')) {
+				console.error('Server returned 502, attempting to reconnect...')
+				// Don't exit - let the connection close naturally
+				return
+			}
+			
 			handleError(error, "WebSocket connection error")
 			process.exit(1)
 		}
@@ -83,13 +87,22 @@ export const createWSRunner = async (
 		transport.onmessage = (message) => {
 			try {
 				if ("error" in message) {
-					// If we receive an error regarding misconfiguration, close the connection
-					console.error(`WebSocket error: ${JSON.stringify(message.error)}`)
+					console.error(`[Runner] WebSocket error: ${JSON.stringify(message.error)}`)
+					
+					// Handle connection error
+					if (message.error.code === -32000) {
+						// Connection closed error
+						console.error('[Runner] Connection closed by server - attempting to reconnect...')
+						transport.close() // This will trigger onclose handler and retry logic
+						return
+					}
+					
+					// Handle message errors
 					if (
-						message.error.message === "Missing configuration" ||
-						message.error.message === "Invalid configuration"
+						message.error.code === -32602 || // InvalidParams
+						message.error.code === -32600    // InvalidRequest
 					) {
-						process.exit(1)
+						console.error(`[Runner] Protocol error: ${message.error.message}`)
 					}
 				}
 

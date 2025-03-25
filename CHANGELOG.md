@@ -4,6 +4,12 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [1.1.54] - 2025-03-25
+
+### Added
+- Enhanced WebSocket error handling with specific handlers for connection errors (code -32000) and protocol errors (codes -32602, -32600)
+- Added automatic reconnection attempt for server-initiated connection closures
+
 ## [1.1.53] - 2025-03-24
 
 ### Changed
@@ -57,4 +63,4 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ### Changed
 - Refactored command organization by moving command files to dedicated `src/commands/` directory
 - Updated import paths and documentation
-- Logging runtime environment details in verbose mode 
+- Logging runtime environment details in verbose mode  
