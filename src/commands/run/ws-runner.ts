@@ -1,7 +1,10 @@
 import WebSocket from "ws"
 import type { Transport } from "@modelcontextprotocol/sdk/shared/transport.js"
 import { ProxyTransport } from "./proxy-transport"
-import { type JSONRPCMessage, type JSONRPCError } from "@modelcontextprotocol/sdk/types.js"
+import type {
+	JSONRPCMessage,
+	JSONRPCError,
+} from "@modelcontextprotocol/sdk/types.js"
 
 global.WebSocket = WebSocket as any
 
@@ -11,22 +14,32 @@ type Cleanup = () => Promise<void>
 const MAX_RETRIES = 3
 const RETRY_DELAY = 1000
 
-const createTransport = (baseUrl: string, config: Config): Transport => {
-	return new ProxyTransport(baseUrl, config, {
-		idleTimeout: 5 * 60 * 1000, // 5 minutes
-		maxBuffer: 100,
-	})
+const createTransport = (
+	baseUrl: string,
+	config?: Config,
+	apiKey?: string,
+): Transport => {
+	return new ProxyTransport(
+		baseUrl,
+		config || {},
+		{
+			idleTimeout: 5 * 60 * 1000, // 5 minutes
+			maxBuffer: 100,
+		},
+		apiKey,
+	)
 }
 
 export const createWSRunner = async (
 	baseUrl: string,
-	config: Config,
+	config?: Config,
+	apiKey?: string,
 ): Promise<Cleanup> => {
 	let retryCount = 0
 	let stdinBuffer = ""
 	let isReady = false
 
-	let transport = createTransport(baseUrl, config)
+	let transport = createTransport(baseUrl, config, apiKey)
 
 	const handleError = (error: Error, context: string) => {
 		console.error(`${context}:`, error.message)
@@ -65,8 +78,7 @@ export const createWSRunner = async (
 				await new Promise((resolve) =>
 					setTimeout(resolve, RETRY_DELAY * Math.pow(2, retryCount)),
 				)
-				// Create new transport
-				transport = createTransport(baseUrl, config)
+				transport = createTransport(baseUrl, config, apiKey)
 				await setupTransport()
 			} else {
 				console.error(`Max reconnection attempts (${MAX_RETRIES}) reached`)
@@ -89,11 +101,6 @@ export const createWSRunner = async (
 			try {
 				if ("error" in message) {
 					const errorMessage = message as JSONRPCError
-					// silence non-critical error to improve UX in clients that surface console errors (e.g., cline)
-					// console.error(
-					// 	`[Runner] WebSocket error: ${JSON.stringify(errorMessage.error)}`,
-					// )
-
 					// Handle connection error
 					if (errorMessage.error.code === -32000) {
 						// Connection closed error
@@ -109,7 +116,9 @@ export const createWSRunner = async (
 						errorMessage.error.code === -32602 || // InvalidParams
 						errorMessage.error.code === -32600 // InvalidRequest
 					) {
-						console.error(`[Runner] Protocol error: ${errorMessage.error.message}`)
+						console.error(
+							`[Runner] Protocol error: ${errorMessage.error.message}`,
+						)
 					}
 				}
 

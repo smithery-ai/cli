@@ -23,7 +23,7 @@
 	},
 	"dependencies": {
 		"@modelcontextprotocol/sdk": "^1.0.3",
-		"@smithery/sdk": "^0.0.22",
+		"@smithery/sdk": "^1.0.3",
 		"chalk": "^4.1.2",
 		"cross-fetch": "^4.1.0",
 		"inquirer": "^8.2.4",
@@ -49,11 +49,7 @@
 		"tsx": "^4.19.2",
 		"typescript": "^5.0.0"
 	},
-	"files": [
-		"dist",
-		"README.md",
-		"package.json"
-	],
+	"files": ["dist", "README.md", "package.json"],
 	"exports": {
 		".": {
 			"import": "./dist/index.js"

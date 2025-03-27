@@ -67,7 +67,7 @@ export async function run(
 
 		const analyticsEnabled = await getAnalyticsConsent()
 		const userId = analyticsEnabled ? await getUserId() : undefined
-		await pickServerAndRun(resolvedServer, finalConfig, userId)
+		await pickServerAndRun(resolvedServer, finalConfig, userId, apiKey)
 	} catch (error) {
 		console.error("[Runner] Fatal error:", error)
 		process.exit(1)
@@ -80,6 +80,7 @@ export async function run(
  * @param {RegistryServer} serverDetails - Details of the server to run, including connection options
  * @param {ServerConfig} config - Configuration values for the server
  * @param {string} [userId] - Optional user ID for analytics tracking
+ * @param {string} [apiKey] - Optional API key for WS connections
  * @returns {Promise<void>} A promise that resolves when the server is running
  * @throws {Error} If connection type is unsupported or deployment URL is missing for WS connections
  * @private
@@ -88,6 +89,7 @@ async function pickServerAndRun(
 	serverDetails: RegistryServer,
 	config: ServerConfig,
 	userId?: string,
+	apiKey?: string,
 ): Promise<void> {
 	const connection = chooseConnection(serverDetails)
 
@@ -95,7 +97,7 @@ async function pickServerAndRun(
 		if (!connection.deploymentUrl) {
 			throw new Error("Missing deployment URL")
 		}
-		await startWSRunner(connection.deploymentUrl, config)
+		await startWSRunner(connection.deploymentUrl, config, apiKey)
 	} else if (connection.type === "stdio") {
 		await startSTDIOrunner(serverDetails, config, userId)
 	} else {

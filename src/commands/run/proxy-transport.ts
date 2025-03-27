@@ -22,8 +22,9 @@ export class ProxyTransport implements Transport {
 
 	constructor(
 		private baseUrl: string,
-		private config: Record<string, unknown>,
+		private config: Record<string, unknown> = {},
 		private options: LazyConnectionOptions = DEFAULT_OPTIONS,
+		private apiKey?: string,
 	) {}
 
 	private resetIdleTimer() {
@@ -51,9 +52,9 @@ export class ProxyTransport implements Transport {
 			const wsUrl = `${this.baseUrl.replace(/^http/, "ws")}${
 				this.baseUrl.endsWith("/") ? "" : "/"
 			}ws`
-			const url = createSmitheryUrl(wsUrl, this.config)
+			const url = createSmitheryUrl(wsUrl, this.config, this.apiKey)
 
-			console.error("ProxyTransport: Creating new WebSocket connection...")
+			console.error("[Runner] Creating new WebSocket connection...")
 			const transport = new WebSocketClientTransport(url)
 
 			// Forward callbacks
@@ -68,9 +69,7 @@ export class ProxyTransport implements Transport {
 			this.realTransport = transport
 			this.resetIdleTimer()
 
-			console.error(
-				"ProxyTransport: Connection established, processing buffer...",
-			)
+			console.error("[Runner] Connection established, processing buffer...")
 			// Process buffered messages
 			while (this.messageBuffer.length > 0) {
 				const msg = this.messageBuffer.shift()!
@@ -88,7 +87,7 @@ export class ProxyTransport implements Transport {
 
 	private async disconnect() {
 		if (this.realTransport) {
-			console.error("ProxyTransport: Closing idle connection")
+			console.error("[Runner] Closing idle connection")
 			await this.realTransport.close()
 			this.realTransport = null
 		}
