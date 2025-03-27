@@ -4,6 +4,11 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [1.1.55] - 2025-03-27
+
+### Changed
+- Silenced WebSocket error logging for non-critical errors to improve UX in clients that surface console errors
+
 ## [1.1.54] - 2025-03-25
 
 ### Added

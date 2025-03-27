@@ -89,9 +89,10 @@ export const createWSRunner = async (
 			try {
 				if ("error" in message) {
 					const errorMessage = message as JSONRPCError
-					console.error(
-						`[Runner] WebSocket error: ${JSON.stringify(errorMessage.error)}`,
-					)
+					// silence the error to improve UX in clients that surface console errors (e.g., cline)
+					// console.error(
+					// 	`[Runner] WebSocket error: ${JSON.stringify(errorMessage.error)}`,
+					// )
 
 					// Handle connection error
 					if (errorMessage.error.code === -32000) {
