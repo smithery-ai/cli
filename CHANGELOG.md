@@ -4,6 +4,11 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [1.1.56]
+
+### Added
+- Added API key support to WebSocket runner for using saved configurations  
+
 ## [1.1.55] - 2025-03-27
 
 ### Changed
@@ -68,4 +73,4 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ### Changed
 - Refactored command organization by moving command files to dedicated `src/commands/` directory
 - Updated import paths and documentation
-- Logging runtime environment details in verbose mode  
+- Logging runtime environment details in verbose mode
