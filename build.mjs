@@ -7,6 +7,5 @@ await esbuild.build({
 	target: "node18",
 	minify: true,
 	treeShaking: true,
-	outfile: "dist/index.js",
-	define,
+	outfile: "dist/index.js"
 })
