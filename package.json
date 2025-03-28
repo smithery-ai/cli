@@ -22,7 +22,7 @@
 		"cli": "dist/index.js"
 	},
 	"dependencies": {
-		"@modelcontextprotocol/sdk": "^1.0.3",
+		"@modelcontextprotocol/sdk": "^1.8.0",
 		"@smithery/sdk": "^1.0.3",
 		"chalk": "^4.1.2",
 		"cross-fetch": "^4.1.0",
