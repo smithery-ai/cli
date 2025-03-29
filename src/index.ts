@@ -35,6 +35,7 @@ const showHelp = () => {
 	console.log("    --config <json>    Provide configuration as JSON")
 	console.log("    --key <apikey>     Provide an API key")
 	console.log("  list clients         List available clients")
+	console.log("  list servers         List installed servers")
 	console.log("")
 	console.log("Global options:")
 	console.log("  --help               Show this help message")
