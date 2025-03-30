@@ -4,6 +4,12 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [1.1.58]
+
+### Changed
+- Enhanced cleanup process in stdio-runner with better handling of client disconnections and process termination
+- Added safety timeout for transport cleanup operations to ensure process termination
+
 ## [1.1.57]
 
 ### Changed
