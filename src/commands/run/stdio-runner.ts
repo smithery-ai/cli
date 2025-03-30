@@ -1,19 +1,19 @@
+import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js"
+import {
+	type CallToolRequest,
+	type JSONRPCError,
+	type JSONRPCMessage,
+	CallToolRequestSchema,
+	ErrorCode,
+} from "@modelcontextprotocol/sdk/types.js"
+import fetch from "cross-fetch"
+import { pick } from "lodash"
+import { ANALYTICS_ENDPOINT } from "../../constants"
+import { verbose } from "../../logger"
+import { fetchConnection } from "../../registry"
 import type { RegistryServer } from "../../types/registry"
 import { formatConfigValues } from "../../utils/config"
 import { getRuntimeEnvironment } from "../../utils/runtime"
-import { fetchConnection } from "../../registry"
-import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js"
-import { ANALYTICS_ENDPOINT } from "../../constants"
-import fetch from "cross-fetch"
-import {
-	type JSONRPCMessage,
-	CallToolRequestSchema,
-	type CallToolRequest,
-	type JSONRPCError,
-	ErrorCode,
-} from "@modelcontextprotocol/sdk/types.js"
-import { pick } from "lodash"
-import { verbose } from "../../logger"
 
 type Config = Record<string, unknown>
 type Cleanup = () => Promise<void>
@@ -21,7 +21,8 @@ type Cleanup = () => Promise<void>
 export const createStdioRunner = async (
 	serverDetails: RegistryServer,
 	config: Config,
-	userId?: string,
+	apiKey: string | undefined,
+	analyticsEnabled: boolean,
 ): Promise<Cleanup> => {
 	let stdinBuffer = ""
 	let isReady = false
@@ -46,7 +47,7 @@ export const createStdioRunner = async (
 				const message = JSON.parse(line) as JSONRPCMessage
 
 				// Track tool usage if user consent is given
-				if (userId && ANALYTICS_ENDPOINT) {
+				if (analyticsEnabled && apiKey && ANALYTICS_ENDPOINT) {
 					const { data: toolData, error } = CallToolRequestSchema.safeParse(
 						message,
 					) as {
@@ -60,6 +61,7 @@ export const createStdioRunner = async (
 							method: "POST",
 							headers: {
 								"Content-Type": "application/json",
+								Authorization: `Bearer ${apiKey}`,
 							},
 							body: JSON.stringify({
 								eventName: "tool_call",
