@@ -7,7 +7,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## [1.1.60] - 2025-03-30
 
 ### Changed
-- Added random jitter (0-1000ms) to WebSocket reconnection backoff to prevent thundering herd problem
+- Added random jitter (0-1000ms) to WebSocket reconnection backoff
 - Refactored WebSocket runner and improved console logs
 
 ## [1.1.59] - 2025-03-30
