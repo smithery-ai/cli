@@ -24,6 +24,34 @@ const createTransport = (
 	return new WebSocketClientTransport(url)
 }
 
+const handleTransportError = (
+	errorMessage: JSONRPCError,
+	transport: WebSocketClientTransport,
+) => {
+	switch (errorMessage.error.code) {
+		case -32000: // Server-specific: Connection closed
+			console.error(
+				"[Runner] Connection closed by server - attempting to reconnect...",
+			)
+			transport.close() // This will trigger onclose handler and retry logic
+			return
+
+		case -32700: // Parse Error
+		case -32600: // Invalid Request
+		case -32601: // Method Not Found
+		case -32602: // Invalid Params
+		case -32603: // Internal Error
+			console.error(errorMessage.error.message)
+			return // continue
+
+		default:
+			console.error(
+				`[Runner] Unexpected error: ${JSON.stringify(errorMessage.error)}`,
+			)
+			process.exit(1)
+	}
+}
+
 export const createWSRunner = async (
 	baseUrl: string,
 	config: Config,
@@ -63,26 +91,30 @@ export const createWSRunner = async (
 	}
 
 	const setupTransport = async () => {
-		console.error(`Connecting to WebSocket endpoint: ${baseUrl}`)
+		console.error(`[Runner] Connecting to WebSocket endpoint: ${baseUrl}`)
 
 		transport.onclose = async () => {
-			console.error("WebSocket connection closed")
+			console.error("[Runner] WebSocket connection closed")
 			isReady = false
 			if (!isClientInitiatedClose && retryCount++ < MAX_RETRIES) {
 				console.error(
-					`Unexpected disconnect, attempting reconnect (attempt ${retryCount} of ${MAX_RETRIES})...`,
+					`[Runner] Unexpected disconnect, attempting reconnect (attempt ${retryCount} of ${MAX_RETRIES})...`,
 				)
-				await new Promise((resolve) =>
-					setTimeout(resolve, RETRY_DELAY * Math.pow(2, retryCount)),
-				)
+				// Random jitter between 0-1000ms to the exponential backoff
+				const jitter = Math.random() * 1000
+				const delay = RETRY_DELAY * Math.pow(2, retryCount) + jitter
+				await new Promise((resolve) => setTimeout(resolve, delay))
+
 				// Create new transport
 				transport = createTransport(baseUrl, config, apiKey)
 				await setupTransport()
 			} else if (!isClientInitiatedClose) {
-				console.error(`Max reconnection attempts (${MAX_RETRIES}) reached`)
+				console.error(
+					`[Runner] Max reconnection attempts (${MAX_RETRIES}) reached`,
+				)
 				process.exit(1)
 			} else {
-				console.error("Clean shutdown, not attempting reconnect")
+				console.error("[Runner] Clean shutdown, not attempting reconnect")
 				process.exit(0)
 			}
 		}
@@ -103,82 +135,55 @@ export const createWSRunner = async (
 		transport.onmessage = (message: JSONRPCMessage) => {
 			try {
 				if ("error" in message) {
-					const errorMessage = message as JSONRPCError
-					// Handle connection error - retry connections
-					if (errorMessage.error.code === -32000) {
-						console.error(
-							"[Runner] Connection closed by server - attempting to reconnect...",
-						)
-						transport.close() // This will trigger onclose handler and retry logic
-						return
-					}
-
-					// Handle protocol errors - continue since message level
-					if (
-						errorMessage.error.code === -32602 ||
-						errorMessage.error.code === -32600
-					) {
-						console.error(
-							`[Runner] Protocol error: ${errorMessage.error.message}`,
-						)
-						return
-					}
-
-					// Handle configuration errors - exit
-					if (
-						errorMessage.error.message === "Missing configuration" ||
-						errorMessage.error.message === "Invalid configuration"
-					) {
-						console.error(
-							`WebSocket error: ${JSON.stringify(errorMessage.error)}`,
-						)
-						process.exit(1)
-					}
+					handleTransportError(message as JSONRPCError, transport)
 				}
-
 				console.log(JSON.stringify(message)) // log message to channel
 			} catch (error) {
 				handleError(error as Error, "Error handling message")
-				console.error("Raw message data:", JSON.stringify(message))
+				console.error("[Runner] Message:", JSON.stringify(message))
 				console.log(JSON.stringify(message))
 			}
 		}
 
 		await transport.start()
 		isReady = true
-		console.error("WebSocket connection established successfully")
+		console.error("[Runner] WebSocket connection initiated")
 		// Release buffered messages
 		await processMessage(Buffer.from(""))
+		console.error("[Runner] WebSocket connection established")
 	}
 
 	const cleanup = async () => {
 		if (isShuttingDown) {
-			console.error("Cleanup already in progress, skipping...")
+			console.error("[Runner] Cleanup already in progress, skipping...")
 			return
 		}
 
-		console.error("Starting cleanup...")
+		console.error("[Runner] Starting cleanup...")
 		isShuttingDown = true
 		isClientInitiatedClose = true // Mark this as a clean shutdown
 
 		try {
-			console.error("Attempting to close transport...")
+			console.error("[Runner] Attempting to close transport...")
 			await Promise.race([
 				transport.close(),
 				new Promise((_, reject) =>
-					setTimeout(() => reject(new Error("Transport close timeout")), 3000),
+					setTimeout(
+						() => reject(new Error("[Runner] Transport close timeout")),
+						3000,
+					),
 				),
 			])
-			console.error("Transport closed successfully")
+			console.error("[Runner] Transport closed successfully")
 		} catch (error) {
-			handleError(error as Error, "Error during cleanup")
+			handleError(error as Error, "[Runner] Error during cleanup")
 		}
 
-		console.error("Cleanup completed")
+		console.error("[Runner] Cleanup completed")
 	}
 
 	const handleExit = async () => {
-		console.error("Shutting down WS Runner...")
+		console.error("[Runner] Shutting down WS Runner...")
 		isClientInitiatedClose = true // Mark as clean shutdown before cleanup
 		await cleanup()
 		if (!isShuttingDown) {
@@ -190,13 +195,13 @@ export const createWSRunner = async (
 	process.on("SIGTERM", handleExit)
 	process.on("beforeExit", handleExit)
 	process.on("exit", () => {
-		console.error("Final cleanup on exit")
+		console.error("[Runner] Final cleanup on exit")
 	})
 
 	process.stdin.on("end", () => {
 		console.error("STDIN closed (client disconnected)")
 		handleExit().catch((error) => {
-			console.error("Error during stdin close cleanup:", error)
+			console.error("[Runner] Error during stdin close cleanup:", error)
 			process.exit(1)
 		})
 	})
@@ -204,14 +209,14 @@ export const createWSRunner = async (
 	process.stdin.on("error", (error) => {
 		console.error("STDIN error:", error)
 		handleExit().catch((error) => {
-			console.error("Error during stdin error cleanup:", error)
+			console.error("[Runner] Error during stdin error cleanup:", error)
 			process.exit(1)
 		})
 	})
 
 	process.stdin.on("data", (data) =>
 		processMessage(data).catch((error) =>
-			handleError(error, "Error processing message"),
+			handleError(error, "[Runner] Error processing message"),
 		),
 	)
 
