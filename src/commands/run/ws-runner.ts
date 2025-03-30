@@ -207,7 +207,7 @@ export const createWSRunner = async (
 	})
 
 	process.stdin.on("error", (error) => {
-		console.error("STDIN error:", error)
+		console.error("[Runner] STDIN error:", error)
 		handleExit().catch((error) => {
 			console.error("[Runner] Error during stdin error cleanup:", error)
 			process.exit(1)
