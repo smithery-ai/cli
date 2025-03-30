@@ -4,7 +4,14 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
-## [1.1.58]
+## [1.1.59] - 2025-03-30
+
+### Changed
+- Enhanced WebSocket runner cleanup process with improved handling of connection termination
+- Added safety timeout for WebSocket transport cleanup operations
+- Added better state management for clean vs unexpected shutdowns in WebSocket connections
+
+## [1.1.58] - 2025-03-30
 
 ### Changed
 - Enhanced cleanup process in stdio-runner with better handling of client disconnections and process termination
