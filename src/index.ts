@@ -53,7 +53,11 @@ const validateClient = (
 	clientFlag: number,
 ): ValidClient | undefined => {
 	/* Run, inspect, and list commands don't need client validation */
-	if (["run", "inspect", "list"].includes(command)) {
+	if (["run", "inspect"].includes(command)) {
+		return undefined
+	}
+
+	if(command === "list" && argument === "clients") {
 		return undefined
 	}
 
@@ -141,7 +145,7 @@ async function main() {
 			await run(argument, config, apiKey)
 			break
 		case "list":
-			await list(argument)
+			await list(argument,client!)
 			break
 		default:
 			showHelp()

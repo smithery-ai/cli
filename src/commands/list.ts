@@ -1,17 +1,20 @@
-import { VALID_CLIENTS } from "../constants"
+import { readConfig } from "../client-config"
+import { VALID_CLIENTS, ValidClient } from "../constants"
 import chalk from "chalk"
 
-export async function list(subcommand: string | undefined) {
+export async function list(subcommand: string | undefined, client: ValidClient) {
 	switch (subcommand) {
 		case "clients":
 			console.log(chalk.bold("Available clients:"))
 			VALID_CLIENTS.forEach((client) => console.log(`  ${chalk.green(client)}`))
 			break
 		case "servers":
+			const config = readConfig(client)
+			const servers = Object.keys(config.mcpServers)
 			console.log(chalk.bold("Installed servers of cline:"))
-			console.log(chalk.green("[enable]  github"))
-			console.log(chalk.gray("[disable] fetch"))
-			console.log(chalk.green("[enable]  slack"))
+			servers.forEach((server) => {
+				console.log(`  ${chalk.green(server)}`)
+			})
 			break
 		default:
 			console.log(
