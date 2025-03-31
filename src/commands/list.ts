@@ -11,10 +11,16 @@ export async function list(subcommand: string | undefined, client: ValidClient) 
 		case "servers":
 			const config = readConfig(client)
 			const servers = Object.keys(config.mcpServers)
-			console.log(chalk.bold(`Installed servers of ${client}:`))
-			servers.forEach((server) => {
-				console.log(`  ${chalk.green(server)}`)
-			})
+			if(servers?.length > 0){
+				console.log(chalk.bold(`Installed servers of ${client}:`))
+				servers.sort().forEach((server) => {
+					console.log(`  ${chalk.green(server)}`)
+				})
+			}else{
+				const info = `No installed server of ${client} found`
+				console.log(`  ${chalk.red(info)}`)
+			}
+
 			break
 		default:
 			console.log(
