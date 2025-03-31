@@ -57,8 +57,8 @@ const validateClient = (
 		return undefined
 	}
 
-	/* List clinets commands don't need client validation */
-	if(command === "list" && argument === "clients") {
+	/* List clients command doesn't need client validation */
+	if (command === "list" && argument === "clients") {
 		return undefined
 	}
 
@@ -146,7 +146,7 @@ async function main() {
 			await run(argument, config, apiKey)
 			break
 		case "list":
-			await list(argument,client!)
+			await list(argument, client!)
 			break
 		default:
 			showHelp()
