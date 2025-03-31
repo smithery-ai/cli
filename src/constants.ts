@@ -6,6 +6,8 @@ export const VALID_CLIENTS = [
 	"witsy",
 	"enconvo",
 	"cursor",
+	"vscode",
+	"vscode-insiders",
 ] as const
 export type ValidClient = (typeof VALID_CLIENTS)[number]
 

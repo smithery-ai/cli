@@ -179,13 +179,19 @@ describe("Client Config", () => {
 
 	describe("Config Path Resolution", () => {
 		it("should get correct config path for known client", () => {
-			const configPath = clientConfig.getConfigPath("claude")
-			expect(configPath).toContain("claude_desktop_config.json")
+			const configTarget = clientConfig.getConfigPath("claude")
+			if (configTarget.type !== "file") {
+				throw new Error("Expected config target to be a file")
+			}
+			expect(configTarget.path).toContain("claude_desktop_config.json")
 		})
 
 		it("should handle unknown client with fallback path", () => {
-			const configPath = clientConfig.getConfigPath("unknown-client")
-			expect(configPath).toContain("unknown-client")
+			const configTarget = clientConfig.getConfigPath("unknown-client")
+			if (configTarget.type !== "file") {
+				throw new Error("Expected config target to be a file")
+			}
+			expect(configTarget.path).toContain("unknown-client")
 		})
 	})
 })
