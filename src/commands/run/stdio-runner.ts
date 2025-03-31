@@ -1,19 +1,19 @@
+import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js"
+import {
+	type CallToolRequest,
+	type JSONRPCError,
+	type JSONRPCMessage,
+	CallToolRequestSchema,
+	ErrorCode,
+} from "@modelcontextprotocol/sdk/types.js"
+import fetch from "cross-fetch"
+import { pick } from "lodash"
+import { ANALYTICS_ENDPOINT } from "../../constants"
+import { verbose } from "../../logger"
+import { fetchConnection } from "../../registry"
 import type { RegistryServer } from "../../types/registry"
 import { formatConfigValues } from "../../utils/config"
 import { getRuntimeEnvironment } from "../../utils/runtime"
-import { fetchConnection } from "../../registry"
-import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js"
-import { ANALYTICS_ENDPOINT } from "../../constants"
-import fetch from "cross-fetch"
-import {
-	type JSONRPCMessage,
-	CallToolRequestSchema,
-	type CallToolRequest,
-	type JSONRPCError,
-	ErrorCode,
-} from "@modelcontextprotocol/sdk/types.js"
-import { pick } from "lodash"
-import { verbose } from "../../logger"
 
 type Config = Record<string, unknown>
 type Cleanup = () => Promise<void>
@@ -21,7 +21,8 @@ type Cleanup = () => Promise<void>
 export const createStdioRunner = async (
 	serverDetails: RegistryServer,
 	config: Config,
-	userId?: string,
+	apiKey: string | undefined,
+	analyticsEnabled: boolean,
 ): Promise<Cleanup> => {
 	let stdinBuffer = ""
 	let isReady = false
@@ -46,7 +47,7 @@ export const createStdioRunner = async (
 				const message = JSON.parse(line) as JSONRPCMessage
 
 				// Track tool usage if user consent is given
-				if (userId && ANALYTICS_ENDPOINT) {
+				if (analyticsEnabled && apiKey && ANALYTICS_ENDPOINT) {
 					const { data: toolData, error } = CallToolRequestSchema.safeParse(
 						message,
 					) as {
@@ -60,6 +61,7 @@ export const createStdioRunner = async (
 							method: "POST",
 							headers: {
 								"Content-Type": "application/json",
+								Authorization: `Bearer ${apiKey}`,
 							},
 							body: JSON.stringify({
 								eventName: "tool_call",
@@ -166,9 +168,11 @@ export const createStdioRunner = async (
 			// Only treat it as unexpected if we're ready and haven't started cleanup
 			if (isReady && !isShuttingDown) {
 				console.error("[Runner] Process terminated unexpectedly while running")
-				process.exit(1)
+				handleExit().catch((error) => {
+					console.error("[Runner] Error during exit cleanup:", error)
+					process.exit(1)
+				})
 			}
-			process.exit(0)
 		}
 
 		transport.onerror = (err) => {
@@ -180,7 +184,10 @@ export const createStdioRunner = async (
 			} else if (err.message.includes("permission")) {
 				console.error("[Runner] Permission error when running child process")
 			}
-			process.exit(1)
+			handleExit().catch((error) => {
+				console.error("[Runner] Error during error cleanup:", error)
+				process.exit(1)
+			})
 		}
 
 		await transport.start()
@@ -190,19 +197,44 @@ export const createStdioRunner = async (
 	}
 
 	const cleanup = async () => {
+		// Prevent recursive cleanup calls
+		if (isShuttingDown) {
+			console.error("[Runner] Cleanup already in progress, skipping...")
+			return
+		}
+
 		console.error("[Runner] Starting cleanup...")
+		isShuttingDown = true
+
+		// Close transport gracefully
 		if (transport) {
-			isShuttingDown = true
-			await transport.close()
+			try {
+				console.error("[Runner] Attempting to close transport...")
+				await Promise.race([
+					transport.close(),
+					new Promise((_, reject) =>
+						setTimeout(
+							() => reject(new Error("Transport close timeout")),
+							3000,
+						),
+					),
+				])
+				console.error("[Runner] Transport closed successfully")
+			} catch (error) {
+				console.error("[Runner] Error during transport cleanup:", error)
+			}
 			transport = null
 		}
+
 		console.error("[Runner] Cleanup completed")
 	}
 
 	const handleExit = async () => {
-		console.error("[Runner] Shutting down STDIO Runner...")
+		console.error("[Runner] Exit handler triggered, starting shutdown...")
 		await cleanup()
-		process.exit(0)
+		if (!isShuttingDown) {
+			process.exit(0)
+		}
 	}
 
 	// Setup event handlers
@@ -212,7 +244,33 @@ export const createStdioRunner = async (
 	process.on("exit", () => {
 		// Synchronous cleanup for exit event
 		console.error("[Runner] Final cleanup on exit")
+		// Additional logging if needed
+		// console.error("[Runner] Final cleanup on exit", {
+		// 	transportExists: !!transport,
+		// 	isShuttingDown,
+		// 	stdinIsTTY: process.stdin.isTTY,
+		// 	stdinIsRaw: process.stdin.isRaw,
+		// 	hasStdinListeners: process.stdin.listenerCount('data') > 0
+		// })
 	})
+
+	// Handle STDIN closure (client disconnect)
+	process.stdin.on("end", () => {
+		console.error("[Runner] STDIN closed (client disconnected)")
+		handleExit().catch((error) => {
+			console.error("[Runner] Error during stdin close cleanup:", error)
+			process.exit(1)
+		})
+	})
+
+	process.stdin.on("error", (error) => {
+		console.error("[Runner] STDIN error:", error)
+		handleExit().catch((error) => {
+			console.error("[Runner] Error during stdin error cleanup:", error)
+			process.exit(1)
+		})
+	})
+
 	process.stdin.on("data", (data) =>
 		processMessage(data).catch((error) =>
 			handleError(error, "Error processing message"),

@@ -1,15 +1,13 @@
 #!/usr/bin/env node
-import { resolvePackage, fetchConfigWithApiKey } from "../../registry.js"
-import type { RegistryServer } from "../../types/registry.js"
-import { createWSRunner as startWSRunner } from "./ws-runner.js"
-import { createStdioRunner as startSTDIOrunner } from "./stdio-runner.js"
+import { fetchConfigWithApiKey, resolvePackage } from "../../registry.js"
 import {
-	initializeSettings,
 	getAnalyticsConsent,
-	getUserId,
+	initializeSettings,
 } from "../../smithery-config.js"
+import type { RegistryServer, ServerConfig } from "../../types/registry.js"
 import { chooseConnection } from "../../utils/config.js"
-import type { ServerConfig } from "../../types/registry.js"
+import { createStdioRunner as startSTDIOrunner } from "./stdio-runner.js"
+import { createWSRunner as startWSRunner } from "./ws-runner.js"
 
 /**
  * Runs a server with the specified configuration
@@ -66,8 +64,12 @@ export async function run(
 		})
 
 		const analyticsEnabled = await getAnalyticsConsent()
-		const userId = analyticsEnabled ? await getUserId() : undefined
-		await pickServerAndRun(resolvedServer, finalConfig, userId, apiKey)
+		await pickServerAndRun(
+			resolvedServer,
+			finalConfig,
+			apiKey,
+			analyticsEnabled,
+		)
 	} catch (error) {
 		console.error("[Runner] Fatal error:", error)
 		process.exit(1)
@@ -79,8 +81,7 @@ export async function run(
  *
  * @param {RegistryServer} serverDetails - Details of the server to run, including connection options
  * @param {ServerConfig} config - Configuration values for the server
- * @param {string} [userId] - Optional user ID for analytics tracking
- * @param {string} [apiKey] - Optional API key for WS connections
+ * @param {string} [apiKey] - Required for WS connections. Optional for stdio connections.
  * @returns {Promise<void>} A promise that resolves when the server is running
  * @throws {Error} If connection type is unsupported or deployment URL is missing for WS connections
  * @private
@@ -88,8 +89,8 @@ export async function run(
 async function pickServerAndRun(
 	serverDetails: RegistryServer,
 	config: ServerConfig,
-	userId?: string,
-	apiKey?: string,
+	apiKey: string | undefined,
+	analyticsEnabled: boolean,
 ): Promise<void> {
 	const connection = chooseConnection(serverDetails)
 
@@ -99,7 +100,7 @@ async function pickServerAndRun(
 		}
 		await startWSRunner(connection.deploymentUrl, config, apiKey)
 	} else if (connection.type === "stdio") {
-		await startSTDIOrunner(serverDetails, config, userId)
+		await startSTDIOrunner(serverDetails, config, apiKey, analyticsEnabled)
 	} else {
 		throw new Error(
 			`Unsupported connection type: ${(connection as { type: string }).type}`,

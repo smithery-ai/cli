@@ -4,6 +4,30 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [1.1.61] - 2025-03-30
+
+### Changed
+- Use API key for calling track
+
+## [1.1.60] - 2025-03-30
+
+### Changed
+- Added random jitter (0-1000ms) to WebSocket reconnection backoff
+- Refactored WebSocket runner and improved console logs
+
+## [1.1.59] - 2025-03-30
+
+### Changed
+- Enhanced WebSocket runner cleanup process with improved handling of connection termination
+- Added safety timeout for WebSocket transport cleanup operations
+- Added better state management for clean vs unexpected shutdowns in WebSocket connections
+
+## [1.1.58] - 2025-03-30
+
+### Changed
+- Enhanced cleanup process in stdio-runner with better handling of client disconnections and process termination
+- Added safety timeout for transport cleanup operations to ensure process termination
+
 ## [1.1.57]
 
 ### Changed
