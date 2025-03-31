@@ -52,11 +52,12 @@ const validateClient = (
 	command: string,
 	clientFlag: number,
 ): ValidClient | undefined => {
-	/* Run, inspect, and list commands don't need client validation */
+	/* Run and inspect commands don't need client validation */
 	if (["run", "inspect"].includes(command)) {
 		return undefined
 	}
 
+	/* List clinets commands don't need client validation */
 	if(command === "list" && argument === "clients") {
 		return undefined
 	}

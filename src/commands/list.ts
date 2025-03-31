@@ -11,7 +11,7 @@ export async function list(subcommand: string | undefined, client: ValidClient) 
 		case "servers":
 			const config = readConfig(client)
 			const servers = Object.keys(config.mcpServers)
-			console.log(chalk.bold("Installed servers of cline:"))
+			console.log(chalk.bold(`Installed servers of ${client}:`))
 			servers.forEach((server) => {
 				console.log(`  ${chalk.green(server)}`)
 			})
