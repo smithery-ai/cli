@@ -98,10 +98,6 @@ async function pickServerAndRun(
 		if (!connection.deploymentUrl) {
 			throw new Error("Missing deployment URL")
 		}
-		connection.deploymentUrl = connection.deploymentUrl.replace(
-			"https://server.smithery.ai",
-			"http://localhost:8080",
-		)
 		await startWSRunner(connection.deploymentUrl, config, apiKey)
 	} else if (connection.type === "stdio") {
 		await startSTDIOrunner(serverDetails, config, apiKey, analyticsEnabled)
