@@ -22,7 +22,7 @@ npx @smithery/cli <command>
 - `run <server-id>` - Run a server
   - `--config <json>` - Provide configuration for the server
 - `list clients` - List available clients
-- `list servers --client <name>` - List installed servers of specify AI client
+- `list servers --client <name>` - List installed servers for specific AI client
 - `--help` - Show help message
 - `--verbose` - Show detailed logs for debugging
 
@@ -41,7 +41,7 @@ npx @smithery/cli uninstall mcp-obsidian --client claude
 # List available clients
 npx @smithery/cli list clients
 
-# List installed servers of claude
+# List installed servers for claude
 npx @smithery/cli list servers --client claude
 
 # Inspect a specific server from smithery's registry
