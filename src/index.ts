@@ -92,7 +92,12 @@ const config: ServerConfig =
 	configFlag !== -1
 		? (() => {
 				try {
-					let parsedConfig = JSON.parse(process.argv[configFlag + 1])
+					let rawConfig = process.argv[configFlag + 1]
+					// Windows cmd does not interpret `'`, passes it literally
+					if (rawConfig.startsWith("'") && rawConfig.endsWith("'")) {
+						rawConfig = rawConfig.slice(1, -1)
+					}
+					let parsedConfig = JSON.parse(rawConfig)
 					if (typeof parsedConfig === "string") {
 						parsedConfig = JSON.parse(parsedConfig)
 					}
