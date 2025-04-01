@@ -4,6 +4,11 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [1.1.63] - 2025-03-31
+
+### Added
+- Added support for VS Code and VS Code Insiders
+
 ## [1.1.62] - 2025-03-31
 
 ### Added
