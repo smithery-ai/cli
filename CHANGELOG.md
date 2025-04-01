@@ -4,7 +4,12 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
-## [1.1.63] - 2025-03-31
+## [1.1.64] - 2025-04-01
+
+### Fixed
+- Fixed config parsing on Windows command prompt where single quotes were being passed literally instead of being interpreted
+
+## [1.1.63] - 2025-04-01
 
 ### Added
 - Added support for VS Code and VS Code Insiders
