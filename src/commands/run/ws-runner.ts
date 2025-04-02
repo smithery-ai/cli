@@ -5,14 +5,18 @@ import type {
 	JSONRPCMessage,
 	JSONRPCError,
 } from "@modelcontextprotocol/sdk/types.js"
+import {
+	IDLE_TIMEOUT,
+	MAX_RETRIES,
+	RETRY_DELAY,
+	logWithTimestamp,
+	handleTransportError,
+} from "./runner-utils.js"
 
 global.WebSocket = WebSocket as any
 
 type Config = Record<string, unknown>
 type Cleanup = () => Promise<void>
-
-const MAX_RETRIES = 3
-const RETRY_DELAY = 1000
 
 const createTransport = (
 	baseUrl: string,
@@ -22,34 +26,6 @@ const createTransport = (
 	const wsUrl = `${baseUrl.replace(/^http/, "ws")}${baseUrl.endsWith("/") ? "" : "/"}ws`
 	const url = createSmitheryUrl(wsUrl, config, apiKey)
 	return new WebSocketClientTransport(url)
-}
-
-const handleTransportError = (
-	errorMessage: JSONRPCError,
-	transport: WebSocketClientTransport,
-) => {
-	switch (errorMessage.error.code) {
-		case -32000: // Server-specific: Connection closed
-			console.error(
-				"[Runner] Connection closed by server - attempting to reconnect...",
-			)
-			transport.close() // This will trigger onclose handler and retry logic
-			return
-
-		case -32700: // Parse Error
-		case -32600: // Invalid Request
-		case -32601: // Method Not Found
-		case -32602: // Invalid Params
-		case -32603: // Internal Error
-			console.error(errorMessage.error.message)
-			return // continue
-
-		default:
-			console.error(
-				`[Runner] Unexpected error: ${JSON.stringify(errorMessage.error)}`,
-			)
-			process.exit(1)
-	}
 }
 
 export const createWSRunner = async (
@@ -62,15 +38,80 @@ export const createWSRunner = async (
 	let isReady = false
 	let isShuttingDown = false
 	let isClientInitiatedClose = false
+	let heartbeatInterval: NodeJS.Timeout | null = null
+	let lastActivityTimestamp: number = Date.now()
+	let idleCheckInterval: NodeJS.Timeout | null = null
 
 	let transport = createTransport(baseUrl, config, apiKey)
 
+	/* Keeps websocket connection alive */
+	const startHeartbeat = () => {
+		// Ping every 30 seconds (well before the 100s timeout)
+		if (heartbeatInterval) {
+			clearInterval(heartbeatInterval)
+		}
+		heartbeatInterval = setInterval(async () => {
+			try {
+				if (isReady) {
+					// logWithTimestamp("[Runner] Sending heartbeat ping")
+					await transport.send({ jsonrpc: "2.0", method: "ping", params: {} })
+				}
+			} catch (error) {
+				logWithTimestamp(
+					`[Runner] Failed to send heartbeat: ${(error as Error).message}`,
+				)
+			}
+		}, 30000)
+	}
+
+	/* Stop heartbeat when connection exceeds internal idle timeouto of 15 minutes */
+	const stopHeartbeat = () => {
+		if (heartbeatInterval) {
+			clearInterval(heartbeatInterval)
+			heartbeatInterval = null
+		}
+	}
+
 	const handleError = (error: Error, context: string) => {
-		console.error(`${context}:`, error.message)
+		logWithTimestamp(`${context}: ${error.message}`)
 		return error
 	}
 
+	const updateLastActivity = () => {
+		lastActivityTimestamp = Date.now()
+	}
+
+	/* Starts and monitors connection idle state */
+	const startIdleCheck = () => {
+		if (idleCheckInterval) {
+			clearInterval(idleCheckInterval)
+		}
+		updateLastActivity() // Initialize the timestamp
+		idleCheckInterval = setInterval(() => {
+			const idleTime = Date.now() - lastActivityTimestamp
+			if (idleTime >= IDLE_TIMEOUT) {
+				logWithTimestamp(
+					`[Runner] Connection idle for ${Math.round(idleTime / 60000)} minutes, initiating shutdown`,
+				)
+				handleExit().catch((error) => {
+					logWithTimestamp(
+						`[Runner] Error during idle timeout cleanup: ${error}`,
+					)
+					process.exit(1)
+				})
+			}
+		}, 60000) // Check every minute
+	}
+
+	const stopIdleCheck = () => {
+		if (idleCheckInterval) {
+			clearInterval(idleCheckInterval)
+			idleCheckInterval = null
+		}
+	}
+
 	const processMessage = async (data: Buffer) => {
+		updateLastActivity() // Update activity state on outgoing message
 		stdinBuffer += data.toString("utf8")
 
 		if (!isReady) return // Wait for connection to be established
@@ -91,100 +132,116 @@ export const createWSRunner = async (
 	}
 
 	const setupTransport = async () => {
-		console.error(`[Runner] Connecting to WebSocket endpoint: ${baseUrl}`)
+		logWithTimestamp(`[Runner] Connecting to WebSocket endpoint: ${baseUrl}`)
 
 		transport.onclose = async () => {
-			console.error("[Runner] WebSocket connection closed")
+			logWithTimestamp("[Runner] WebSocket connection closed")
 			isReady = false
+			stopHeartbeat()
 			if (!isClientInitiatedClose && retryCount++ < MAX_RETRIES) {
-				console.error(
-					`[Runner] Unexpected disconnect, attempting reconnect (attempt ${retryCount} of ${MAX_RETRIES})...`,
-				)
-				// Random jitter between 0-1000ms to the exponential backoff
 				const jitter = Math.random() * 1000
 				const delay = RETRY_DELAY * Math.pow(2, retryCount) + jitter
+				logWithTimestamp(
+					`[Runner] Unexpected disconnect, attempting reconnect in ${Math.round(delay)}ms (attempt ${retryCount} of ${MAX_RETRIES})...`,
+				)
 				await new Promise((resolve) => setTimeout(resolve, delay))
 
 				// Create new transport
 				transport = createTransport(baseUrl, config, apiKey)
+				logWithTimestamp(
+					"[Runner] Created new transport instance after disconnect",
+				)
 				await setupTransport()
 			} else if (!isClientInitiatedClose) {
-				console.error(
-					`[Runner] Max reconnection attempts (${MAX_RETRIES}) reached`,
+				logWithTimestamp(
+					`[Runner] Max reconnection attempts (${MAX_RETRIES}) reached - giving up`,
 				)
 				process.exit(1)
 			} else {
-				console.error("[Runner] Clean shutdown, not attempting reconnect")
+				logWithTimestamp(
+					"[Runner] Clean shutdown detected, performing graceful exit",
+				)
 				process.exit(0)
 			}
 		}
 
 		transport.onerror = (error) => {
 			if (error.message.includes("502")) {
-				console.error(
-					"[Runner] Server returned 502, attempting to reconnect...",
+				logWithTimestamp("[Runner] Server returned 502 Bad Gateway")
+				logWithTimestamp(
+					`[Runner] Connection state before 502 retry - isReady: ${isReady}`,
 				)
-				// Don't exit - let the connection close naturally after retry attempts
 				return
 			}
 
-			handleError(error, "WebSocket connection error")
+			logWithTimestamp(`[Runner] WebSocket error: ${error.message}`)
 			process.exit(1)
 		}
 
 		transport.onmessage = (message: JSONRPCMessage) => {
+			updateLastActivity() // Update on incoming message
 			try {
 				if ("error" in message) {
-					handleTransportError(message as JSONRPCError, transport)
+					handleTransportError(message as JSONRPCError)
 				}
-				console.log(JSON.stringify(message)) // log message to channel
+				console.log(JSON.stringify(message)) // Strictly keep this as console.log since it's for channel output
 			} catch (error) {
 				handleError(error as Error, "Error handling message")
-				console.error("[Runner] Message:", JSON.stringify(message))
-				console.log(JSON.stringify(message))
+				logWithTimestamp(`[Runner] Message: ${JSON.stringify(message)}`)
+				console.log(JSON.stringify(message)) // Keep this as console.log since it's for channel output
 			}
 		}
 
 		await transport.start()
 		isReady = true
-		console.error("[Runner] WebSocket connection initiated")
+		logWithTimestamp("[Runner] WebSocket connection initiated")
+		startHeartbeat() // Start heartbeat
+		startIdleCheck() // Start idle checking
 		// Release buffered messages
 		await processMessage(Buffer.from(""))
-		console.error("[Runner] WebSocket connection established")
+		logWithTimestamp("[Runner] WebSocket connection established")
 	}
 
 	const cleanup = async () => {
 		if (isShuttingDown) {
-			console.error("[Runner] Cleanup already in progress, skipping...")
+			logWithTimestamp(
+				"[Runner] Cleanup already in progress, skipping duplicate cleanup...",
+			)
 			return
 		}
 
-		console.error("[Runner] Starting cleanup...")
+		logWithTimestamp("[Runner] Starting cleanup process...")
 		isShuttingDown = true
 		isClientInitiatedClose = true // Mark this as a clean shutdown
+		stopHeartbeat() // Stop heartbeat
+		stopIdleCheck() // Stop idle checking
 
 		try {
-			console.error("[Runner] Attempting to close transport...")
+			logWithTimestamp("[Runner] Attempting to close transport (3s timeout)...")
 			await Promise.race([
 				transport.close(),
 				new Promise((_, reject) =>
 					setTimeout(
-						() => reject(new Error("[Runner] Transport close timeout")),
+						() =>
+							reject(new Error("[Runner] Transport close timeout after 3s")),
 						3000,
 					),
 				),
 			])
-			console.error("[Runner] Transport closed successfully")
+			logWithTimestamp("[Runner] Transport closed successfully")
 		} catch (error) {
-			handleError(error as Error, "[Runner] Error during cleanup")
+			logWithTimestamp(
+				`[Runner] Error during transport cleanup: ${(error as Error).message}`,
+			)
 		}
 
-		console.error("[Runner] Cleanup completed")
+		logWithTimestamp("[Runner] Cleanup completed")
 	}
 
 	const handleExit = async () => {
-		console.error("[Runner] Shutting down WS Runner...")
-		isClientInitiatedClose = true // Mark as clean shutdown before cleanup
+		logWithTimestamp("[Runner] Received exit signal, initiating shutdown...")
+		// logWithTimestamp(`[Runner] Exit state - isReady: ${isReady}, isShuttingDown: ${isShuttingDown}`)
+		isClientInitiatedClose = true
 		await cleanup()
 		if (!isShuttingDown) {
 			process.exit(0)
@@ -195,21 +252,21 @@ export const createWSRunner = async (
 	process.on("SIGTERM", handleExit)
 	process.on("beforeExit", handleExit)
 	process.on("exit", () => {
-		console.error("[Runner] Final cleanup on exit")
+		logWithTimestamp("[Runner] Final cleanup on exit")
 	})
 
 	process.stdin.on("end", () => {
-		console.error("STDIN closed (client disconnected)")
+		logWithTimestamp("[Runner] STDIN closed (client disconnected)")
 		handleExit().catch((error) => {
-			console.error("[Runner] Error during stdin close cleanup:", error)
+			logWithTimestamp(`[Runner] Error during stdin close cleanup: ${error}`)
 			process.exit(1)
 		})
 	})
 
 	process.stdin.on("error", (error) => {
-		console.error("[Runner] STDIN error:", error)
+		logWithTimestamp(`[Runner] STDIN error: ${error.message}`)
 		handleExit().catch((error) => {
-			console.error("[Runner] Error during stdin error cleanup:", error)
+			logWithTimestamp(`[Runner] Error during stdin error cleanup: ${error}`)
 			process.exit(1)
 		})
 	})
