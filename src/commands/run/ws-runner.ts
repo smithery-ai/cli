@@ -64,7 +64,6 @@ export const createWSRunner = async (
 		}, 30000)
 	}
 
-	/* Stop heartbeat when connection exceeds internal idle timeouto of 15 minutes */
 	const stopHeartbeat = () => {
 		if (heartbeatInterval) {
 			clearInterval(heartbeatInterval)
