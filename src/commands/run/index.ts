@@ -5,7 +5,7 @@ import {
 	initializeSettings,
 } from "../../smithery-config.js"
 import type { RegistryServer, ServerConfig } from "../../types/registry.js"
-import { chooseConnection } from "../../utils/config.js"
+import { chooseConnection, formatRunConfigValues } from "../../utils/config.js"
 import { createStdioRunner as startSTDIOrunner } from "./stdio-runner.js"
 import { createWSRunner as startWSRunner } from "./ws-runner.js"
 
@@ -40,7 +40,12 @@ export async function run(
 			try {
 				const result = await fetchConfigWithApiKey(qualifiedName, apiKey)
 				resolvedServer = result.server
-				finalConfig = { ...result.config, ...config } // Merge configs, with local config taking precedence
+				// Merge configs with proper schema validation
+				const connection = chooseConnection(result.server)
+				finalConfig = await formatRunConfigValues(connection, {
+					...result.config,
+					...config,
+				})
 				console.error("[Runner] Using saved configuration")
 			} catch (error) {
 				console.error("[Runner] Failed to fetch config with API key:", error)
@@ -56,6 +61,12 @@ export async function run(
 
 		if (!resolvedServer) {
 			throw new Error(`Could not resolve server: ${qualifiedName}`)
+		}
+
+		// Format final config with schema validation if not already done
+		if (!apiKey) {
+			const connection = chooseConnection(resolvedServer)
+			finalConfig = await formatRunConfigValues(connection, finalConfig)
 		}
 
 		console.error("[Runner] Connecting to server:", {

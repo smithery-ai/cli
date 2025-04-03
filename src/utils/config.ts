@@ -445,3 +445,56 @@ export function formatServerConfig(
 		args: npxArgs,
 	}
 }
+
+/**
+ * Formats and validates configuration values for the run command.
+ * This is a special case that allows empty strings for required fields.
+ *
+ * @param connection - Server connection details containing the config schema
+ * @param configValues - Optional existing configuration values to format
+ * @returns Formatted configuration values with proper types according to schema
+ */
+export async function formatRunConfigValues(
+	connection: ConnectionDetails,
+	configValues?: ServerConfig,
+): Promise<ServerConfig> {
+	const formattedValues: ServerConfig = {}
+
+	if (!connection.configSchema?.properties) {
+		return configValues || {}
+	}
+
+	const required = new Set<string>(connection.configSchema.required || [])
+
+	// First pass: collect all values and track missing required fields
+	for (const [key, prop] of Object.entries(
+		connection.configSchema.properties,
+	)) {
+		const schemaProp = prop as { type?: string; default?: unknown }
+		const value = configValues?.[key]
+
+		try {
+			let finalValue: unknown
+			if (value !== undefined) {
+				finalValue = value
+			} else if (!required.has(key)) {
+				finalValue = schemaProp.default
+			} else {
+				finalValue = "" // Use empty string for required fields that are missing
+			}
+
+			if (finalValue === undefined) {
+				// Use empty string for optional values without defaults
+				formattedValues[key] = ""
+				continue
+			}
+
+			formattedValues[key] = convertValueToType(finalValue, schemaProp.type)
+		} catch (error) {
+			// For any errors, use empty string for required fields and null for optional ones
+			formattedValues[key] = required.has(key) ? "" : null
+		}
+	}
+
+	return formattedValues
+}
