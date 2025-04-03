@@ -4,6 +4,13 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [1.1.66] - 2025-04-03
+
+### Changed
+- Modified runtime config validation to allow empty strings for required fields
+- Added separate config validation for run vs install commands
+- Improved error handling for missing required fields during runtime
+
 ## [1.1.65] - 2025-04-02
 
 ### Added
