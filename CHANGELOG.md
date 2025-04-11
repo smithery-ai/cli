@@ -9,6 +9,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ### Changed
 - Unified error handling between WebSocket and STDIO runners by centralizing common error handling logic
 - Improved error handling flow by letting parent handle process exits during protocol errors
+- Enhanced verbose logging in inspect command to track server resolution, connection selection, and runtime environment setup
+- Improved security by logging only configuration structure instead of sensitive values
 
 ## [1.1.66] - 2025-04-03
 

@@ -240,20 +240,24 @@ export async function inspectServer(qualifiedName: string): Promise<void> {
 	try {
 		// Fetch server details from registry
 		const server = await resolvePackage(qualifiedName)
+		verbose(`Resolved server package: ${qualifiedName}`)
 		spinner.succeed(`Successfully resolved ${qualifiedName}`)
 
 		// Choose a connection from available options
 		const connection = chooseConnection(server)
+		verbose(`Selected connection type: ${connection.type}`)
 
 		// Collect configuration values if needed
 		const configValues = await collectConfigValues(connection)
-
 		verbose(
-			`Collected Configuration Values: ${JSON.stringify(configValues, null, 2)}`,
+			`Collected Configuration Structure: ${JSON.stringify(Object.keys(configValues), null, 2)}`,
 		)
 
 		// Get runtime environment
 		const runtimeEnv = getRuntimeEnvironment({})
+		verbose(
+			`Runtime environment initialized with ${Object.keys(runtimeEnv).length} variables`,
+		)
 
 		// Create appropriate transport with environment variables
 		transport = new StdioClientTransport({
@@ -268,6 +272,7 @@ export async function inspectServer(qualifiedName: string): Promise<void> {
 			],
 			env: runtimeEnv,
 		})
+		verbose(`Created transport for server: ${qualifiedName}`)
 
 		// Connect to the server and start interactive session
 		await connectServer(transport)
