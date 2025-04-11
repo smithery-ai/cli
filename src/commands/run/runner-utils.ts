@@ -26,8 +26,7 @@ export const handleTransportError = (errorMessage: JSONRPCError) => {
 		case ErrorCode.MethodNotFound:
 		case ErrorCode.InvalidParams:
 		case ErrorCode.InternalError:
-			return // natural reconnection logic for ws
-
+			return
 		default:
 			logWithTimestamp(
 				`[Runner] Unexpected protocol error: ${JSON.stringify(errorMessage.error)}`,
