@@ -1,4 +1,5 @@
 import type { JSONRPCError } from "@modelcontextprotocol/sdk/types.js"
+import { ErrorCode } from "@modelcontextprotocol/sdk/types.js"
 
 export const IDLE_TIMEOUT = 15 * 60 * 1000 // 15 minutes in milliseconds
 export const MAX_RETRIES = 3
@@ -12,26 +13,25 @@ export const logWithTimestamp = (message: string) => {
 
 export const handleTransportError = (errorMessage: JSONRPCError) => {
 	switch (errorMessage.error.code) {
-		case -32000: // Server-specific: Connection closed
+		case ErrorCode.ConnectionClosed: // Server-specific: Connection closed
 			logWithTimestamp(
-				`[Runner] Connection closed by server (code: -32000). Details: ${JSON.stringify(errorMessage.error)}`,
+				`[Runner] Connection closed by server (code: ${ErrorCode.ConnectionClosed}). Details: ${JSON.stringify(errorMessage.error)}`,
 			)
 			logWithTimestamp(
 				"[Runner] Attempting to reconnect after server-initiated close...",
 			)
-			return // natural reconnection logic
-
-		case -32700: // Parse Error
-		case -32600: // Invalid Request
-		case -32601: // Method Not Found
-		case -32602: // Invalid Params
-		case -32603: // Internal Error
-			return // natural reconnection logic
+			return // natural reconnection logic for ws
+		case ErrorCode.ParseError:
+		case ErrorCode.InvalidRequest:
+		case ErrorCode.MethodNotFound:
+		case ErrorCode.InvalidParams:
+		case ErrorCode.InternalError:
+			return // natural reconnection logic for ws
 
 		default:
 			logWithTimestamp(
 				`[Runner] Unexpected protocol error: ${JSON.stringify(errorMessage.error)}`,
 			)
-			process.exit(1)
+			return // Let the error flow naturally through the error handling chain
 	}
 }
