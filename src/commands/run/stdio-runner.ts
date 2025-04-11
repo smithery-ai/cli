@@ -14,6 +14,7 @@ import { fetchConnection } from "../../registry"
 import type { RegistryServer } from "../../types/registry"
 import { formatConfigValues } from "../../utils/config"
 import { getRuntimeEnvironment } from "../../utils/runtime"
+import { handleTransportError } from "./runner-utils.js"
 
 type Config = Record<string, unknown>
 type Cleanup = () => Promise<void>
@@ -149,17 +150,25 @@ export const createStdioRunner = async (
 
 		transport.onmessage = (message: JSONRPCMessage) => {
 			try {
-				if ("error" in message) {
+				if ("error" in message && message.error) {
 					const errorMessage = message as JSONRPCError
-					// Only log errors that aren't "Method not found"
-					if (errorMessage.error.code !== ErrorCode.MethodNotFound) {
-						console.error(`[Runner] Child process error:`, errorMessage.error)
+					handleTransportError(errorMessage)
+					// For connection closed error, trigger cleanup
+					if (errorMessage.error.code === ErrorCode.ConnectionClosed) {
+						handleExit().catch((error) => {
+							console.error("[Runner] Error during exit cleanup:", error)
+							process.exit(1)
+						})
 					}
 				}
 				// Forward the message to stdout
 				console.log(JSON.stringify(message))
 			} catch (error) {
 				handleError(error as Error, "Error handling message")
+				handleExit().catch((error) => {
+					console.error("[Runner] Error during exit cleanup:", error)
+					process.exit(1)
+				})
 			}
 		}
 
@@ -244,14 +253,6 @@ export const createStdioRunner = async (
 	process.on("exit", () => {
 		// Synchronous cleanup for exit event
 		console.error("[Runner] Final cleanup on exit")
-		// Additional logging if needed
-		// console.error("[Runner] Final cleanup on exit", {
-		// 	transportExists: !!transport,
-		// 	isShuttingDown,
-		// 	stdinIsTTY: process.stdin.isTTY,
-		// 	stdinIsRaw: process.stdin.isRaw,
-		// 	hasStdinListeners: process.stdin.listenerCount('data') > 0
-		// })
 	})
 
 	// Handle STDIN closure (client disconnect)
