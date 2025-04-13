@@ -14,7 +14,7 @@ import { fetchConnection } from "../../registry"
 import type { RegistryServer } from "../../types/registry"
 import { formatConfigValues } from "../../utils/config"
 import { getRuntimeEnvironment } from "../../utils/runtime"
-import { handleTransportError } from "./runner-utils.js"
+import { handleTransportError, logWithTimestamp } from "./runner-utils.js"
 
 type Config = Record<string, unknown>
 type Cleanup = () => Promise<void>
@@ -31,7 +31,7 @@ export const createStdioRunner = async (
 	let transport: StdioClientTransport | null = null
 
 	const handleError = (error: Error, context: string) => {
-		console.error(`[Runner] ${context}:`, error.message)
+		logWithTimestamp(`[Runner] ${context}: ${error.message}`)
 		return error
 	}
 
@@ -86,7 +86,7 @@ export const createStdioRunner = async (
 	}
 
 	const setupTransport = async () => {
-		console.error("[Runner] Starting child process setup...")
+		logWithTimestamp("[Runner] Starting child process setup...")
 		const stdioConnection = serverDetails.connections.find(
 			(conn) => conn.type === "stdio",
 		)
@@ -120,11 +120,9 @@ export const createStdioRunner = async (
 
 		// Resolve npx path upfront if needed
 		if (finalCommand === "npx") {
-			console.error("[Runner] Using npx path:", finalCommand)
-
 			// Special handling for Windows platform
 			if (process.platform === "win32") {
-				console.error(
+				logWithTimestamp(
 					"[Runner] Windows platform detected, using cmd /c for npx",
 				)
 				finalArgs = ["/c", "npx", ...finalArgs]
@@ -132,10 +130,12 @@ export const createStdioRunner = async (
 			}
 		}
 
-		console.error("[Runner] Executing:", {
-			command: finalCommand,
-			args: finalArgs,
-		})
+		logWithTimestamp(
+			`[Runner] Executing: ${JSON.stringify({
+				command: finalCommand,
+				args: finalArgs,
+			})}`,
+		)
 
 		try {
 			transport = new StdioClientTransport({
@@ -144,7 +144,7 @@ export const createStdioRunner = async (
 				env: runtimeEnv,
 			})
 		} catch (error) {
-			console.error("For more help, see: https://smithery.ai/docs/faq/users")
+			logWithTimestamp("For more help, see: https://smithery.ai/docs/faq/users")
 			throw error
 		}
 
@@ -156,7 +156,7 @@ export const createStdioRunner = async (
 					// For connection closed error, trigger cleanup
 					if (errorMessage.error.code === ErrorCode.ConnectionClosed) {
 						handleExit().catch((error) => {
-							console.error("[Runner] Error during exit cleanup:", error)
+							logWithTimestamp(`[Runner] Error during exit cleanup: ${error}`)
 							process.exit(1)
 						})
 					}
@@ -166,37 +166,37 @@ export const createStdioRunner = async (
 			} catch (error) {
 				handleError(error as Error, "Error handling message")
 				handleExit().catch((error) => {
-					console.error("[Runner] Error during exit cleanup:", error)
+					logWithTimestamp(`[Runner] Error during exit cleanup: ${error}`)
 					process.exit(1)
 				})
 			}
 		}
 
 		transport.onclose = () => {
-			console.error("[Runner] Child process terminated")
+			logWithTimestamp("[Runner] Child process terminated")
 			// Only treat it as unexpected if we're ready and haven't started cleanup
 			if (isReady && !isShuttingDown) {
-				console.error("[Runner] Process terminated unexpectedly while running")
+				logWithTimestamp(
+					"[Runner] Process terminated unexpectedly while running",
+				)
 				handleExit().catch((error) => {
-					console.error("[Runner] Error during exit cleanup:", error)
+					logWithTimestamp(`[Runner] Error during exit cleanup: ${error}`)
 					process.exit(1)
 				})
 			}
 		}
 
 		transport.onerror = (err) => {
-			console.error("[Runner] Child process error:", err.message)
+			logWithTimestamp(`[Runner] Child process error: ${err.message}`)
 			if (err.message.includes("spawn")) {
-				console.error(
+				logWithTimestamp(
 					"[Runner] Failed to spawn child process - check if the command exists and is executable",
 				)
 			} else if (err.message.includes("permission")) {
-				console.error("[Runner] Permission error when running child process")
+				logWithTimestamp("[Runner] Permission error when running child process")
+			} else {
+				logWithTimestamp("[Runner] Non-critical error, continuing")
 			}
-			handleExit().catch((error) => {
-				console.error("[Runner] Error during error cleanup:", error)
-				process.exit(1)
-			})
 		}
 
 		await transport.start()
@@ -208,17 +208,17 @@ export const createStdioRunner = async (
 	const cleanup = async () => {
 		// Prevent recursive cleanup calls
 		if (isShuttingDown) {
-			console.error("[Runner] Cleanup already in progress, skipping...")
+			logWithTimestamp("[Runner] Cleanup already in progress, skipping...")
 			return
 		}
 
-		console.error("[Runner] Starting cleanup...")
+		logWithTimestamp("[Runner] Starting cleanup...")
 		isShuttingDown = true
 
 		// Close transport gracefully
 		if (transport) {
 			try {
-				console.error("[Runner] Attempting to close transport...")
+				logWithTimestamp("[Runner] Attempting to close transport...")
 				await Promise.race([
 					transport.close(),
 					new Promise((_, reject) =>
@@ -228,18 +228,18 @@ export const createStdioRunner = async (
 						),
 					),
 				])
-				console.error("[Runner] Transport closed successfully")
+				logWithTimestamp("[Runner] Transport closed successfully")
 			} catch (error) {
-				console.error("[Runner] Error during transport cleanup:", error)
+				logWithTimestamp(`[Runner] Error during transport cleanup: ${error}`)
 			}
 			transport = null
 		}
 
-		console.error("[Runner] Cleanup completed")
+		logWithTimestamp("[Runner] Cleanup completed")
 	}
 
 	const handleExit = async () => {
-		console.error("[Runner] Exit handler triggered, starting shutdown...")
+		logWithTimestamp("[Runner] Exit handler triggered, starting shutdown...")
 		await cleanup()
 		if (!isShuttingDown) {
 			process.exit(0)
@@ -252,22 +252,22 @@ export const createStdioRunner = async (
 	process.on("beforeExit", handleExit)
 	process.on("exit", () => {
 		// Synchronous cleanup for exit event
-		console.error("[Runner] Final cleanup on exit")
+		logWithTimestamp("[Runner] Final cleanup on exit")
 	})
 
 	// Handle STDIN closure (client disconnect)
 	process.stdin.on("end", () => {
-		console.error("[Runner] STDIN closed (client disconnected)")
+		logWithTimestamp("[Runner] STDIN closed (client disconnected)")
 		handleExit().catch((error) => {
-			console.error("[Runner] Error during stdin close cleanup:", error)
+			logWithTimestamp(`[Runner] Error during stdin close cleanup: ${error}`)
 			process.exit(1)
 		})
 	})
 
 	process.stdin.on("error", (error) => {
-		console.error("[Runner] STDIN error:", error)
+		logWithTimestamp(`[Runner] STDIN error: ${error}`)
 		handleExit().catch((error) => {
-			console.error("[Runner] Error during stdin error cleanup:", error)
+			logWithTimestamp(`[Runner] Error during stdin error cleanup: ${error}`)
 			process.exit(1)
 		})
 	})

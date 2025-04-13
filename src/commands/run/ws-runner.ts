@@ -174,7 +174,7 @@ export const createWSRunner = async (
 			}
 
 			logWithTimestamp(`[Runner] WebSocket error: ${error.message}`)
-			process.exit(1)
+			// process.exit(1) // reconnection logic
 		}
 
 		transport.onmessage = (message: JSONRPCMessage) => {
