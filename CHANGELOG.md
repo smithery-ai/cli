@@ -7,7 +7,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## [1.1.69] - 2025-04-13
 
 ### Changed
-- Updated Roo Code (previously roo-cline) configuration path
+- Updated Roo Code (previously Roo Cline) configuration path
 
 ## [1.1.68] - 2025-04-12
 
