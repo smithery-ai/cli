@@ -4,6 +4,11 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [1.1.69] - 2025-04-13
+
+### Changed
+- Updated Roo Code (previously roo-cline) configuration path
+
 ## [1.1.68] - 2025-04-12
 
 ### Changed
