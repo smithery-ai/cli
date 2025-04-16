@@ -60,7 +60,7 @@ const clientPaths: { [key: string]: ClientInstallTarget } = {
 			"cline_mcp_settings.json",
 		),
 	},
-	"roocode": {
+	roocode: {
 		type: "file",
 		path: path.join(
 			baseDir,
