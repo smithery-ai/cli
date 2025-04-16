@@ -60,14 +60,14 @@ const clientPaths: { [key: string]: ClientInstallTarget } = {
 			"cline_mcp_settings.json",
 		),
 	},
-	"roo-cline": {
+	"roo-code": {
 		type: "file",
 		path: path.join(
 			baseDir,
 			vscodePath,
 			"rooveterinaryinc.roo-cline",
 			"settings",
-			"cline_mcp_settings.json",
+			"mcp_settings.json",
 		),
 	},
 	windsurf: {

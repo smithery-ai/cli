@@ -2,7 +2,7 @@ export const VALID_CLIENTS = [
 	"claude",
 	"cline",
 	"windsurf",
-	"roo-cline",
+	"roo-code",
 	"witsy",
 	"enconvo",
 	"cursor",
