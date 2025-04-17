@@ -15,7 +15,7 @@ jest.mock("../utils/config", () => ({
 	normalizeServerId: jest.fn((id) => id),
 	denormalizeServerId: jest.fn((id) => id),
 	envVarsToArgs: jest.fn(),
-	formatConfigValues: jest.fn(),
+	formatAndValidateConfig: jest.fn(),
 	chooseStdioConnection: jest.fn(),
 }))
 jest.mock("../utils/client", () => ({

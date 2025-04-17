@@ -5,9 +5,13 @@ import {
 	initializeSettings,
 } from "../../smithery-config.js"
 import type { RegistryServer, ServerConfig } from "../../types/registry.js"
-import { chooseConnection, formatRunConfigValues } from "../../utils/config.js"
+import {
+	chooseConnection,
+	validateAndFormatConfig,
+} from "../../utils/config.js"
 import { createStdioRunner as startSTDIOrunner } from "./stdio-runner.js"
 import { createWSRunner as startWSRunner } from "./ws-runner.js"
+import { logWithTimestamp } from "./runner-utils.js"
 
 /**
  * Runs a server with the specified configuration
@@ -26,9 +30,8 @@ export async function run(
 	try {
 		const settingsResult = await initializeSettings()
 		if (!settingsResult.success) {
-			console.warn(
-				"[Runner] Settings initialization warning:",
-				settingsResult.error,
+			logWithTimestamp(
+				`[Runner] Settings initialization warning: ${settingsResult.error}`,
 			)
 		}
 
@@ -42,14 +45,16 @@ export async function run(
 				resolvedServer = result.server
 				// Merge configs with proper schema validation
 				const connection = chooseConnection(result.server)
-				finalConfig = await formatRunConfigValues(connection, {
+				finalConfig = await validateAndFormatConfig(connection, {
 					...result.config,
 					...config,
 				})
-				console.error("[Runner] Using saved configuration")
+				logWithTimestamp("[Runner] Using saved configuration")
 			} catch (error) {
-				console.error("[Runner] Failed to fetch config with API key:", error)
-				console.error("[Runner] Falling back to standard resolution")
+				logWithTimestamp(
+					`[Runner] Failed to fetch config with API key: ${error}`,
+				)
+				logWithTimestamp("[Runner] Falling back to standard resolution")
 				resolvedServer = null // Ensure we do a fresh resolution below
 			}
 		}
@@ -66,13 +71,15 @@ export async function run(
 		// Format final config with schema validation if not already done
 		if (!apiKey) {
 			const connection = chooseConnection(resolvedServer)
-			finalConfig = await formatRunConfigValues(connection, finalConfig)
+			finalConfig = await validateAndFormatConfig(connection, finalConfig)
 		}
 
-		console.error("[Runner] Connecting to server:", {
-			id: resolvedServer.qualifiedName,
-			connectionTypes: resolvedServer.connections.map((c) => c.type),
-		})
+		logWithTimestamp(
+			`[Runner] Connecting to server: ${JSON.stringify({
+				id: resolvedServer.qualifiedName,
+				connectionTypes: resolvedServer.connections.map((c) => c.type),
+			})}`,
+		)
 
 		const analyticsEnabled = await getAnalyticsConsent()
 		await pickServerAndRun(
@@ -82,7 +89,9 @@ export async function run(
 			analyticsEnabled,
 		)
 	} catch (error) {
-		console.error("[Runner] Fatal error:", error)
+		logWithTimestamp(
+			`[Runner] Error: ${error instanceof Error ? error.message : error}`,
+		)
 		process.exit(1)
 	}
 }

@@ -1,5 +1,6 @@
 import type { ConnectionDetails } from "../types/registry"
 import type { ConfiguredServer, ServerConfig } from "../types/registry"
+import type { JSONSchema } from "../types/registry"
 import inquirer from "inquirer"
 import chalk from "chalk"
 import type { RegistryServer } from "../types/registry"
@@ -7,70 +8,83 @@ import type { RegistryServer } from "../types/registry"
 /**
  * Formats and validates configuration values according to the connection's schema
  *
- * This function processes configuration values to ensure they match the expected types
- * defined in the connection schema. It handles type conversions, applies defaults for
- * non-required fields, and validates that all required fields are present.
+ * This function:
+ * 1. Ensures all required fields are present (throws error if not)
+ * 2. Fills empty fields with defaults if available (applies to both required and optional fields)
+ * 3. Omits empty optional fields without defaults
  *
  * @param connection - Server connection details containing the config schema
  * @param configValues - Optional existing configuration values to format
  * @returns Formatted configuration values with proper types according to schema
  * @throws Error if any required config values are missing
  */
-export async function formatConfigValues(
+export async function validateAndFormatConfig(
 	connection: ConnectionDetails,
 	configValues?: ServerConfig,
 ): Promise<ServerConfig> {
-	const formattedValues: ServerConfig = {}
-	const missingRequired: string[] = []
-
 	if (!connection.configSchema?.properties) {
 		return configValues || {}
 	}
 
 	const required = new Set<string>(connection.configSchema.required || [])
+	const formattedValues: ServerConfig = {}
+	const missingRequired: string[] = []
+	const validationErrors: Array<{ field: string; error: string }> = []
 
-	// First pass: collect all values and track missing required fields
 	for (const [key, prop] of Object.entries(
 		connection.configSchema.properties,
 	)) {
-		const schemaProp = prop as { type?: string; default?: unknown }
+		const schemaProp = prop as JSONSchema
 		const value = configValues?.[key]
 
 		try {
-			let finalValue: unknown
-			if (value !== undefined) {
-				finalValue = value
-			} else if (!required.has(key)) {
-				finalValue = schemaProp.default
-			} else {
-				finalValue = undefined
-			}
+			const processedValue = value === "" ? undefined : value
+			const finalValue =
+				processedValue !== undefined ? processedValue : schemaProp.default
 
-			if (finalValue === undefined) {
-				if (required.has(key)) {
+			// Handle required fields
+			if (required.has(key)) {
+				if (finalValue === undefined) {
 					missingRequired.push(key)
 					continue
 				}
-				// Use empty string for optional values without defaults
-				formattedValues[key] = ""
+			}
+
+			// Skip optional fields with no value and no default
+			if (finalValue === undefined) {
 				continue
 			}
 
+			// Convert and include the value
 			formattedValues[key] = convertValueToType(finalValue, schemaProp.type)
 		} catch (error) {
+			const errorMessage =
+				error instanceof Error ? error.message : "Unknown validation error"
+			validationErrors.push({ field: key, error: errorMessage })
 			if (required.has(key)) {
 				missingRequired.push(key)
-			} else {
-				formattedValues[key] = null // Explicit null for invalid optional values
 			}
 		}
 	}
 
-	// After collecting all values, throw error if any required fields are missing
-	if (missingRequired.length > 0) {
-		throw new Error(
-			`Missing required config values: ${missingRequired.join(", ")}`,
-		)
+	// Combine all validation errors into a single error message
+	if (validationErrors.length > 0 || missingRequired.length > 0) {
+		const errorMessages: string[] = []
+
+		if (missingRequired.length > 0) {
+			errorMessages.push(
+				`Missing required config values: ${missingRequired.join(", ")}`,
+			)
+		}
+
+		if (validationErrors.length > 0) {
+			errorMessages.push(
+				"Validation errors:",
+				...validationErrors.map(({ field, error }) => `  ${field}: ${error}`),
+			)
+		}
+
+		throw new Error(errorMessages.join("\n"))
 	}
 
 	return formattedValues
@@ -96,19 +110,19 @@ function convertValueToType(value: unknown, type: string | undefined): unknown {
 			if (str === "true") return true
 			if (str === "false") return false
 			invalid("boolean")
-			return null // Add this to avoid fallthrough (will never be reached)
+			break
 		}
 		case "number": {
 			const num = Number(value)
 			if (!Number.isNaN(num)) return num
 			invalid("number")
-			return null // Add this to prevent fallthrough
+			break
 		}
 		case "integer": {
 			const num = Number.parseInt(String(value), 10)
 			if (!Number.isNaN(num)) return num
 			invalid("integer")
-			return null // Add this to prevent fallthrough
+			break
 		}
 		case "string":
 			return String(value)
@@ -120,52 +134,6 @@ function convertValueToType(value: unknown, type: string | undefined): unknown {
 						.map((v) => v.trim())
 		default:
 			return value
-	}
-}
-
-/**
- * Validates if saved configuration contains all required values
- * @param connection - Server connection details containing the config schema
- * @param savedConfig - Optional saved configuration to validate
- * @returns Object indicating if config is complete and the validated config
- */
-export async function validateConfig(
-	connection: ConnectionDetails,
-	savedConfig?: ServerConfig,
-): Promise<{ isValid: boolean; savedConfig?: Record<string, unknown> }> {
-	// If no config schema needed, return early
-	if (!connection.configSchema?.properties) {
-		return { isValid: true, savedConfig: {} }
-	}
-
-	try {
-		// Always format first to ensure type safety
-		const formattedConfig = await formatConfigValues(
-			connection,
-			savedConfig || {},
-		)
-
-		// Now validate against the formatted config
-		const required = new Set<string>(connection.configSchema.required || [])
-		const hasAllRequired = Array.from(required).every(
-			(key) => formattedConfig[key] !== undefined,
-		)
-
-		return {
-			isValid: hasAllRequired,
-			savedConfig: formattedConfig,
-		}
-	} catch (error) {
-		try {
-			// Try to get partial config by ignoring required fields
-			const partialConfig = Object.fromEntries(
-				Object.entries(savedConfig || {}).filter(([_, v]) => v !== undefined),
-			)
-			return { isValid: false, savedConfig: partialConfig }
-		} catch {
-			// If that fails too, return empty config
-			return { isValid: false }
-		}
 	}
 }
 
@@ -186,45 +154,57 @@ export async function collectConfigValues(
 
 	let baseConfig: ServerConfig = {}
 
-	// 2. Validate and process existing values
+	// 2. Try to validate and use existing values
 	if (existingValues) {
-		const { isValid, savedConfig } = await validateConfig(
-			connection,
-			existingValues,
-		)
-		if (isValid) {
-			return savedConfig!
+		try {
+			return await validateAndFormatConfig(connection, existingValues)
+		} catch {
+			// If validation fails, use the existing values as base for collecting missing ones
+			baseConfig = existingValues
 		}
-		baseConfig = savedConfig || {}
 	}
 
 	// 3. Collect missing values
 	const required = new Set<string>(connection.configSchema.required || [])
 	const properties = connection.configSchema.properties
 
-	for (const [key, prop] of Object.entries(properties)) {
-		const schemaProp = prop as {
-			description?: string
-			default?: unknown
-			type?: string
-		}
+	const collectedConfig = await Object.entries(properties).reduce(
+		async (configPromise, [key, prop]) => {
+			const config = await configPromise
+			const {
+				description,
+				default: defaultValue,
+				type,
+			} = prop as {
+				description?: string
+				default?: unknown
+				type?: string
+			}
 
-		// Skip if value already exists
-		if (baseConfig[key] !== undefined) continue
+			// Skip if value already exists
+			if (baseConfig[key] !== undefined) {
+				return { ...config, [key]: baseConfig[key] }
+			}
 
-		// Prompt for missing value
-		const value = await promptForConfigValue(key, schemaProp, required)
-		baseConfig[key] = value !== undefined ? value : schemaProp.default
-	}
+			// Prompt for missing value
+			const value = await promptForConfigValue(
+				key,
+				{ description, default: defaultValue, type },
+				required,
+			)
+			return { ...config, [key]: value !== undefined ? value : defaultValue }
+		},
+		Promise.resolve({} as ServerConfig),
+	)
 
 	// 4. Final validation and formatting
 	try {
-		return await formatConfigValues(connection, baseConfig)
+		return await validateAndFormatConfig(connection, collectedConfig)
 	} catch (error) {
 		const errorMessage =
 			error instanceof Error ? error.message : "Unknown configuration error"
 		console.error(chalk.red("Configuration error:"), errorMessage)
-		return baseConfig
+		return collectedConfig
 	}
 }
 
@@ -444,57 +424,4 @@ export function formatServerConfig(
 		command: "npx",
 		args: npxArgs,
 	}
-}
-
-/**
- * Formats and validates configuration values for the run command.
- * This is a special case that allows empty strings for required fields.
- *
- * @param connection - Server connection details containing the config schema
- * @param configValues - Optional existing configuration values to format
- * @returns Formatted configuration values with proper types according to schema
- */
-export async function formatRunConfigValues(
-	connection: ConnectionDetails,
-	configValues?: ServerConfig,
-): Promise<ServerConfig> {
-	const formattedValues: ServerConfig = {}
-
-	if (!connection.configSchema?.properties) {
-		return configValues || {}
-	}
-
-	const required = new Set<string>(connection.configSchema.required || [])
-
-	// First pass: collect all values and track missing required fields
-	for (const [key, prop] of Object.entries(
-		connection.configSchema.properties,
-	)) {
-		const schemaProp = prop as { type?: string; default?: unknown }
-		const value = configValues?.[key]
-
-		try {
-			let finalValue: unknown
-			if (value !== undefined) {
-				finalValue = value
-			} else if (!required.has(key)) {
-				finalValue = schemaProp.default
-			} else {
-				finalValue = "" // Use empty string for required fields that are missing
-			}
-
-			if (finalValue === undefined) {
-				// Use empty string for optional values without defaults
-				formattedValues[key] = ""
-				continue
-			}
-
-			formattedValues[key] = convertValueToType(finalValue, schemaProp.type)
-		} catch (error) {
-			// For any errors, use empty string for required fields and null for optional ones
-			formattedValues[key] = required.has(key) ? "" : null
-		}
-	}
-
-	return formattedValues
 }

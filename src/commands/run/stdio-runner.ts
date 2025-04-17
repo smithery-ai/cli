@@ -12,7 +12,6 @@ import { ANALYTICS_ENDPOINT } from "../../constants"
 import { verbose } from "../../logger"
 import { fetchConnection } from "../../registry"
 import type { RegistryServer } from "../../types/registry"
-import { formatConfigValues } from "../../utils/config"
 import { getRuntimeEnvironment } from "../../utils/runtime"
 import { handleTransportError, logWithTimestamp } from "./runner-utils.js"
 
@@ -95,10 +94,9 @@ export const createStdioRunner = async (
 		}
 
 		// Process config values and fetch server configuration
-		const processedConfig = await formatConfigValues(stdioConnection, config)
 		const serverConfig = await fetchConnection(
 			serverDetails.qualifiedName,
-			processedConfig,
+			config,
 		)
 
 		if (!serverConfig || "type" in serverConfig) {
@@ -183,6 +181,9 @@ export const createStdioRunner = async (
 					logWithTimestamp(`[Runner] Error during exit cleanup: ${error}`)
 					process.exit(1)
 				})
+			} else {
+				// Normal closure - exit cleanly
+				process.exit(0)
 			}
 		}
 

@@ -1,6 +1,6 @@
 /// <reference types="jest" />
 
-import { collectConfigValues, validateConfig } from "../utils/config"
+import { collectConfigValues, validateAndFormatConfig } from "../utils/config"
 import * as registry from "../registry"
 import inquirer from "inquirer"
 import type { ConnectionDetails } from "../types/registry"
@@ -96,8 +96,6 @@ describe("Server Configuration", () => {
 			expect(mockPrompt).not.toHaveBeenCalled()
 		})
 
-		// The collectConfigValues function no longer directly handles API keys - you'd need to test
-		// the code that calls collectConfigValues with the result of fetchConfigWithApiKey separately
 		test("should prompt for missing required values", async () => {
 			mockPrompt.mockResolvedValueOnce({ value: "prompt-key" })
 			mockPrompt.mockResolvedValueOnce({ value: "prompt-region" })
@@ -111,48 +109,51 @@ describe("Server Configuration", () => {
 		})
 	})
 
-	describe("validateConfig", () => {
-		test("should validate complete config as valid", async () => {
+	describe("formatAndValidateConfig", () => {
+		test("should validate complete config successfully", async () => {
 			const completeConfig = {
 				apiKey: "test-key",
 				region: "us-east",
 				maxTokens: 1000, // Added required default
 			}
 
-			const result = await validateConfig(mockConnection, completeConfig)
+			const result = await validateAndFormatConfig(
+				mockConnection,
+				completeConfig,
+			)
 
-			expect(result.isValid).toBe(true)
-			expect(result.savedConfig).toEqual(completeConfig)
+			expect(result).toEqual(completeConfig)
 		})
 
-		test("should validate incomplete config as invalid", async () => {
+		test("should throw error for incomplete config", async () => {
 			const incompleteConfig = {
 				region: "us-east", // missing apiKey
 			}
 
-			const result = await validateConfig(mockConnection, incompleteConfig)
-
-			expect(result.isValid).toBe(false)
-			expect(result.savedConfig).toBeUndefined()
+			await expect(
+				validateAndFormatConfig(mockConnection, incompleteConfig),
+			).rejects.toThrow("Missing required config values: apiKey")
 		})
 
-		test("should validate as true when no schema exists", async () => {
+		test("should return empty object when no schema exists", async () => {
 			const connectionWithoutSchema: ConnectionDetails = {
 				type: "stdio",
 				stdioFunction: "npx",
 			}
 
 			const anyConfig = { randomField: "value" }
-			const result = await validateConfig(connectionWithoutSchema, anyConfig)
+			const result = await validateAndFormatConfig(
+				connectionWithoutSchema,
+				anyConfig,
+			)
 
-			expect(result.isValid).toBe(true)
-			expect(result.savedConfig).toEqual({})
+			expect(result).toEqual({})
 		})
 
-		test("should validate as false when no config provided but schema exists", async () => {
-			const result = await validateConfig(mockConnection, undefined)
+		test("should handle undefined config", async () => {
+			const result = await validateAndFormatConfig(mockConnection, undefined)
 
-			expect(result.isValid).toBe(false)
+			expect(result).toEqual({})
 		})
 	})
 })

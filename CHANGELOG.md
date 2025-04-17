@@ -4,6 +4,15 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [1.1.71] - 2025-04-18
+
+### Changed
+- Refactored config handling to treat empty strings ("") as undefined values
+- Added stricter validation for required fields in configuration
+- Improved process exit handling with proper exit code 0 on transport close
+- Removed redundant config validation in and index.ts
+- Streamlined config validation flow in config.ts
+
 ## [1.1.70] - 2025-04-17
 
 ### Changed
