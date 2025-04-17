@@ -9,9 +9,9 @@ import type { RegistryServer } from "../types/registry"
  * Formats and validates configuration values according to the connection's schema
  *
  * This function:
- * Ensures all required fields are present (throws error if not)
- * Fills empty fields with defaults if available (applies to both required and optional fields)
- * Omits empty optional fields without defaults
+ * 1. Ensures all required fields are present (throws error if not)
+ * 2. Fills empty fields with defaults if available (applies to both required and optional fields)
+ * 3. Omits empty optional fields without defaults
  *
  * @param connection - Server connection details containing the config schema
  * @param configValues - Optional existing configuration values to format
