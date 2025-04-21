@@ -90,7 +90,7 @@ This guide will help you get started with developing for @smithery/cli.
 
 ```bash
 # List all servers
-npx . <command>
+npx . list servers
 
 # Inspect a specific server
 npx . inspect <server-id>
