@@ -38,6 +38,12 @@ export const ConnectionDetailsSchema = z.union([
 		configSchema: JSONSchemaSchema.optional(),
 		exampleConfig: z.record(z.any()).optional(),
 	}),
+	z.object({
+		type: z.literal("shttp"),
+		deploymentUrl: z.string().url(),
+		configSchema: JSONSchemaSchema.optional(),
+		exampleConfig: z.record(z.any()).optional(),
+	}),
 ])
 
 export type ConnectionDetails = z.infer<typeof ConnectionDetailsSchema>
@@ -69,21 +75,42 @@ export const StdioConnectionSchema = z.object({
 		.describe("The environment to use when spawning the process."),
 })
 
-export type StdioConnection = z.infer<typeof StdioConnectionSchema>
-
+// websocket connection
 export const WSConnectionSchema = z.object({
-	type: z.literal("ws"),
-	url: z.string().url(),
-	config: z.record(z.any()).optional(),
+	deploymentUrl: z.string().describe("The URL of the WebSocket server."),
 })
 
-export type WSConnection = z.infer<typeof WSConnectionSchema>
+// streamable http connection
+export const SHTTPConnectionSchema = z.object({
+	deploymentUrl: z.string().describe("The URL of the Streamable HTTP server."),
+})
 
-// Update ConfiguredServer to handle both types
-export type ConfiguredServer = StdioConnection | WSConnection
-export type ConfiguredStdioServer = StdioConnection
+export type StdioConnection = z.infer<typeof StdioConnectionSchema>
+export type WSConnection = z.infer<typeof WSConnectionSchema>
+export type SHTTPConnection = z.infer<typeof SHTTPConnectionSchema>
+
+// Update ConfiguredServer to handle all types
+export type ConfiguredServer = StdioConnection | WSConnection | SHTTPConnection
 
 // Server Configuration key value pairs
 export interface ServerConfig {
 	[key: string]: unknown
 }
+
+// Connection type schema
+export const ConnectionTypeSchema = z.union([
+	z.object({
+		type: z.literal("stdio"),
+		...StdioConnectionSchema.shape,
+	}),
+	z.object({
+		type: z.literal("ws"),
+		...WSConnectionSchema.shape,
+	}),
+	z.object({
+		type: z.literal("shttp"),
+		...SHTTPConnectionSchema.shape,
+	}),
+])
+
+export type ConnectionType = "stdio" | "ws" | "shttp"
