@@ -42,10 +42,11 @@ export async function run(
 		// If API key is provided, fetch both config and server info in one call
 		if (apiKey) {
 			try {
+				// we should not fetch config anymore
 				const result = await fetchConfigWithApiKey(qualifiedName, apiKey)
 				resolvedServer = result.server
-				// Merge configs with proper schema validation
 				const connection = chooseConnection(result.server)
+				// this becomes redundant soon - gateway handles this
 				finalConfig = await validateAndFormatConfig(connection, {
 					...result.config,
 					...config,

@@ -124,6 +124,7 @@ async function main() {
 			}
 			await inspectServer(argument)
 			break
+		// api keys should be enforced here
 		case "install":
 			if (!argument) {
 				console.error("Please provide a server ID to install")
