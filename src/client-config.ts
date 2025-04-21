@@ -89,6 +89,7 @@ const clientPaths: { [key: string]: ClientInstallTarget } = {
 		command:
 			process.platform === "win32" ? "code-insiders.cmd" : "code-insiders",
 	},
+	boltai: { type: "file", path: path.join(homeDir, ".boltai", "mcp.json") },
 }
 
 export function getConfigPath(client?: string): ClientInstallTarget {

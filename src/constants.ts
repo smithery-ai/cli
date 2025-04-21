@@ -8,6 +8,7 @@ export const VALID_CLIENTS = [
 	"cursor",
 	"vscode",
 	"vscode-insiders",
+	"boltai"
 ] as const
 export type ValidClient = (typeof VALID_CLIENTS)[number]
 
