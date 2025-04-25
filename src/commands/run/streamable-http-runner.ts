@@ -152,12 +152,15 @@ export const createStreamableHTTPRunner = async (
 			transport.start(),
 			new Promise((_, reject) =>
 				setTimeout(
-					() => reject(new Error("[Runner] Transport connection timeout after 10s")),
+					() =>
+						reject(
+							new Error("[Runner] Transport connection timeout after 10s"),
+						),
 					10000,
 				),
 			),
 		])
-		
+
 		isReady = true
 		retryCount = 0 // Reset retry count on successful connection
 		logWithTimestamp("[Runner] Streamable HTTP connection initiated")
@@ -170,9 +173,7 @@ export const createStreamableHTTPRunner = async (
 
 	const cleanup = async () => {
 		if (isShuttingDown) {
-			logWithTimestamp(
-				"[Runner] Cleanup already in progress, skipping duplicate cleanup...",
-			)
+			logWithTimestamp("[Runner] Cleanup already in progress, skipping...")
 			return
 		}
 
@@ -180,9 +181,38 @@ export const createStreamableHTTPRunner = async (
 		isShuttingDown = true
 		isClientInitiatedClose = true // Mark this as a clean shutdown
 		heartbeatManager.stop() // Stop heartbeat
-		idleManager.stop() // Stop idle checking
+		idleManager.stop() // Stop idle check
 
 		try {
+			// First try to terminate the session if we have one
+			if (transport.sessionId) {
+				const shortSessionId = `${transport.sessionId.substring(0, 12)}...`
+				logWithTimestamp(
+					`[Runner] Terminating session with ID: ${shortSessionId}`,
+				)
+				try {
+					await transport.terminateSession()
+					logWithTimestamp("[Runner] Session terminated successfully")
+
+					// Verify session ID was cleared
+					if (!transport.sessionId) {
+						logWithTimestamp("[Runner] Session ID has been cleared")
+					} else {
+						logWithTimestamp(
+							"[Runner] Server responded with 405 Method Not Allowed (session termination not supported)",
+						)
+						logWithTimestamp(
+							`[Runner] Session ID is still active: ${shortSessionId}`,
+						)
+					}
+				} catch (error) {
+					logWithTimestamp(
+						`[Runner] Error terminating session: ${(error as Error).message}`,
+					)
+				}
+			}
+
+			// Then close the transport
 			logWithTimestamp("[Runner] Attempting to close transport (3s timeout)...")
 			await Promise.race([
 				transport.close(),

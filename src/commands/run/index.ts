@@ -77,7 +77,8 @@ async function pickServerAndRun(
 		if (!connection.deploymentUrl) {
 			throw new Error("Missing deployment URL")
 		}
-		if (!apiKey) { // eventually make it required for all connections
+		if (!apiKey) {
+			// eventually make it required for all connections
 			throw new Error("API key is required for remote connections")
 		}
 		await createStreamableHTTPRunner(connection.deploymentUrl, apiKey, config)
