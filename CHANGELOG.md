@@ -4,7 +4,12 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
-## [1.1.72] - 2025-04-24
+## [1.1.75] - 2025-04-25
+
+### Added
+- Added session termination on transport close for Streamable HTTP runner
+
+## [1.1.74] - 2025-04-25
 
 ### Added
 - New Streamable HTTP runner as the primary connection method
