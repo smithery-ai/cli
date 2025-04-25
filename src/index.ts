@@ -162,20 +162,7 @@ async function main() {
 				console.error("Please provide a server ID to run")
 				process.exit(1)
 			}
-			if (!apiKey) {
-				console.error(
-					chalk.red(
-						"API key is required to run the server. Please provide it using --key flag.",
-					),
-				)
-				console.error(
-					chalk.red(
-						"Get your API key from: https://smithery.ai/account/api-keys",
-					),
-				)
-				process.exit(1)
-			}
-			await run(argument, config, apiKey)
+			await run(argument, config)
 			break
 		case "list":
 			await list(argument, client!)

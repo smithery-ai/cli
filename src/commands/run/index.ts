@@ -22,7 +22,7 @@ import { createStreamableHTTPRunner } from "./streamable-http-runner.js"
 export async function run(
 	qualifiedName: string,
 	config: ServerConfig,
-	apiKey: string,
+	apiKey?: string,
 ) {
 	try {
 		const settingsResult = await initializeSettings()
@@ -45,7 +45,7 @@ export async function run(
 		)
 
 		const analyticsEnabled = await getAnalyticsConsent()
-		await pickServerAndRun(resolvedServer, config, apiKey, analyticsEnabled)
+		await pickServerAndRun(resolvedServer, config, analyticsEnabled, apiKey)
 	} catch (error) {
 		logWithTimestamp(
 			`[Runner] Error: ${error instanceof Error ? error.message : error}`,
@@ -59,6 +59,7 @@ export async function run(
  *
  * @param {RegistryServer} serverDetails - Details of the server to run, including connection options
  * @param {ServerConfig} config - Configuration values for the server
+ * @param {boolean} analyticsEnabled - Whether analytics are enabled for the server
  * @param {string} [apiKey] - Required for WS connections. Optional for stdio connections.
  * @returns {Promise<void>} A promise that resolves when the server is running
  * @throws {Error} If connection type is unsupported or deployment URL is missing for WS connections
@@ -67,14 +68,17 @@ export async function run(
 async function pickServerAndRun(
 	serverDetails: RegistryServer,
 	config: ServerConfig,
-	apiKey: string,
 	analyticsEnabled: boolean,
+	apiKey?: string,
 ): Promise<void> {
 	const connection = chooseConnection(serverDetails)
 
 	if (connection.type === "http") {
 		if (!connection.deploymentUrl) {
 			throw new Error("Missing deployment URL")
+		}
+		if (!apiKey) { // eventually make it required for all connections
+			throw new Error("API key is required for remote connections")
 		}
 		await createStreamableHTTPRunner(connection.deploymentUrl, apiKey, config)
 	} else if (connection.type === "stdio") {
