@@ -28,7 +28,7 @@ const showHelp = () => {
 	console.log(
 		"    --config <json>    Provide configuration data as JSON (skips prompts)",
 	)
-	console.log("    --key <apikey>     Provide an API key")
+	console.log("    --key <apikey>     Provide an API key (required)")
 	console.log("  uninstall <server>   Uninstall a package")
 	console.log("  inspect <server>     Inspect server from registry")
 	console.log("  run <server>         Run a server")
@@ -130,6 +130,19 @@ async function main() {
 				console.error("Please provide a server ID to install")
 				process.exit(1)
 			}
+			if (!apiKey) {
+				console.error(
+					chalk.red(
+						"API key is required for installation. Please provide it using --key flag.",
+					),
+				)
+				console.error(
+					chalk.red(
+						"Get your API key from: https://smithery.ai/account/api-keys",
+					),
+				)
+				process.exit(1)
+			}
 			await installServer(
 				argument,
 				client!,
@@ -147,6 +160,19 @@ async function main() {
 		case "run":
 			if (!argument) {
 				console.error("Please provide a server ID to run")
+				process.exit(1)
+			}
+			if (!apiKey) {
+				console.error(
+					chalk.red(
+						"API key is required to run the server. Please provide it using --key flag.",
+					),
+				)
+				console.error(
+					chalk.red(
+						"Get your API key from: https://smithery.ai/account/api-keys",
+					),
+				)
 				process.exit(1)
 			}
 			await run(argument, config, apiKey)
