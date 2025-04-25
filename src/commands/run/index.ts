@@ -22,7 +22,7 @@ import { createStreamableHTTPRunner } from "./streamable-http-runner.js"
 export async function run(
 	qualifiedName: string,
 	config: ServerConfig,
-	apiKey?: string,
+	apiKey: string | undefined,
 ) {
 	try {
 		const settingsResult = await initializeSettings()
@@ -69,7 +69,7 @@ async function pickServerAndRun(
 	serverDetails: RegistryServer,
 	config: ServerConfig,
 	analyticsEnabled: boolean,
-	apiKey?: string,
+	apiKey: string | undefined,
 ): Promise<void> {
 	const connection = chooseConnection(serverDetails)
 
