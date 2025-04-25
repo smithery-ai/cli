@@ -1,18 +1,20 @@
 import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/streamableHttp.js"
-// import { TransportSendOptions } from "@modelcontextprotocol/sdk/shared/transport.js"
-import { createSmitheryUrl } from "@smithery/sdk/config.js"
 import type {
 	JSONRPCMessage,
 	JSONRPCError,
 } from "@modelcontextprotocol/sdk/types.js"
-// import type { AuthInfo } from "@modelcontextprotocol/sdk/server/auth/types.js"
 import {
 	MAX_RETRIES,
 	RETRY_DELAY,
 	logWithTimestamp,
 	handleTransportError,
+	createIdleTimeoutManager,
+	createHeartbeatManager,
 } from "./runner-utils.js"
-import { createShttpTransportUrl, Config } from "../../utils/shttp-utils.js"
+import {
+	createStreamableHTTPTransportUrl,
+	type Config,
+} from "../../utils/url-utils.js"
 
 type Cleanup = () => Promise<void>
 
@@ -21,11 +23,14 @@ const createTransport = (
 	config: Config,
 	apiKey?: string,
 ): StreamableHTTPClientTransport => {
-	const url = createShttpTransportUrl(baseUrl, config, apiKey)
+	const url = createStreamableHTTPTransportUrl(baseUrl, config, apiKey)
+	logWithTimestamp(
+		`[Runner] Connecting to Streamable HTTP endpoint: ${baseUrl}`,
+	)
 	return new StreamableHTTPClientTransport(url)
 }
 
-export const createSHTTPRunner = async (
+export const createStreamableHTTPRunner = async (
 	baseUrl: string,
 	config: Config,
 	apiKey?: string,
@@ -43,7 +48,23 @@ export const createSHTTPRunner = async (
 		return error
 	}
 
+	const handleExit = async () => {
+		logWithTimestamp("[Runner] Received exit signal, initiating shutdown...")
+		isClientInitiatedClose = true
+		await cleanup()
+		if (!isShuttingDown) {
+			process.exit(0)
+		}
+	}
+
+	const idleManager = createIdleTimeoutManager(handleExit)
+	const heartbeatManager = createHeartbeatManager(
+		(message) => transport.send(message),
+		() => isReady,
+	)
+
 	const processMessage = async (data: Buffer) => {
+		idleManager.updateActivity() // Update activity state on outgoing message
 		stdinBuffer += data.toString("utf8")
 
 		if (!isReady) return // Wait for connection to be established
@@ -65,11 +86,10 @@ export const createSHTTPRunner = async (
 	}
 
 	const setupTransport = async () => {
-		logWithTimestamp(`[Runner] Connecting to Streamable HTTP endpoint: ${baseUrl}`)
-
 		transport.onclose = async () => {
 			logWithTimestamp("[Runner] Streamable HTTP connection closed")
 			isReady = false
+			heartbeatManager.stop()
 			if (!isClientInitiatedClose && retryCount++ < MAX_RETRIES) {
 				const jitter = Math.random() * 1000
 				const delay = RETRY_DELAY * Math.pow(2, retryCount) + jitter
@@ -110,6 +130,13 @@ export const createSHTTPRunner = async (
 		}
 
 		transport.onmessage = (message: JSONRPCMessage) => {
+			// Only update activity for non-heartbeat messages
+			if (
+				"method" in message &&
+				!(message.method === "ping" || message.method === "pong")
+			) {
+				idleManager.updateActivity() // Update on incoming message
+			}
 			try {
 				if ("error" in message) {
 					handleTransportError(message as JSONRPCError)
@@ -125,6 +152,8 @@ export const createSHTTPRunner = async (
 		await transport.start()
 		isReady = true
 		logWithTimestamp("[Runner] Streamable HTTP connection initiated")
+		heartbeatManager.start() // Start heartbeat
+		idleManager.start() // Start idle checking
 		// Release buffered messages
 		await processMessage(Buffer.from(""))
 		logWithTimestamp("[Runner] Streamable HTTP connection established")
@@ -141,6 +170,8 @@ export const createSHTTPRunner = async (
 		logWithTimestamp("[Runner] Starting cleanup process...")
 		isShuttingDown = true
 		isClientInitiatedClose = true // Mark this as a clean shutdown
+		heartbeatManager.stop() // Stop heartbeat
+		idleManager.stop() // Stop idle checking
 
 		try {
 			logWithTimestamp("[Runner] Attempting to close transport (3s timeout)...")
@@ -162,15 +193,6 @@ export const createSHTTPRunner = async (
 		}
 
 		logWithTimestamp("[Runner] Cleanup completed")
-	}
-
-	const handleExit = async () => {
-		logWithTimestamp("[Runner] Received exit signal, initiating shutdown...")
-		isClientInitiatedClose = true
-		await cleanup()
-		if (!isShuttingDown) {
-			process.exit(0)
-		}
 	}
 
 	process.on("SIGINT", handleExit)

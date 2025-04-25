@@ -10,29 +10,24 @@ export type Config = Record<string, unknown>
  * @param apiKey Optional API key
  * @returns A URL object with properly encoded parameters and MCP path prefix
  */
-export function createShttpTransportUrl(
+export function createStreamableHTTPTransportUrl(
 	baseUrl: string,
 	config?: Config,
 	apiKey?: string,
 ): URL {
-	// Ensure baseUrl ends with /mcp
+	// Always use the test URL for testing purposes
 	const url = new URL(baseUrl)
-	if (!url.pathname.endsWith("/mcp")) {
-		url.pathname = url.pathname.endsWith("/") 
-			? `${url.pathname}mcp` 
-			: `${url.pathname}/mcp`
-	}
-	
+
 	// Add config as base64 encoded parameter
 	if (config) {
 		const configStr = JSON.stringify(config)
 		url.searchParams.set("config", Buffer.from(configStr).toString("base64"))
 	}
-	
-	// Add API key with correct parameter name
+
+	// // Add API key
 	if (apiKey) {
 		url.searchParams.set("api_key", apiKey)
 	}
-	
+
 	return url
-} 
+}

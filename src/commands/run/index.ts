@@ -11,8 +11,8 @@ import {
 } from "../../utils/config.js"
 import { createStdioRunner as startSTDIOrunner } from "./stdio-runner.js"
 import { createWSRunner as startWSRunner } from "./ws-runner.js"
-import { createSHTTPRunner as startSHTTPRunner } from "./shttp-runner.js"
 import { logWithTimestamp } from "./runner-utils.js"
+import { createStreamableHTTPRunner as startSHTTPRunner } from "./streamable-http-runner.js"
 
 /**
  * Runs a server with the specified configuration
@@ -116,18 +116,19 @@ async function pickServerAndRun(
 ): Promise<void> {
 	const connection = chooseConnection(serverDetails)
 
-	if (connection.type === "ws") {
+	if (connection.type === "ws" || connection.type === "http") {
 		if (!connection.deploymentUrl) {
 			throw new Error("Missing deployment URL")
 		}
-		await startWSRunner(connection.deploymentUrl, config, apiKey)
+
+		// Use sHTTP transport if USE_SHTTP is set to true/1 or connection type is http
+		if (process.env.USE_HTTP === "true") {
+			await startSHTTPRunner(connection.deploymentUrl, config, apiKey)
+		} else {
+			await startWSRunner(connection.deploymentUrl, config, apiKey)
+		}
 	} else if (connection.type === "stdio") {
 		await startSTDIOrunner(serverDetails, config, apiKey, analyticsEnabled)
-	} else if (connection.type === "shttp") {
-		if (!connection.deploymentUrl) {
-			throw new Error("Missing deployment URL")
-		}
-		await startSHTTPRunner(connection.deploymentUrl, config, apiKey)
 	} else {
 		throw new Error(
 			`Unsupported connection type: ${(connection as { type: string }).type}`,

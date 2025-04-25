@@ -4,6 +4,15 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [1.1.72] - 2025-04-24
+
+### Added
+- New Streamable HTTP runner as the primary connection method
+- Refactored common connection utilities into `runner-utils` for better code organization
+
+### Deprecated
+- WebSocket transport is now deprecated in favor of Streamable HTTP transport
+
 ## [1.1.71] - 2025-04-18
 
 ### Changed

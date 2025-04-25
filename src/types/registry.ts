@@ -39,7 +39,7 @@ export const ConnectionDetailsSchema = z.union([
 		exampleConfig: z.record(z.any()).optional(),
 	}),
 	z.object({
-		type: z.literal("shttp"),
+		type: z.literal("http"),
 		deploymentUrl: z.string().url(),
 		configSchema: JSONSchemaSchema.optional(),
 		exampleConfig: z.record(z.any()).optional(),
@@ -81,16 +81,21 @@ export const WSConnectionSchema = z.object({
 })
 
 // streamable http connection
-export const SHTTPConnectionSchema = z.object({
+export const StreamableHTTPConnectionSchema = z.object({
 	deploymentUrl: z.string().describe("The URL of the Streamable HTTP server."),
 })
 
 export type StdioConnection = z.infer<typeof StdioConnectionSchema>
 export type WSConnection = z.infer<typeof WSConnectionSchema>
-export type SHTTPConnection = z.infer<typeof SHTTPConnectionSchema>
+export type StreamableHTTPConnection = z.infer<
+	typeof StreamableHTTPConnectionSchema
+>
 
 // Update ConfiguredServer to handle all types
-export type ConfiguredServer = StdioConnection | WSConnection | SHTTPConnection
+export type ConfiguredServer =
+	| StdioConnection
+	| WSConnection
+	| StreamableHTTPConnection
 
 // Server Configuration key value pairs
 export interface ServerConfig {
@@ -108,8 +113,8 @@ export const ConnectionTypeSchema = z.union([
 		...WSConnectionSchema.shape,
 	}),
 	z.object({
-		type: z.literal("shttp"),
-		...SHTTPConnectionSchema.shape,
+		type: z.literal("http"),
+		...StreamableHTTPConnectionSchema.shape,
 	}),
 ])
 

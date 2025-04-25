@@ -6,11 +6,12 @@ import type {
 	JSONRPCError,
 } from "@modelcontextprotocol/sdk/types.js"
 import {
-	IDLE_TIMEOUT,
 	MAX_RETRIES,
 	RETRY_DELAY,
 	logWithTimestamp,
 	handleTransportError,
+	createHeartbeatManager,
+	createIdleTimeoutManager,
 } from "./runner-utils.js"
 
 global.WebSocket = WebSocket as any
@@ -38,79 +39,31 @@ export const createWSRunner = async (
 	let isReady = false
 	let isShuttingDown = false
 	let isClientInitiatedClose = false
-	let heartbeatInterval: NodeJS.Timeout | null = null
-	let lastActivityTimestamp: number = Date.now()
-	let idleCheckInterval: NodeJS.Timeout | null = null
 
 	let transport = createTransport(baseUrl, config, apiKey)
-
-	/* Keeps websocket connection alive */
-	const startHeartbeat = () => {
-		// Ping every 30 seconds (well before the 100s timeout)
-		if (heartbeatInterval) {
-			clearInterval(heartbeatInterval)
-		}
-		heartbeatInterval = setInterval(async () => {
-			try {
-				if (isReady) {
-					// logWithTimestamp("[Runner] Sending heartbeat ping")
-					await transport.send({ jsonrpc: "2.0", method: "ping", params: {} })
-				}
-			} catch (error) {
-				logWithTimestamp(
-					`[Runner] Failed to send heartbeat: ${(error as Error).message}`,
-				)
-			}
-		}, 30000)
-	}
-
-	const stopHeartbeat = () => {
-		if (heartbeatInterval) {
-			clearInterval(heartbeatInterval)
-			heartbeatInterval = null
-		}
-	}
 
 	const handleError = (error: Error, context: string) => {
 		logWithTimestamp(`${context}: ${error.message}`)
 		return error
 	}
 
-	const updateLastActivity = () => {
-		lastActivityTimestamp = Date.now()
-	}
-
-	/* Starts and monitors connection idle state */
-	const startIdleCheck = () => {
-		if (idleCheckInterval) {
-			clearInterval(idleCheckInterval)
-		}
-		updateLastActivity() // Initialize the timestamp
-		idleCheckInterval = setInterval(() => {
-			const idleTime = Date.now() - lastActivityTimestamp
-			if (idleTime >= IDLE_TIMEOUT) {
-				logWithTimestamp(
-					`[Runner] Connection idle for ${Math.round(idleTime / 60000)} minutes, initiating shutdown`,
-				)
-				handleExit().catch((error) => {
-					logWithTimestamp(
-						`[Runner] Error during idle timeout cleanup: ${error}`,
-					)
-					process.exit(1)
-				})
-			}
-		}, 60000) // Check every minute
-	}
-
-	const stopIdleCheck = () => {
-		if (idleCheckInterval) {
-			clearInterval(idleCheckInterval)
-			idleCheckInterval = null
+	const handleExit = async () => {
+		logWithTimestamp("[Runner] Received exit signal, initiating shutdown...")
+		isClientInitiatedClose = true
+		await cleanup()
+		if (!isShuttingDown) {
+			process.exit(0)
 		}
 	}
+
+	const idleManager = createIdleTimeoutManager(handleExit)
+	const heartbeatManager = createHeartbeatManager(
+		(message) => transport.send(message),
+		() => isReady,
+	)
 
 	const processMessage = async (data: Buffer) => {
-		updateLastActivity() // Update activity state on outgoing message
+		idleManager.updateActivity() // Update activity state on outgoing message
 		stdinBuffer += data.toString("utf8")
 
 		if (!isReady) return // Wait for connection to be established
@@ -136,7 +89,8 @@ export const createWSRunner = async (
 		transport.onclose = async () => {
 			logWithTimestamp("[Runner] WebSocket connection closed")
 			isReady = false
-			stopHeartbeat()
+			heartbeatManager.stop()
+			idleManager.stop()
 			if (!isClientInitiatedClose && retryCount++ < MAX_RETRIES) {
 				const jitter = Math.random() * 1000
 				const delay = RETRY_DELAY * Math.pow(2, retryCount) + jitter
@@ -178,7 +132,7 @@ export const createWSRunner = async (
 		}
 
 		transport.onmessage = (message: JSONRPCMessage) => {
-			updateLastActivity() // Update on incoming message
+			idleManager.updateActivity() // Update on incoming message
 			try {
 				if ("error" in message) {
 					handleTransportError(message as JSONRPCError)
@@ -194,8 +148,8 @@ export const createWSRunner = async (
 		await transport.start()
 		isReady = true
 		logWithTimestamp("[Runner] WebSocket connection initiated")
-		startHeartbeat() // Start heartbeat
-		startIdleCheck() // Start idle checking
+		heartbeatManager.start() // Start heartbeat
+		idleManager.start() // Start idle checking
 		// Release buffered messages
 		await processMessage(Buffer.from(""))
 		logWithTimestamp("[Runner] WebSocket connection established")
@@ -212,8 +166,8 @@ export const createWSRunner = async (
 		logWithTimestamp("[Runner] Starting cleanup process...")
 		isShuttingDown = true
 		isClientInitiatedClose = true // Mark this as a clean shutdown
-		stopHeartbeat() // Stop heartbeat
-		stopIdleCheck() // Stop idle checking
+		heartbeatManager.stop() // Stop heartbeat
+		idleManager.stop() // Stop idle checking
 
 		try {
 			logWithTimestamp("[Runner] Attempting to close transport (3s timeout)...")
@@ -235,16 +189,6 @@ export const createWSRunner = async (
 		}
 
 		logWithTimestamp("[Runner] Cleanup completed")
-	}
-
-	const handleExit = async () => {
-		logWithTimestamp("[Runner] Received exit signal, initiating shutdown...")
-		// logWithTimestamp(`[Runner] Exit state - isReady: ${isReady}, isShuttingDown: ${isShuttingDown}`)
-		isClientInitiatedClose = true
-		await cleanup()
-		if (!isShuttingDown) {
-			process.exit(0)
-		}
 	}
 
 	process.on("SIGINT", handleExit)
