@@ -7,15 +7,14 @@ export type Config = Record<string, unknown>
  * Creates a URL for the Streamable HTTP transport
  * @param baseUrl The base URL to start with
  * @param config Optional configuration object
- * @param apiKey Optional API key
+ * @param apiKey API key (required)
  * @returns A URL object with properly encoded parameters and MCP path prefix
  */
 export function createStreamableHTTPTransportUrl(
 	baseUrl: string,
+	apiKey: string, // api key is required
 	config?: Config,
-	apiKey?: string,
 ): URL {
-	// Always use the test URL for testing purposes
 	const url = new URL(baseUrl)
 
 	// Add config as base64 encoded parameter
@@ -24,10 +23,8 @@ export function createStreamableHTTPTransportUrl(
 		url.searchParams.set("config", Buffer.from(configStr).toString("base64"))
 	}
 
-	// // Add API key
-	if (apiKey) {
-		url.searchParams.set("api_key", apiKey)
-	}
+	// Add API key
+	url.searchParams.set("api_key", apiKey)
 
 	return url
 }

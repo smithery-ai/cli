@@ -139,6 +139,7 @@ export const fetchConnection = async (
 }
 
 /**
+ * @deprecated This function is deprecated and will be removed in a future version.
  * Fetches saved server configuration and server details using an API key
  * @param serverName The qualified name of the server
  * @param apiKey The user's API key
