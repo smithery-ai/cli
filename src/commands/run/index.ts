@@ -67,7 +67,7 @@ export async function run(
 async function pickServerAndRun(
 	serverDetails: RegistryServer,
 	config: ServerConfig,
-	apiKey: string | undefined,
+	apiKey: string,
 	analyticsEnabled: boolean,
 ): Promise<void> {
 	const connection = chooseConnection(serverDetails)
@@ -76,7 +76,7 @@ async function pickServerAndRun(
 		if (!connection.deploymentUrl) {
 			throw new Error("Missing deployment URL")
 		}
-		await createStreamableHTTPRunner(connection.deploymentUrl, config, apiKey)
+		await createStreamableHTTPRunner(connection.deploymentUrl, apiKey, config)
 	} else if (connection.type === "stdio") {
 		await startSTDIOrunner(serverDetails, config, apiKey, analyticsEnabled)
 	} else {
