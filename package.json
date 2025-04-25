@@ -4,6 +4,10 @@
 	"type": "commonjs",
 	"private": false,
 	"homepage": "https://smithery.ai/",
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/smithery-ai/cli.git"
+	},
 	"description": "A NPX command to install and list Model Context Protocols from Smithery",
 	"main": "dist/index.js",
 	"scripts": {
