@@ -146,8 +146,20 @@ export const createStreamableHTTPRunner = async (
 			}
 		}
 
-		await transport.start()
+		// Add a 10-second timeout to prevent hanging if connection fails
+		// If timeout occurs, it will trigger the onclose handler which will attempt reconnection
+		await Promise.race([
+			transport.start(),
+			new Promise((_, reject) =>
+				setTimeout(
+					() => reject(new Error("[Runner] Transport connection timeout after 10s")),
+					10000,
+				),
+			),
+		])
+		
 		isReady = true
+		retryCount = 0 // Reset retry count on successful connection
 		logWithTimestamp("[Runner] Streamable HTTP connection initiated")
 		heartbeatManager.start() // Start heartbeat
 		idleManager.start() // Start idle checking
