@@ -310,15 +310,12 @@ export function chooseConnection(server: RegistryServer): ConnectionDetails {
 		if (stdioConnection) return stdioConnection
 	}
 
-	/* For remote servers, try HTTP first, then WebSocket */
+	/* For remote servers, try HTTP */
 	if (server.remote) {
 		const httpConnection = server.connections.find(
 			(conn) => conn.type === "http",
 		)
 		if (httpConnection) return httpConnection
-
-		const wsConnection = server.connections.find((conn) => conn.type === "ws")
-		if (wsConnection) return wsConnection
 	}
 
 	/* If still no connection found, try stdio again */

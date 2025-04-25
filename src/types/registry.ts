@@ -118,4 +118,4 @@ export const ConnectionTypeSchema = z.union([
 	}),
 ])
 
-export type ConnectionType = "stdio" | "ws" | "shttp"
+export type ConnectionType = "stdio" | "ws" | "http"
