@@ -162,7 +162,7 @@ async function main() {
 				console.error("Please provide a server ID to run")
 				process.exit(1)
 			}
-			await run(argument, config)
+			await run(argument, config, apiKey)
 			break
 		case "list":
 			await list(argument, client!)
