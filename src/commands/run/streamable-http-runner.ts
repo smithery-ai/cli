@@ -20,10 +20,10 @@ type Cleanup = () => Promise<void>
 
 const createTransport = (
 	baseUrl: string,
+	apiKey: string,
 	config: Config,
-	apiKey?: string,
 ): StreamableHTTPClientTransport => {
-	const url = createStreamableHTTPTransportUrl(baseUrl, config, apiKey)
+	const url = createStreamableHTTPTransportUrl(baseUrl, apiKey, config)
 	logWithTimestamp(
 		`[Runner] Connecting to Streamable HTTP endpoint: ${baseUrl}`,
 	)
@@ -32,8 +32,8 @@ const createTransport = (
 
 export const createStreamableHTTPRunner = async (
 	baseUrl: string,
+	apiKey: string,
 	config: Config,
-	apiKey?: string,
 ): Promise<Cleanup> => {
 	let retryCount = 0
 	let stdinBuffer = ""
@@ -41,7 +41,7 @@ export const createStreamableHTTPRunner = async (
 	let isShuttingDown = false
 	let isClientInitiatedClose = false
 
-	let transport = createTransport(baseUrl, config, apiKey)
+	let transport = createTransport(baseUrl, apiKey, config)
 
 	const handleError = (error: Error, context: string) => {
 		logWithTimestamp(`${context}: ${error.message}`)
@@ -99,7 +99,7 @@ export const createStreamableHTTPRunner = async (
 				await new Promise((resolve) => setTimeout(resolve, delay))
 
 				// Create new transport
-				transport = createTransport(baseUrl, config, apiKey)
+				transport = createTransport(baseUrl, apiKey, config)
 				logWithTimestamp(
 					"[Runner] Created new transport instance after disconnect",
 				)
@@ -120,9 +120,6 @@ export const createStreamableHTTPRunner = async (
 		transport.onerror = (error) => {
 			if (error.message.includes("502")) {
 				logWithTimestamp("[Runner] Server returned 502 Bad Gateway")
-				logWithTimestamp(
-					`[Runner] Connection state before 502 retry - isReady: ${isReady}`,
-				)
 				return
 			}
 
