@@ -1,14 +1,11 @@
 #!/usr/bin/env node
-import { fetchConfigWithApiKey, resolvePackage } from "../../registry.js"
+import { resolvePackage } from "../../registry.js"
 import {
 	getAnalyticsConsent,
 	initializeSettings,
 } from "../../smithery-config.js"
 import type { RegistryServer, ServerConfig } from "../../types/registry.js"
-import {
-	chooseConnection,
-	validateAndFormatConfig,
-} from "../../utils/config.js"
+import { chooseConnection } from "../../utils/config.js"
 import { createStdioRunner as startSTDIOrunner } from "./stdio-runner.js"
 import { logWithTimestamp } from "./runner-utils.js"
 import { createStreamableHTTPRunner } from "./streamable-http-runner.js"
@@ -18,14 +15,14 @@ import { createStreamableHTTPRunner } from "./streamable-http-runner.js"
  *
  * @param {string} qualifiedName - The qualified name of the server to run
  * @param {ServerConfig} config - Configuration values for the server
- * @param {string} [apiKey] - Optional API key to fetch saved configuration
+ * @param {string} apiKey - API key required for authentication
  * @returns {Promise<void>} A promise that resolves when the server is running or fails
  * @throws {Error} If the server cannot be resolved or connection fails
  */
 export async function run(
 	qualifiedName: string,
 	config: ServerConfig,
-	apiKey?: string,
+	apiKey: string,
 ) {
 	try {
 		const settingsResult = await initializeSettings()
@@ -35,44 +32,9 @@ export async function run(
 			)
 		}
 
-		let resolvedServer: RegistryServer | null = null
-		let finalConfig = config
-
-		// If API key is provided, fetch both config and server info in one call
-		if (apiKey) {
-			try {
-				// we should not fetch config anymore
-				const result = await fetchConfigWithApiKey(qualifiedName, apiKey)
-				resolvedServer = result.server
-				const connection = chooseConnection(result.server)
-				// this becomes redundant soon - gateway handles this
-				finalConfig = await validateAndFormatConfig(connection, {
-					...result.config,
-					...config,
-				})
-				logWithTimestamp("[Runner] Using saved configuration")
-			} catch (error) {
-				logWithTimestamp(
-					`[Runner] Failed to fetch config with API key: ${error}`,
-				)
-				logWithTimestamp("[Runner] Falling back to standard resolution")
-				resolvedServer = null // Ensure we do a fresh resolution below
-			}
-		}
-
-		// If we still don't have a server (either no API key or API key fetch failed)
-		if (!resolvedServer) {
-			resolvedServer = await resolvePackage(qualifiedName)
-		}
-
+		const resolvedServer = await resolvePackage(qualifiedName)
 		if (!resolvedServer) {
 			throw new Error(`Could not resolve server: ${qualifiedName}`)
-		}
-
-		// Format final config with schema validation if not already done
-		if (!apiKey) {
-			const connection = chooseConnection(resolvedServer)
-			finalConfig = await validateAndFormatConfig(connection, finalConfig)
 		}
 
 		logWithTimestamp(
@@ -83,12 +45,7 @@ export async function run(
 		)
 
 		const analyticsEnabled = await getAnalyticsConsent()
-		await pickServerAndRun(
-			resolvedServer,
-			finalConfig,
-			apiKey,
-			analyticsEnabled,
-		)
+		await pickServerAndRun(resolvedServer, config, apiKey, analyticsEnabled)
 	} catch (error) {
 		logWithTimestamp(
 			`[Runner] Error: ${error instanceof Error ? error.message : error}`,
