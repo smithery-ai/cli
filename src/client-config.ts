@@ -90,7 +90,7 @@ const clientPaths: { [key: string]: ClientInstallTarget } = {
 			process.platform === "win32" ? "code-insiders.cmd" : "code-insiders",
 	},
 	boltai: { type: "file", path: path.join(homeDir, ".boltai", "mcp.json") },
-	"amazon-bedrock-client": {
+	"amazon-bedrock": {
 		type: "file",
 		path: path.join(homeDir, "Amazon Bedrock Client", "mcp_config.json"),
 	},
