@@ -15,7 +15,7 @@ import ora from "ora"
 import { readConfig, writeConfig } from "../client-config"
 import type { ValidClient } from "../constants"
 import { verbose } from "../logger"
-import { resolvePackage, fetchConfigWithApiKey } from "../registry.js"
+import { resolvePackage } from "../registry.js"
 import {
 	ensureUVInstalled,
 	ensureBunInstalled,
@@ -29,6 +29,7 @@ import {
 } from "../utils/config"
 import { checkAnalyticsConsent } from "../utils/analytics"
 import { promptForRestart } from "../utils/client"
+import { isRemote } from "../utils/runtime"
 
 /**
  * Installs and configures a Smithery server for a specified client.
@@ -52,30 +53,6 @@ export async function installServer(
 	/* start resolving in background */
 	verbose(`Resolving package: ${qualifiedName}`)
 
-	// Resolve server based on whether an API key is provided
-	let serverPromise: Promise<any>
-	let savedConfig = undefined
-
-	if (apiKey) {
-		verbose("API key provided, fetching server details and saved config")
-		serverPromise = fetchConfigWithApiKey(qualifiedName, apiKey)
-			.then((result) => {
-				savedConfig = result.config
-				return result.server
-			})
-			.catch((error) => {
-				console.warn(
-					chalk.yellow("[Install] Failed to fetch config with API key:"),
-					error instanceof Error ? error.message : String(error),
-				)
-				// Fall back to standard resolution
-				verbose("Falling back to standard package resolution")
-				return resolvePackage(qualifiedName)
-			})
-	} else {
-		serverPromise = resolvePackage(qualifiedName)
-	}
-
 	try {
 		verbose("Checking analytics consent...")
 		await checkAnalyticsConsent()
@@ -91,7 +68,7 @@ export async function installServer(
 	const spinner = ora(`Resolving ${qualifiedName}...`).start()
 	try {
 		verbose("Awaiting package resolution...")
-		const server = await serverPromise
+		const server = await resolvePackage(qualifiedName)
 		verbose(`Package resolved successfully: ${server.qualifiedName}`)
 		spinner.succeed(`Successfully resolved ${qualifiedName}`)
 
@@ -104,32 +81,37 @@ export async function installServer(
 		await ensureBunInstalled(connection)
 
 		/* inform users of remote server installation */
+		if (isRemote(server) && !apiKey) {
+			console.error(
+				chalk.yellow(
+					"API key is required for connecting to remote servers. Please provide it using --key flag.",
+				),
+			)
+			console.error(
+				chalk.yellow(
+					"Get your API key from: https://smithery.ai/account/api-keys",
+				),
+			)
+			process.exit(1)
+		}
 		checkAndNotifyRemoteServer(server)
 
-		// Merge configs, with user-provided values taking precedence
-		const mergedConfigValues = savedConfig
-			? { ...(savedConfig as Record<string, unknown>), ...(configValues || {}) }
-			: configValues
+		// If api key provided, don't prompt for additional config values
+		const collectedConfigValues = apiKey
+			? configValues || {} // if api key provided, use given config if any
+			: await collectConfigValues(connection, configValues || {}) // if no api key (local servers), prompt for additional values if needed
 
-		// Get the validated config values, prompt if additional values are needed
-		const collectedConfigValues = await collectConfigValues(
-			connection,
-			mergedConfigValues,
-		)
-
-		// Determine if we need to pass config flag
-		// If user provided config values, always use them
+		// If config values given, always use them
 		const configFlagNeeded = !!configValues
 
 		verbose(`Config values: ${JSON.stringify(collectedConfigValues, null, 2)}`)
-		verbose(`Using config flag: ${configFlagNeeded}`)
 
 		verbose("Formatting server configuration...")
 		const serverConfig = formatServerConfig(
 			qualifiedName,
 			collectedConfigValues,
 			apiKey,
-			configFlagNeeded, // Only include config if it differs from saved config
+			configFlagNeeded,
 		)
 		verbose(`Formatted server config: ${JSON.stringify(serverConfig, null, 2)}`)
 

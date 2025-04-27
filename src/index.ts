@@ -130,19 +130,6 @@ async function main() {
 				console.error("Please provide a server ID to install")
 				process.exit(1)
 			}
-			if (!apiKey) {
-				console.error(
-					chalk.red(
-						"API key is required for installation. Please provide it using --key flag.",
-					),
-				)
-				console.error(
-					chalk.red(
-						"Get your API key from: https://smithery.ai/account/api-keys",
-					),
-				)
-				process.exit(1)
-			}
 			await installServer(
 				argument,
 				client!,

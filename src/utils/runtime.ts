@@ -202,6 +202,22 @@ export async function ensureBunInstalled(
 }
 
 /**
+ * Checks if a server is remote based on its connection details
+ * @param server The server information containing connection details
+ * @returns boolean indicating if the server is remote
+ */
+export function isRemote(server: {
+	connections: ConnectionDetails[]
+	remote?: boolean
+}): boolean {
+	return (
+		server.connections.some(
+			(conn) => conn.type === "http" && "deploymentUrl" in conn,
+		) && server.remote !== false
+	)
+}
+
+/**
  * Checks if the server is a remote server and displays a security notice if needed
  * @param server The server information containing connection details
  * @returns boolean indicating if the server is remote
@@ -210,10 +226,7 @@ export function checkAndNotifyRemoteServer(server: {
 	connections: ConnectionDetails[]
 	remote?: boolean
 }): boolean {
-	const remote =
-		server.connections.some(
-			(conn) => conn.type === "ws" && "deploymentUrl" in conn,
-		) && server.remote !== false
+	const remote = isRemote(server)
 
 	if (remote) {
 		verbose("Remote server detected, showing security notice")

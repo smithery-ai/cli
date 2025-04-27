@@ -147,25 +147,13 @@ export async function collectConfigValues(
 	connection: ConnectionDetails,
 	existingValues?: ServerConfig,
 ): Promise<ServerConfig> {
-	// 1. Early exit if no config needed
+	// Early exit if no config needed
 	if (!connection.configSchema?.properties) {
 		return {}
 	}
+	const baseConfig = existingValues || {}
 
-	let baseConfig: ServerConfig = {}
-
-	// 2. Try to validate and use existing values
-	if (existingValues) {
-		try {
-			return await validateAndFormatConfig(connection, existingValues)
-		} catch {
-			// If validation fails, use the existing values as base for collecting missing ones
-			baseConfig = existingValues
-		}
-	}
-
-	// 3. Collect missing values
-	const required = new Set<string>(connection.configSchema.required || [])
+	// Collect missing values
 	const properties = connection.configSchema.properties
 
 	const collectedConfig = await Object.entries(properties).reduce(
@@ -187,17 +175,17 @@ export async function collectConfigValues(
 			}
 
 			// Prompt for missing value
-			const value = await promptForConfigValue(
-				key,
-				{ description, default: defaultValue, type },
-				required,
-			)
+			const value = await promptForConfigValue(key, {
+				description,
+				default: defaultValue,
+				type,
+			})
 			return { ...config, [key]: value !== undefined ? value : defaultValue }
 		},
 		Promise.resolve({} as ServerConfig),
 	)
 
-	// 4. Final validation and formatting
+	// Final validation and formatting
 	try {
 		return await validateAndFormatConfig(connection, collectedConfig)
 	} catch (error) {
@@ -212,7 +200,6 @@ export async function collectConfigValues(
  * Prompts the user for a config value based on schema property
  * @param key - The configuration key
  * @param schemaProp - The schema property details
- * @param required - Set of required field names
  * @returns The collected value from user input
  */
 async function promptForConfigValue(
@@ -222,12 +209,7 @@ async function promptForConfigValue(
 		default?: unknown
 		type?: string
 	},
-	required: Set<string>,
 ): Promise<unknown> {
-	const requiredText = required.has(key)
-		? chalk.red(" (required)")
-		: " (optional)"
-
 	const promptType = key.toLowerCase().includes("key")
 		? "password"
 		: schemaProp.type === "boolean"
@@ -242,13 +224,12 @@ async function promptForConfigValue(
 		{
 			type: promptType,
 			name: "value",
-			message: `${schemaProp.description || `Enter value for ${key}`}${requiredText}${
+			message: `${schemaProp.description || `Enter value for ${key}`}${
 				schemaProp.type === "array" ? " (comma-separated)" : ""
 			}`,
 			default: schemaProp.default,
 			mask: promptType === "password" ? "*" : undefined,
 			validate: (input: string | number) => {
-				if (required.has(key) && !input) return false
 				if (schemaProp.type === "number" || schemaProp.type === "integer") {
 					return !Number.isNaN(Number(input)) || "Please enter a valid number"
 				}

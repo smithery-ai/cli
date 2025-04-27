@@ -4,6 +4,13 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [1.1.78] - 2025-04-26
+
+### Changed
+- Removed API key requirement for local server installation
+- Removed deprecated `fetchConfigWithApiKey` function
+- Updated config collection flow to skip configuration prompts when API key is provided
+
 ## [1.1.75] - 2025-04-25
 
 ### Added
