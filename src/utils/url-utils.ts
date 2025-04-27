@@ -35,7 +35,5 @@ export function createStreamableHTTPTransportUrl(
 	// Add API key
 	url.searchParams.set("api_key", apiKey)
 
-	console.error("Connection URL:", url.toString())
-
 	return url
 }
