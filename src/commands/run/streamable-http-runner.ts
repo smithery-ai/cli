@@ -146,21 +146,6 @@ export const createStreamableHTTPRunner = async (
 			}
 		}
 
-		// Add a 10-second timeout to prevent hanging if connection fails
-		// If timeout occurs, it will trigger the onclose handler which will attempt reconnection
-		// await Promise.race([
-		// 	transport.start(),
-		// 	new Promise((_, reject) =>
-		// 		setTimeout(
-		// 			() =>
-		// 				reject(
-		// 					logWithTimestamp(`[Runner] Connection timeout after 10s (attempt ${retryCount + 1} of ${MAX_RETRIES})`)
-		// 				),
-		// 			5000,
-		// 		),
-		// 	),
-		// ])
-
 		transport.start()
 		isReady = true
 		retryCount = 0 // Reset retry count on successful connection
