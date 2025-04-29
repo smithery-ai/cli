@@ -1,19 +1,21 @@
-/**
- * Configuration type for runners
- */
 export type Config = Record<string, unknown>
 
 /**
+ * @deprecated
+ * To be replaced with createSmitheryURL from sdk
+ * Configuration type for runners
  * Creates a URL for the Streamable HTTP transport
  * @param baseUrl The base URL to start with
- * @param config Optional configuration object
+ * @param config Configuration object
  * @param apiKey API key (required)
+ * @param profile Optional profile name
  * @returns A URL object with properly encoded parameters and MCP path prefix
  */
 export function createStreamableHTTPTransportUrl(
 	baseUrl: string,
 	apiKey: string, // api key is required
-	config?: Config,
+	config: Config | {},
+	profile: string | undefined,
 ): URL {
 	const url = new URL(baseUrl)
 
@@ -30,6 +32,11 @@ export function createStreamableHTTPTransportUrl(
 	if (config) {
 		const configStr = JSON.stringify(config)
 		url.searchParams.set("config", Buffer.from(configStr).toString("base64"))
+	}
+
+	// Add profile if provided
+	if (profile) {
+		url.searchParams.set("profile", profile)
 	}
 
 	// Add API key

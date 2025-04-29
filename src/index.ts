@@ -15,6 +15,7 @@ const argument = process.argv[3]
 const clientFlag = process.argv.indexOf("--client")
 const configFlag = process.argv.indexOf("--config")
 const keyFlag = process.argv.indexOf("--key")
+const profileFlag = process.argv.indexOf("--profile")
 const verboseFlag = process.argv.includes("--verbose")
 const helpFlag = process.argv.includes("--help")
 
@@ -34,6 +35,7 @@ const showHelp = () => {
 	console.log("  run <server>         Run a server")
 	console.log("    --config <json>    Provide configuration as JSON")
 	console.log("    --key <apikey>     Provide an API key")
+	console.log("    --profile <name>   Use a specific profile")
 	console.log("  list clients         List available clients")
 	console.log("  list servers         List installed servers")
 	console.log("")
@@ -115,6 +117,10 @@ const config: ServerConfig =
 const apiKey: string | undefined =
 	keyFlag !== -1 ? process.argv[keyFlag + 1] : undefined
 
+/* sets to undefined if no profile given */
+const profile: string | undefined =
+	profileFlag !== -1 ? process.argv[profileFlag + 1] : undefined
+
 async function main() {
 	switch (command) {
 		case "inspect":
@@ -135,6 +141,7 @@ async function main() {
 				client!,
 				configFlag !== -1 ? config : undefined,
 				apiKey,
+				profile,
 			)
 			break
 		case "uninstall":
@@ -149,7 +156,7 @@ async function main() {
 				console.error("Please provide a server ID to run")
 				process.exit(1)
 			}
-			await run(argument, config, apiKey)
+			await run(argument, config, apiKey, profile)
 			break
 		case "list":
 			await list(argument, client!)

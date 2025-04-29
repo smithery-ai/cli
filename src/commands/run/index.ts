@@ -16,6 +16,7 @@ import { createStreamableHTTPRunner } from "./streamable-http-runner.js"
  * @param {string} qualifiedName - The qualified name of the server to run
  * @param {ServerConfig} config - Configuration values for the server
  * @param {string} apiKey - API key required for authentication
+ * @param {string} [profile] - Optional profile name to use
  * @returns {Promise<void>} A promise that resolves when the server is running or fails
  * @throws {Error} If the server cannot be resolved or connection fails
  */
@@ -23,6 +24,7 @@ export async function run(
 	qualifiedName: string,
 	config: ServerConfig,
 	apiKey: string | undefined,
+	profile?: string,
 ) {
 	try {
 		const settingsResult = await initializeSettings()
@@ -45,7 +47,13 @@ export async function run(
 		)
 
 		const analyticsEnabled = await getAnalyticsConsent()
-		await pickServerAndRun(resolvedServer, config, analyticsEnabled, apiKey)
+		await pickServerAndRun(
+			resolvedServer,
+			config,
+			analyticsEnabled,
+			apiKey,
+			profile,
+		)
 	} catch (error) {
 		logWithTimestamp(
 			`[Runner] Error: ${error instanceof Error ? error.message : error}`,
@@ -69,7 +77,8 @@ async function pickServerAndRun(
 	serverDetails: RegistryServer,
 	config: ServerConfig,
 	analyticsEnabled: boolean,
-	apiKey: string | undefined,
+	apiKey: string | undefined, // can be undefined because of optionality for local servers
+	profile: string | undefined,
 ): Promise<void> {
 	const connection = chooseConnection(serverDetails)
 
@@ -81,9 +90,14 @@ async function pickServerAndRun(
 			// eventually make it required for all connections
 			throw new Error("API key is required for remote connections")
 		}
-		await createStreamableHTTPRunner(connection.deploymentUrl, apiKey, config)
+		await createStreamableHTTPRunner(
+			connection.deploymentUrl,
+			apiKey, // api key can't be undefined here
+			config,
+			profile, // profile can be undefined
+		)
 	} else if (connection.type === "stdio") {
-		await startSTDIOrunner(serverDetails, config, apiKey, analyticsEnabled)
+		await startSTDIOrunner(serverDetails, config, apiKey, analyticsEnabled) // here, api key can be undefined
 	} else {
 		throw new Error(
 			`Unsupported connection type: ${(connection as { type: string }).type}`,

@@ -379,35 +379,37 @@ export function getServerName(serverId: string): string {
  * @param userConfig - The user configuration for the server
  * @param apiKey - Optional API key
  * @param configNeeded - Whether the config flag is needed (defaults to true)
+ * @param profile - Optional profile name to use
  * @returns Configured server with command and arguments
  */
 export function formatServerConfig(
 	qualifiedName: string,
 	userConfig: ServerConfig,
-	apiKey?: string,
-	configNeeded = true, // whether config flag is needed
+	apiKey: string | undefined,
+	profile: string | undefined,
 ): ConfiguredServer {
 	// Base arguments for npx command
 	const npxArgs = ["-y", "@smithery/cli@latest", "run", qualifiedName]
 
-	// Always add API key if provided
+	// Add API key if provided
 	if (apiKey) {
 		npxArgs.push("--key", apiKey)
 	}
 
-	/**
-	 * Add config flag in these scenarios:
-	 * 1. api key is not given OR config is needed (configNeeded prop)
-	 * 2. config is not empty
-	 */
+	// Add profile if provided
+	if (profile) {
+		npxArgs.push("--profile", profile)
+	}
+
 	const isEmptyConfig = Object.keys(userConfig).length === 0
-	if (!isEmptyConfig && (!apiKey || configNeeded)) {
+	/* Add config flag if provided and not empty */
+	if (!isEmptyConfig) {
 		/* double stringify config to make it shell-safe */
 		const encodedConfig = JSON.stringify(JSON.stringify(userConfig))
 		npxArgs.push("--config", encodedConfig)
 	}
 
-	// Use cmd /c for Windows platforms
+	/* Use cmd /c for Windows platforms */
 	if (process.platform === "win32") {
 		return {
 			command: "cmd",
