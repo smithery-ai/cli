@@ -139,7 +139,7 @@ async function main() {
 			await installServer(
 				argument,
 				client!,
-				configFlag !== -1 ? config : undefined,
+				config,
 				apiKey,
 				profile,
 			)

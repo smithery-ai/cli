@@ -47,8 +47,8 @@ import type { ServerConfig } from "../types/registry"
 export async function installServer(
 	qualifiedName: string,
 	client: ValidClient,
-	apiKey: string | undefined,
 	configValues: ServerConfig,
+	apiKey: string | undefined,
 	profile: string | undefined,
 ): Promise<void> {
 	verbose(`Starting installation of ${qualifiedName} for client ${client}`)
