@@ -4,6 +4,11 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [1.1.80] - 2025-04-26
+
+### Added
+- Added support for profiles to allow multiple configurations per server
+
 ## [1.1.79] - 2025-04-26
 
 ### Changed
