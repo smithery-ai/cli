@@ -136,13 +136,7 @@ async function main() {
 				console.error("Please provide a server ID to install")
 				process.exit(1)
 			}
-			await installServer(
-				argument,
-				client!,
-				config,
-				apiKey,
-				profile,
-			)
+			await installServer(argument, client!, config, apiKey, profile)
 			break
 		case "uninstall":
 			if (!argument) {
