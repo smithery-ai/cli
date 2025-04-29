@@ -30,6 +30,7 @@ import {
 import { checkAnalyticsConsent } from "../utils/analytics"
 import { promptForRestart } from "../utils/client"
 import { isRemote } from "../utils/runtime"
+import type { ServerConfig } from "../types/registry"
 
 /**
  * Installs and configures a Smithery server for a specified client.
@@ -47,7 +48,7 @@ export async function installServer(
 	qualifiedName: string,
 	client: ValidClient,
 	apiKey: string | undefined,
-	configValues: Record<string, unknown> | {},
+	configValues: ServerConfig,
 	profile: string | undefined,
 ): Promise<void> {
 	verbose(`Starting installation of ${qualifiedName} for client ${client}`)

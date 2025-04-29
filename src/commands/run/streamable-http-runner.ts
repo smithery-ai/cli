@@ -11,17 +11,15 @@ import {
 	createIdleTimeoutManager,
 	createHeartbeatManager,
 } from "./runner-utils.js"
-import {
-	createStreamableHTTPTransportUrl,
-	type Config,
-} from "../../utils/url-utils.js"
+import { createStreamableHTTPTransportUrl } from "../../utils/url-utils.js"
+import type { ServerConfig } from "../../types/registry"
 
 type Cleanup = () => Promise<void>
 
 const createTransport = (
 	baseUrl: string,
 	apiKey: string,
-	config: Config,
+	config: ServerConfig,
 	profile: string | undefined,
 ): StreamableHTTPClientTransport => {
 	const url = createStreamableHTTPTransportUrl(baseUrl, apiKey, config, profile)
@@ -34,7 +32,7 @@ const createTransport = (
 export const createStreamableHTTPRunner = async (
 	baseUrl: string,
 	apiKey: string,
-	config: Config,
+	config: ServerConfig,
 	profile: string | undefined,
 ): Promise<Cleanup> => {
 	let retryCount = 0

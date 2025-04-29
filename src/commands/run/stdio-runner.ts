@@ -14,13 +14,13 @@ import { fetchConnection } from "../../registry"
 import type { RegistryServer } from "../../types/registry"
 import { getRuntimeEnvironment } from "../../utils/runtime"
 import { handleTransportError, logWithTimestamp } from "./runner-utils.js"
+import type { ServerConfig } from "../../types/registry"
 
-type Config = Record<string, unknown>
 type Cleanup = () => Promise<void>
 
 export const createStdioRunner = async (
 	serverDetails: RegistryServer,
-	config: Config,
+	config: ServerConfig,
 	apiKey: string | undefined,
 	analyticsEnabled: boolean,
 ): Promise<Cleanup> => {

@@ -1,4 +1,4 @@
-export type Config = Record<string, unknown>
+import type { ServerConfig } from "../types/registry"
 
 /**
  * @deprecated
@@ -14,7 +14,7 @@ export type Config = Record<string, unknown>
 export function createStreamableHTTPTransportUrl(
 	baseUrl: string,
 	apiKey: string, // api key is required
-	config: Config | {},
+	config: ServerConfig | Record<string, never>,
 	profile: string | undefined,
 ): URL {
 	const url = new URL(baseUrl)
