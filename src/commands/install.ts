@@ -92,9 +92,9 @@ export async function installServer(
 		}
 		checkAndNotifyRemoteServer(server)
 
-		const collectedConfigValues = finalApiKey
-			? configValues || {} // If api key provided, don't prompt for additional config values
-			: await collectConfigValues(connection, configValues || {}) // if no api key (allowed for local servers), prompt for additional values if needed
+		const collectedConfigValues = apiKey // Check if API key was provided as argument
+			? configValues || {} // If api key was provided as argument, don't prompt for additional config values
+			: await collectConfigValues(connection, configValues || {}) // if api key wasn't provided as argument, prompt for additional values
 
 		verbose(`Config values: ${JSON.stringify(collectedConfigValues, null, 2)}`)
 
