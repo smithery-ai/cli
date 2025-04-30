@@ -4,7 +4,7 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
-## [1.1.81] - 2025-04-26
+## [1.1.81] - 2025-04-29
 
 ### Added
 - Added new API key prompt during installation of remote servers
