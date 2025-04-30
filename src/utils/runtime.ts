@@ -239,3 +239,25 @@ export function checkAndNotifyRemoteServer(server: {
 
 	return remote
 }
+
+/**
+ * Prompts the user for their Smithery API key
+ * @returns Promise<string> The entered API key
+ */
+export async function promptForApiKey(): Promise<string> {
+	const { apiKey } = await inquirer.prompt([
+		{
+			type: "password",
+			name: "apiKey",
+			message: `Please enter your Smithery API key ${chalk.cyan("(get one for free from")} ${chalk.blue.underline("https://smithery.ai/account/api-keys")}${chalk.cyan(")")}:`,
+			mask: "*",
+			validate: (input: string) => {
+				if (!input.trim()) {
+					return "API key is required"
+				}
+				return true
+			},
+		},
+	])
+	return apiKey
+}

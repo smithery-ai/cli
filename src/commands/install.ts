@@ -20,6 +20,8 @@ import {
 	ensureUVInstalled,
 	ensureBunInstalled,
 	checkAndNotifyRemoteServer,
+	promptForApiKey,
+	isRemote,
 } from "../utils/runtime"
 import {
 	chooseConnection,
@@ -29,7 +31,6 @@ import {
 } from "../utils/config"
 import { checkAnalyticsConsent } from "../utils/analytics"
 import { promptForRestart } from "../utils/client"
-import { isRemote } from "../utils/runtime"
 import type { ServerConfig } from "../types/registry"
 
 /**
@@ -83,23 +84,15 @@ export async function installServer(
 		await ensureUVInstalled(connection)
 		await ensureBunInstalled(connection)
 
-		/* inform users of remote server installation */
+		/* inform users of remote server installation and prompt for API key if needed */
+		let finalApiKey = apiKey
 		if (isRemote(server) && !apiKey) {
-			console.error(
-				chalk.yellow(
-					"API key is required for connecting to remote servers. Please provide it using --key flag.",
-				),
-			)
-			console.error(
-				chalk.yellow(
-					"Get your API key from: https://smithery.ai/account/api-keys",
-				),
-			)
-			process.exit(1)
+			spinner.stop()
+			finalApiKey = await promptForApiKey()
 		}
 		checkAndNotifyRemoteServer(server)
 
-		const collectedConfigValues = apiKey
+		const collectedConfigValues = finalApiKey
 			? configValues || {} // If api key provided, don't prompt for additional config values
 			: await collectConfigValues(connection, configValues || {}) // if no api key (allowed for local servers), prompt for additional values if needed
 
@@ -109,7 +102,7 @@ export async function installServer(
 		const serverConfig = formatServerConfig(
 			qualifiedName,
 			collectedConfigValues,
-			apiKey,
+			finalApiKey,
 			profile,
 		)
 		verbose(`Formatted server config: ${JSON.stringify(serverConfig, null, 2)}`)
