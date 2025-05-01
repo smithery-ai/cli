@@ -12,6 +12,9 @@ import { verbose } from "./logger"
 dotenvConfig()
 
 const getEndpoint = (): string => {
+	if (process.env.NODE_ENV === "development" && process.env.LOCAL_REGISTRY_ENDPOINT) {
+		return process.env.LOCAL_REGISTRY_ENDPOINT
+	}
 	const endpoint =
 		process.env.REGISTRY_ENDPOINT || "https://registry.smithery.ai"
 	if (!endpoint) {
@@ -83,6 +86,7 @@ export const resolvePackage = async (
 export const fetchConnection = async (
 	packageName: string,
 	config: ServerConfig,
+	apiKey: string | undefined,
 ): Promise<StdioConnection> => {
 	const endpoint = getEndpoint()
 	verbose(`Fetching connection for ${packageName} from registry at ${endpoint}`)
@@ -98,11 +102,17 @@ export const fetchConnection = async (
 		verbose(`Sending connection request for ${packageName}`)
 
 		verbose(`Making POST request to ${endpoint}/servers/${packageName}`)
+		const headers: Record<string, string> = {
+			"Content-Type": "application/json",
+		}
+		
+		if (apiKey) {
+			headers["Authorization"] = `Bearer ${apiKey}`
+		}
+
 		const response = await fetch(`${endpoint}/servers/${packageName}`, {
 			method: "POST",
-			headers: {
-				"Content-Type": "application/json",
-			},
+			headers,
 			body: JSON.stringify(requestBody),
 		})
 		verbose(`Response status: ${response.status}`)

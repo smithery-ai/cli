@@ -92,11 +92,12 @@ export const createStdioRunner = async (
 		if (!stdioConnection) {
 			throw new Error("No STDIO connection found")
 		}
-
+		verbose("fetching connection with")
 		// Process config values and fetch server configuration
 		const serverConfig = await fetchConnection(
 			serverDetails.qualifiedName,
 			config,
+			apiKey
 		)
 
 		if (!serverConfig || "type" in serverConfig) {
