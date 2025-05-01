@@ -10,6 +10,7 @@ export const VALID_CLIENTS = [
 	"vscode-insiders",
 	"boltai",
 	"amazon-bedrock",
+	"amazonq",
 ] as const
 export type ValidClient = (typeof VALID_CLIENTS)[number]
 

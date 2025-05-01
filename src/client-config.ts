@@ -94,6 +94,10 @@ const clientPaths: { [key: string]: ClientInstallTarget } = {
 		type: "file",
 		path: path.join(homeDir, "Amazon Bedrock Client", "mcp_config.json"),
 	},
+	amazonq: {
+		type: "file",
+		path: path.join(homeDir, ".aws", "amazonq", "mcp.json"),
+	},
 }
 
 export function getConfigPath(client?: string): ClientInstallTarget {
