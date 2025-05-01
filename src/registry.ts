@@ -12,7 +12,10 @@ import { verbose } from "./logger"
 dotenvConfig()
 
 const getEndpoint = (): string => {
-	if (process.env.NODE_ENV === "development" && process.env.LOCAL_REGISTRY_ENDPOINT) {
+	if (
+		process.env.NODE_ENV === "development" &&
+		process.env.LOCAL_REGISTRY_ENDPOINT
+	) {
 		return process.env.LOCAL_REGISTRY_ENDPOINT
 	}
 	const endpoint =
@@ -105,9 +108,9 @@ export const fetchConnection = async (
 		const headers: Record<string, string> = {
 			"Content-Type": "application/json",
 		}
-		
+
 		if (apiKey) {
-			headers["Authorization"] = `Bearer ${apiKey}`
+			headers.Authorization = `Bearer ${apiKey}`
 		}
 
 		const response = await fetch(`${endpoint}/servers/${packageName}`, {

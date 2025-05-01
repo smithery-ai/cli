@@ -97,7 +97,7 @@ export const createStdioRunner = async (
 		const serverConfig = await fetchConnection(
 			serverDetails.qualifiedName,
 			config,
-			apiKey
+			apiKey,
 		)
 
 		if (!serverConfig || "type" in serverConfig) {
