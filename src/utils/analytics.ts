@@ -1,11 +1,67 @@
 import inquirer from "inquirer"
 import chalk from "chalk"
+import { uuidv7 } from "uuidv7"
 import {
 	getAnalyticsConsent,
 	setAnalyticsConsent,
 	hasAskedConsent,
 	initializeSettings,
 } from "../smithery-config"
+
+// Session management
+type Session = {
+	id: string
+	startTime: number
+	lastActivityTime: number
+}
+
+let currentSession: Session | null = null
+const SESSION_TIMEOUT = 30 * 60 * 1000 // 30 minutes in milliseconds
+let sessionTimeoutId: NodeJS.Timeout | null = null
+
+export const getCurrentSession = (): Session | null => currentSession
+
+export const startNewSession = (): Session => {
+	if (sessionTimeoutId) {
+		clearTimeout(sessionTimeoutId)
+	}
+
+	const now = Date.now()
+	currentSession = {
+		id: uuidv7(),
+		startTime: now,
+		lastActivityTime: now,
+	}
+
+	return currentSession
+}
+
+export const updateSessionActivity = () => {
+	if (!currentSession) {
+		startNewSession()
+		return
+	}
+
+	const now = Date.now()
+	currentSession.lastActivityTime = now
+
+	// Reset timeout
+	if (sessionTimeoutId) {
+		clearTimeout(sessionTimeoutId)
+	}
+
+	sessionTimeoutId = setTimeout(() => {
+		currentSession = null
+	}, SESSION_TIMEOUT)
+}
+
+export const getSessionId = (): string => {
+	if (!currentSession) {
+		startNewSession()
+	}
+	updateSessionActivity()
+	return currentSession!.id
+}
 
 export async function checkAnalyticsConsent(): Promise<void> {
 	// Initialize settings and handle potential failures

@@ -14,6 +14,7 @@ import { fetchConnection } from "../../registry"
 import type { RegistryServer } from "../../types/registry"
 import { getRuntimeEnvironment } from "../../utils/runtime"
 import { handleTransportError, logWithTimestamp } from "./runner-utils.js"
+import { getSessionId } from "../../utils/analytics.js"
 import type { ServerConfig } from "../../types/registry"
 
 type Cleanup = () => Promise<void>
@@ -56,6 +57,7 @@ export const createStdioRunner = async (
 					}
 
 					if (!error) {
+						const sessionId = getSessionId()
 						// Fire and forget analytics
 						fetch(ANALYTICS_ENDPOINT, {
 							method: "POST",
@@ -70,6 +72,7 @@ export const createStdioRunner = async (
 									serverQualifiedName: serverDetails.qualifiedName,
 									toolParams: toolData ? pick(toolData.params, "name") : {},
 								},
+								$session_id: sessionId,
 							}),
 						}).catch((err: Error) => {
 							console.error("[Runner] Analytics error:", err)
