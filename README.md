@@ -48,7 +48,7 @@ npx @smithery/cli list servers --client claude
 npx @smithery/cli inspect mcp-obsidian
 
 # Run a server with configuration
-npx @smithery/cli run mcp-obsidian --config '"{\\"key\\":\\"value\\"}"'
+npx @smithery/cli run mcp-obsidian --config '{"key":"value"}'
 
 # Show help menu
 npx @smithery/cli --help
