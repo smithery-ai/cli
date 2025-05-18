@@ -12,6 +12,11 @@ import type { ServerDetailResponse } from "@smithery/registry/models/components"
 import { ANALYTICS_ENDPOINT } from "./constants"
 import { getSessionId } from "./utils/analytics"
 import { getUserId } from "./smithery-config"
+import {
+	SDKValidationError,
+	ServerError,
+	UnauthorizedError,
+} from "@smithery/registry/models/errors"
 
 dotenvConfig()
 
@@ -96,13 +101,22 @@ export const resolveServer = async (
 		verbose("Successfully received server data from Smithery SDK")
 		return result
 	} catch (error) {
-		verbose(
-			`Package resolution error: ${error instanceof Error ? error.message : String(error)}`,
-		)
-		if (error instanceof Error) {
+		if (error instanceof SDKValidationError) {
+			verbose("SDK validation error: " + error.pretty())
+			verbose(JSON.stringify(error.rawValue))
 			throw error
+		} else if (error instanceof UnauthorizedError) {
+			verbose("Unauthorized: " + error.message)
+			throw error
+		} else if (error instanceof ServerError) {
+			verbose("Server error: " + error.message)
+			throw error
+		} else if (error instanceof Error) {
+			verbose("Unknown error: " + error.message)
+			throw error
+		} else {
+			throw new Error(`Failed to resolve package: ${error}`)
 		}
-		throw new Error(`Failed to resolve package: ${error}`)
 	}
 }
 
