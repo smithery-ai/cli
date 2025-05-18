@@ -44,13 +44,12 @@ export enum ResolveServerSource {
 }
 
 export const resolveServer = async (
-	qualifiedName: string,
+	serverQualifiedName: string,
 	apiKey?: string,
 	source?: ResolveServerSource,
 ): Promise<ServerDetailResponse> => {
 	// Fire analytics event if apiKey is missing
-	/* Migration towards making api key a required parameter */
-	if (!apiKey && ANALYTICS_ENDPOINT) {
+	if (ANALYTICS_ENDPOINT) {
 		(async () => {
 			try {
 				const sessionId = getSessionId()
@@ -59,8 +58,12 @@ export const resolveServer = async (
 					method: "POST",
 					headers: { "Content-Type": "application/json" },
 					body: JSON.stringify({
-						eventName: "missing_api_key",
-						payload: { qualifiedName, source },
+						eventName: "resolve_server",
+						payload: { 
+							serverQualifiedName, 
+							source,
+							hasApiKey: !!apiKey 
+						},
 						$session_id: sessionId,
 						userId,
 					}),
@@ -83,12 +86,12 @@ export const resolveServer = async (
 
 	const smitheryRegistry = new SmitheryRegistry(options)
 	verbose(
-		`Resolving package ${qualifiedName} using Smithery SDK at ${options.serverURL || "<default>"}`,
+		`Resolving package ${serverQualifiedName} using Smithery SDK at ${options.serverURL || "<default>"}`,
 	)
 
 	try {
 		const result = await smitheryRegistry.servers.get({
-			qualifiedName: qualifiedName,
+			qualifiedName: serverQualifiedName,
 		})
 		verbose("Successfully received server data from Smithery SDK")
 		return result
@@ -105,17 +108,17 @@ export const resolveServer = async (
 
 /**
  * Fetches a connection for a specific package from the registry
- * @param packageName The name of the package to connect to
+ * @param serverQualifiedName The name of the package to connect to
  * @param config Configuration options for the server connection
  * @returns A validated StdioConnection object
  */
 export const fetchConnection = async (
-	packageName: string,
+	serverQualifiedName: string,
 	config: ServerConfig,
 	apiKey: string | undefined,
 ): Promise<StdioConnection> => {
 	const endpoint = getEndpoint()
-	verbose(`Fetching connection for ${packageName} from registry at ${endpoint}`)
+	verbose(`Fetching connection for ${serverQualifiedName} from registry at ${endpoint}`)
 	verbose(
 		`Connection config provided (keys: ${Object.keys(config).join(", ")})`,
 	)
@@ -125,9 +128,9 @@ export const fetchConnection = async (
 			connectionType: "stdio",
 			config,
 		}
-		verbose(`Sending connection request for ${packageName}`)
+		verbose(`Sending connection request for ${serverQualifiedName}`)
 
-		verbose(`Making POST request to ${endpoint}/servers/${packageName}`)
+		verbose(`Making POST request to ${endpoint}/servers/${serverQualifiedName}`)
 		const headers: Record<string, string> = {
 			"Content-Type": "application/json",
 		}
@@ -136,7 +139,7 @@ export const fetchConnection = async (
 			headers.Authorization = `Bearer ${apiKey}`
 		}
 
-		const response = await fetch(`${endpoint}/servers/${packageName}`, {
+		const response = await fetch(`${endpoint}/servers/${serverQualifiedName}`, {
 			method: "POST",
 			headers,
 			body: JSON.stringify(requestBody),
