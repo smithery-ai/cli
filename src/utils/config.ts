@@ -1,9 +1,11 @@
-import type { ConnectionDetails } from "../types/registry"
+import type {
+	ConnectionInfo,
+	ServerDetailResponse,
+} from "@smithery/registry/models/components"
 import type { ConfiguredServer, ServerConfig } from "../types/registry"
 import type { JSONSchema } from "../types/registry"
 import inquirer from "inquirer"
 import chalk from "chalk"
-import type { RegistryServer } from "../types/registry"
 
 /**
  * Formats and validates configuration values according to the connection's schema
@@ -19,7 +21,7 @@ import type { RegistryServer } from "../types/registry"
  * @throws Error if any required config values are missing
  */
 export async function validateAndFormatConfig(
-	connection: ConnectionDetails,
+	connection: ConnectionInfo,
 	configValues?: ServerConfig,
 ): Promise<ServerConfig> {
 	if (!connection.configSchema?.properties) {
@@ -144,7 +146,7 @@ function convertValueToType(value: unknown, type: string | undefined): unknown {
  * @returns Object containing collected config values
  */
 export async function collectConfigValues(
-	connection: ConnectionDetails,
+	connection: ConnectionInfo,
 	existingValues?: ServerConfig,
 ): Promise<ServerConfig> {
 	// Early exit if no config needed
@@ -258,8 +260,8 @@ async function promptForConfigValue(
  * @returns The best stdio connection or null if none found
  */
 export function chooseStdioConnection(
-	connections: ConnectionDetails[],
-): ConnectionDetails | null {
+	connections: ConnectionInfo[],
+): ConnectionInfo | null {
 	const stdioConnections = connections.filter((conn) => conn.type === "stdio")
 	if (!stdioConnections.length) return null
 
@@ -291,7 +293,7 @@ export function chooseStdioConnection(
  * @returns The chosen connection details
  * @throws Error if no connection configuration is found
  */
-export function chooseConnection(server: RegistryServer): ConnectionDetails {
+export function chooseConnection(server: ServerDetailResponse): ConnectionInfo {
 	if (!server.connections?.length) {
 		throw new Error("No connection configuration found")
 	}

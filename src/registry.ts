@@ -2,12 +2,13 @@ import fetch from "cross-fetch" /* some runtimes use node <18 causing fetch not 
 import { config as dotenvConfig } from "dotenv"
 import { verbose } from "./logger"
 import {
-	type RegistryServer,
 	type ServerConfig,
 	type StdioConnection,
 	StdioConnectionSchema,
 	type StreamableHTTPConnection,
 } from "./types/registry"
+import { SmitheryRegistry } from "@smithery/registry"
+import type { ServerDetailResponse } from "@smithery/registry/models/components"
 
 dotenvConfig()
 
@@ -31,50 +32,36 @@ const getEndpoint = (): string => {
  * @param packageName The name of the package to resolve
  * @returns Details about the server, including available connection options
  */
-export const resolvePackage = async (
-	packageName: string,
-): Promise<RegistryServer> => {
-	const endpoint = getEndpoint()
-	verbose(`Resolving package ${packageName} from registry at ${endpoint}`)
+export const resolveServer = async (
+	qualifiedName: string,
+): Promise<ServerDetailResponse> => {
+	const options: Record<string, any> = {
+		bearerAuth: process.env.SMITHERY_BEARER_AUTH ?? "",
+	}
+	if (
+		process.env.NODE_ENV === "development" &&
+		process.env.LOCAL_REGISTRY_ENDPOINT
+	) {
+		options.serverURL = process.env.LOCAL_REGISTRY_ENDPOINT
+	}
+
+	const smitheryRegistry = new SmitheryRegistry(options)
+	verbose(
+		`Resolving package ${qualifiedName} using Smithery SDK at ${options.serverURL || "<default>"}`,
+	)
 
 	try {
-		verbose(`Making GET request to ${endpoint}/servers/${packageName}`)
-		const response = await fetch(`${endpoint}/servers/${packageName}`, {
-			method: "GET",
-			headers: {
-				"Content-Type": "application/json",
-			},
+		const result = await smitheryRegistry.servers.get({
+			qualifiedName: qualifiedName,
 		})
-		verbose(`Response status: ${response.status}`)
-
-		if (!response.ok) {
-			const errorData = (await response.json().catch(() => null)) as {
-				error?: string
-			}
-			const errorMessage = errorData?.error || (await response.text())
-			verbose(`Error response: ${errorMessage}`)
-
-			if (response.status === 404) {
-				throw new Error(`Server "${packageName}" not found`)
-			}
-
-			throw new Error(
-				`Package resolution failed with status ${response.status}: ${errorMessage}`,
-			)
-		}
-
-		verbose("Successfully received server data from registry")
-		const data = (await response.json()) as RegistryServer
-		verbose(
-			`Server ${packageName} resolved with ${data.connections.length} connection options`,
-		)
-		return data
+		verbose("Successfully received server data from Smithery SDK")
+		return result
 	} catch (error) {
 		verbose(
 			`Package resolution error: ${error instanceof Error ? error.message : String(error)}`,
 		)
 		if (error instanceof Error) {
-			throw error // Pass through our custom errors without wrapping
+			throw error
 		}
 		throw new Error(`Failed to resolve package: ${error}`)
 	}

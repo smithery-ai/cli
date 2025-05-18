@@ -3,14 +3,6 @@
  */
 import { z } from "zod"
 
-// Base registry package (what we receive)
-export interface RegistryServer {
-	qualifiedName: string
-	displayName: string
-	remote: boolean
-	connections: Array<ConnectionDetails>
-}
-
 export const JSONSchemaSchema: z.ZodType = z.lazy(() =>
 	z.object({
 		type: z.string().optional(),
@@ -23,33 +15,6 @@ export const JSONSchemaSchema: z.ZodType = z.lazy(() =>
 )
 
 export type JSONSchema = z.infer<typeof JSONSchemaSchema>
-
-export const ConnectionDetailsSchema = z.union([
-	z.object({
-		type: z.literal("stdio"),
-		configSchema: JSONSchemaSchema.optional(),
-		exampleConfig: z.record(z.any()).optional(),
-		published: z.boolean().optional(),
-		stdioFunction: z.string().optional(),
-	}),
-	z.object({
-		type: z.literal("http"),
-		deploymentUrl: z.string().url(),
-		configSchema: JSONSchemaSchema.optional(),
-		exampleConfig: z.record(z.any()).optional(),
-	}),
-])
-
-export type ConnectionDetails = z.infer<typeof ConnectionDetailsSchema>
-
-// Resolved server (after we check against our registry on installation status)
-export interface ResolvedServer {
-	qualifiedName: string
-	name: string
-	isInstalled: boolean
-	client?: string
-	connections: Array<ConnectionDetails>
-}
 
 // list of configured MCP servers stored locally
 export interface MCPConfig {

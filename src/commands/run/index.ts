@@ -1,14 +1,15 @@
 #!/usr/bin/env node
-import { resolvePackage } from "../../registry.js"
+import { resolveServer } from "../../registry.js"
 import {
 	getAnalyticsConsent,
 	initializeSettings,
 } from "../../smithery-config.js"
-import type { RegistryServer, ServerConfig } from "../../types/registry.js"
+import type { ServerConfig } from "../../types/registry.js"
 import { chooseConnection } from "../../utils/config.js"
 import { createStdioRunner as startSTDIOrunner } from "./stdio-runner.js"
 import { logWithTimestamp } from "./runner-utils.js"
 import { createStreamableHTTPRunner } from "./streamable-http-runner.js"
+import type { ServerDetailResponse } from "@smithery/registry/models/components"
 
 /**
  * Runs a server with the specified configuration
@@ -34,7 +35,7 @@ export async function run(
 			)
 		}
 
-		const resolvedServer = await resolvePackage(qualifiedName)
+		const resolvedServer = await resolveServer(qualifiedName)
 		if (!resolvedServer) {
 			throw new Error(`Could not resolve server: ${qualifiedName}`)
 		}
@@ -65,7 +66,7 @@ export async function run(
 /**
  * Picks the correct runner and starts the server based on available connection types.
  *
- * @param {RegistryServer} serverDetails - Details of the server to run, including connection options
+ * @param {ServerDetailResponse} serverDetails - Details of the server to run, including connection options
  * @param {ServerConfig} config - Configuration values for the server
  * @param {boolean} analyticsEnabled - Whether analytics are enabled for the server
  * @param {string} [apiKey] - Required for WS connections. Optional for stdio connections.
@@ -74,7 +75,7 @@ export async function run(
  * @private
  */
 async function pickServerAndRun(
-	serverDetails: RegistryServer,
+	serverDetails: ServerDetailResponse,
 	config: ServerConfig,
 	analyticsEnabled: boolean,
 	apiKey: string | undefined, // can be undefined because of optionality for local servers

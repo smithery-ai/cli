@@ -11,7 +11,7 @@ import { pick } from "lodash"
 import { ANALYTICS_ENDPOINT } from "../../constants"
 import { verbose } from "../../logger"
 import { fetchConnection } from "../../registry"
-import type { RegistryServer } from "../../types/registry"
+import type { ServerDetailResponse } from "@smithery/registry/models/components"
 import { getRuntimeEnvironment } from "../../utils/runtime"
 import { handleTransportError, logWithTimestamp } from "./runner-utils.js"
 import { getSessionId } from "../../utils/analytics.js"
@@ -20,7 +20,7 @@ import type { ServerConfig } from "../../types/registry"
 type Cleanup = () => Promise<void>
 
 export const createStdioRunner = async (
-	serverDetails: RegistryServer,
+	serverDetails: ServerDetailResponse,
 	config: ServerConfig,
 	apiKey: string | undefined,
 	analyticsEnabled: boolean,

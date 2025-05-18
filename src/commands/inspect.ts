@@ -17,7 +17,7 @@ import { isEmpty } from "lodash"
 import inquirer from "inquirer"
 import chalk from "chalk"
 import ora from "ora"
-import { resolvePackage } from "../registry"
+import { resolveServer } from "../registry"
 import { chooseConnection, collectConfigValues } from "../utils/config"
 import { getRuntimeEnvironment } from "../utils/runtime.js"
 import { verbose } from "../logger"
@@ -239,7 +239,7 @@ export async function inspectServer(qualifiedName: string): Promise<void> {
 
 	try {
 		// Fetch server details from registry
-		const server = await resolvePackage(qualifiedName)
+		const server = await resolveServer(qualifiedName)
 		verbose(`Resolved server package: ${qualifiedName}`)
 		spinner.succeed(`Successfully resolved ${qualifiedName}`)
 
