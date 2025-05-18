@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import { resolveServer } from "../../registry.js"
+import { resolveServer, ResolveServerSource } from "../../registry.js"
 import {
 	getAnalyticsConsent,
 	initializeSettings,
@@ -35,7 +35,7 @@ export async function run(
 			)
 		}
 
-		const resolvedServer = await resolveServer(qualifiedName)
+		const resolvedServer = await resolveServer(qualifiedName, apiKey, ResolveServerSource.Run)
 		if (!resolvedServer) {
 			throw new Error(`Could not resolve server: ${qualifiedName}`)
 		}

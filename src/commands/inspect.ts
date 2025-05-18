@@ -17,7 +17,7 @@ import { isEmpty } from "lodash"
 import inquirer from "inquirer"
 import chalk from "chalk"
 import ora from "ora"
-import { resolveServer } from "../registry"
+import { resolveServer, ResolveServerSource } from "../registry"
 import { chooseConnection, collectConfigValues } from "../utils/config"
 import { getRuntimeEnvironment } from "../utils/runtime.js"
 import { verbose } from "../logger"
@@ -233,13 +233,13 @@ async function readPromptArgumentInputs(args: any[]) {
 }
 
 /* Main function to inspect a server */
-export async function inspectServer(qualifiedName: string): Promise<void> {
+export async function inspectServer(qualifiedName: string, apiKey?: string): Promise<void> {
 	const spinner = ora(`Resolving ${qualifiedName}...`).start()
 	let transport: StdioClientTransport | null = null
 
 	try {
 		// Fetch server details from registry
-		const server = await resolveServer(qualifiedName)
+		const server = await resolveServer(qualifiedName, apiKey, ResolveServerSource.Inspect)
 		verbose(`Resolved server package: ${qualifiedName}`)
 		spinner.succeed(`Successfully resolved ${qualifiedName}`)
 
@@ -269,6 +269,7 @@ export async function inspectServer(qualifiedName: string): Promise<void> {
 				qualifiedName,
 				"--config",
 				JSON.stringify(JSON.stringify(configValues)),
+				...(apiKey ? ["--key", apiKey] : []),
 			],
 			env: runtimeEnv,
 		})

@@ -9,6 +9,9 @@ import {
 } from "./types/registry"
 import { SmitheryRegistry } from "@smithery/registry"
 import type { ServerDetailResponse } from "@smithery/registry/models/components"
+import { ANALYTICS_ENDPOINT } from "./constants"
+import { getSessionId } from "./utils/analytics"
+import { getUserId } from "./smithery-config"
 
 dotenvConfig()
 
@@ -29,14 +32,47 @@ const getEndpoint = (): string => {
 
 /**
  * Get server details from registry
- * @param packageName The name of the package to resolve
+ * @param qualifiedName The unique name of the server to resolve
+ * @param apiKey Optional API key for authentication
+ * @param source Optional source of the call (install, run, inspect)
  * @returns Details about the server, including available connection options
  */
+export enum ResolveServerSource {
+	Install = "install",
+	Run = "run",
+	Inspect = "inspect",
+}
+
 export const resolveServer = async (
 	qualifiedName: string,
+	apiKey?: string,
+	source?: ResolveServerSource,
 ): Promise<ServerDetailResponse> => {
+	// Fire analytics event if apiKey is missing
+	/* Migration towards making api key a required parameter */
+	if (!apiKey && ANALYTICS_ENDPOINT) {
+		(async () => {
+			try {
+				const sessionId = getSessionId()
+				const userId = await getUserId()
+				await fetch(ANALYTICS_ENDPOINT, {
+					method: "POST",
+					headers: { "Content-Type": "application/json" },
+					body: JSON.stringify({
+						eventName: "missing_api_key",
+						payload: { qualifiedName, source },
+						$session_id: sessionId,
+						userId,
+					}),
+				})
+			} catch (err) {
+				// Ignore analytics errors
+			}
+		})()
+	}
+
 	const options: Record<string, any> = {
-		bearerAuth: process.env.SMITHERY_BEARER_AUTH ?? "",
+		bearerAuth: apiKey ?? process.env.SMITHERY_BEARER_AUTH ?? "",
 	}
 	if (
 		process.env.NODE_ENV === "development" &&

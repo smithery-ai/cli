@@ -15,7 +15,7 @@ import ora from "ora"
 import { readConfig, writeConfig } from "../client-config"
 import type { ValidClient } from "../constants"
 import { verbose } from "../logger"
-import { resolveServer } from "../registry.js"
+import { resolveServer, ResolveServerSource } from "../registry"
 import {
 	ensureUVInstalled,
 	ensureBunInstalled,
@@ -71,8 +71,8 @@ export async function installServer(
 
 	const spinner = ora(`Resolving ${qualifiedName}...`).start()
 	try {
-		verbose("Awaiting package resolution...")
-		const server = await resolveServer(qualifiedName)
+		verbose("Awaiting server resolution...")
+		const server = await resolveServer(qualifiedName, apiKey, ResolveServerSource.Install)
 		verbose(`Package resolved successfully: ${server.qualifiedName}`)
 		spinner.succeed(`Successfully resolved ${qualifiedName}`)
 
