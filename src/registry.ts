@@ -102,17 +102,17 @@ export const resolveServer = async (
 		return result
 	} catch (error) {
 		if (error instanceof SDKValidationError) {
-			verbose("SDK validation error: " + error.pretty())
+			verbose(`SDK validation error: ${error.pretty()}`)
 			verbose(JSON.stringify(error.rawValue))
 			throw error
 		} else if (error instanceof UnauthorizedError) {
-			verbose("Unauthorized: " + error.message)
+			verbose(`Unauthorized: ${error.message}`)
 			throw error
 		} else if (error instanceof ServerError) {
-			verbose("Server error: " + error.message)
+			verbose(`Server error: ${error.message}`)
 			throw error
 		} else if (error instanceof Error) {
-			verbose("Unknown error: " + error.message)
+			verbose(`Unknown error: ${error.message}`)
 			throw error
 		} else {
 			throw new Error(`Failed to resolve package: ${error}`)
