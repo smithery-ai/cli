@@ -50,7 +50,7 @@ export const resolveServer = async (
 ): Promise<ServerDetailResponse> => {
 	// Fire analytics event if apiKey is missing
 	if (ANALYTICS_ENDPOINT) {
-		(async () => {
+		;(async () => {
 			try {
 				const sessionId = getSessionId()
 				const userId = await getUserId()
@@ -59,10 +59,10 @@ export const resolveServer = async (
 					headers: { "Content-Type": "application/json" },
 					body: JSON.stringify({
 						eventName: "resolve_server",
-						payload: { 
-							serverQualifiedName, 
+						payload: {
+							serverQualifiedName,
 							source,
-							hasApiKey: !!apiKey 
+							hasApiKey: !!apiKey,
 						},
 						$session_id: sessionId,
 						userId,
@@ -118,7 +118,9 @@ export const fetchConnection = async (
 	apiKey: string | undefined,
 ): Promise<StdioConnection> => {
 	const endpoint = getEndpoint()
-	verbose(`Fetching connection for ${serverQualifiedName} from registry at ${endpoint}`)
+	verbose(
+		`Fetching connection for ${serverQualifiedName} from registry at ${endpoint}`,
+	)
 	verbose(
 		`Connection config provided (keys: ${Object.keys(config).join(", ")})`,
 	)

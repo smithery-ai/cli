@@ -35,7 +35,11 @@ export async function run(
 			)
 		}
 
-		const resolvedServer = await resolveServer(qualifiedName, apiKey, ResolveServerSource.Run)
+		const resolvedServer = await resolveServer(
+			qualifiedName,
+			apiKey,
+			ResolveServerSource.Run,
+		)
 		if (!resolvedServer) {
 			throw new Error(`Could not resolve server: ${qualifiedName}`)
 		}

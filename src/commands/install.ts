@@ -72,7 +72,11 @@ export async function installServer(
 	const spinner = ora(`Resolving ${qualifiedName}...`).start()
 	try {
 		verbose("Awaiting server resolution...")
-		const server = await resolveServer(qualifiedName, apiKey, ResolveServerSource.Install)
+		const server = await resolveServer(
+			qualifiedName,
+			apiKey,
+			ResolveServerSource.Install,
+		)
 		verbose(`Package resolved successfully: ${server.qualifiedName}`)
 		spinner.succeed(`Successfully resolved ${qualifiedName}`)
 
@@ -126,6 +130,7 @@ export async function installServer(
 		verbose("Prompting for client restart...")
 		await promptForRestart(client)
 		verbose("Installation process completed")
+		process.exit(0)
 	} catch (error) {
 		spinner.fail(`Failed to install ${qualifiedName}`)
 		verbose(
