@@ -2,6 +2,7 @@
 
 import chalk from "chalk"
 import { Command } from "commander"
+import { dev } from "./commands/dev"
 import { inspectServer } from "./commands/inspect"
 import { installServer } from "./commands/install"
 import { list } from "./commands/list"
@@ -147,6 +148,21 @@ program
 		}
 
 		await run(server, config, await ensureApiKey(options.key), options.profile)
+	})
+
+// Dev command
+program
+	.command("dev")
+	.description("Start development server with hot-reload and tunnel")
+	.option("--port <port>", "Port to run the server on (default: 8181)")
+	.option("--key <apikey>", "Provide an API key")
+	.option("--no-open", "Don't automatically open the playground")
+	.action(async (options) => {
+		await dev({
+			port: options.port,
+			key: options.key,
+			open: options.open,
+		})
 	})
 
 // Playground command
