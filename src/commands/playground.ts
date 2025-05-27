@@ -8,7 +8,7 @@ const execAsync = promisify(exec)
 
 async function getTemporaryTunnelToken(apiKey: string): Promise<{
 	authtoken: string
-	domain?: string
+	domain: string
 }> {
 	try {
 		const response = await fetch(
@@ -57,7 +57,10 @@ function detectPortFromOutput(output: string): string | null {
 }
 
 // Start subprocess and wait for port detection
-function startSubprocess(command: string): Promise<{
+function startSubprocess(
+	command: string,
+	preferredPort: string,
+): Promise<{
 	process: ChildProcess
 	detectedPort: string
 }> {
@@ -68,6 +71,10 @@ function startSubprocess(command: string): Promise<{
 		const childProcess = spawn(cmd, args, {
 			stdio: ["inherit", "pipe", "pipe"],
 			shell: true,
+			env: {
+				...process.env,
+				PORT: preferredPort,
+			},
 		})
 
 		let output = ""
@@ -155,13 +162,14 @@ export async function playground(options: {
 	apiKey: string
 }): Promise<void> {
 	try {
-		let finalPort = options.port || "3000"
+		let finalPort = options.port || "8181"
 		let childProcess: ChildProcess | undefined
 
 		// If command is provided, start it and detect port
 		if (options.command) {
 			const { process: proc, detectedPort } = await startSubprocess(
 				options.command,
+				finalPort,
 			)
 			childProcess = proc
 			finalPort = detectedPort
