@@ -2,10 +2,10 @@
 
 import chalk from "chalk"
 import { Command } from "commander"
-import { dev } from "./commands/dev"
 import { inspectServer } from "./commands/inspect"
 import { installServer } from "./commands/install"
 import { list } from "./commands/list"
+import { playground } from "./commands/playground"
 import { run } from "./commands/run/index"
 import { uninstallServer } from "./commands/uninstall"
 import { type ValidClient, VALID_CLIENTS } from "./constants"
@@ -149,13 +149,14 @@ program
 		await run(server, config, await ensureApiKey(options.key), options.profile)
 	})
 
-// Dev command
+// Playground command
 program
-	.command("dev")
-	.description("Expose localhost and print Studio link")
+	.command("playground")
+	.description("Open MCP playground in browser")
 	.option("--port <port>", "Port to expose (default: 3000)")
 	.option("--key <apikey>", "Provide an API key")
 	.allowUnknownOption() // Allow pass-through for command after --
+	.allowExcessArguments() // Allow extra args after -- without error
 	.action(async (options) => {
 		// Extract command after -- separator
 		let command: string | undefined
@@ -165,8 +166,11 @@ program
 			command = rawArgs.slice(separatorIndex + 1).join(" ")
 		}
 
-		const validApiKey = await ensureApiKey(options.key)
-		await dev(options.port, command, validApiKey)
+		await playground({
+			port: options.port,
+			command,
+			apiKey: await ensureApiKey(options.key),
+		})
 	})
 
 // List command

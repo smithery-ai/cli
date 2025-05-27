@@ -1,6 +1,10 @@
 import ngrok from "@ngrok/ngrok"
 import chalk from "chalk"
 import { spawn, type ChildProcess } from "node:child_process"
+import { exec } from "node:child_process"
+import { promisify } from "node:util"
+
+const execAsync = promisify(exec)
 
 async function getTemporaryTunnelToken(apiKey: string): Promise<{
 	authtoken: string
@@ -119,18 +123,46 @@ function startSubprocess(command: string): Promise<{
 	})
 }
 
-export async function dev(
-	port?: string,
-	command?: string,
-	apiKey?: string,
-): Promise<void> {
+// Open URL in browser
+async function openInBrowser(url: string): Promise<void> {
 	try {
-		let finalPort = port || "3000"
+		const platform = process.platform
+		let command: string
+
+		switch (platform) {
+			case "darwin": // macOS
+				command = `open "${url}"`
+				break
+			case "win32": // Windows
+				command = `start "" "${url}"`
+				break
+			default: // Linux and others
+				command = `xdg-open "${url}"`
+				break
+		}
+
+		await execAsync(command)
+		console.log(chalk.green("🌐 Opened playground in browser"))
+	} catch (error) {
+		console.log(chalk.yellow("Could not open browser automatically"))
+		console.log(chalk.gray("Please open the link manually"))
+	}
+}
+
+export async function playground(options: {
+	port?: string
+	command?: string
+	apiKey: string
+}): Promise<void> {
+	try {
+		let finalPort = options.port || "3000"
 		let childProcess: ChildProcess | undefined
 
 		// If command is provided, start it and detect port
-		if (command) {
-			const { process: proc, detectedPort } = await startSubprocess(command)
+		if (options.command) {
+			const { process: proc, detectedPort } = await startSubprocess(
+				options.command,
+			)
 			childProcess = proc
 			finalPort = detectedPort
 		}
@@ -139,14 +171,13 @@ export async function dev(
 
 		// Get temporary token from Smithery backend
 		console.log(chalk.gray("Getting tunnel credentials..."))
-		const { authtoken, domain } = await getTemporaryTunnelToken(apiKey!)
+		const { authtoken, domain } = await getTemporaryTunnelToken(options.apiKey)
 
-		console.log(authtoken, domain)
 		// Start tunnel using ngrok SDK with temporary token
 		const listener = await ngrok.forward({
 			addr: finalPort,
 			authtoken,
-			...(domain && { domain }), // Use reserved domain if provided
+			domain,
 		})
 
 		const tunnelUrl = listener.url()
@@ -155,21 +186,26 @@ export async function dev(
 			throw new Error("Failed to get tunnel URL")
 		}
 
+		const playgroundUrl = `https://smithery.ai/playground?mcp=${encodeURIComponent(tunnelUrl)}`
+
 		// Print helpful links
-		console.log(
-			chalk.cyan(
-				`🔗 Open:  https://smithery.ai/playground?mcp=${encodeURIComponent(tunnelUrl)}`,
-			),
-		)
+		console.log(chalk.cyan(`🔗 Playground: ${playgroundUrl}`))
 		console.log(chalk.gray("Press Ctrl+C to stop the tunnel"))
+
+		// Open playground in browser
+		await openInBrowser(playgroundUrl)
 
 		// Handle cleanup on exit
 		const cleanup = async () => {
 			console.log(chalk.yellow("\n👋 Shutting down tunnel..."))
 
 			// Close tunnel
-			await listener.close()
-			console.log(chalk.green("Tunnel closed"))
+			try {
+				await listener.close()
+				console.log(chalk.green("Tunnel closed"))
+			} catch (error) {
+				console.log(chalk.yellow("Tunnel already closed"))
+			}
 
 			// Kill child process if it exists
 			if (childProcess && !childProcess.killed) {
@@ -187,11 +223,11 @@ export async function dev(
 			process.exit(0)
 		}
 
-		// Keep process alive until SIGINT
+		// Set up signal handlers before keeping process alive
 		process.on("SIGINT", cleanup)
 		process.on("SIGTERM", cleanup)
 
-		// If child process exits, also exit
+		// If child process exits, also exit (only if we have a child process)
 		if (childProcess) {
 			childProcess.on("exit", (code) => {
 				console.log(chalk.yellow(`\nSubprocess exited with code ${code}`))
@@ -199,16 +235,13 @@ export async function dev(
 			})
 		}
 
-		// Keep alive
-		await new Promise(() => {}) // Never resolves, keeps process running
+		// Keep the process alive by keeping stdin open
+		process.stdin.resume()
+
+		// Keep the process alive indefinitely (this promise never resolves)
+		await new Promise<void>(() => {})
 	} catch (error) {
-		console.error(chalk.red("❌ Failed to start development tunnel:"), error)
-		console.log(
-			chalk.yellow("💡 Make sure you have internet connection and try again"),
-		)
-		console.log(
-			chalk.yellow("   If the problem persists, please contact support"),
-		)
+		console.error(chalk.red("Error:"), error)
 		process.exit(1)
 	}
 }
