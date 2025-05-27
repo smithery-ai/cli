@@ -158,7 +158,7 @@ export async function dev(
 		// Print helpful links
 		console.log(
 			chalk.cyan(
-				`🔗 Open:  https://smithery.ai/studio?mcp=${encodeURIComponent(tunnelUrl)}`,
+				`🔗 Open:  https://smithery.ai/playground?mcp=${encodeURIComponent(tunnelUrl)}`,
 			),
 		)
 		console.log(chalk.gray("Press Ctrl+C to stop the tunnel"))
