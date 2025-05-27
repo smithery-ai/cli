@@ -80,7 +80,7 @@ program
 			server,
 			options.client as ValidClient,
 			config,
-			await ensureApiKey(options.key),
+			options.key,
 			options.profile,
 		)
 	})

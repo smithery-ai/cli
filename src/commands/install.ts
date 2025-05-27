@@ -16,22 +16,22 @@ import { readConfig, writeConfig } from "../client-config"
 import type { ValidClient } from "../constants"
 import { verbose } from "../logger"
 import { resolveServer, ResolveServerSource } from "../registry"
-import {
-	ensureUVInstalled,
-	ensureBunInstalled,
-	checkAndNotifyRemoteServer,
-	promptForApiKey,
-	isRemote,
-} from "../utils/runtime"
+import type { ServerConfig } from "../types/registry"
+import { checkAnalyticsConsent } from "../utils/analytics"
+import { promptForRestart } from "../utils/client"
 import {
 	chooseConnection,
 	collectConfigValues,
-	getServerName,
 	formatServerConfig,
+	getServerName,
 } from "../utils/config"
-import { checkAnalyticsConsent } from "../utils/analytics"
-import { promptForRestart } from "../utils/client"
-import type { ServerConfig } from "../types/registry"
+import {
+	checkAndNotifyRemoteServer,
+	ensureApiKey,
+	ensureBunInstalled,
+	ensureUVInstalled,
+	isRemote,
+} from "../utils/runtime"
 
 /**
  * Installs and configures a Smithery server for a specified client.
@@ -92,7 +92,7 @@ export async function installServer(
 		let finalApiKey = apiKey
 		if (isRemote(server) && !apiKey) {
 			spinner.stop()
-			finalApiKey = await promptForApiKey()
+			finalApiKey = await ensureApiKey()
 		}
 		checkAndNotifyRemoteServer(server)
 
