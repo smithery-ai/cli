@@ -8,6 +8,7 @@ interface Settings {
 	userId: string
 	analyticsConsent: boolean
 	askedConsent: boolean
+	apiKey?: string
 	cache?: {
 		servers?: Record<
 			string,
@@ -220,6 +221,11 @@ export const getAnalyticsConsent = async (): Promise<boolean> => {
 	return result.data.analyticsConsent
 }
 
+export const getApiKey = async (): Promise<string | undefined> => {
+	await initializeSettings()
+	return settingsData?.apiKey
+}
+
 // Safe setter with proper error handling
 export const setAnalyticsConsent = async (
 	consent: boolean,
@@ -234,6 +240,17 @@ export const setAnalyticsConsent = async (
 		analyticsConsent: consent,
 		askedConsent: true,
 	}
+
+	return await saveSettings(settingsData, getSettingsPath())
+}
+
+export const setApiKey = async (apiKey: string): Promise<SettingsResult> => {
+	const initResult = await initializeSettings()
+	if (!initResult.success || !initResult.data) {
+		return initResult
+	}
+
+	settingsData = { ...initResult.data, apiKey }
 
 	return await saveSettings(settingsData, getSettingsPath())
 }

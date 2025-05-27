@@ -1,14 +1,16 @@
 #!/usr/bin/env node
 
 import chalk from "chalk"
-import { type ValidClient, VALID_CLIENTS } from "./constants"
+import { dev } from "./commands/dev"
 import { inspectServer } from "./commands/inspect"
 import { installServer } from "./commands/install"
 import { list } from "./commands/list"
-import { setVerbose } from "./logger"
 import { run } from "./commands/run/index" // use new run function
 import { uninstallServer } from "./commands/uninstall"
+import { type ValidClient, VALID_CLIENTS } from "./constants"
+import { setVerbose } from "./logger"
 import type { ServerConfig } from "./types/registry"
+import { ensureApiKey } from "./utils/runtime"
 
 const command = process.argv[2]
 const argument = process.argv[3]
@@ -36,6 +38,11 @@ const showHelp = () => {
 	console.log("    --config <json>    Provide configuration as JSON")
 	console.log("    --key <apikey>     Provide an API key")
 	console.log("    --profile <name>   Use a specific profile")
+	console.log("  dev [--port <port>] [-- <command>]")
+	console.log("                       Expose localhost and print Studio link")
+	console.log(
+		"                       Optionally run a command and auto-detect port",
+	)
 	console.log("  list clients         List available clients")
 	console.log("  list servers         List installed servers")
 	console.log("")
@@ -54,8 +61,8 @@ const validateClient = (
 	command: string,
 	clientFlag: number,
 ): ValidClient | undefined => {
-	/* Run and inspect commands don't need client validation */
-	if (["run", "inspect"].includes(command)) {
+	/* Run, inspect, and dev commands don't need client validation */
+	if (["run", "inspect", "dev"].includes(command)) {
 		return undefined
 	}
 
@@ -86,6 +93,37 @@ const validateClient = (
 	}
 
 	return requestedClient as ValidClient
+}
+
+// Parse dev command arguments
+function parseDevArgs(args: string[]): {
+	port?: string
+	command?: string
+} {
+	const devIndex = args.indexOf("dev")
+	if (devIndex === -1) return {}
+
+	const devArgs = args.slice(devIndex + 1)
+	const separatorIndex = devArgs.indexOf("--")
+
+	let port: string | undefined
+	let command: string | undefined
+
+	// Parse arguments before separator
+	const beforeSeparator =
+		separatorIndex >= 0 ? devArgs.slice(0, separatorIndex) : devArgs
+	const portFlagIndex = beforeSeparator.indexOf("--port")
+
+	if (portFlagIndex >= 0 && portFlagIndex + 1 < beforeSeparator.length) {
+		port = beforeSeparator[portFlagIndex + 1]
+	}
+
+	// Parse command after separator
+	if (separatorIndex >= 0 && separatorIndex + 1 < devArgs.length) {
+		command = devArgs.slice(separatorIndex + 1).join(" ")
+	}
+
+	return { port, command }
 }
 
 const client = validateClient(command, clientFlag)
@@ -152,6 +190,12 @@ async function main() {
 			}
 			await run(argument, config, apiKey, profile)
 			break
+		case "dev": {
+			const validApiKey = await ensureApiKey(apiKey)
+			const { port, command: devCommand } = parseDevArgs(process.argv)
+			await dev(port, devCommand, validApiKey)
+			break
+		}
 		case "list":
 			await list(argument, client!)
 			break

@@ -6,6 +6,7 @@ import { promisify } from "node:util"
 import { getDefaultEnvironment } from "@modelcontextprotocol/sdk/client/stdio.js"
 import ora from "ora"
 import { verbose } from "../logger"
+import { getApiKey, setApiKey } from "../smithery-config"
 
 const execAsync = promisify(exec)
 
@@ -260,4 +261,37 @@ export async function promptForApiKey(): Promise<string> {
 		},
 	])
 	return apiKey
+}
+
+/**
+ * Ensures that an API key is available, prompting the user if not provided
+ * @param apiKey - Optional API key that may have been provided via command line
+ * @returns Promise<string> The API key (either provided or prompted)
+ */
+export async function ensureApiKey(apiKey?: string): Promise<string> {
+	// If API key provided via command line, use it
+	if (apiKey) {
+		return apiKey
+	}
+
+	// Check if API key exists in config
+	const savedApiKey = await getApiKey()
+	if (savedApiKey) {
+		return savedApiKey
+	}
+
+	// Prompt user for API key and save it
+	const promptedApiKey = await promptForApiKey()
+
+	// Save the API key to config for future use
+	const saveResult = await setApiKey(promptedApiKey)
+	if (!saveResult.success) {
+		console.warn(
+			chalk.yellow(
+				"Warning: Could not save API key to config. You may need to enter it again next time.",
+			),
+		)
+	}
+
+	return promptedApiKey
 }

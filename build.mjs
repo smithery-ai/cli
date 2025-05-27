@@ -20,5 +20,6 @@ await esbuild.build({
 	minify: true,
 	treeShaking: true,
 	outfile: "dist/index.js",
+	external: ["@ngrok/ngrok"],
 	define,
 })
