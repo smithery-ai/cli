@@ -13,6 +13,7 @@ import { type ValidClient, VALID_CLIENTS } from "./constants"
 import { setVerbose } from "./logger"
 import type { ServerConfig } from "./types/registry"
 import { ensureApiKey } from "./utils/runtime"
+import { build } from "./commands/build"
 
 const program = new Command()
 
@@ -162,6 +163,17 @@ program
 			port: options.port,
 			key: options.key,
 			open: options.open,
+		})
+	})
+
+// Build command
+program
+	.command("build")
+	.description("Build MCP server for production")
+	.option("--out <outfile>", "Output file path (default: .smithery/index.cjs)")
+	.action(async (options) => {
+		await build({
+			outFile: options.out,
 		})
 	})
 
