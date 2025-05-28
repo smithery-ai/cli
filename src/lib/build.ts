@@ -66,7 +66,6 @@ export async function buildMcpServer(
 		outfile: outFile,
 		sourcemap: "inline",
 		format: "cjs",
-		external: ["@modelcontextprotocol/sdk", "@smithery/sdk"],
 	}
 
 	let buildConfig: esbuild.BuildOptions
@@ -98,24 +97,23 @@ export async function buildMcpServer(
 			},
 		}
 
-		// Bundle the production bootstrap with the compiled user code
 		buildConfig = {
 			...commonOptions,
 			entryPoints: [bootstrapPath],
 			plugins: [aliasPlugin],
 			define: {
-				__SMITHERY_ENTRY__: "undefined",
+				__SMITHERY_ENTRY__: JSON.stringify(entryFileUrl),
+				"process.env.NODE_ENV": JSON.stringify("production"),
 			},
 		}
 	} else {
-		// Development build: use dev bootstrap with dynamic imports
 		buildConfig = {
 			...commonOptions,
 			entryPoints: [entryFile],
 			inject: [bootstrapPath],
 			define: {
 				__SMITHERY_ENTRY__: JSON.stringify(entryFileUrl),
-				__SMITHERY_USER_MODULE__: "undefined",
+				"process.env.NODE_ENV": JSON.stringify("development"),
 			},
 		}
 	}
