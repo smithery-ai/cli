@@ -14,8 +14,9 @@ export interface BuildOptions {
 
 function resolveBootstrapPath(name: string): string {
 	const candidatePaths = [
-		join(__dirname, "../runtime", `${name}.ts`),
 		join(__dirname, "../runtime", `${name}.js`),
+		join(__dirname, "../runtime", `${name}.ts`),
+		join(__dirname, "../src/runtime", `${name}.js`),
 		join(__dirname, "../src/runtime", `${name}.ts`),
 	]
 	for (const candidate of candidatePaths) {
@@ -25,7 +26,7 @@ function resolveBootstrapPath(name: string): string {
 	}
 	console.error(
 		chalk.red(
-			`❌ Could not locate ${name}.ts. Please reinstall the Smithery CLI.`,
+			`❌ Could not locate ${name}.js or ${name}.ts. Please reinstall the Smithery CLI.`,
 		),
 	)
 	process.exit(1)
