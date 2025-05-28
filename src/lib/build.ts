@@ -1,7 +1,7 @@
 import chalk from "chalk"
 import * as esbuild from "esbuild"
 import { existsSync } from "node:fs"
-import { join, dirname } from "node:path"
+import { dirname, join } from "node:path"
 import { pathToFileURL } from "node:url"
 
 export interface BuildOptions {
@@ -13,12 +13,7 @@ export interface BuildOptions {
 }
 
 function resolveBootstrapPath(name: string): string {
-	const candidatePaths = [
-		join(__dirname, "../runtime", `${name}.js`),
-		join(__dirname, "../runtime", `${name}.ts`),
-		join(__dirname, "../src/runtime", `${name}.js`),
-		join(__dirname, "../src/runtime", `${name}.ts`),
-	]
+	const candidatePaths = [join(__dirname, "runtime", `${name}.js`)]
 	for (const candidate of candidatePaths) {
 		if (existsSync(candidate)) {
 			return candidate
