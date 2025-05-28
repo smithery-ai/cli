@@ -18,6 +18,9 @@ export async function getTemporaryTunnelToken(apiKey: string): Promise<{
 		)
 
 		if (!response.ok) {
+			if (response.status === 401) {
+				throw new Error("Unauthorized: Invalid API key")
+			}
 			throw new Error(`Failed to get tunnel token: ${response.statusText}`)
 		}
 

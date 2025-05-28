@@ -12,8 +12,9 @@ import { uninstallServer } from "./commands/uninstall"
 import { type ValidClient, VALID_CLIENTS } from "./constants"
 import { setVerbose } from "./logger"
 import type { ServerConfig } from "./types/registry"
-import { ensureApiKey } from "./utils/runtime"
+import { ensureApiKey, promptForApiKey } from "./utils/runtime"
 import { build } from "./commands/build"
+import { setApiKey } from "./smithery-config"
 
 const program = new Command()
 
@@ -237,6 +238,37 @@ program
 			console.error(
 				chalk.red(`Invalid list type: ${type}. Use 'clients' or 'servers'`),
 			)
+			process.exit(1)
+		}
+	})
+
+// Login command
+program
+	.command("login")
+	.description("Login with an API key")
+	.action(async () => {
+		console.log(chalk.cyan("Login to Smithery"))
+		console.log(
+			chalk.gray("Get your API key from: https://smithery.ai/account/api-keys"),
+		)
+		console.log()
+
+		try {
+			const apiKey = await promptForApiKey()
+			const result = await setApiKey(apiKey)
+
+			if (result.success) {
+				console.log(chalk.green("✓ API key saved successfully"))
+				console.log(chalk.gray("You can now use Smithery CLI commands"))
+			} else {
+				console.error(chalk.red("✗ Failed to save API key"))
+				console.error(chalk.gray("You may need to enter it again next time"))
+			}
+		} catch (error) {
+			console.error(chalk.red("✗ Login failed"))
+			const errorMessage =
+				error instanceof Error ? error.message : String(error)
+			console.error(chalk.gray(errorMessage))
 			process.exit(1)
 		}
 	})
