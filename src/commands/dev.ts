@@ -7,6 +7,7 @@ import { buildMcpServer } from "../lib/build"
 import { existsSync } from "node:fs"
 
 interface DevOptions {
+	entryFile?: string
 	port?: string
 	key?: string
 	open?: boolean
@@ -99,6 +100,7 @@ export async function dev(options: DevOptions = {}): Promise<void> {
 		// Set up build with watch mode
 		const buildContext = await buildMcpServer({
 			outFile,
+			entryFile: options.entryFile,
 			watch: true,
 			onRebuild: () => {
 				startServer()

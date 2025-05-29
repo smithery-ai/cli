@@ -1,6 +1,7 @@
 import { buildMcpServer } from "../lib/build"
 
 interface BuildOptions {
+	entryFile?: string
 	outFile?: string
 	transport?: "shttp" | "stdio"
 }
@@ -8,6 +9,7 @@ interface BuildOptions {
 export async function build(options: BuildOptions = {}): Promise<void> {
 	try {
 		await buildMcpServer({
+			entryFile: options.entryFile,
 			outFile: options.outFile,
 			transport: options.transport,
 			watch: false,

@@ -1,7 +1,7 @@
 import chalk from "chalk"
 import * as esbuild from "esbuild"
-import { existsSync, mkdirSync } from "node:fs"
-import { dirname, join } from "node:path"
+import { existsSync, mkdirSync, readFileSync } from "node:fs"
+import { dirname, join, resolve } from "node:path"
 
 // TypeScript declarations for global constants injected at build time
 declare const __SMITHERY_SHTTP_BOOTSTRAP__: string
@@ -16,19 +16,61 @@ export interface BuildOptions {
 	transport?: "shttp" | "stdio"
 }
 
+/**
+ * Resolves the entry point from package.json or uses provided entryFile
+ */
+function resolveEntryPoint(providedEntry?: string): string {
+	if (providedEntry) {
+		const resolvedPath = resolve(process.cwd(), providedEntry)
+		if (!existsSync(resolvedPath)) {
+			throw new Error(`Entry file not found at ${resolvedPath}`)
+		}
+		return resolvedPath
+	}
+
+	// Read package.json to find entry point
+	const packageJsonPath = join(process.cwd(), "package.json")
+	if (!existsSync(packageJsonPath)) {
+		throw new Error(
+			"No package.json found in current directory. Please run this command from your project root or specify an entry file.",
+		)
+	}
+
+	let packageJson: Record<string, unknown>
+	try {
+		const packageContent = readFileSync(packageJsonPath, "utf-8")
+		packageJson = JSON.parse(packageContent)
+	} catch (error) {
+		throw new Error(`Failed to parse package.json: ${error}`)
+	}
+
+	// Check "module" field (TypeScript entry point)
+	if (!packageJson.module || typeof packageJson.module !== "string") {
+		throw new Error(
+			'No entry point found in package.json. Please define the "module" field:\n' +
+				'  "module": "./src/index.ts"\n' +
+				"Or specify an entry file directly with the command.",
+		)
+	}
+
+	const entryPoint = packageJson.module
+	const resolvedPath = resolve(process.cwd(), entryPoint)
+	if (!existsSync(resolvedPath)) {
+		throw new Error(
+			`Entry file specified in package.json not found at ${resolvedPath}.
+Check that the file exists or update your package.json`,
+		)
+	}
+
+	return resolvedPath
+}
+
 export async function buildMcpServer(
 	options: BuildOptions = {},
 ): Promise<esbuild.BuildContext | esbuild.BuildResult> {
 	const outFile = options.outFile || ".smithery/index.cjs"
 	const transport = options.transport ?? "shttp"
-	const entryFile = join(process.cwd(), "src/index.ts")
-
-	// Check if the entry file exists
-	if (!existsSync(entryFile)) {
-		throw new Error(
-			`Entry file not found at ${entryFile}. Make sure you have a src/index.ts file.`,
-		)
-	}
+	const entryFile = resolveEntryPoint(options.entryFile)
 
 	// Create output directory if it doesn't exist
 	const outDir = dirname(outFile)

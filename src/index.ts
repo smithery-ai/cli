@@ -154,13 +154,14 @@ program
 
 // Dev command
 program
-	.command("dev")
+	.command("dev [entryFile]")
 	.description("Start development server with hot-reload and tunnel")
 	.option("--port <port>", "Port to run the server on (default: 8181)")
 	.option("--key <apikey>", "Provide an API key")
 	.option("--no-open", "Don't automatically open the playground")
-	.action(async (options) => {
+	.action(async (entryFile, options) => {
 		await dev({
+			entryFile,
 			port: options.port,
 			key: options.key,
 			open: options.open,
@@ -169,14 +170,17 @@ program
 
 // Build command
 program
-	.command("build")
+	.command("build [entryFile]")
 	.description("Build MCP server for production")
-	.option("--out <outfile>", "Output file path (default: .smithery/index.cjs)")
+	.option(
+		"-o, --out <outfile>",
+		"Output file path (default: .smithery/index.cjs)",
+	)
 	.option(
 		"--transport <type>",
 		"Transport type: shttp or stdio (default: shttp)",
 	)
-	.action(async (options) => {
+	.action(async (entryFile, options) => {
 		// Validate transport option
 		const transport = options.transport || "shttp"
 		if (!["shttp", "stdio"].includes(transport)) {
@@ -189,6 +193,7 @@ program
 		}
 
 		await build({
+			entryFile,
 			outFile: options.out,
 			transport: transport as "shttp" | "stdio",
 		})

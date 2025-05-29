@@ -78,8 +78,10 @@ function parseCliConfig<T = Record<string, unknown>>(
 			console.error("\nExpected schema:")
 			console.error(JSON.stringify(jsonSchema, null, 2))
 			console.error("\nExample usage:")
-			console.error("  node server.js server.host=localhost server.port=8080 debug=true")
-			
+			console.error(
+				"  node server.js server.host=localhost server.port=8080 debug=true",
+			)
+
 			return { config: config as T, errors }
 		}
 		return { config: result.data, errors: undefined }
@@ -108,8 +110,10 @@ async function startMcpServer() {
 		) {
 			// Stateful server - generate a session ID for stdio
 			const sessionId = `stdio-${Date.now()}-${Math.random().toString(36).substring(2)}`
-			console.error(`[smithery] Creating stateful server with session: ${sessionId}`)
-			
+			console.error(
+				`[smithery] Creating stateful server with session: ${sessionId}`,
+			)
+
 			mcpServer = entry.createStatefulServer({ sessionId, config })
 		} else if (
 			entry.createStatelessServer &&
@@ -132,7 +136,7 @@ async function startMcpServer() {
 		await mcpServer.connect(transport)
 
 		console.error(`[smithery] MCP server connected to stdio transport`)
-		
+
 		// If config was provided, show what was parsed
 		if (Object.keys(config).length > 0) {
 			console.error(`[smithery] Configuration loaded:`, config)
