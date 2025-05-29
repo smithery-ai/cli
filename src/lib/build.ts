@@ -1,8 +1,11 @@
 import chalk from "chalk"
 import * as esbuild from "esbuild"
-import { existsSync } from "node:fs"
+import { existsSync, mkdirSync } from "node:fs"
 import { dirname, join } from "node:path"
-import { pathToFileURL } from "node:url"
+
+// TypeScript declarations for global constants injected at build time
+declare const __SMITHERY_SHTTP_BOOTSTRAP__: string
+declare const __SMITHERY_STDIO_BOOTSTRAP__: string
 
 export interface BuildOptions {
 	entryFile?: string
@@ -10,53 +13,75 @@ export interface BuildOptions {
 	watch?: boolean
 	onRebuild?: (result: esbuild.BuildResult) => void
 	production?: boolean
-}
-
-function resolveBootstrapPath(name: string): string {
-	const candidatePaths = [join(__dirname, "runtime", `${name}.js`)]
-	for (const candidate of candidatePaths) {
-		if (existsSync(candidate)) {
-			return candidate
-		}
-	}
-	console.error(
-		chalk.red(
-			`❌ Could not locate ${name}.js or ${name}.ts. Please reinstall the Smithery CLI.`,
-		),
-	)
-	process.exit(1)
+	transport?: "shttp" | "stdio"
 }
 
 export async function buildMcpServer(
 	options: BuildOptions = {},
 ): Promise<esbuild.BuildContext | esbuild.BuildResult> {
 	const outFile = options.outFile || ".smithery/index.cjs"
+	const transport = options.transport ?? "shttp"
 	const entryFile = join(process.cwd(), "src/index.ts")
 
 	// Check if the entry file exists
 	if (!existsSync(entryFile)) {
-		console.error(
-			chalk.red(
-				`❌ Entry file not found: ${entryFile}. Make sure you have a src/index.ts file.`,
-			),
+		throw new Error(
+			`Entry file not found at ${entryFile}. Make sure you have a src/index.ts file.`,
 		)
-		process.exit(1)
 	}
 
 	// Create output directory if it doesn't exist
 	const outDir = dirname(outFile)
 	if (!existsSync(outDir)) {
-		const { mkdirSync } = await import("node:fs")
 		mkdirSync(outDir, { recursive: true })
 	}
 
-	// Get URL format of the entry file for dev mode
-	const entryFileUrl = pathToFileURL(entryFile).href
+	console.log(
+		chalk.blue(`🔨 Building MCP server with ${transport} transport...`),
+	)
 
-	// Resolve bootstrap paths
-	const bootstrapPath = resolveBootstrapPath("bootstrap")
+	// Create a unified plugin that handles both dev and production
+	const createBootstrapPlugin = (): esbuild.Plugin => ({
+		name: "smithery-bootstrap-plugin",
+		setup(build) {
+			build.onResolve({ filter: /^virtual:bootstrap$/ }, () => ({
+				path: "virtual:bootstrap",
+				namespace: "bootstrap",
+			}))
 
-	console.log(chalk.blue("🔨 Building MCP server..."))
+			build.onResolve({ filter: /^virtual:user-module$/ }, () => ({
+				path: "virtual:user-module",
+				namespace: "user-module",
+			}))
+
+			build.onLoad({ filter: /.*/, namespace: "bootstrap" }, () => {
+				return {
+					contents:
+						transport === "stdio"
+							? __SMITHERY_STDIO_BOOTSTRAP__
+							: __SMITHERY_SHTTP_BOOTSTRAP__,
+					loader: "js",
+				}
+			})
+
+			build.onLoad({ filter: /.*/, namespace: "user-module" }, async () => {
+				// First, compile the user's TypeScript to JavaScript
+				const userBuildResult = await esbuild.build({
+					...commonOptions,
+					entryPoints: [entryFile],
+					write: false, // Don't write to disk, get result as string
+					sourcemap: false,
+				})
+
+				// Get the compiled user code
+				const userCompiledCode = userBuildResult.outputFiles[0].text
+				return {
+					contents: userCompiledCode,
+					loader: "js",
+				}
+			})
+		},
+	})
 
 	// Common build options
 	const commonOptions: esbuild.BuildOptions = {
@@ -70,57 +95,21 @@ export async function buildMcpServer(
 
 	let buildConfig: esbuild.BuildOptions
 
-	if (options.production) {
-		// Production build: compile user entry and bundle with production bootstrap
-		const tempOutFile = join(
-			process.cwd(),
-			dirname(outFile),
-			"user-compiled.js",
-		)
-
-		// First, compile the user's TypeScript to JavaScript
-		await esbuild.build({
-			...commonOptions,
-			entryPoints: [entryFile],
-			outfile: tempOutFile,
-			sourcemap: false, // Don't need sourcemap for intermediate file
-		})
-
-		// Create an alias plugin to resolve the user module import
-		const aliasPlugin: esbuild.Plugin = {
-			name: "alias-plugin",
-			setup(build) {
-				build.onResolve({ filter: /^__SMITHERY_USER_MODULE__$/ }, () => ({
-					path: tempOutFile,
-					external: false,
-				}))
-			},
-		}
-
-		buildConfig = {
-			...commonOptions,
-			entryPoints: [bootstrapPath],
-			plugins: [aliasPlugin],
-			define: {
-				__SMITHERY_ENTRY__: JSON.stringify(entryFileUrl),
-				"process.env.NODE_ENV": JSON.stringify("production"),
-			},
-		}
-	} else {
-		buildConfig = {
-			...commonOptions,
-			entryPoints: [entryFile],
-			inject: [bootstrapPath],
-			define: {
-				__SMITHERY_ENTRY__: JSON.stringify(entryFileUrl),
-				"process.env.NODE_ENV": JSON.stringify("development"),
-			},
-		}
+	buildConfig = {
+		...commonOptions,
+		entryPoints: ["virtual:bootstrap"],
+		plugins: [createBootstrapPlugin()],
+		define: {
+			"process.env.NODE_ENV": JSON.stringify(
+				options.production ? "production" : "development",
+			),
+		},
 	}
 
 	if (options.watch && options.onRebuild) {
 		// Set up esbuild with watch mode and rebuild plugin
 		const plugins: esbuild.Plugin[] = [
+			...(buildConfig.plugins || []),
 			{
 				name: "rebuild-handler",
 				setup(build) {

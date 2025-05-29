@@ -172,9 +172,25 @@ program
 	.command("build")
 	.description("Build MCP server for production")
 	.option("--out <outfile>", "Output file path (default: .smithery/index.cjs)")
+	.option(
+		"--transport <type>",
+		"Transport type: shttp or stdio (default: shttp)",
+	)
 	.action(async (options) => {
+		// Validate transport option
+		const transport = options.transport || "shttp"
+		if (!["shttp", "stdio"].includes(transport)) {
+			console.error(
+				chalk.red(
+					`Invalid transport type "${transport}". Valid options are: shttp, stdio`,
+				),
+			)
+			process.exit(1)
+		}
+
 		await build({
 			outFile: options.out,
+			transport: transport as "shttp" | "stdio",
 		})
 	})
 

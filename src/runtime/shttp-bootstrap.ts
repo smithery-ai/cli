@@ -1,4 +1,3 @@
-// Universal bootstrap for both dev and production builds
 import {
 	createStatefulServer,
 	type CreateServerFn as CreateStatefulServerFn,
@@ -11,27 +10,25 @@ import cors from "cors"
 import express from "express"
 import type { z } from "zod"
 
+// These will be replaced by esbuild at build time.
+// @ts-ignore
+import * as _entry from "virtual:user-module"
+
 // Type declaration for the user module
 interface SmitheryModule {
 	// Named exports
 	createStatefulServer?: CreateStatefulServerFn
 	createStatelessServer?: CreateStatelessServerFn
 	configSchema?: z.ZodSchema
-	// Default export (backward compatibility)
-	default?: CreateStatelessServerFn
 }
 
-// These will be replaced by esbuild at build time
-declare const __SMITHERY_ENTRY__: string
+const entry: SmitheryModule = _entry
 
 async function startMcpServer() {
 	try {
 		const port = process.env.PORT || "8181"
 
 		console.log(`[smithery] Starting MCP server on port ${port}`)
-
-		// Load user module - different approach for dev vs prod
-		const entry: SmitheryModule = await import(__SMITHERY_ENTRY__)
 
 		let server: { app: express.Application }
 
