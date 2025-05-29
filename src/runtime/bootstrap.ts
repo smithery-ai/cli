@@ -42,7 +42,6 @@ async function startMcpServer() {
 			console.log(`[smithery] Injecting cors middleware`)
 			app.use(
 				cors({
-					origin: "https://smithery.ai",
 					exposedHeaders: ["mcp-session-id"],
 				}),
 			)
