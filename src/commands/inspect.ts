@@ -20,7 +20,7 @@ import ora from "ora"
 import { resolveServer, ResolveServerSource } from "../registry"
 import { chooseConnection, collectConfigValues } from "../utils/config"
 import { getRuntimeEnvironment } from "../utils/runtime.js"
-import { verbose } from "../logger"
+import { verbose, debug } from "../logger"
 
 async function createClient() {
 	const client = new Client(
@@ -30,7 +30,7 @@ async function createClient() {
 	client.setNotificationHandler(
 		LoggingMessageNotificationSchema,
 		(notification) => {
-			console.debug("[server log]:", notification.params.data)
+			debug(`[server log]: ${notification.params.data}`)
 		},
 	)
 	return client
@@ -83,7 +83,9 @@ async function connectServer(transport: any) {
 		const primitives = await listPrimitives(client)
 
 		spinner.succeed(
-			`Connected, server capabilities: ${Object.keys(client.getServerCapabilities() || {}).join(", ")}`,
+			`Connected, server capabilities: ${Object.keys(
+				client.getServerCapabilities() || {},
+			).join(", ")}`,
 		)
 
 		// Setup exit handlers
@@ -172,7 +174,9 @@ async function connectServer(transport: any) {
 		}
 	} catch (error) {
 		spinner.fail(
-			`Failed to connect to server: ${error instanceof Error ? error.message : String(error)}`,
+			`Failed to connect to server: ${
+				error instanceof Error ? error.message : String(error)
+			}`,
 		)
 
 		// Clean up the client if it exists
@@ -257,13 +261,19 @@ export async function inspectServer(
 		// Collect configuration values if needed
 		const configValues = await collectConfigValues(connection)
 		verbose(
-			`Collected Configuration Structure: ${JSON.stringify(Object.keys(configValues), null, 2)}`,
+			`Collected Configuration Structure: ${JSON.stringify(
+				Object.keys(configValues),
+				null,
+				2,
+			)}`,
 		)
 
 		// Get runtime environment
 		const runtimeEnv = getRuntimeEnvironment({})
 		verbose(
-			`Runtime environment initialized with ${Object.keys(runtimeEnv).length} variables`,
+			`Runtime environment initialized with ${
+				Object.keys(runtimeEnv).length
+			} variables`,
 		)
 
 		// Create appropriate transport with environment variables

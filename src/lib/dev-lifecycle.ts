@@ -6,6 +6,7 @@ export async function setupTunnelAndPlayground(
 	port: string,
 	apiKey: string,
 	autoOpen = true,
+	initialMessage = "Say hello to the world!",
 ): Promise<{ listener: any; url: string }> {
 	const { listener, url } = await startTunnel(port, apiKey)
 

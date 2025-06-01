@@ -10,7 +10,7 @@ import { playground } from "./commands/playground"
 import { run } from "./commands/run/index"
 import { uninstallServer } from "./commands/uninstall"
 import { type ValidClient, VALID_CLIENTS } from "./constants"
-import { setVerbose } from "./logger"
+import { setVerbose, setDebug } from "./logger"
 import type { ServerConfig } from "./types/registry"
 import { ensureApiKey, promptForApiKey } from "./utils/runtime"
 import { build } from "./commands/build"
@@ -23,11 +23,15 @@ program
 	.name("smithery")
 	.description("Smithery CLI - Manage and run MCP servers")
 	.option("--verbose", "Show detailed logs")
+	.option("--debug", "Show debug logs")
 	.hook("preAction", (thisCommand, actionCommand) => {
 		// Set verbose mode if flag is present
 		const opts = thisCommand.opts()
 		if (opts.verbose) {
 			setVerbose(true)
+		}
+		if (opts.debug) {
+			setDebug(true)
 		}
 	})
 

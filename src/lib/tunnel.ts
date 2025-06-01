@@ -1,5 +1,6 @@
 import ngrok from "@ngrok/ngrok"
 import chalk from "chalk"
+import { debug } from "../logger"
 
 export async function getTemporaryTunnelToken(apiKey: string): Promise<{
 	authtoken: string
@@ -27,7 +28,9 @@ export async function getTemporaryTunnelToken(apiKey: string): Promise<{
 		return await response.json()
 	} catch (error) {
 		throw new Error(
-			`Failed to connect to Smithery API: ${error instanceof Error ? error.message : error}`,
+			`Failed to connect to Smithery API: ${
+				error instanceof Error ? error.message : error
+			}`,
 		)
 	}
 }
@@ -60,10 +63,10 @@ export async function startTunnel(
 	listener: any
 	url: string
 }> {
-	console.log(chalk.blue(`🚀 Starting tunnel for localhost:${port}...`))
+	debug(chalk.blue(`🚀 Starting tunnel for localhost:${port}...`))
 
 	// Get temporary token from Smithery backend
-	console.log(chalk.gray("Getting tunnel credentials..."))
+	debug(chalk.gray("Getting tunnel credentials..."))
 	const { authtoken, domain } = await getTemporaryTunnelToken(apiKey)
 
 	// Start tunnel using ngrok SDK with temporary token
