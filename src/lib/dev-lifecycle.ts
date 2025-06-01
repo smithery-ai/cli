@@ -11,7 +11,7 @@ export async function setupTunnelAndPlayground(
 	const { listener, url } = await startTunnel(port, apiKey)
 
 	if (autoOpen) {
-		await openPlayground(url)
+		await openPlayground(`${url}&prompt=${encodeURIComponent(initialMessage)}`)
 	}
 
 	console.log(chalk.gray("Press Ctrl+C to stop the dev server"))
