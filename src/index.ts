@@ -22,7 +22,6 @@ const program = new Command()
 program
 	.name("smithery")
 	.description("Smithery CLI - Manage and run MCP servers")
-	.version("1.0.0")
 	.option("--verbose", "Show detailed logs")
 	.hook("preAction", (thisCommand, actionCommand) => {
 		// Set verbose mode if flag is present
@@ -51,7 +50,9 @@ program
 		if (!VALID_CLIENTS.includes(options.client as ValidClient)) {
 			console.error(
 				chalk.yellow(
-					`Invalid client "${options.client}". Valid options are: ${VALID_CLIENTS.join(", ")}`,
+					`Invalid client "${
+						options.client
+					}". Valid options are: ${VALID_CLIENTS.join(", ")}`,
 				),
 			)
 			process.exit(1)
@@ -101,7 +102,9 @@ program
 		if (!VALID_CLIENTS.includes(options.client as ValidClient)) {
 			console.error(
 				chalk.yellow(
-					`Invalid client "${options.client}". Valid options are: ${VALID_CLIENTS.join(", ")}`,
+					`Invalid client "${
+						options.client
+					}". Valid options are: ${VALID_CLIENTS.join(", ")}`,
 				),
 			)
 			process.exit(1)
@@ -239,7 +242,9 @@ program
 			if (!options.client) {
 				console.error(
 					chalk.yellow(
-						`Please specify a client using --client. Valid options are: ${VALID_CLIENTS.join(", ")}`,
+						`Please specify a client using --client. Valid options are: ${VALID_CLIENTS.join(
+							", ",
+						)}`,
 					),
 				)
 				process.exit(1)
@@ -248,7 +253,9 @@ program
 			if (!VALID_CLIENTS.includes(options.client as ValidClient)) {
 				console.error(
 					chalk.yellow(
-						`Invalid client "${options.client}". Valid options are: ${VALID_CLIENTS.join(", ")}`,
+						`Invalid client "${
+							options.client
+						}". Valid options are: ${VALID_CLIENTS.join(", ")}`,
 					),
 				)
 				process.exit(1)
