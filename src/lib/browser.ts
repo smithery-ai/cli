@@ -4,10 +4,13 @@ import { promisify } from "node:util"
 
 const execAsync = promisify(exec)
 
-export async function openPlayground(tunnelUrl: string): Promise<void> {
+export async function openPlayground(
+	tunnelUrl: string,
+	initialMessage: string,
+): Promise<void> {
 	const playgroundUrl = `https://smithery.ai/playground?mcp=${encodeURIComponent(
 		`${tunnelUrl}/mcp`,
-	)}`
+	)}&prompt=${encodeURIComponent(initialMessage)}`
 
 	console.log(chalk.cyan(`🔗 Playground: ${playgroundUrl}`))
 
