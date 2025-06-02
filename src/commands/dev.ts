@@ -12,6 +12,7 @@ interface DevOptions {
 	port?: string
 	key?: string
 	open?: boolean
+	initialMessage?: string
 }
 
 export async function dev(options: DevOptions = {}): Promise<void> {
@@ -95,7 +96,12 @@ export async function dev(options: DevOptions = {}): Promise<void> {
 			// Start tunnel and open playground on first successful start
 			if (isFirstBuild) {
 				console.log(chalk.green(`✅ Server starting on port ${finalPort}`))
-				setupTunnelAndPlayground(finalPort, apiKey, options.open !== false)
+				setupTunnelAndPlayground(
+					finalPort,
+					apiKey,
+					options.open !== false,
+					options.initialMessage,
+				)
 					.then(({ listener }) => {
 						tunnelListener = listener
 						isFirstBuild = false

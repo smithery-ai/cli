@@ -166,12 +166,14 @@ program
 	.option("--port <port>", "Port to run the server on (default: 8181)")
 	.option("--key <apikey>", "Provide an API key")
 	.option("--no-open", "Don't automatically open the playground")
+	.option("--prompt <prompt>", "Initial message to start the playground with")
 	.action(async (entryFile, options) => {
 		await dev({
 			entryFile,
 			port: options.port,
 			key: options.key,
 			open: options.open,
+			initialMessage: options.prompt,
 		})
 	})
 
