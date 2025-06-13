@@ -69,13 +69,13 @@ Check that the file exists or update your package.json`,
 /**
  * Load custom esbuild configuration from file
  */
-async function loadCustomConfig(configPath?: string): Promise<Partial<esbuild.BuildOptions>> {
-	const possiblePaths = configPath ? [configPath] : [
-		"smithery.config.js",
-		"smithery.config.mjs",
-		"smithery.config.cjs"
-	]
-	
+async function loadCustomConfig(
+	configPath?: string,
+): Promise<Partial<esbuild.BuildOptions>> {
+	const possiblePaths = configPath
+		? [configPath]
+		: ["smithery.config.js", "smithery.config.mjs", "smithery.config.cjs"]
+
 	for (const path of possiblePaths) {
 		const resolvedPath = resolve(process.cwd(), path)
 		if (existsSync(resolvedPath)) {
@@ -88,7 +88,7 @@ async function loadCustomConfig(configPath?: string): Promise<Partial<esbuild.Bu
 			}
 		}
 	}
-	
+
 	return {}
 }
 
