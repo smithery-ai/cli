@@ -11,6 +11,7 @@ export const VALID_CLIENTS = [
 	"boltai",
 	"amazon-bedrock",
 	"amazonq",
+	"librechat",
 ] as const
 export type ValidClient = (typeof VALID_CLIENTS)[number]
 
