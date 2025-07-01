@@ -108,6 +108,10 @@ const clientPaths: { [key: string]: ClientInstallTarget } = {
 		type: "yaml",
 		path: path.join(homeDir, "LibreChat", "librechat.yaml"),
 	},
+	"gemini-cli": {
+		type: "file",
+		path: path.join(homeDir, ".gemini", "settings.json"),
+	},
 }
 
 export function getConfigPath(client?: string): ClientInstallTarget {
