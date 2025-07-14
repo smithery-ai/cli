@@ -1,0 +1,96 @@
+name: Bug Report
+description: File a bug report.
+title: '[Bug]: replace_with_a_clear_understandable_name'
+labels: ['bug', 'triage']
+projects:
+  [
+    'examples',
+    'rollup-plugin-zephyr',
+    'vite-plugin-zephyr',
+    'zephyr-webpack-plugin',
+    'zephyr-rspack-plugin',
+    'zephyr-edge-contract',
+    'zephyr-agent',
+    'zephyr-xpack-internal',
+  ]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to fill out this bug report! After filing this issue remember to select the related project to put a correct **Label**.
+  - type: input
+    id: contact
+    attributes:
+      label: Contact Details (Optional)
+      description: Is there a customer get in touch for this error?
+      placeholder: ex. email@example.com
+    validations:
+      required: false
+  - type: textarea
+    id: pre-condition
+    attributes:
+      label: Pre condition?
+      description: |
+        Do you know their environment when they are using product?
+        Run `npx envinfo --system --browsers --npmPackages '{zephyr-webpack-plugin,vite-zephyr-plugin,zephyr-*}'`
+        If this command is not available run `uname -a`
+      placeholder: Are they registered user? Have they logged in? When is there last active session on dashboard?
+      value: |
+        "Are they registered user?
+        Have they logged in? When is there last active session on dashboard?
+        What bundler they are using?
+        What cloud provider they are using?
+        Example:  Jakub from Callstack is using our managed cloud with Re.Pack to bundle and build application towards android and ios."
+    validations:
+      required: true
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What actually happened?
+      description: What's the actual current behavior? Please describe the what happened in details as much as possible.
+      placeholder: What the customer is seeing?
+      value: |
+        "Description:
+        Screenshots:
+        Terminal outputs:
+        What:
+        Example: Jakub ran `ZC=1 pnpm run build:io` where ZC=1 is an environment variable set for themselves to run Zephyr. His build succeeded, but on the returned deploy URL he sees "Asset not found"
+        "
+    validations:
+      required: true
+  - type: textarea
+    id: what-expected
+    attributes:
+      label: What's the expected behavior?
+      description: Please describe what's the expected behavior ?
+      placeholder: What the customer is seeing?
+      value: |
+        "Please describe what's the expected behavior as detail as possible
+        Design sketch (if applicable):
+        What commands did they run:
+        Example: Deployment successful without build failure.
+        "
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Relevant terminal/log output
+      description: Please copy and paste any relevant log output. This will be automatically formatted into code, so no need for backticks.
+      render: shell
+  - type: textarea
+    id: repo
+    attributes:
+      label: Repo link (Optional)
+      description: Is there a reproducible link? What are the step to replicate the environment if any?
+      placeholder: ex. email@example.com
+    validations:
+      required: false
+  - type: textarea
+    id: additional
+    attributes:
+      label: Additional information (Optional)
+      description: Is there any additional information the team should know?
+      placeholder: 'Example: Jakub works in Callstack building React Native mobile apps.'
+    validations:
+      required: false
