@@ -23,7 +23,7 @@
 		"test": "jest"
 	},
 	"bin": {
-		"cli": "dist/index.js"
+		"smithery": "dist/index.js"
 	},
 	"dependencies": {
 		"@modelcontextprotocol/sdk": "^1.15.0",
