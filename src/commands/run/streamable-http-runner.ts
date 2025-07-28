@@ -52,9 +52,7 @@ export const createStreamableHTTPRunner = async (
 		logWithTimestamp("[Runner] Received exit signal, initiating shutdown...")
 		isClientInitiatedClose = true
 		await cleanup()
-		if (!isShuttingDown) {
-			process.exit(0)
-		}
+		process.exit(0)
 	}
 
 	const heartbeatManager = createHeartbeatManager(

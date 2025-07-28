@@ -245,9 +245,7 @@ export const createStdioRunner = async (
 	const handleExit = async () => {
 		logWithTimestamp("[Runner] Exit handler triggered, starting shutdown...")
 		await cleanup()
-		if (!isShuttingDown) {
-			process.exit(0)
-		}
+		process.exit(0)
 	}
 
 	// Setup event handlers
