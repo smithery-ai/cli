@@ -1,6 +1,6 @@
 import fs from "node:fs"
 import os from "node:os"
-import yaml from "js-yaml"
+import * as YAML from "yaml"
 import path from "node:path"
 import type { MCPConfig } from "./types/registry.js"
 import { verbose } from "./logger"
@@ -153,7 +153,7 @@ export function readConfig(client: string): ClientConfig {
 		let rawConfig: any = {}
 		
 		if (configPath.type === "yaml") {
-			rawConfig = yaml.load(fileContent) as any || {}
+			rawConfig = YAML.parse(fileContent) as any || {}
 		} else {
 			rawConfig = JSON.parse(fileContent)
 		}
@@ -266,17 +266,14 @@ function writeConfigYaml(config: ClientConfig, target: ClientYamlTarget): void {
 		fs.mkdirSync(configDir, { recursive: true })
 	}
 
-	let existingYaml: any = {}
-	let originalContent = ""
+	let originalDoc: any = null
 	
 	try {
 		if (fs.existsSync(target.path)) {
 			verbose(`Reading existing YAML config file for merging`)
-			originalContent = fs.readFileSync(target.path, "utf8")
-			existingYaml = yaml.load(originalContent) as any || {}
-			verbose(
-				`Existing YAML config loaded: ${JSON.stringify(existingYaml, null, 2)}`,
-			)
+			const originalContent = fs.readFileSync(target.path, "utf8")
+			originalDoc = YAML.parseDocument(originalContent)
+			verbose(`Original YAML document loaded successfully`)
 		}
 	} catch (error) {
 		verbose(
@@ -286,104 +283,52 @@ function writeConfigYaml(config: ClientConfig, target: ClientYamlTarget): void {
 	}
 
 	verbose(`Merging YAML configs`)
-	
-	// Initialize mcpServers if it doesn't exist
-	if (!existingYaml.mcpServers) {
-		existingYaml.mcpServers = {}
-	}
-	
-	// Merge the new servers into the existing mcpServers
-	for (const [serverName, serverConfig] of Object.entries(config.mcpServers)) {
-		existingYaml.mcpServers[serverName] = serverConfig
-	}
-	
-	verbose(`Merged YAML config: ${JSON.stringify(existingYaml, null, 2)}`)
 
-	verbose(`Writing YAML config to file: ${target.path}`)
-	
-	// If this is a new file or we can't preserve formatting, use standard dump
-	if (!originalContent) {
-		const yamlContent = yaml.dump(existingYaml, { 
+	if (originalDoc) {
+		let mcpServersNode = originalDoc.get('mcpServers')
+		if (!mcpServersNode) {
+			verbose(`mcpServers section not found, creating new section`)
+			originalDoc.set('mcpServers', new YAML.YAMLMap())
+			mcpServersNode = originalDoc.get('mcpServers')
+		}
+
+		if (mcpServersNode && typeof mcpServersNode.set === 'function') {
+			for (const [serverName, serverConfig] of Object.entries(config.mcpServers)) {
+				verbose(`Adding/updating server: ${serverName}`)
+				
+				const existingServer = mcpServersNode.get(serverName)
+				if (existingServer && typeof existingServer.set === 'function') {
+					verbose(`Updating existing server ${serverName} while preserving comments`)
+					for (const [key, value] of Object.entries(serverConfig)) {
+						existingServer.set(key, value)
+					}
+				} else {
+					verbose(`Adding new server ${serverName}`)
+					mcpServersNode.set(serverName, serverConfig)
+				}
+			}
+		} else {
+			const nodeType = mcpServersNode ? typeof mcpServersNode : 'undefined'
+			throw new Error(
+				`mcpServers section is not a proper YAML Map (found: ${nodeType}). ` +
+				`Please ensure the YAML file has a valid mcpServers section or create a new file.`
+			)
+		}
+		
+		fs.writeFileSync(target.path, originalDoc.toString())
+		verbose(`YAML config updated`)
+	} else {
+		// Create new file from scratch
+		const newConfig = { mcpServers: config.mcpServers }
+		const yamlContent = YAML.stringify(newConfig, {
 			indent: 2,
-			lineWidth: -1,
-			noRefs: true
+			lineWidth: -1
 		})
 		fs.writeFileSync(target.path, yamlContent)
-	} else {
-		// Try to preserve formatting by updating only the mcpServers section
-		const updatedContent = updateYamlSection(originalContent, 'mcpServers', existingYaml.mcpServers)
-		fs.writeFileSync(target.path, updatedContent)
+		verbose(`New YAML config file created`)
 	}
 	
 	verbose(`YAML config successfully written`)
 }
 
-function updateYamlSection(originalContent: string, sectionName: string, newSectionData: any): string {
-	// Find the root-level mcpServers section
-	const lines = originalContent.split('\n')
-	verbose(`Looking for root-level ${sectionName} in YAML with ${lines.length} lines`)
-	
-	const sectionStart = lines.findIndex((line, index) => {
-		const trimmed = line.trim()
-		const indent = line.match(/^\s*/)?.[0] || ''
-		const isRootLevel = indent.length === 0 // Only truly root level (no indentation)
-		const isTargetSection = trimmed.startsWith(`${sectionName}:`)
-		
-		verbose(`Line ${index}: "${line}" - indent: ${indent.length}, isRoot: ${isRootLevel}, isTarget: ${isTargetSection}`)
-		
-		return isTargetSection && isRootLevel
-	})
-	
-	verbose(`Found ${sectionName} section at line ${sectionStart}`)
-	
-	if (sectionStart === -1) {
-		// Section doesn't exist, add it at the end
-		verbose(`No root-level ${sectionName} found, adding at end`)
-		const sectionYaml = yaml.dump({ [sectionName]: newSectionData }, { 
-			indent: 2,
-			lineWidth: -1,
-			noRefs: true
-		})
-		return originalContent + '\n' + sectionYaml
-	}
-	
-	// Find the end of the section (next key at same or higher level)
-	let sectionEnd = sectionStart + 1
-	const baseIndent = lines[sectionStart].match(/^\s*/)?.[0] || ''
-	verbose(`Base indent for section: "${baseIndent}" (length: ${baseIndent.length})`)
-	
-	while (sectionEnd < lines.length) {
-		const line = lines[sectionEnd]
-		const trimmed = line.trim()
-		
-		// Skip empty lines and comments
-		if (trimmed === '' || trimmed.startsWith('#')) {
-			sectionEnd++
-			continue
-		}
-		
-		// Check if this is a new key at the same or higher level
-		const lineIndent = line.match(/^\s*/)?.[0] || ''
-		if (lineIndent.length <= baseIndent.length && trimmed.includes(':')) {
-			verbose(`Found section end at line ${sectionEnd}: "${line}"`)
-			break
-		}
-		
-		sectionEnd++
-	}
-	
-	verbose(`Section spans from line ${sectionStart} to ${sectionEnd}`)
-	
-	// Generate new section content
-	const sectionYaml = yaml.dump({ [sectionName]: newSectionData }, { 
-		indent: 2,
-		lineWidth: -1,
-		noRefs: true
-	})
-	
-	// Replace the section
-	const beforeSection = lines.slice(0, sectionStart).join('\n')
-	const afterSection = lines.slice(sectionEnd).join('\n')
-	
-	return beforeSection + '\n' + sectionYaml + (afterSection ? '\n' + afterSection : '')
-}
+
