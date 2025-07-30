@@ -26,7 +26,7 @@
 		"cli": "dist/index.js"
 	},
 	"dependencies": {
-		"@modelcontextprotocol/sdk": "^1.15.0",
+		"@modelcontextprotocol/sdk": "^1.17.0",
 		"@ngrok/ngrok": "^1.5.1",
 		"@smithery/registry": "^0.3.7",
 		"@smithery/sdk": "^1.5.4",
