@@ -106,7 +106,7 @@ const clientPaths: { [key: string]: ClientInstallTarget } = {
 	},
 	librechat: {
 		type: "yaml",
-		path: path.join(homeDir, "LibreChat", "librechat.yaml"),
+		path: path.join(process.env.LIBRECHAT_CONFIG_DIR || homeDir, "LibreChat", "librechat.yaml"),
 	},
 	"gemini-cli": {
 		type: "file",
