@@ -123,7 +123,11 @@ export async function buildMcpServer(
 	}
 
 	const transportDisplay = transport === "shttp" ? "streamable http" : transport
-	console.log(chalk.yellow(`* Building ${serverType} MCP server with ${transportDisplay} transport...`))
+	console.log(
+		chalk.yellow(
+			`* Building ${serverType} MCP server with ${transportDisplay} transport...`,
+		),
+	)
 
 	// Create a unified plugin that handles both dev and production
 	const createBootstrapPlugin = (): esbuild.Plugin => ({

@@ -106,6 +106,4 @@ describe("stateless server behavior", () => {
 		expect(moduleWithSchema.configSchema.required).toContain("apiKey")
 		expect(moduleWithSchema.configSchema.properties.apiKey.type).toBe("string")
 	})
-
-
 })

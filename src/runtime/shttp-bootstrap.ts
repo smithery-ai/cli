@@ -29,7 +29,9 @@ async function startMcpServer() {
 	try {
 		const port = process.env.PORT || "8181"
 
-		console.log(`${chalk.blue("[smithery]")} Starting MCP server on port ${port}`)
+		console.log(
+			`${chalk.blue("[smithery]")} Starting MCP server on port ${port}`,
+		)
 
 		let server: { app: express.Application }
 
@@ -46,13 +48,18 @@ async function startMcpServer() {
 		}
 
 		if (entry.default && typeof entry.default === "function") {
-			console.log(`${chalk.blue("[smithery]")} Setting up ${entry.stateless ? "stateless" : "stateful"} server`)
+			console.log(
+				`${chalk.blue("[smithery]")} Setting up ${entry.stateless ? "stateless" : "stateful"} server`,
+			)
 
 			if (entry.stateless) {
-				server = createStatelessServer(entry.default as CreateStatelessServerFn, {
-					schema: entry.configSchema,
-					app,
-				})
+				server = createStatelessServer(
+					entry.default as CreateStatelessServerFn,
+					{
+						schema: entry.configSchema,
+						app,
+					},
+				)
 			} else {
 				server = createStatefulServer(entry.default as CreateStatefulServerFn, {
 					schema: entry.configSchema,
@@ -69,9 +76,14 @@ async function startMcpServer() {
 
 		// Start the server
 		server.app.listen(Number.parseInt(port))
-		console.log(`${chalk.green("[smithery]")} MCP server started successfully on port ${port}`)
+		console.log(
+			`${chalk.green("[smithery]")} MCP server started successfully on port ${port}`,
+		)
 	} catch (error) {
-		console.error(`${chalk.red("[smithery]")} Failed to start MCP server:`, error)
+		console.error(
+			`${chalk.red("[smithery]")} Failed to start MCP server:`,
+			error,
+		)
 		process.exit(1)
 	}
 }

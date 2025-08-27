@@ -72,7 +72,9 @@ function parseCliConfig<T = Record<string, unknown>>(
 			})
 
 			// Print schema information
-			console.error(`\n${chalk.red("[smithery]")} Configuration validation failed:`)
+			console.error(
+				`\n${chalk.red("[smithery]")} Configuration validation failed:`,
+			)
 			console.error(errors.join("\n"))
 			console.error("\nExpected schema:")
 			console.error(JSON.stringify(jsonSchema, null, 2))
@@ -91,7 +93,9 @@ function parseCliConfig<T = Record<string, unknown>>(
 
 async function startMcpServer() {
 	try {
-		console.error(`${chalk.blue("[smithery]")} Starting MCP server with stdio transport`)
+		console.error(
+			`${chalk.blue("[smithery]")} Starting MCP server with stdio transport`,
+		)
 
 		// Parse CLI arguments (skip first two: node executable and script path)
 		const args = process.argv.slice(2)
@@ -118,14 +122,19 @@ async function startMcpServer() {
 		const transport = new StdioServerTransport()
 		await mcpServer.connect(transport)
 
-		console.error(`${chalk.green("[smithery]")} MCP server connected to stdio transport`)
+		console.error(
+			`${chalk.green("[smithery]")} MCP server connected to stdio transport`,
+		)
 
 		// If config was provided, show what was parsed
 		if (Object.keys(config).length > 0) {
 			console.error(`${chalk.blue("[smithery]")} Configuration loaded:`, config)
 		}
 	} catch (error) {
-		console.error(`${chalk.red("[smithery]")} Failed to start MCP server:`, error)
+		console.error(
+			`${chalk.red("[smithery]")} Failed to start MCP server:`,
+			error,
+		)
 		process.exit(1)
 	}
 }

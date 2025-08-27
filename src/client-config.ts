@@ -25,7 +25,10 @@ interface ClientCommandTarget {
 	command: string
 }
 
-type ClientInstallTarget = ClientCommandTarget | ClientFileTarget | ClientYamlTarget
+type ClientInstallTarget =
+	| ClientCommandTarget
+	| ClientFileTarget
+	| ClientYamlTarget
 
 // Initialize platform-specific paths
 const homeDir = os.homedir()
@@ -106,7 +109,11 @@ const clientPaths: { [key: string]: ClientInstallTarget } = {
 	},
 	librechat: {
 		type: "yaml",
-		path: path.join(process.env.LIBRECHAT_CONFIG_DIR || homeDir, "LibreChat", "librechat.yaml"),
+		path: path.join(
+			process.env.LIBRECHAT_CONFIG_DIR || homeDir,
+			"LibreChat",
+			"librechat.yaml",
+		),
 	},
 	"gemini-cli": {
 		type: "file",
@@ -151,9 +158,9 @@ export function readConfig(client: string): ClientConfig {
 		verbose(`Reading config file content`)
 		const fileContent = fs.readFileSync(configPath.path, "utf8")
 		let rawConfig: any = {}
-		
+
 		if (configPath.type === "yaml") {
-			rawConfig = YAML.parse(fileContent) as any || {}
+			rawConfig = (YAML.parse(fileContent) as any) || {}
 		} else {
 			rawConfig = JSON.parse(fileContent)
 		}
@@ -267,7 +274,7 @@ function writeConfigYaml(config: ClientConfig, target: ClientYamlTarget): void {
 	}
 
 	let originalDoc: any = null
-	
+
 	try {
 		if (fs.existsSync(target.path)) {
 			verbose(`Reading existing YAML config file for merging`)
@@ -285,20 +292,24 @@ function writeConfigYaml(config: ClientConfig, target: ClientYamlTarget): void {
 	verbose(`Merging YAML configs`)
 
 	if (originalDoc) {
-		let mcpServersNode = originalDoc.get('mcpServers')
+		let mcpServersNode = originalDoc.get("mcpServers")
 		if (!mcpServersNode) {
 			verbose(`mcpServers section not found, creating new section`)
-			originalDoc.set('mcpServers', new YAML.YAMLMap())
-			mcpServersNode = originalDoc.get('mcpServers')
+			originalDoc.set("mcpServers", new YAML.YAMLMap())
+			mcpServersNode = originalDoc.get("mcpServers")
 		}
 
-		if (mcpServersNode && typeof mcpServersNode.set === 'function') {
-			for (const [serverName, serverConfig] of Object.entries(config.mcpServers)) {
+		if (mcpServersNode && typeof mcpServersNode.set === "function") {
+			for (const [serverName, serverConfig] of Object.entries(
+				config.mcpServers,
+			)) {
 				verbose(`Adding/updating server: ${serverName}`)
-				
+
 				const existingServer = mcpServersNode.get(serverName)
-				if (existingServer && typeof existingServer.set === 'function') {
-					verbose(`Updating existing server ${serverName} while preserving comments`)
+				if (existingServer && typeof existingServer.set === "function") {
+					verbose(
+						`Updating existing server ${serverName} while preserving comments`,
+					)
 					for (const [key, value] of Object.entries(serverConfig)) {
 						existingServer.set(key, value)
 					}
@@ -308,13 +319,12 @@ function writeConfigYaml(config: ClientConfig, target: ClientYamlTarget): void {
 				}
 			}
 		} else {
-			const nodeType = mcpServersNode ? typeof mcpServersNode : 'undefined'
+			const nodeType = mcpServersNode ? typeof mcpServersNode : "undefined"
 			throw new Error(
-				`mcpServers section is not a proper YAML Map (found: ${nodeType}). ` +
-				`Please ensure the YAML file has a valid mcpServers section or create a new file.`
+				`mcpServers section is not a proper YAML Map (found: ${nodeType}). Please ensure the YAML file has a valid mcpServers section or create a new file.`,
 			)
 		}
-		
+
 		fs.writeFileSync(target.path, originalDoc.toString())
 		verbose(`YAML config updated`)
 	} else {
@@ -322,13 +332,11 @@ function writeConfigYaml(config: ClientConfig, target: ClientYamlTarget): void {
 		const newConfig = { mcpServers: config.mcpServers }
 		const yamlContent = YAML.stringify(newConfig, {
 			indent: 2,
-			lineWidth: -1
+			lineWidth: -1,
 		})
 		fs.writeFileSync(target.path, yamlContent)
 		verbose(`New YAML config file created`)
 	}
-	
+
 	verbose(`YAML config successfully written`)
 }
-
-

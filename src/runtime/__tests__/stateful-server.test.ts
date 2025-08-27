@@ -98,6 +98,8 @@ describe("stateful server behavior", () => {
 		// Verify schema is properly attached
 		expect(moduleWithSchema.configSchema).toBe(mockSchema)
 		expect(moduleWithSchema.configSchema.required).toContain("sessionTimeout")
-		expect(moduleWithSchema.configSchema.properties.sessionTimeout.type).toBe("number")
+		expect(moduleWithSchema.configSchema.properties.sessionTimeout.type).toBe(
+			"number",
+		)
 	})
 })
