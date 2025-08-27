@@ -1,5 +1,6 @@
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js"
 import type { CreateServerFn as CreateStatefulServerFn } from "@smithery/sdk/server/stateful.js"
+import chalk from "chalk"
 import _ from "lodash"
 import type { z } from "zod"
 import { zodToJsonSchema } from "zod-to-json-schema"
@@ -71,7 +72,9 @@ function parseCliConfig<T = Record<string, unknown>>(
 			})
 
 			// Print schema information
-			console.error("\n[smithery] Configuration validation failed:")
+			console.error(
+				`\n${chalk.red("[smithery]")} Configuration validation failed:`,
+			)
 			console.error(errors.join("\n"))
 			console.error("\nExpected schema:")
 			console.error(JSON.stringify(jsonSchema, null, 2))
@@ -90,7 +93,9 @@ function parseCliConfig<T = Record<string, unknown>>(
 
 async function startMcpServer() {
 	try {
-		console.error(`[smithery] Starting MCP server with stdio transport`)
+		console.error(
+			`${chalk.blue("[smithery]")} Starting MCP server with stdio transport`,
+		)
 
 		// Parse CLI arguments (skip first two: node executable and script path)
 		const args = process.argv.slice(2)
@@ -103,7 +108,7 @@ async function startMcpServer() {
 		let mcpServer: any
 		if (entry.default && typeof entry.default === "function") {
 			const sessionId = `stdio-${Date.now()}-${Math.random().toString(36).substring(2)}`
-			console.error(`[smithery] Creating server.`)
+			console.error(`${chalk.blue("[smithery]")} Creating server.`)
 
 			mcpServer = entry.default({ sessionId, config })
 		} else {
@@ -117,19 +122,24 @@ async function startMcpServer() {
 		const transport = new StdioServerTransport()
 		await mcpServer.connect(transport)
 
-		console.error(`[smithery] MCP server connected to stdio transport`)
+		console.error(
+			`${chalk.green("[smithery]")} MCP server connected to stdio transport`,
+		)
 
 		// If config was provided, show what was parsed
 		if (Object.keys(config).length > 0) {
-			console.error(`[smithery] Configuration loaded:`, config)
+			console.error(`${chalk.blue("[smithery]")} Configuration loaded:`, config)
 		}
 	} catch (error) {
-		console.error(`[smithery] Failed to start MCP server:`, error)
+		console.error(
+			`${chalk.red("[smithery]")} Failed to start MCP server:`,
+			error,
+		)
 		process.exit(1)
 	}
 }
 
 startMcpServer().catch((error) => {
-	console.error(`[smithery] Unhandled error:`, error)
+	console.error(`${chalk.red("[smithery]")} Unhandled error:`, error)
 	process.exit(1)
 })

@@ -92,12 +92,29 @@ async function loadCustomConfig(
 	return {}
 }
 
+/**
+ * Analyze entry file to determine if it's stateless or stateful
+ */
+function detectServerType(entryFile: string): "stateless" | "stateful" {
+	try {
+		const content = readFileSync(entryFile, "utf-8")
+		// Look for stateless export
+		if (content.includes("stateless") && content.includes("true")) {
+			return "stateless"
+		}
+		return "stateful"
+	} catch {
+		return "stateful" // Default fallback
+	}
+}
+
 export async function buildMcpServer(
 	options: BuildOptions = {},
 ): Promise<esbuild.BuildContext | esbuild.BuildResult> {
 	const outFile = options.outFile || ".smithery/index.cjs"
 	const transport = options.transport ?? "shttp"
 	const entryFile = resolveEntryPoint(options.entryFile)
+	const serverType = detectServerType(entryFile)
 
 	// Create output directory if it doesn't exist
 	const outDir = dirname(outFile)
@@ -105,8 +122,11 @@ export async function buildMcpServer(
 		mkdirSync(outDir, { recursive: true })
 	}
 
+	const transportDisplay = transport === "shttp" ? "streamable http" : transport
 	console.log(
-		chalk.blue(`🔨 Building MCP server with ${transport} transport...`),
+		chalk.yellow(
+			`* Building ${serverType} MCP server with ${transportDisplay} transport...`,
+		),
 	)
 
 	// Create a unified plugin that handles both dev and production
@@ -197,11 +217,18 @@ export async function buildMcpServer(
 	}
 
 	// Single build
-	const result = await esbuild.build(buildConfig)
-	if (result.errors.length > 0) {
-		console.error(chalk.red("❌ Build failed:"), result.errors)
+	try {
+		const result = await esbuild.build(buildConfig)
+		if (result.errors.length > 0) {
+			console.log(chalk.red("✗ Build failed"))
+			console.error(result.errors)
+			process.exit(1)
+		}
+		console.log(chalk.green("✓ Build complete"))
+		return result
+	} catch (error) {
+		console.log(chalk.red("✗ Build failed"))
+		console.error(error)
 		process.exit(1)
 	}
-	console.log(chalk.green("✅ Build complete"))
-	return result
 }
