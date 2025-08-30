@@ -10,7 +10,7 @@ export async function openPlayground(
 ): Promise<void> {
 	const playgroundUrl = `https://smithery.ai/playground?mcp=${encodeURIComponent(
 		`${tunnelUrl}/mcp`,
-	)}${initialMessage ? `&prompt=${encodeURIComponent(initialMessage)}` : ""}`
+	)}&dev=true${initialMessage ? `&prompt=${encodeURIComponent(initialMessage)}` : ""}`
 
 	console.log(chalk.cyan(`🔗 Playground: ${playgroundUrl}`))
 
