@@ -133,14 +133,14 @@ program
 	.option("--config <json>", "Provide configuration as JSON")
 	.option("--key <apikey>", "Provide an API key")
 	.option("--profile <name>", "Use a specific profile")
-	.option("--uplink", "Create uplink token and open playground")
+	.option("--playground", "Create playground tunnel and open playground")
 	.option(
 		"--no-open",
-		"Don't automatically open the playground (when using --uplink)",
+		"Don't automatically open the playground (when using --playground)",
 	)
 	.option(
 		"--prompt <prompt>",
-		"Initial message to start the playground with (when using --uplink)",
+		"Initial message to start the playground with (when using --playground)",
 	)
 	.action(async (server, options) => {
 		// Parse config if provided
@@ -171,7 +171,7 @@ program
 			await ensureApiKey(options.key),
 			options.profile,
 			{
-				uplink: options.uplink,
+				playground: options.playground,
 				open: options.open,
 				initialMessage: options.prompt,
 			},

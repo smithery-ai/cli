@@ -18,7 +18,7 @@ import {
 import type { ServerDetailResponse } from "@smithery/registry/models/components"
 import type { ServerConfig } from "../../types/registry.js"
 
-interface LocalUplinkOptions {
+interface LocalPlaygroundOptions {
 	open?: boolean
 	initialMessage?: string
 	port?: number
@@ -26,11 +26,11 @@ interface LocalUplinkOptions {
 
 type Cleanup = () => Promise<void>
 
-export const createLocalUplinkRunner = async (
+export const createLocalPlaygroundRunner = async (
 	serverDetails: ServerDetailResponse,
 	config: ServerConfig,
 	apiKey: string,
-	options: LocalUplinkOptions = {},
+	options: LocalPlaygroundOptions = {},
 ): Promise<Cleanup> => {
 	let isShuttingDown = false
 	let isReady = false
@@ -50,13 +50,13 @@ export const createLocalUplinkRunner = async (
 	app.use(express.json())
 
 	const handleError = (error: Error, context: string) => {
-		logWithTimestamp(`[Local Uplink] ${context}: ${error.message}`)
+		logWithTimestamp(`[Local Playground] ${context}: ${error.message}`)
 		return error
 	}
 
 	const handleExit = async () => {
 		logWithTimestamp(
-			"[Local Uplink] Received exit signal, initiating shutdown...",
+			"[Local Playground] Received exit signal, initiating shutdown...",
 		)
 		await cleanup()
 		if (!isShuttingDown) {
@@ -98,7 +98,7 @@ export const createLocalUplinkRunner = async (
 			}
 
 			logWithTimestamp(
-				`[Local Uplink] Received HTTP request: ${JSON.stringify(message)}`,
+				`[Local Playground] Received HTTP request: ${JSON.stringify(message)}`,
 			)
 
 			// For requests with IDs, we need to wait for responses
@@ -130,7 +130,7 @@ export const createLocalUplinkRunner = async (
 				res.status(200).json({ success: true })
 			}
 		} catch (error) {
-			logWithTimestamp(`[Local Uplink] Error handling HTTP request: ${error}`)
+			logWithTimestamp(`[Local Playground] Error handling HTTP request: ${error}`)
 			res.status(500).json({
 				error: error instanceof Error ? error.message : "Internal server error",
 				code: -32603,
@@ -147,7 +147,7 @@ export const createLocalUplinkRunner = async (
 	})
 
 	const setupStdioTransport = async () => {
-		logWithTimestamp("[Local Uplink] Starting STDIO process setup...")
+		logWithTimestamp("[Local Playground] Starting STDIO process setup...")
 
 		const stdioConnection = serverDetails.connections.find(
 			(conn) => conn.type === "stdio",
@@ -176,14 +176,14 @@ export const createLocalUplinkRunner = async (
 		// Handle Windows platform for npx
 		if (finalCommand === "npx" && process.platform === "win32") {
 			logWithTimestamp(
-				"[Local Uplink] Windows platform detected, using cmd /c for npx",
+				"[Local Playground] Windows platform detected, using cmd /c for npx",
 			)
 			finalArgs = ["/c", "npx", ...finalArgs]
 			finalCommand = "cmd"
 		}
 
 		logWithTimestamp(
-			`[Local Uplink] Executing STDIO process: ${JSON.stringify({
+			`[Local Playground] Executing STDIO process: ${JSON.stringify({
 				command: finalCommand,
 				args: finalArgs,
 			})}`,
@@ -211,7 +211,7 @@ export const createLocalUplinkRunner = async (
 				}
 
 				logWithTimestamp(
-					`[Local Uplink] Received STDIO message: ${JSON.stringify(message)}`,
+					`[Local Playground] Received STDIO message: ${JSON.stringify(message)}`,
 				)
 
 				if ("error" in message && message.error) {
@@ -236,7 +236,7 @@ export const createLocalUplinkRunner = async (
 
 				// For other messages (notifications, etc.), log them
 				logWithTimestamp(
-					`[Local Uplink] STDIO output: ${JSON.stringify(message)}`,
+					`[Local Playground] STDIO output: ${JSON.stringify(message)}`,
 				)
 			} catch (error) {
 				handleError(error as Error, "Error handling STDIO message")
@@ -244,23 +244,23 @@ export const createLocalUplinkRunner = async (
 		}
 
 		transport.onclose = () => {
-			logWithTimestamp("[Local Uplink] STDIO process terminated")
+			logWithTimestamp("[Local Playground] STDIO process terminated")
 			if (isReady && !isShuttingDown) {
-				logWithTimestamp("[Local Uplink] Process terminated unexpectedly")
+				logWithTimestamp("[Local Playground] Process terminated unexpectedly")
 				handleExit().catch((error) => {
-					logWithTimestamp(`[Local Uplink] Error during exit cleanup: ${error}`)
+					logWithTimestamp(`[Local Playground] Error during exit cleanup: ${error}`)
 					process.exit(1)
 				})
 			}
 		}
 
 		transport.onerror = (err) => {
-			logWithTimestamp(`[Local Uplink] STDIO process error: ${err.message}`)
+			logWithTimestamp(`[Local Playground] STDIO process error: ${err.message}`)
 		}
 
 		await transport.start()
 		isReady = true
-		logWithTimestamp("[Local Uplink] STDIO transport established")
+		logWithTimestamp("[Local Playground] STDIO transport established")
 
 		heartbeatManager.start()
 		idleManager.start()
@@ -273,7 +273,7 @@ export const createLocalUplinkRunner = async (
 					reject(err)
 				} else {
 					logWithTimestamp(
-						`[Local Uplink] HTTP server listening on port ${localPort}`,
+						`[Local Playground] HTTP server listening on port ${localPort}`,
 					)
 					resolve()
 				}
@@ -284,12 +284,12 @@ export const createLocalUplinkRunner = async (
 	const cleanup = async () => {
 		if (isShuttingDown) {
 			logWithTimestamp(
-				"[Local Uplink] Cleanup already in progress, skipping...",
+				"[Local Playground] Cleanup already in progress, skipping...",
 			)
 			return
 		}
 
-		logWithTimestamp("[Local Uplink] Starting cleanup process...")
+		logWithTimestamp("[Local Playground] Starting cleanup process...")
 		isShuttingDown = true
 		heartbeatManager.stop()
 		idleManager.stop()
@@ -303,33 +303,33 @@ export const createLocalUplinkRunner = async (
 		// Close tunnel first
 		if (tunnelListener) {
 			try {
-				logWithTimestamp("[Local Uplink] Closing tunnel...")
+				logWithTimestamp("[Local Playground] Closing tunnel...")
 				await tunnelListener.close()
-				logWithTimestamp("[Local Uplink] Tunnel closed successfully")
+				logWithTimestamp("[Local Playground] Tunnel closed successfully")
 			} catch (error) {
-				logWithTimestamp(`[Local Uplink] Error closing tunnel: ${error}`)
+				logWithTimestamp(`[Local Playground] Error closing tunnel: ${error}`)
 			}
 		}
 
 		// Close HTTP server
 		if (httpServer) {
 			try {
-				logWithTimestamp("[Local Uplink] Closing HTTP server...")
+				logWithTimestamp("[Local Playground] Closing HTTP server...")
 				await new Promise<void>((resolve) => {
 					httpServer.close(() => {
-						logWithTimestamp("[Local Uplink] HTTP server closed")
+						logWithTimestamp("[Local Playground] HTTP server closed")
 						resolve()
 					})
 				})
 			} catch (error) {
-				logWithTimestamp(`[Local Uplink] Error closing HTTP server: ${error}`)
+				logWithTimestamp(`[Local Playground] Error closing HTTP server: ${error}`)
 			}
 		}
 
 		// Close STDIO transport
 		if (transport) {
 			try {
-				logWithTimestamp("[Local Uplink] Closing STDIO transport...")
+				logWithTimestamp("[Local Playground] Closing STDIO transport...")
 				await Promise.race([
 					transport.close(),
 					new Promise((_, reject) =>
@@ -339,23 +339,23 @@ export const createLocalUplinkRunner = async (
 						),
 					),
 				])
-				logWithTimestamp("[Local Uplink] STDIO transport closed successfully")
+				logWithTimestamp("[Local Playground] STDIO transport closed successfully")
 			} catch (error) {
 				logWithTimestamp(
-					`[Local Uplink] Error closing STDIO transport: ${error}`,
+					`[Local Playground] Error closing STDIO transport: ${error}`,
 				)
 			}
 			transport = null
 		}
 
-		logWithTimestamp("[Local Uplink] Cleanup completed")
+		logWithTimestamp("[Local Playground] Cleanup completed")
 		console.log(
 			`\n\n${chalk.rgb(
 				234,
 				88,
 				12,
 			)(
-				"Thanks for using Smithery Local Uplink!",
+				"Thanks for using Smithery Local Playground!",
 			)}\n🚀 One-click cloud deploy: ${chalk.blue.underline(
 				"https://smithery.ai/new",
 			)}\n\n`,
@@ -367,7 +367,7 @@ export const createLocalUplinkRunner = async (
 	process.on("SIGTERM", handleExit)
 	process.on("beforeExit", handleExit)
 	process.on("exit", () => {
-		logWithTimestamp("[Local Uplink] Final cleanup on exit")
+		logWithTimestamp("[Local Playground] Final cleanup on exit")
 	})
 
 	try {
@@ -392,7 +392,7 @@ export const createLocalUplinkRunner = async (
 			chalk.green("🚀 Local uplink tunnel established and playground opened"),
 		)
 	} catch (error) {
-		logWithTimestamp(`[Local Uplink] Failed to start: ${error}`)
+		logWithTimestamp(`[Local Playground] Failed to start: ${error}`)
 		await cleanup()
 		throw error
 	}
