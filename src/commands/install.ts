@@ -12,10 +12,20 @@ process.on("warning", (warning) => {
 
 import chalk from "chalk"
 import ora from "ora"
-import { readConfig, writeConfig } from "../client-config"
-import type { ValidClient } from "../constants"
-import { verbose } from "../logger"
-import { resolveServer, ResolveServerSource } from "../registry"
+import {
+	readConfig,
+	writeConfig,
+	runConfigCommand,
+} from "../utils/mcp-config"
+import type { ValidClient } from "../config/clients"
+import { getClientConfiguration } from "../config/clients"
+import { verbose } from "../lib/logger"
+import {
+	resolveServer,
+	ResolveServerSource,
+	saveUserConfig,
+	validateUserConfig,
+} from "../lib/registry"
 import type { ServerConfig } from "../types/registry"
 import { checkAnalyticsConsent } from "../utils/analytics"
 import { promptForRestart } from "../utils/client"
@@ -24,7 +34,7 @@ import {
 	collectConfigValues,
 	formatServerConfig,
 	getServerName,
-} from "../utils/config"
+} from "../utils/session-config"
 import {
 	checkAndNotifyRemoteServer,
 	ensureApiKey,
@@ -37,7 +47,7 @@ import {
  * Installs and configures a Smithery server for a specified client.
  * Prompts for config values if config not given OR saved config not valid
  *
- * @param {string} qualifiedName - The fully qualified name of the server package to install
+ * @param {string} qualifiedName - The qualified name of the server to install
  * @param {ValidClient} client - The client to install the server for
  * @param {Record<string, unknown>} [configValues] - Optional configuration values for the server
  * @param {string} [apiKey] - Optional API key (during installation, local servers don't need key; remote servers prompt for key)
@@ -57,6 +67,7 @@ export async function installServer(
 	/* start resolving in background */
 	verbose(`Resolving package: ${qualifiedName}`)
 
+	/* check analytics consent */
 	try {
 		verbose("Checking analytics consent...")
 		await checkAnalyticsConsent()
@@ -80,6 +91,7 @@ export async function installServer(
 		verbose(`Package resolved successfully: ${server.qualifiedName}`)
 		spinner.succeed(`Successfully resolved ${qualifiedName}`)
 
+		/* choose connection type */
 		verbose("Choosing connection type...")
 		const connection = chooseConnection(server)
 		verbose(`Selected connection: ${JSON.stringify(connection, null, 2)}`)
@@ -96,36 +108,128 @@ export async function installServer(
 		}
 		checkAndNotifyRemoteServer(server)
 
-		const collectedConfigValues = apiKey // Check if API key was provided as argument
-			? configValues || {} // If api key was provided as argument, don't prompt for additional config values
-			: await collectConfigValues(connection, configValues || {}) // if api key wasn't provided as argument, prompt for additional values
+		let collectedConfigValues: ServerConfig = configValues || {}
+
+		// Check existing config first
+		if (finalApiKey && Object.keys(configValues).length === 0) {
+			try {
+				verbose("Checking existing configuration...")
+				const configSpinner = ora("Validating configuration...").start()
+				const validation = await validateUserConfig(qualifiedName, finalApiKey)
+				configSpinner.stop()
+
+				if (validation.isComplete) {
+					// Check if there are any required fields at all
+					const hasRequiredFields =
+						Object.keys(validation.fieldSchemas).length > 0
+
+					if (hasRequiredFields) {
+						console.log(
+							`${chalk.cyan("*")} Using existing configuration from default profile`,
+						)
+						console.log(
+							chalk.dim(
+								`  Update configuration at: https://smithery.ai/account/profiles?server=${qualifiedName}`,
+							),
+						)
+					} else {
+						console.log(`${chalk.cyan("*")} No configuration required`)
+					}
+					collectedConfigValues = {} // Empty - will use saved config from smithery
+				} else {
+					console.log(
+						chalk.yellow("!"),
+						`Missing config: ${validation.missingFields.join(", ")}`,
+					)
+					// Prompt for all fields @TODO: is there a better flow?
+					collectedConfigValues = await collectConfigValues(
+						connection,
+						configValues || {},
+					)
+				}
+			} catch (error) {
+				verbose(
+					`Config validation failed: ${error instanceof Error ? error.message : String(error)}`,
+				)
+				// Fall back to normal prompting
+				collectedConfigValues = await collectConfigValues(
+					connection,
+					configValues || {},
+				)
+			}
+		} else if (Object.keys(configValues).length === 0) {
+			// No API key or no existing config, prompt normally
+			collectedConfigValues = await collectConfigValues(
+				connection,
+				configValues || {},
+			)
+		}
 
 		verbose(`Config values: ${JSON.stringify(collectedConfigValues, null, 2)}`)
+
+		/* Save user config to smithery if API key is available */
+		let configSavedToSmithery = false
+		if (finalApiKey && Object.keys(collectedConfigValues).length > 0) {
+			verbose("Saving configuration to smithery...")
+			try {
+				await saveUserConfig(qualifiedName, collectedConfigValues, finalApiKey)
+				verbose("Configuration successfully saved to smithery")
+				configSavedToSmithery = true
+			} catch (error) {
+				verbose(
+					`Failed to save config to smithery: ${error instanceof Error ? error.message : String(error)}`,
+				)
+				// Don't fail the installation if config save fails
+				console.warn(
+					chalk.yellow(
+						"Warning: Could not save configuration. Config will be saved locally.",
+					),
+				)
+			}
+		}
 
 		verbose("Formatting server configuration...")
 		const serverConfig = formatServerConfig(
 			qualifiedName,
-			collectedConfigValues,
+			configSavedToSmithery ? {} : collectedConfigValues, // Use empty config if saved to smithery
 			finalApiKey,
 			profile,
+			client, // Pass client name to determine transport type
+			server, // Pass server details to check HTTP support
 		)
 		verbose(`Formatted server config: ${JSON.stringify(serverConfig, null, 2)}`)
 
-		/* read config from client */
-		verbose(`Reading configuration for client: ${client}`)
-		const config = readConfig(client)
 		verbose("Normalizing server ID...")
 		const serverName = getServerName(qualifiedName)
 		verbose(`Normalized server ID: ${serverName}`)
 
-		verbose("Updating client configuration...")
-		config.mcpServers[serverName] = serverConfig
-		verbose("Writing updated configuration...")
-		writeConfig(config, client)
-		verbose("Configuration successfully written")
+		// Check if this is a command-based client
+		const clientConfig = getClientConfiguration(client)
+
+		if (clientConfig.installType === "command") {
+			// For command-based clients, execute command directly for this server only
+			verbose("Command-based client detected, executing command directly...")
+			const targetServerConfig = {
+				mcpServers: {
+					[serverName]: serverConfig,
+				},
+			}
+			runConfigCommand(targetServerConfig, clientConfig)
+			verbose("Command executed successfully")
+		} else {
+			// For file-based clients, read existing config and merge
+			verbose(`Reading configuration for client: ${client}`)
+			const config = readConfig(client)
+
+			verbose("Updating client configuration...")
+			config.mcpServers[serverName] = serverConfig
+			verbose("Writing updated configuration...")
+			writeConfig(config, client)
+			verbose("Configuration successfully written")
+		}
 
 		console.log(
-			chalk.green(`${qualifiedName} successfully installed for ${client}`),
+			chalk.green(`✓ ${qualifiedName} successfully installed for ${client}`),
 		)
 		verbose("Prompting for client restart...")
 		await promptForRestart(client)

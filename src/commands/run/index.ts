@@ -1,11 +1,11 @@
 #!/usr/bin/env node
-import { resolveServer, ResolveServerSource } from "../../registry.js"
+import { resolveServer, ResolveServerSource } from "../../lib/registry.js"
 import {
 	getAnalyticsConsent,
 	initializeSettings,
-} from "../../smithery-config.js"
+} from "../../utils/smithery-config.js"
 import type { ServerConfig } from "../../types/registry.js"
-import { chooseConnection } from "../../utils/config.js"
+import { chooseConnection } from "../../utils/session-config.js"
 import { createStdioRunner as startSTDIOrunner } from "./stdio-runner.js"
 import { logWithTimestamp } from "./runner-utils.js"
 import { createStreamableHTTPRunner } from "./streamable-http-runner.js"

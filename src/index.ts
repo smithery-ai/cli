@@ -9,12 +9,13 @@ import { list } from "./commands/list"
 import { playground } from "./commands/playground"
 import { run } from "./commands/run/index"
 import { uninstallServer } from "./commands/uninstall"
-import { type ValidClient, VALID_CLIENTS } from "./constants"
-import { setVerbose, setDebug } from "./logger"
+import { type ValidClient, VALID_CLIENTS } from "./config/clients"
+import { setVerbose, setDebug } from "./lib/logger"
 import type { ServerConfig } from "./types/registry"
+import { searchServers, resolveServer, ResolveServerSource } from "./lib/registry"
 import { ensureApiKey, promptForApiKey } from "./utils/runtime"
 import { build } from "./commands/build"
-import { setApiKey } from "./smithery-config"
+import { setApiKey } from "./utils/smithery-config"
 
 const program = new Command()
 
@@ -37,9 +38,9 @@ program
 
 // Install command
 program
-	.command("install <server>")
-	.description("Install a package")
-	.requiredOption(
+	.command("install [server]")
+	.description("install a server")
+	.option(
 		"--client <name>",
 		`Specify the AI client (${VALID_CLIENTS.join(", ")})`,
 	)
@@ -50,13 +51,123 @@ program
 	.option("--key <apikey>", "Provide an API key")
 	.option("--profile <name>", "Use a specific profile")
 	.action(async (server, options) => {
+		let selectedServer = server
+		let selectedClient = options.client
+
+		// Step 1: Select client if not provided
+		if (!selectedClient) {
+			console.log(chalk.cyan("*"), "Installing MCP server")
+			console.log()
+
+			const inquirer = (await import("inquirer")).default
+			const autocompletePrompt = (await import("inquirer-autocomplete-prompt"))
+				.default
+			inquirer.registerPrompt("autocomplete", autocompletePrompt)
+
+			const { client } = await inquirer.prompt([
+				{
+					type: "autocomplete",
+					name: "client",
+					message: "Select client:",
+					source: (_: unknown, input: string) => {
+						const filtered = VALID_CLIENTS.filter((client) =>
+							client.toLowerCase().includes((input || "").toLowerCase()),
+						)
+						return Promise.resolve(filtered)
+					},
+				},
+			])
+			selectedClient = client
+			console.log()
+		}
+
+		// Step 2: Search and select server if not provided
+		if (!selectedServer) {
+			console.log(
+				chalk.cyan("*"),
+				"Installing MCP server for",
+				chalk.cyan(selectedClient),
+			)
+			console.log()
+
+			const inquirer = (await import("inquirer")).default
+			const { searchTerm } = await inquirer.prompt([
+				{
+					type: "input",
+					name: "searchTerm",
+					message: "Search for servers:",
+					validate: (input: string) =>
+						input.trim().length > 0 || "Please enter a search term",
+				},
+			])
+
+			try {
+				const apiKey = await ensureApiKey(options.key)
+				const ora = (await import("ora")).default
+				const spinner = ora(`Searching for "${searchTerm}"...`).start()
+
+				const servers = await searchServers(searchTerm, apiKey)
+
+				if (servers.length === 0) {
+					spinner.fail(`No servers found for "${searchTerm}"`)
+					process.exit(0)
+				}
+
+				spinner.succeed(
+					`Found ${servers.length} server${servers.length === 1 ? "" : "s"}`,
+				)
+				console.log()
+
+				const autocompletePrompt = (
+					await import("inquirer-autocomplete-prompt")
+				).default
+				inquirer.registerPrompt("autocomplete", autocompletePrompt)
+
+				const { serverChoice } = await inquirer.prompt([
+					{
+						type: "autocomplete",
+						name: "serverChoice",
+						message: "Select server to install:",
+						source: (_: unknown, input: string) => {
+							const filtered = servers
+								.filter(
+									(s) =>
+										s.qualifiedName
+											.toLowerCase()
+											.includes((input || "").toLowerCase()) ||
+										s.displayName
+											?.toLowerCase()
+											.includes((input || "").toLowerCase()) ||
+										s.description
+											?.toLowerCase()
+											.includes((input || "").toLowerCase()),
+								)
+								.map((s) => ({
+									name: `${s.qualifiedName} (${s.useCount.toLocaleString()} tool calls) - ${s.displayName || s.description?.substring(0, 50) || ""}`,
+									value: s.qualifiedName,
+								}))
+							return Promise.resolve(filtered)
+						},
+					},
+				])
+				selectedServer = serverChoice
+				console.log()
+			} catch (error) {
+				const ora = (await import("ora")).default
+				const spinner = ora().start()
+				spinner.fail("Failed to search servers")
+				console.error(
+					chalk.red(error instanceof Error ? error.message : String(error)),
+				)
+				process.exit(1)
+			}
+		}
+
 		// Validate client
-		if (!VALID_CLIENTS.includes(options.client as ValidClient)) {
+		if (!VALID_CLIENTS.includes(selectedClient as ValidClient)) {
 			console.error(
 				chalk.yellow(
-					`Invalid client "${
-						options.client
-					}". Valid options are: ${VALID_CLIENTS.join(", ")}`,
+					`Invalid client "${selectedClient}". Valid options are: ${VALID_CLIENTS.join(", ")}`,
 				),
 			)
 			process.exit(1)
@@ -85,8 +196,8 @@ program
 		}
 
 		await installServer(
-			server,
-			options.client as ValidClient,
+			selectedServer,
+			selectedClient as ValidClient,
 			config,
 			options.key,
 			options.profile,
@@ -95,26 +206,92 @@ program
 
 // Uninstall command
 program
-	.command("uninstall <server>")
-	.description("Uninstall a package")
-	.requiredOption(
+	.command("uninstall [server]")
+	.description("uninstall a server")
+	.option(
 		"--client <name>",
 		`Specify the AI client (${VALID_CLIENTS.join(", ")})`,
 	)
 	.action(async (server, options) => {
+		const { readConfig } = await import("./utils/mcp-config")
+		let selectedClient = options.client
+		let selectedServer = server
+
+		// Step 1: Select client if not provided
+		if (!selectedClient) {
+			console.log(chalk.cyan("*"), "Uninstalling MCP server")
+
+			const inquirer = (await import("inquirer")).default
+			const autocompletePrompt = (await import("inquirer-autocomplete-prompt"))
+				.default
+			inquirer.registerPrompt("autocomplete", autocompletePrompt)
+
+			const { client } = await inquirer.prompt([
+				{
+					type: "autocomplete",
+					name: "client",
+					message: "Select client:",
+					source: (_: unknown, input: string) => {
+						const filtered = VALID_CLIENTS.filter((client) =>
+							client.toLowerCase().includes((input || "").toLowerCase()),
+						)
+						return Promise.resolve(filtered)
+					},
+				},
+			])
+			selectedClient = client
+			console.log()
+		}
+
 		// Validate client
-		if (!VALID_CLIENTS.includes(options.client as ValidClient)) {
+		if (!VALID_CLIENTS.includes(selectedClient as ValidClient)) {
 			console.error(
 				chalk.yellow(
-					`Invalid client "${
-						options.client
-					}". Valid options are: ${VALID_CLIENTS.join(", ")}`,
+					`Invalid client "${selectedClient}". Valid options are: ${VALID_CLIENTS.join(", ")}`,
 				),
 			)
 			process.exit(1)
 		}
 
-		await uninstallServer(server, options.client as ValidClient)
+		// Step 2: Select server if not provided
+		if (!selectedServer) {
+			console.log(
+				chalk.cyan("*"),
+				"Uninstalling server from",
+				chalk.cyan(selectedClient),
+			)
+			console.log()
+
+			const config = readConfig(selectedClient)
+			const installedServers = Object.keys(config.mcpServers)
+
+			if (installedServers.length === 0) {
+				console.log(chalk.yellow(`No servers installed for ${selectedClient}`))
+				process.exit(0)
+			}
+
+			const inquirer = (await import("inquirer")).default
+			const autocompletePrompt = (await import("inquirer-autocomplete-prompt"))
+				.default
+			inquirer.registerPrompt("autocomplete", autocompletePrompt)
+
+			const { serverName } = await inquirer.prompt([
+				{
+					type: "autocomplete",
+					name: "serverName",
+					message: `Select server to uninstall from ${selectedClient}:`,
+					source: (_: unknown, input: string) => {
+						const filtered = installedServers.filter((server) =>
+							server.toLowerCase().includes((input || "").toLowerCase()),
+						)
+						return Promise.resolve(filtered)
+					},
+				},
+			])
+			selectedServer = serverName
+		}
+
+		await uninstallServer(selectedServer, selectedClient as ValidClient)
 	})
 
 // Inspect command
@@ -129,7 +306,7 @@ program
 // Run command
 program
 	.command("run <server>")
-	.description("Run a server")
+	.description("run a server")
 	.option("--config <json>", "Provide configuration as JSON")
 	.option("--key <apikey>", "Provide an API key")
 	.option("--profile <name>", "Use a specific profile")
@@ -204,7 +381,7 @@ program
 // Build command
 program
 	.command("build [entryFile]")
-	.description("Build MCP server for production")
+	.description("build MCP server for production")
 	.option(
 		"-o, --out <outfile>",
 		"Output file path (default: .smithery/index.cjs)",
@@ -240,7 +417,7 @@ program
 // Playground command
 program
 	.command("playground")
-	.description("Open MCP playground in browser")
+	.description("open MCP playground in browser")
 	.option("--port <port>", "Port to expose (default: 3000)")
 	.option("--key <apikey>", "Provide an API key")
 	.allowUnknownOption() // Allow pass-through for command after --
@@ -263,44 +440,216 @@ program
 
 // List command
 program
-	.command("list <type>")
-	.description("List available resources")
-	.option(
-		"--client <name>",
-		`Specify the AI client (${VALID_CLIENTS.join(", ")})`,
-	)
-	.action(async (type, options) => {
-		if (type === "clients") {
-			await list("clients", undefined as any)
-		} else if (type === "servers") {
-			// For listing servers, we need a client
-			if (!options.client) {
-				console.error(
-					chalk.yellow(
-						`Please specify a client using --client. Valid options are: ${VALID_CLIENTS.join(
-							", ",
-						)}`,
-					),
-				)
-				process.exit(1)
-			}
+	.command("list")
+	.description("list installed servers")
+	.option("--client <name>", `Specify the client (${VALID_CLIENTS.join(", ")})`)
+	.action(async (options) => {
+		let selectedClient = options.client
 
-			if (!VALID_CLIENTS.includes(options.client as ValidClient)) {
-				console.error(
-					chalk.yellow(
-						`Invalid client "${
-							options.client
-						}". Valid options are: ${VALID_CLIENTS.join(", ")}`,
-					),
-				)
-				process.exit(1)
-			}
+		// If no client provided, show interactive selection
+		if (!selectedClient) {
+			console.log(chalk.cyan("*"), "List installed servers")
+			console.log()
 
-			await list("servers", options.client as ValidClient)
-		} else {
+			const inquirer = (await import("inquirer")).default
+			const autocompletePrompt = (await import("inquirer-autocomplete-prompt"))
+				.default
+			inquirer.registerPrompt("autocomplete", autocompletePrompt)
+
+			const { client } = await inquirer.prompt([
+				{
+					type: "autocomplete",
+					name: "client",
+					message: "Select client:",
+					source: (_: unknown, input: string) => {
+						const filtered = VALID_CLIENTS.filter((client) =>
+							client.toLowerCase().includes((input || "").toLowerCase()),
+						)
+						return Promise.resolve(filtered)
+					},
+				},
+			])
+			selectedClient = client
+			console.log()
+		}
+
+		// Validate client
+		if (!VALID_CLIENTS.includes(selectedClient as ValidClient)) {
 			console.error(
-				chalk.red(`Invalid list type: ${type}. Use 'clients' or 'servers'`),
+				chalk.yellow(
+					`Invalid client "${selectedClient}". Valid options are: ${VALID_CLIENTS.join(", ")}`,
+				),
 			)
+			process.exit(1)
+		}
+
+		await list("servers", selectedClient as ValidClient)
+	})
+
+// Search command
+program
+	.command("search [term]")
+	.description("Search for servers in the Smithery registry")
+	.action(async (term) => {
+		let searchTerm = term
+		
+		// If no search term provided, prompt for it
+		if (!searchTerm) {
+			const inquirer = (await import("inquirer")).default
+			
+			const result = await inquirer.prompt([
+				{
+					type: "input",
+					name: "searchTerm",
+					message: "Search for servers:",
+					validate: (input: string) => input.trim().length > 0 || "Please enter a search term",
+				},
+			])
+			searchTerm = result.searchTerm
+			console.log()
+		}
+		try {
+			const apiKey = await ensureApiKey()
+			const ora = (await import("ora")).default
+			const spinner = ora(`Searching for "${searchTerm}"...`).start()
+
+			const servers = await searchServers(searchTerm, apiKey)
+
+			if (servers.length === 0) {
+				spinner.fail(`No servers found for "${searchTerm}"`)
+				return
+			}
+
+			spinner.succeed(`Showing top ${servers.length} server${servers.length === 1 ? "" : "s"}`)
+			console.log()
+
+			// Show interactive selection
+			const inquirer = (await import("inquirer")).default
+			const autocompletePrompt = (await import("inquirer-autocomplete-prompt")).default
+			inquirer.registerPrompt("autocomplete", autocompletePrompt)
+
+			// Interactive search with back navigation
+			let showingDetails = false
+			
+			while (!showingDetails) {
+				const { selectedServer } = await inquirer.prompt([
+					{
+						type: "autocomplete",
+						name: "selectedServer",
+						message: "Select server for details (or search again):",
+						source: (_: unknown, input: string) => {
+							const options = [
+								{ name: chalk.dim("← Search again"), value: "__SEARCH_AGAIN__" },
+								{ name: chalk.dim("Exit"), value: "__EXIT__" }
+							]
+							
+							const filtered = servers
+								.filter((s) =>
+									s.qualifiedName.toLowerCase().includes((input || "").toLowerCase()) ||
+									s.displayName?.toLowerCase().includes((input || "").toLowerCase())
+								)
+								.map((s) => {
+									const displayName = s.displayName || s.qualifiedName
+									const usageInfo = s.useCount > 0 ? chalk.dim(` (${s.useCount.toLocaleString()} calls/month)`) : ""
+									return {
+										name: `${displayName}${usageInfo}`,
+										value: s.qualifiedName,
+									}
+								})
+							
+							return Promise.resolve([...options, ...filtered])
+						},
+					},
+				])
+
+				if (selectedServer === "__EXIT__") {
+					return
+				} else if (selectedServer === "__SEARCH_AGAIN__") {
+					// Restart search
+					const { newSearchTerm } = await inquirer.prompt([
+						{
+							type: "input",
+							name: "newSearchTerm",
+							message: "Search for servers:",
+							validate: (input: string) => input.trim().length > 0 || "Please enter a search term",
+						},
+					])
+					
+					const spinner = ora(`Searching for "${newSearchTerm}"...`).start()
+					const newServers = await searchServers(newSearchTerm, apiKey)
+					
+					if (newServers.length === 0) {
+						spinner.fail(`No servers found for "${newSearchTerm}"`)
+						return
+					}
+					
+					spinner.succeed(`Showing top ${newServers.length} server${newServers.length === 1 ? "" : "s"}`)
+					servers.splice(0, servers.length, ...newServers) // Replace servers array
+					console.log()
+					continue
+				}
+
+				// Show detailed view of selected server
+				console.log()
+				const selectedServerData = servers.find(s => s.qualifiedName === selectedServer)
+				if (selectedServerData) {
+					const displayName = selectedServerData.displayName || selectedServerData.qualifiedName
+					console.log(`${chalk.bold.cyan(displayName)}`)
+					console.log(`${chalk.dim("Qualified name:")} ${selectedServerData.qualifiedName}`)
+					if (selectedServerData.description) {
+						console.log(`${chalk.dim("Description:")} ${selectedServerData.description}`)
+					}
+					console.log(`${chalk.dim("Usage:")} ${selectedServerData.useCount.toLocaleString()} calls/month`)
+					console.log()
+					console.log(chalk.dim(`Use 'smithery install ${selectedServerData.qualifiedName}' to install`))
+					
+					// Ask what to do next
+					const { action } = await inquirer.prompt([
+						{
+							type: "list",
+							name: "action",
+							message: "What would you like to do?",
+							choices: [
+								{ name: "← Back to server list", value: "back" },
+								{ name: "← Search again", value: "search" },
+								{ name: "Exit", value: "exit" },
+							],
+						},
+					])
+					
+					if (action === "back") {
+						console.log()
+						continue // Go back to server selection
+					} else if (action === "search") {
+						// Restart search
+						const { newSearchTerm } = await inquirer.prompt([
+							{
+								type: "input",
+								name: "newSearchTerm",
+								message: "Search for servers:",
+								validate: (input: string) => input.trim().length > 0 || "Please enter a search term",
+							},
+						])
+						
+						const spinner = ora(`Searching for "${newSearchTerm}"...`).start()
+						const newServers = await searchServers(newSearchTerm, apiKey)
+						
+						if (newServers.length === 0) {
+							spinner.fail(`No servers found for "${newSearchTerm}"`)
+							return
+						}
+						
+						spinner.succeed(`Showing top ${newServers.length} server${newServers.length === 1 ? "" : "s"}`)
+						servers.splice(0, servers.length, ...newServers) // Replace servers array
+						console.log()
+						continue
+					} else {
+						showingDetails = true // Exit
+					}
+				}
+			}
+		} catch (error) {
+			console.error(chalk.red("Error searching servers:"), error instanceof Error ? error.message : String(error))
 			process.exit(1)
 		}
 	})

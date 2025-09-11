@@ -2,7 +2,7 @@ import chalk from "chalk"
 import type { ChildProcess } from "node:child_process"
 import { startSubprocess } from "../lib/subprocess"
 import { setupTunnelAndPlayground } from "../lib/dev-lifecycle"
-import { debug } from "../logger"
+import { debug } from "../lib/logger"
 
 export async function playground(options: {
 	port?: string

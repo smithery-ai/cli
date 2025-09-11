@@ -37,6 +37,9 @@ jobs:
           echo "REGISTRY_ENDPOINT=${{ secrets.REGISTRY_ENDPOINT }}" >> .env
           echo "ANALYTICS_ENDPOINT=${{ secrets.ANALYTICS_ENDPOINT }}" >> .env
 
+      - name: Run tests
+        run: npm test
+
       - name: Build project
         run: npm run build
 

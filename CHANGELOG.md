@@ -4,6 +4,18 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [1.2.26] - 2025-01-11
+
+### Added
+- Interactive CLI commands: `smithery install`, `smithery uninstall`, and `smithery list` now support interactive client selection when no `--client` flag is provided
+- New `search [term]` command for interactive server discovery in the Smithery registry
+- Support for Codex client with TOML configuration format
+- Comprehensive installation test suite covering Target × Transport matrix (json, yaml, toml, command × stdio, http)
+
+### Changed
+- Improved client configuration pattern with better structure and validation
+- Updated command documentation and help text to reflect interactive capabilities
+
 ## [1.2.12] - 2025-01-05
 
 ### Changed

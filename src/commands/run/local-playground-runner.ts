@@ -7,7 +7,7 @@ import type {
 	JSONRPCError,
 } from "@modelcontextprotocol/sdk/types.js"
 import { setupTunnelAndPlayground } from "../../lib/dev-lifecycle.js"
-import { fetchConnection } from "../../registry.js"
+import { fetchConnection } from "../../lib/registry.js"
 import { getRuntimeEnvironment } from "../../utils/runtime.js"
 import {
 	logWithTimestamp,
@@ -39,7 +39,10 @@ export const createLocalPlaygroundRunner = async (
 	let tunnelListener: { close: () => Promise<void> } | undefined
 	const pendingRequests = new Map<
 		string,
-		{ resolve: Function; reject: Function }
+		{
+			resolve: (value: JSONRPCMessage) => void
+			reject: (reason: Error) => void
+		}
 	>()
 
 	const localPort = options.port || 6969

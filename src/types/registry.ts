@@ -34,17 +34,29 @@ export const StdioConnectionSchema = z.object({
 		.describe("The environment to use when spawning the process."),
 })
 
-// streamable http connection
-export const StreamableHTTPConnectionSchema = z.object({
+// streamable http deployment connection (for CLI internal use)
+export const StreamableHTTPDeploymentConnectionSchema = z.object({
 	deploymentUrl: z.string().describe("The URL of the Streamable HTTP server."),
 })
 
+// streamable http connection (for client config files)
+export const StreamableHTTPConnectionSchema = z.object({
+	type: z.literal("http").describe("Connection type for HTTP servers."),
+	url: z.string().describe("The direct URL of the HTTP MCP server."),
+	headers: z
+		.record(z.string(), z.string())
+		.optional()
+		.describe("Optional HTTP headers to include."),
+})
+
 export type StdioConnection = z.infer<typeof StdioConnectionSchema>
+export type StreamableHTTPDeploymentConnection = z.infer<
+	typeof StreamableHTTPDeploymentConnectionSchema
+>
 export type StreamableHTTPConnection = z.infer<
 	typeof StreamableHTTPConnectionSchema
 >
 
-// Update ConfiguredServer to handle all types
 export type ConfiguredServer = StdioConnection | StreamableHTTPConnection
 
 // Server Configuration key value pairs
@@ -52,7 +64,7 @@ export interface ServerConfig {
 	[key: string]: unknown
 }
 
-// Connection type schema
+// Connection type schema (for registry API)
 export const ConnectionTypeSchema = z.union([
 	z.object({
 		type: z.literal("stdio"),
@@ -60,7 +72,7 @@ export const ConnectionTypeSchema = z.union([
 	}),
 	z.object({
 		type: z.literal("http"),
-		...StreamableHTTPConnectionSchema.shape,
+		...StreamableHTTPDeploymentConnectionSchema.shape,
 	}),
 ])
 

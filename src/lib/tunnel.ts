@@ -1,5 +1,5 @@
 import chalk from "chalk"
-import { debug } from "../logger"
+import { debug } from "./logger"
 
 export async function getTemporaryTunnelToken(apiKey: string): Promise<{
 	authtoken: string

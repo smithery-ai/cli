@@ -17,10 +17,10 @@ import { isEmpty } from "lodash"
 import inquirer from "inquirer"
 import chalk from "chalk"
 import ora from "ora"
-import { resolveServer, ResolveServerSource } from "../registry"
-import { chooseConnection, collectConfigValues } from "../utils/config"
+import { resolveServer, ResolveServerSource } from "../lib/registry"
+import { chooseConnection, collectConfigValues } from "../utils/session-config"
 import { getRuntimeEnvironment } from "../utils/runtime.js"
-import { verbose, debug } from "../logger"
+import { verbose, debug } from "../lib/logger"
 
 async function createClient() {
 	const client = new Client(

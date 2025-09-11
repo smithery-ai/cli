@@ -1,5 +1,9 @@
-import { readConfig, getConfigPath } from "../client-config"
-import { VALID_CLIENTS, type ValidClient } from "../constants"
+import { readConfig } from "../utils/mcp-config"
+import {
+	VALID_CLIENTS,
+	type ValidClient,
+	getClientConfiguration,
+} from "../config/clients"
 import chalk from "chalk"
 
 export async function list(
@@ -13,8 +17,8 @@ export async function list(
 			break
 		case "servers": {
 			/* check if client is command-type */
-			const configTarget = getConfigPath(client)
-			if (configTarget.type === "command") {
+			const configTarget = getClientConfiguration(client)
+			if (configTarget.installType === "command") {
 				console.log(
 					chalk.yellow(
 						`Listing servers is currently not supported for ${client}`,
