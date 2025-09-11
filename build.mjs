@@ -6,9 +6,16 @@ import { existsSync, mkdirSync } from "node:fs"
 config()
 const define = {}
 
+const isDotSafeIdentifier = (str) => {
+	return /^[a-zA-Z_$][a-zA-Z0-9_$]*$/.test(str)
+}
+
 for (const k in process.env) {
 	/* Skip environment variables that should be evaluated at runtime */
 	if (["HOME", "USER", "XDG_CONFIG_HOME"].includes(k)) continue
+
+	// Skip variables whose names are not dot-safe identifiers (e.g., those containing hyphens, parentheses, etc.)
+	if (!isDotSafeIdentifier(k)) continue
 
 	define[`process.env.${k}`] = JSON.stringify(process.env[k])
 }
