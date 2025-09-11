@@ -248,6 +248,23 @@ function writeConfigYaml(
 		}
 
 		if (mcpServersNode && typeof mcpServersNode.set === "function") {
+			const existingServerNames = new Set<string>()
+			if (mcpServersNode.items) {
+				for (const item of mcpServersNode.items) {
+					if (item.key && item.key.value) {
+						existingServerNames.add(item.key.value)
+					}
+				}
+			}
+			const newServerNames = new Set<string>(Object.keys(config.mcpServers))
+
+			for (const serverName of existingServerNames) {
+				if (!newServerNames.has(serverName)) {
+					verbose(`Removing server: ${serverName}`)
+					mcpServersNode.delete(serverName)
+				}
+			}
+
 			for (const [serverName, serverConfig] of Object.entries(
 				config.mcpServers,
 			)) {
