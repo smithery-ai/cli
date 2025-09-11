@@ -14,7 +14,7 @@ import type { ValidClient } from "../config/clients"
 import { promptForRestart } from "../utils/client"
 // import { getConfig } from "../utils/client-config"
 import { getClientConfiguration } from "../config/clients.js"
-import { readConfig, writeConfig } from "../utils/client-config"
+import { readConfig, writeConfig } from "../utils/mcp-config"
 import chalk from "chalk"
 
 /* uninstalls server for given client */

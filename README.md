@@ -5,7 +5,21 @@ The Smithery registry installer and manager for Model Context Protocol (MCP) ser
 ## Requirements
 - NodeJS version 18 or above
 
+## Installation
+
+Install globally for easier usage:
+
+```bash
+npm install -g @smithery/cli
+```
+
 ## Usage
+
+```bash
+smithery <command>
+```
+
+Or run directly without installation:
 
 ```bash
 npx @smithery/cli <command>
@@ -13,16 +27,17 @@ npx @smithery/cli <command>
 
 ### Available Commands
 
-- `install <package>` - Install a package
-  - `--client <name>` - Specify the AI client
+- `install <server>` - Install a server (interactive client selection)
+  - `--client <name>` - Specify the AI client (skips selection)
   - `--config <json>` - Provide configuration data as JSON (skips prompts)
-- `uninstall <package>` - Uninstall a package
-  - `--client <name>` - Specify the AI client
+- `uninstall <server>` - Uninstall a server (interactive client selection)
+  - `--client <name>` - Specify the AI client (skips selection)
 - `inspect <server-id>` - Inspect a server interactively
 - `run <server-id>` - Run a server
   - `--config <json>` - Provide configuration for the server
-- `list clients` - List available clients
-- `list servers --client <name>` - List installed servers for specific AI client
+- `list` - List installed servers (interactive client selection)
+  - `--client <name>` - Specify the AI client (skips selection)
+- `search [term]` - Search for servers in the Smithery registry (interactive)
 - `login` - Login with an API key (interactive)
 - `dev [entryFile]` - Start development server with hot-reload and tunnel
   - `--port <port>` - Port to run the server on (default: 8181)
@@ -44,47 +59,59 @@ npx @smithery/cli <command>
 ### Examples
 
 ```bash
-# Install a server (requires --client flag)
-npx @smithery/cli install mcp-obsidian --client claude
+# Install a server (interactive client selection)
+smithery install mcp-obsidian
+
+# Install a server for specific client (skips selection)
+smithery install mcp-obsidian --client claude
 
 # Install a server with pre-configured data (skips prompts)
-npx @smithery/cli install mcp-obsidian --client claude --config '{"vaultPath":"path/to/vault"}'
+smithery install mcp-obsidian --client claude --config '{"vaultPath":"path/to/vault"}'
 
-# Remove a server
-npx @smithery/cli uninstall mcp-obsidian --client claude
+# Remove a server (interactive client selection)
+smithery uninstall mcp-obsidian
 
-# List available clients
-npx @smithery/cli list clients
+# Remove a server from specific client (skips selection)
+smithery uninstall mcp-obsidian --client claude
+
+# List installed servers (interactive)
+smithery list
 
 # List installed servers for claude
-npx @smithery/cli list servers --client claude
+smithery list --client claude
+
+# Search for servers in the registry
+smithery search obsidian
+
+# Search interactively (prompts for term)
+smithery search
 
 # Inspect a specific server from smithery's registry
-npx @smithery/cli inspect mcp-obsidian
+smithery inspect mcp-obsidian
 
 # Run a server with configuration
-npx @smithery/cli run mcp-obsidian --config '{"key":"value"}'
+smithery run mcp-obsidian --config '{"key":"value"}'
 
 # Login and set API key
-npx @smithery/cli login
+smithery login
 
 # Start development server with hot-reload
-npx @smithery/cli dev
-npx @smithery/cli dev server.ts --port 3000
+smithery dev
+smithery dev server.ts --port 3000
 
 # Build server for production
-npx @smithery/cli build
-npx @smithery/cli build server.ts --out dist/server.cjs --transport stdio
+smithery build
+smithery build server.ts --out dist/server.cjs --transport stdio
 
 # Open playground in browser
-npx @smithery/cli playground
-npx @smithery/cli playground --port 3001 -- node dist/server.js
+smithery playground
+smithery playground --port 3001 -- node dist/server.js
 
 # Show help menu
-npx @smithery/cli --help
+smithery --help
 
 # Install with verbose logging for debugging
-npx @smithery/cli install mcp-obsidian --client claude --verbose
+smithery install mcp-obsidian --client claude --verbose
 ```
 
 ### Important Notes
@@ -122,8 +149,11 @@ This guide will help you get started with developing for @smithery/cli.
 ### Development Commands
 
 ```bash
-# List all servers
-npx . list servers
+# List installed servers
+npx . list --client claude
+
+# Search for servers
+npx . search obsidian
 
 # Inspect a specific server
 npx . inspect <server-id>

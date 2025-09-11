@@ -1,6 +1,6 @@
 import fs from "node:fs"
 import * as YAML from "yaml"
-import * as TOML from "toml"
+import { parse as parseToml, stringify as stringifyToml } from "smol-toml"
 import path from "node:path"
 import type { MCPConfig } from "../types/registry.js"
 import { verbose } from "../lib/logger.js"
@@ -44,7 +44,7 @@ export function readConfig(client: string): ClientMCPConfig {
 			rawConfig = (YAML.parse(fileContent) as any) || {}
 		} else if (clientConfig.installType === "toml") {
 			try {
-				rawConfig = TOML.parse(fileContent) as any
+				rawConfig = parseToml(fileContent) as any
 				verbose(`TOML config parsed successfully`)
 			} catch (tomlError) {
 				verbose(
@@ -311,7 +311,7 @@ function writeConfigToml(
 		if (fs.existsSync(configPath)) {
 			verbose(`Reading existing TOML config file for merging`)
 			const existingContent = fs.readFileSync(configPath, "utf8")
-			existingConfig = TOML.parse(existingContent)
+			existingConfig = parseToml(existingContent)
 			verbose(`Existing TOML config loaded successfully`)
 		}
 	} catch (error) {
@@ -336,82 +336,8 @@ function writeConfigToml(
 
 	verbose(`Merged TOML config: ${JSON.stringify(mergedConfig, null, 2)}`)
 
-	// Convert to TOML format
-	const tomlContent = Object.entries(mergedConfig)
-		.map(([section, content]) => {
-			if (section === "mcp_servers" && typeof content === "object") {
-				// Handle mcp_servers section specially
-				return Object.entries(content as Record<string, any>)
-					.map(([serverName, serverConfig]) => {
-						const lines = [`[mcp_servers.${serverName}]`]
-						for (const [key, value] of Object.entries(
-							serverConfig as Record<string, any>,
-						)) {
-							if (Array.isArray(value)) {
-								// Handle arrays by converting each element properly
-								const arrayElements = value
-									.map((item) => {
-										if (typeof item === "string") {
-											// For strings containing JSON or complex characters, use literal strings
-											if (item.includes("{") || item.includes('"')) {
-												// Use TOML literal strings (single quotes) for complex strings
-												return `'${item.replace(/'/g, "''")}'`
-											} else {
-												// Use regular quoted strings for simple strings
-												return `"${item}"`
-											}
-										} else {
-											return JSON.stringify(item)
-										}
-									})
-									.join(", ")
-								lines.push(`${key} = [${arrayElements}]`)
-							} else if (typeof value === "object" && value !== null) {
-								// Handle env object specially
-								if (key === "env") {
-									const envEntries = Object.entries(
-										value as Record<string, string>,
-									)
-										.map(([envKey, envValue]) => `"${envKey}" = "${envValue}"`)
-										.join(", ")
-									lines.push(`${key} = { ${envEntries} }`)
-								} else {
-									lines.push(`${key} = ${JSON.stringify(value)}`)
-								}
-							} else if (typeof value === "string") {
-								// Escape quotes in strings for TOML
-								lines.push(`${key} = "${value.replace(/"/g, '\\"')}"`)
-							} else {
-								lines.push(`${key} = ${value}`)
-							}
-						}
-						return lines.join("\n")
-					})
-					.join("\n\n")
-			} else if (typeof content === "object") {
-				// Handle other sections
-				const lines = [`[${section}]`]
-				for (const [key, value] of Object.entries(
-					content as Record<string, any>,
-				)) {
-					if (typeof value === "string") {
-						lines.push(`${key} = "${value}"`)
-					} else {
-						lines.push(`${key} = ${JSON.stringify(value)}`)
-					}
-				}
-				return lines.join("\n")
-			} else {
-				// Handle top-level properties
-				if (typeof content === "string") {
-					return `${section} = "${content}"`
-				} else {
-					return `${section} = ${JSON.stringify(content)}`
-				}
-			}
-		})
-		.filter(Boolean)
-		.join("\n\n")
+	// Convert to TOML format using smol-toml
+	const tomlContent = stringifyToml(mergedConfig)
 
 	verbose(`Writing TOML config to file: ${configPath}`)
 	fs.writeFileSync(configPath, tomlContent)

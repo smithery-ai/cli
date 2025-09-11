@@ -16,7 +16,7 @@ import {
 	readConfig,
 	writeConfig,
 	runConfigCommand,
-} from "../utils/client-config"
+} from "../utils/mcp-config"
 import type { ValidClient } from "../config/clients"
 import { getClientConfiguration } from "../config/clients"
 import { verbose } from "../lib/logger"
@@ -34,7 +34,7 @@ import {
 	collectConfigValues,
 	formatServerConfig,
 	getServerName,
-} from "../utils/config"
+} from "../utils/session-config"
 import {
 	checkAndNotifyRemoteServer,
 	ensureApiKey,

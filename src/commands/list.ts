@@ -1,4 +1,4 @@
-import { readConfig } from "../utils/client-config"
+import { readConfig } from "../utils/mcp-config"
 import {
 	VALID_CLIENTS,
 	type ValidClient,

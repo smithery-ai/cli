@@ -12,7 +12,7 @@ import { uninstallServer } from "./commands/uninstall"
 import { type ValidClient, VALID_CLIENTS } from "./config/clients"
 import { setVerbose, setDebug } from "./lib/logger"
 import type { ServerConfig } from "./types/registry"
-import { searchServers } from "./lib/registry"
+import { searchServers, resolveServer, ResolveServerSource } from "./lib/registry"
 import { ensureApiKey, promptForApiKey } from "./utils/runtime"
 import { build } from "./commands/build"
 import { setApiKey } from "./utils/smithery-config"
@@ -39,7 +39,7 @@ program
 // Install command
 program
 	.command("install [server]")
-	.description("Install a package")
+	.description("install a server")
 	.option(
 		"--client <name>",
 		`Specify the AI client (${VALID_CLIENTS.join(", ")})`,
@@ -207,13 +207,13 @@ program
 // Uninstall command
 program
 	.command("uninstall [server]")
-	.description("Uninstall a package")
+	.description("uninstall a server")
 	.option(
 		"--client <name>",
 		`Specify the AI client (${VALID_CLIENTS.join(", ")})`,
 	)
 	.action(async (server, options) => {
-		const { readConfig } = await import("./utils/client-config")
+		const { readConfig } = await import("./utils/mcp-config")
 		let selectedClient = options.client
 		let selectedServer = server
 
@@ -306,7 +306,7 @@ program
 // Run command
 program
 	.command("run <server>")
-	.description("Run a server")
+	.description("run a server")
 	.option("--config <json>", "Provide configuration as JSON")
 	.option("--key <apikey>", "Provide an API key")
 	.option("--profile <name>", "Use a specific profile")
@@ -381,7 +381,7 @@ program
 // Build command
 program
 	.command("build [entryFile]")
-	.description("Build MCP server for production")
+	.description("build MCP server for production")
 	.option(
 		"-o, --out <outfile>",
 		"Output file path (default: .smithery/index.cjs)",
@@ -417,7 +417,7 @@ program
 // Playground command
 program
 	.command("playground")
-	.description("Open MCP playground in browser")
+	.description("open MCP playground in browser")
 	.option("--port <port>", "Port to expose (default: 3000)")
 	.option("--key <apikey>", "Provide an API key")
 	.allowUnknownOption() // Allow pass-through for command after --
@@ -441,11 +441,8 @@ program
 // List command
 program
 	.command("list")
-	.description("List installed servers")
-	.option(
-		"--client <name>",
-		`Specify the AI client (${VALID_CLIENTS.join(", ")})`,
-	)
+	.description("list installed servers")
+	.option("--client <name>", `Specify the client (${VALID_CLIENTS.join(", ")})`)
 	.action(async (options) => {
 		let selectedClient = options.client
 
@@ -487,6 +484,174 @@ program
 		}
 
 		await list("servers", selectedClient as ValidClient)
+	})
+
+// Search command
+program
+	.command("search [term]")
+	.description("Search for servers in the Smithery registry")
+	.action(async (term) => {
+		let searchTerm = term
+		
+		// If no search term provided, prompt for it
+		if (!searchTerm) {
+			const inquirer = (await import("inquirer")).default
+			
+			const result = await inquirer.prompt([
+				{
+					type: "input",
+					name: "searchTerm",
+					message: "Search for servers:",
+					validate: (input: string) => input.trim().length > 0 || "Please enter a search term",
+				},
+			])
+			searchTerm = result.searchTerm
+			console.log()
+		}
+		try {
+			const apiKey = await ensureApiKey()
+			const ora = (await import("ora")).default
+			const spinner = ora(`Searching for "${searchTerm}"...`).start()
+
+			const servers = await searchServers(searchTerm, apiKey)
+
+			if (servers.length === 0) {
+				spinner.fail(`No servers found for "${searchTerm}"`)
+				return
+			}
+
+			spinner.succeed(`Showing top ${servers.length} server${servers.length === 1 ? "" : "s"}`)
+			console.log()
+
+			// Show interactive selection
+			const inquirer = (await import("inquirer")).default
+			const autocompletePrompt = (await import("inquirer-autocomplete-prompt")).default
+			inquirer.registerPrompt("autocomplete", autocompletePrompt)
+
+			// Interactive search with back navigation
+			let showingDetails = false
+			
+			while (!showingDetails) {
+				const { selectedServer } = await inquirer.prompt([
+					{
+						type: "autocomplete",
+						name: "selectedServer",
+						message: "Select server for details (or search again):",
+						source: (_: unknown, input: string) => {
+							const options = [
+								{ name: chalk.dim("← Search again"), value: "__SEARCH_AGAIN__" },
+								{ name: chalk.dim("Exit"), value: "__EXIT__" }
+							]
+							
+							const filtered = servers
+								.filter((s) =>
+									s.qualifiedName.toLowerCase().includes((input || "").toLowerCase()) ||
+									s.displayName?.toLowerCase().includes((input || "").toLowerCase())
+								)
+								.map((s) => {
+									const displayName = s.displayName || s.qualifiedName
+									const usageInfo = s.useCount > 0 ? chalk.dim(` (${s.useCount.toLocaleString()} calls/month)`) : ""
+									return {
+										name: `${displayName}${usageInfo}`,
+										value: s.qualifiedName,
+									}
+								})
+							
+							return Promise.resolve([...options, ...filtered])
+						},
+					},
+				])
+
+				if (selectedServer === "__EXIT__") {
+					return
+				} else if (selectedServer === "__SEARCH_AGAIN__") {
+					// Restart search
+					const { newSearchTerm } = await inquirer.prompt([
+						{
+							type: "input",
+							name: "newSearchTerm",
+							message: "Search for servers:",
+							validate: (input: string) => input.trim().length > 0 || "Please enter a search term",
+						},
+					])
+					
+					const spinner = ora(`Searching for "${newSearchTerm}"...`).start()
+					const newServers = await searchServers(newSearchTerm, apiKey)
+					
+					if (newServers.length === 0) {
+						spinner.fail(`No servers found for "${newSearchTerm}"`)
+						return
+					}
+					
+					spinner.succeed(`Showing top ${newServers.length} server${newServers.length === 1 ? "" : "s"}`)
+					servers.splice(0, servers.length, ...newServers) // Replace servers array
+					console.log()
+					continue
+				}
+
+				// Show detailed view of selected server
+				console.log()
+				const selectedServerData = servers.find(s => s.qualifiedName === selectedServer)
+				if (selectedServerData) {
+					const displayName = selectedServerData.displayName || selectedServerData.qualifiedName
+					console.log(`${chalk.bold.cyan(displayName)}`)
+					console.log(`${chalk.dim("Qualified name:")} ${selectedServerData.qualifiedName}`)
+					if (selectedServerData.description) {
+						console.log(`${chalk.dim("Description:")} ${selectedServerData.description}`)
+					}
+					console.log(`${chalk.dim("Usage:")} ${selectedServerData.useCount.toLocaleString()} calls/month`)
+					console.log()
+					console.log(chalk.dim(`Use 'smithery install ${selectedServerData.qualifiedName}' to install`))
+					
+					// Ask what to do next
+					const { action } = await inquirer.prompt([
+						{
+							type: "list",
+							name: "action",
+							message: "What would you like to do?",
+							choices: [
+								{ name: "← Back to server list", value: "back" },
+								{ name: "← Search again", value: "search" },
+								{ name: "Exit", value: "exit" },
+							],
+						},
+					])
+					
+					if (action === "back") {
+						console.log()
+						continue // Go back to server selection
+					} else if (action === "search") {
+						// Restart search
+						const { newSearchTerm } = await inquirer.prompt([
+							{
+								type: "input",
+								name: "newSearchTerm",
+								message: "Search for servers:",
+								validate: (input: string) => input.trim().length > 0 || "Please enter a search term",
+							},
+						])
+						
+						const spinner = ora(`Searching for "${newSearchTerm}"...`).start()
+						const newServers = await searchServers(newSearchTerm, apiKey)
+						
+						if (newServers.length === 0) {
+							spinner.fail(`No servers found for "${newSearchTerm}"`)
+							return
+						}
+						
+						spinner.succeed(`Showing top ${newServers.length} server${newServers.length === 1 ? "" : "s"}`)
+						servers.splice(0, servers.length, ...newServers) // Replace servers array
+						console.log()
+						continue
+					} else {
+						showingDetails = true // Exit
+					}
+				}
+			}
+		} catch (error) {
+			console.error(chalk.red("Error searching servers:"), error instanceof Error ? error.message : String(error))
+			process.exit(1)
+		}
 	})
 
 // Login command

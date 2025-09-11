@@ -495,6 +495,7 @@ function shouldUseHTTPFormat(
  * @param userConfig - The user configuration for the server
  * @param apiKey - Optional API key
  * @param profile - Optional profile name to use
+ * @param client - Optional client name
  * @returns HTTP configuration
  */
 function createHTTPServerConfig(
