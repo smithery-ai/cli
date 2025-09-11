@@ -58,7 +58,9 @@ export const createUplinkRunner = async (
 	}
 
 	const handleExit = async () => {
-		logWithTimestamp("[Uplink Runner] Received exit signal, initiating shutdown...")
+		logWithTimestamp(
+			"[Uplink Runner] Received exit signal, initiating shutdown...",
+		)
 		isClientInitiatedClose = true
 		await cleanup()
 		if (!isShuttingDown) {
@@ -132,7 +134,9 @@ export const createUplinkRunner = async (
 				return
 			}
 
-			logWithTimestamp(`[Uplink Runner] Streamable HTTP error: ${error.message}`)
+			logWithTimestamp(
+				`[Uplink Runner] Streamable HTTP error: ${error.message}`,
+			)
 		}
 
 		transport.onmessage = (message: JSONRPCMessage) => {
@@ -159,17 +163,19 @@ export const createUplinkRunner = async (
 		isReady = true
 		retryCount = 0 // Reset retry count on successful connection
 		logWithTimestamp("[Uplink Runner] Streamable HTTP connection initiated")
-		
+
 		// Release buffered messages
 		await processMessage(Buffer.from(""))
 		logWithTimestamp("[Uplink Runner] Streamable HTTP connection established")
-		
+
 		heartbeatManager.start() // Start heartbeat after connection is fully established
 		idleManager.start() // Start idle check
 
 		// Set up tunnel and playground after successful connection
 		try {
-			console.log(chalk.green("✅ Server connection established, setting up uplink..."))
+			console.log(
+				chalk.green("✅ Server connection established, setting up uplink..."),
+			)
 			const { listener } = await setupTunnelAndPlayground(
 				"3000", // Use a default port for the tunnel
 				apiKey,
@@ -177,7 +183,9 @@ export const createUplinkRunner = async (
 				options.initialMessage || "Say hello to the world!",
 			)
 			tunnelListener = listener
-			console.log(chalk.green("🚀 Uplink tunnel established and playground opened"))
+			console.log(
+				chalk.green("🚀 Uplink tunnel established and playground opened"),
+			)
 		} catch (error) {
 			logWithTimestamp(`[Uplink Runner] Failed to setup tunnel: ${error}`)
 			throw error
@@ -186,7 +194,9 @@ export const createUplinkRunner = async (
 
 	const cleanup = async () => {
 		if (isShuttingDown) {
-			logWithTimestamp("[Uplink Runner] Cleanup already in progress, skipping...")
+			logWithTimestamp(
+				"[Uplink Runner] Cleanup already in progress, skipping...",
+			)
 			return
 		}
 
@@ -237,13 +247,17 @@ export const createUplinkRunner = async (
 			}
 
 			// Then close the transport
-			logWithTimestamp("[Uplink Runner] Attempting to close transport (3s timeout)...")
+			logWithTimestamp(
+				"[Uplink Runner] Attempting to close transport (3s timeout)...",
+			)
 			await Promise.race([
 				transport.close(),
 				new Promise((_, reject) =>
 					setTimeout(
 						() =>
-							reject(new Error("[Uplink Runner] Transport close timeout after 3s")),
+							reject(
+								new Error("[Uplink Runner] Transport close timeout after 3s"),
+							),
 						3000,
 					),
 				),
@@ -279,7 +293,9 @@ export const createUplinkRunner = async (
 	process.stdin.on("end", () => {
 		logWithTimestamp("[Uplink Runner] STDIN closed (client disconnected)")
 		handleExit().catch((error) => {
-			logWithTimestamp(`[Uplink Runner] Error during stdin close cleanup: ${error}`)
+			logWithTimestamp(
+				`[Uplink Runner] Error during stdin close cleanup: ${error}`,
+			)
 			process.exit(1)
 		})
 	})
@@ -287,7 +303,9 @@ export const createUplinkRunner = async (
 	process.stdin.on("error", (error) => {
 		logWithTimestamp(`[Uplink Runner] STDIN error: ${error.message}`)
 		handleExit().catch((error) => {
-			logWithTimestamp(`[Uplink Runner] Error during stdin error cleanup: ${error}`)
+			logWithTimestamp(
+				`[Uplink Runner] Error during stdin error cleanup: ${error}`,
+			)
 			process.exit(1)
 		})
 	})

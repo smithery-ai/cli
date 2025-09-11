@@ -37,7 +37,10 @@ export const createLocalUplinkRunner = async (
 	let transport: StdioClientTransport | null = null
 	let httpServer: any = null
 	let tunnelListener: { close: () => Promise<void> } | undefined
-	let pendingRequests = new Map<string, { resolve: Function; reject: Function }>()
+	const pendingRequests = new Map<
+		string,
+		{ resolve: Function; reject: Function }
+	>()
 
 	const localPort = options.port || 3000
 	const app = express()
@@ -52,7 +55,9 @@ export const createLocalUplinkRunner = async (
 	}
 
 	const handleExit = async () => {
-		logWithTimestamp("[Local Uplink] Received exit signal, initiating shutdown...")
+		logWithTimestamp(
+			"[Local Uplink] Received exit signal, initiating shutdown...",
+		)
 		await cleanup()
 		if (!isShuttingDown) {
 			process.exit(0)
@@ -73,46 +78,50 @@ export const createLocalUplinkRunner = async (
 	app.post("/mcp", async (req: express.Request, res: express.Response) => {
 		try {
 			idleManager.updateActivity()
-			
+
 			if (!isReady || !transport) {
-				res.status(503).json({ 
+				res.status(503).json({
 					error: "Server not ready",
-					code: -32603
+					code: -32603,
 				})
 				return
 			}
 
 			const message = req.body as JSONRPCMessage
-			
+
 			if (!message) {
 				res.status(400).json({
 					error: "Invalid JSON-RPC message",
-					code: -32600
+					code: -32600,
 				})
 				return
 			}
 
-			logWithTimestamp(`[Local Uplink] Received HTTP request: ${JSON.stringify(message)}`)
+			logWithTimestamp(
+				`[Local Uplink] Received HTTP request: ${JSON.stringify(message)}`,
+			)
 
 			// For requests with IDs, we need to wait for responses
 			if ("id" in message && message.id !== null && message.id !== undefined) {
 				const messageId = String(message.id)
-				
+
 				// Send the message to the STDIO process
 				await transport.send(message)
-				
+
 				// Wait for response with timeout
-				const response = await new Promise<JSONRPCMessage>((resolve, reject) => {
-					pendingRequests.set(messageId, { resolve, reject })
-					
-					// Timeout after 30 seconds
-					setTimeout(() => {
-						if (pendingRequests.has(messageId)) {
-							pendingRequests.delete(messageId)
-							reject(new Error("Request timeout"))
-						}
-					}, 30000)
-				})
+				const response = await new Promise<JSONRPCMessage>(
+					(resolve, reject) => {
+						pendingRequests.set(messageId, { resolve, reject })
+
+						// Timeout after 30 seconds
+						setTimeout(() => {
+							if (pendingRequests.has(messageId)) {
+								pendingRequests.delete(messageId)
+								reject(new Error("Request timeout"))
+							}
+						}, 30000)
+					},
+				)
 
 				res.json(response)
 			} else {
@@ -124,22 +133,22 @@ export const createLocalUplinkRunner = async (
 			logWithTimestamp(`[Local Uplink] Error handling HTTP request: ${error}`)
 			res.status(500).json({
 				error: error instanceof Error ? error.message : "Internal server error",
-				code: -32603
+				code: -32603,
 			})
 		}
 	})
 
 	// Health check endpoint
 	app.get("/health", (req: express.Request, res: express.Response) => {
-		res.json({ 
+		res.json({
 			status: isReady ? "ready" : "not ready",
-			uptime: process.uptime()
+			uptime: process.uptime(),
 		})
 	})
 
 	const setupStdioTransport = async () => {
 		logWithTimestamp("[Local Uplink] Starting STDIO process setup...")
-		
+
 		const stdioConnection = serverDetails.connections.find(
 			(conn) => conn.type === "stdio",
 		)
@@ -166,7 +175,9 @@ export const createLocalUplinkRunner = async (
 
 		// Handle Windows platform for npx
 		if (finalCommand === "npx" && process.platform === "win32") {
-			logWithTimestamp("[Local Uplink] Windows platform detected, using cmd /c for npx")
+			logWithTimestamp(
+				"[Local Uplink] Windows platform detected, using cmd /c for npx",
+			)
 			finalArgs = ["/c", "npx", ...finalArgs]
 			finalCommand = "cmd"
 		}
@@ -199,7 +210,9 @@ export const createLocalUplinkRunner = async (
 					idleManager.updateActivity()
 				}
 
-				logWithTimestamp(`[Local Uplink] Received STDIO message: ${JSON.stringify(message)}`)
+				logWithTimestamp(
+					`[Local Uplink] Received STDIO message: ${JSON.stringify(message)}`,
+				)
 
 				if ("error" in message && message.error) {
 					const errorMessage = message as JSONRPCError
@@ -207,7 +220,11 @@ export const createLocalUplinkRunner = async (
 				}
 
 				// Handle responses to pending HTTP requests
-				if ("id" in message && message.id !== null && message.id !== undefined) {
+				if (
+					"id" in message &&
+					message.id !== null &&
+					message.id !== undefined
+				) {
 					const messageId = String(message.id)
 					const pending = pendingRequests.get(messageId)
 					if (pending) {
@@ -218,7 +235,9 @@ export const createLocalUplinkRunner = async (
 				}
 
 				// For other messages (notifications, etc.), log them
-				logWithTimestamp(`[Local Uplink] STDIO output: ${JSON.stringify(message)}`)
+				logWithTimestamp(
+					`[Local Uplink] STDIO output: ${JSON.stringify(message)}`,
+				)
 			} catch (error) {
 				handleError(error as Error, "Error handling STDIO message")
 			}
@@ -242,7 +261,7 @@ export const createLocalUplinkRunner = async (
 		await transport.start()
 		isReady = true
 		logWithTimestamp("[Local Uplink] STDIO transport established")
-		
+
 		heartbeatManager.start()
 		idleManager.start()
 	}
@@ -253,7 +272,9 @@ export const createLocalUplinkRunner = async (
 				if (err) {
 					reject(err)
 				} else {
-					logWithTimestamp(`[Local Uplink] HTTP server listening on port ${localPort}`)
+					logWithTimestamp(
+						`[Local Uplink] HTTP server listening on port ${localPort}`,
+					)
 					resolve()
 				}
 			})
@@ -262,7 +283,9 @@ export const createLocalUplinkRunner = async (
 
 	const cleanup = async () => {
 		if (isShuttingDown) {
-			logWithTimestamp("[Local Uplink] Cleanup already in progress, skipping...")
+			logWithTimestamp(
+				"[Local Uplink] Cleanup already in progress, skipping...",
+			)
 			return
 		}
 
@@ -318,7 +341,9 @@ export const createLocalUplinkRunner = async (
 				])
 				logWithTimestamp("[Local Uplink] STDIO transport closed successfully")
 			} catch (error) {
-				logWithTimestamp(`[Local Uplink] Error closing STDIO transport: ${error}`)
+				logWithTimestamp(
+					`[Local Uplink] Error closing STDIO transport: ${error}`,
+				)
 			}
 			transport = null
 		}
@@ -348,12 +373,14 @@ export const createLocalUplinkRunner = async (
 	try {
 		// Start HTTP server first
 		await startHttpServer()
-		
+
 		// Then setup STDIO transport
 		await setupStdioTransport()
-		
+
 		// Finally setup tunnel and playground
-		console.log(chalk.green("✅ Local server started, setting up uplink tunnel..."))
+		console.log(
+			chalk.green("✅ Local server started, setting up uplink tunnel..."),
+		)
 		const { listener } = await setupTunnelAndPlayground(
 			String(localPort),
 			apiKey,
@@ -361,8 +388,9 @@ export const createLocalUplinkRunner = async (
 			options.initialMessage || "Say hello to the world!",
 		)
 		tunnelListener = listener
-		console.log(chalk.green("🚀 Local uplink tunnel established and playground opened"))
-		
+		console.log(
+			chalk.green("🚀 Local uplink tunnel established and playground opened"),
+		)
 	} catch (error) {
 		logWithTimestamp(`[Local Uplink] Failed to start: ${error}`)
 		await cleanup()

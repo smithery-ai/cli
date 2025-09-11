@@ -134,8 +134,14 @@ program
 	.option("--key <apikey>", "Provide an API key")
 	.option("--profile <name>", "Use a specific profile")
 	.option("--uplink", "Create uplink token and open playground")
-	.option("--no-open", "Don't automatically open the playground (when using --uplink)")
-	.option("--prompt <prompt>", "Initial message to start the playground with (when using --uplink)")
+	.option(
+		"--no-open",
+		"Don't automatically open the playground (when using --uplink)",
+	)
+	.option(
+		"--prompt <prompt>",
+		"Initial message to start the playground with (when using --uplink)",
+	)
 	.action(async (server, options) => {
 		// Parse config if provided
 		let config: ServerConfig = {}
@@ -159,11 +165,17 @@ program
 			}
 		}
 
-		await run(server, config, await ensureApiKey(options.key), options.profile, {
-			uplink: options.uplink,
-			open: options.open,
-			initialMessage: options.prompt
-		})
+		await run(
+			server,
+			config,
+			await ensureApiKey(options.key),
+			options.profile,
+			{
+				uplink: options.uplink,
+				open: options.open,
+				initialMessage: options.prompt,
+			},
+		)
 	})
 
 // Dev command

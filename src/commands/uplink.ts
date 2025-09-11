@@ -93,7 +93,7 @@ export async function uplink(options: UplinkOptions = {}): Promise<void> {
 			const scaffoldDir = join(".smithery", "scaffold")
 			const scaffoldFile = join(scaffoldDir, "index.ts")
 			const packageJsonFile = join(scaffoldDir, "package.json")
-			
+
 			// Ensure directories exist
 			if (!existsSync(smitheryDir)) {
 				mkdirSync(smitheryDir, { recursive: true })
@@ -104,28 +104,33 @@ export async function uplink(options: UplinkOptions = {}): Promise<void> {
 
 			// Create a package.json for the scaffold with necessary dependencies
 			const scaffoldPackageJson = {
-				"name": "smithery-scaffold",
-				"version": "1.0.0",
-				"type": "module",
-				"dependencies": {
-					"@modelcontextprotocol/sdk": "^1.10.1"
-				}
+				name: "smithery-scaffold",
+				version: "1.0.0",
+				type: "module",
+				dependencies: {
+					"@modelcontextprotocol/sdk": "^1.10.1",
+				},
 			}
-			writeFileSync(packageJsonFile, JSON.stringify(scaffoldPackageJson, null, 2))
+			writeFileSync(
+				packageJsonFile,
+				JSON.stringify(scaffoldPackageJson, null, 2),
+			)
 
 			// Write scaffold file
 			writeFileSync(scaffoldFile, createScaffoldServer())
 			options.entryFile = scaffoldFile
-			
-			console.log(chalk.cyan("📝 Created scaffold server at .smithery/scaffold/index.ts"))
-			
+
+			console.log(
+				chalk.cyan("📝 Created scaffold server at .smithery/scaffold/index.ts"),
+			)
+
 			// Install dependencies for the scaffold
 			console.log(chalk.cyan("📦 Installing scaffold dependencies..."))
 			const installResult = spawnSync("npm", ["install"], {
 				cwd: scaffoldDir,
-				stdio: "inherit"
+				stdio: "inherit",
 			})
-			
+
 			if (installResult.status !== 0) {
 				console.error(chalk.red("❌ Failed to install scaffold dependencies"))
 				process.exit(1)
@@ -203,7 +208,9 @@ export async function uplink(options: UplinkOptions = {}): Promise<void> {
 
 			// Start tunnel and open playground on first successful start
 			if (isFirstBuild) {
-				console.log(chalk.green(`✅ Uplink server starting on port ${finalPort}`))
+				console.log(
+					chalk.green(`✅ Uplink server starting on port ${finalPort}`),
+				)
 				setupTunnelAndPlayground(
 					finalPort,
 					apiKey,

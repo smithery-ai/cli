@@ -106,7 +106,7 @@ async function pickServerAndRun(
 		if (!apiKey) {
 			throw new Error("API key is required for uplink connections")
 		}
-		
+
 		if (connection.type === "http") {
 			// Remote uplink mode - connect to deployed server via HTTP
 			if (!connection.deploymentUrl) {
@@ -120,21 +120,18 @@ async function pickServerAndRun(
 				{
 					open: options.open !== false, // default to true
 					initialMessage: options.initialMessage || "Say hello to the world!",
-				}
+				},
 			)
 		} else if (connection.type === "stdio") {
 			// Local uplink mode - start local STDIO server with HTTP tunnel
-			await createLocalUplinkRunner(
-				serverDetails,
-				config,
-				apiKey,
-				{
-					open: options.open !== false, // default to true
-					initialMessage: options.initialMessage || "Say hello to the world!",
-				}
-			)
+			await createLocalUplinkRunner(serverDetails, config, apiKey, {
+				open: options.open !== false, // default to true
+				initialMessage: options.initialMessage || "Say hello to the world!",
+			})
 		} else {
-			throw new Error(`Uplink functionality does not support ${connection.type} connections`)
+			throw new Error(
+				`Uplink functionality does not support ${connection.type} connections`,
+			)
 		}
 		return
 	}
