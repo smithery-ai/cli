@@ -130,7 +130,9 @@ export const createLocalPlaygroundRunner = async (
 				res.status(200).json({ success: true })
 			}
 		} catch (error) {
-			logWithTimestamp(`[Local Playground] Error handling HTTP request: ${error}`)
+			logWithTimestamp(
+				`[Local Playground] Error handling HTTP request: ${error}`,
+			)
 			res.status(500).json({
 				error: error instanceof Error ? error.message : "Internal server error",
 				code: -32603,
@@ -248,7 +250,9 @@ export const createLocalPlaygroundRunner = async (
 			if (isReady && !isShuttingDown) {
 				logWithTimestamp("[Local Playground] Process terminated unexpectedly")
 				handleExit().catch((error) => {
-					logWithTimestamp(`[Local Playground] Error during exit cleanup: ${error}`)
+					logWithTimestamp(
+						`[Local Playground] Error during exit cleanup: ${error}`,
+					)
 					process.exit(1)
 				})
 			}
@@ -322,7 +326,9 @@ export const createLocalPlaygroundRunner = async (
 					})
 				})
 			} catch (error) {
-				logWithTimestamp(`[Local Playground] Error closing HTTP server: ${error}`)
+				logWithTimestamp(
+					`[Local Playground] Error closing HTTP server: ${error}`,
+				)
 			}
 		}
 
@@ -339,7 +345,9 @@ export const createLocalPlaygroundRunner = async (
 						),
 					),
 				])
-				logWithTimestamp("[Local Playground] STDIO transport closed successfully")
+				logWithTimestamp(
+					"[Local Playground] STDIO transport closed successfully",
+				)
 			} catch (error) {
 				logWithTimestamp(
 					`[Local Playground] Error closing STDIO transport: ${error}`,
