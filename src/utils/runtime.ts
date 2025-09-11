@@ -233,7 +233,7 @@ export function checkAndNotifyRemoteServer(server: {
 		verbose("Remote server detected, showing security notice")
 		console.log(
 			chalk.dim(
-				`Installing remote server. Please ensure you trust the server author, especially when sharing sensitive data.")}`,
+				`Installing remote server. Please ensure you trust the server author, especially when sharing sensitive data.`,
 			),
 		)
 	}

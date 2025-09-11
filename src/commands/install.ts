@@ -114,7 +114,9 @@ export async function installServer(
 		if (finalApiKey && Object.keys(configValues).length === 0) {
 			try {
 				verbose("Checking existing configuration...")
+				const configSpinner = ora("Validating configuration...").start()
 				const validation = await validateUserConfig(qualifiedName, finalApiKey)
+				configSpinner.stop()
 
 				if (validation.isComplete) {
 					// Check if there are any required fields at all
@@ -127,7 +129,7 @@ export async function installServer(
 						)
 						console.log(
 							chalk.dim(
-								`  Update at: https://smithery.ai/account/profiles?server=${qualifiedName}`,
+								`  Update configuration at: https://smithery.ai/account/profiles?server=${qualifiedName}`,
 							),
 						)
 					} else {
