@@ -52,16 +52,24 @@ export const createStreamableHTTPRunner = async (
 		logWithTimestamp("[Runner] Received exit signal, initiating shutdown...")
 		isClientInitiatedClose = true
 		await cleanup()
-		if (!isShuttingDown) {
-			process.exit(0)
-		}
+		process.exit(0)
 	}
 
-	const idleManager = createIdleTimeoutManager(handleExit)
 	const heartbeatManager = createHeartbeatManager(
 		(message) => transport.send(message),
 		() => isReady,
 	)
+
+	const idleManager = createIdleTimeoutManager(handleExit, {
+		onIdleDetected: () => {
+			logWithTimestamp("[Runner] Stopping heartbeat due to idle timeout")
+			heartbeatManager.stop()
+		},
+		onActivityResumed: () => {
+			logWithTimestamp("[Runner] Restarting heartbeat after activity")
+			heartbeatManager.start()
+		},
+	})
 
 	const processMessage = async (data: Buffer) => {
 		idleManager.updateActivity() // Update activity state on outgoing message

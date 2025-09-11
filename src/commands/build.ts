@@ -4,6 +4,7 @@ interface BuildOptions {
 	entryFile?: string
 	outFile?: string
 	transport?: "shttp" | "stdio"
+	configFile?: string
 }
 
 export async function build(options: BuildOptions = {}): Promise<void> {
@@ -14,6 +15,7 @@ export async function build(options: BuildOptions = {}): Promise<void> {
 			transport: options.transport,
 			watch: false,
 			production: true,
+			configFile: options.configFile,
 		})
 	} catch (error) {
 		console.error("❌ Build failed:", error)

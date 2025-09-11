@@ -4,6 +4,13 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [1.2.12] - 2025-01-05
+
+### Changed
+- Idle timeout (30 minutes) now only logs instead of closing connection
+- Heartbeat stops on idle, resumes on activity
+- Refactored idle manager to use callbacks
+
 ## [1.1.89] - 2025-05-01
 
 ### Changed

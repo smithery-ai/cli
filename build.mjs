@@ -43,7 +43,7 @@ const stdioBootstrapJs = stdioResult.outputFiles[0].text
 define.__SMITHERY_SHTTP_BOOTSTRAP__ = JSON.stringify(shttpBootstrapJs)
 define.__SMITHERY_STDIO_BOOTSTRAP__ = JSON.stringify(stdioBootstrapJs)
 
-console.log("✅ Compiled bootstrap files")
+console.log("✓ Compiled bootstrap files")
 
 // Build main CLI entry point
 await esbuild.build({
@@ -64,4 +64,4 @@ if (!existsSync(runtimeDir)) {
 	mkdirSync(runtimeDir, { recursive: true })
 }
 
-console.log("✅ Build complete - runtime files copied")
+console.log("✓ Build complete - runtime files copied")

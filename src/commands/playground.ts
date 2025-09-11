@@ -10,6 +10,19 @@ export async function playground(options: {
 	apiKey: string
 }): Promise<void> {
 	try {
+		// If no command is provided, require a port to be specified
+		if (!options.command && !options.port) {
+			console.error(
+				chalk.red("❌ Port is required when no command is specified."),
+			)
+			console.error(
+				chalk.yellow(
+					"Use --port <port> to specify the port where your service is running.",
+				),
+			)
+			process.exit(1)
+		}
+
 		let finalPort = options.port || "8181"
 		let childProcess: ChildProcess | undefined
 

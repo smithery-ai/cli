@@ -2,7 +2,8 @@ import type { JSONRPCError } from "@modelcontextprotocol/sdk/types.js"
 import { ErrorCode } from "@modelcontextprotocol/sdk/types.js"
 import type { JSONRPCMessage } from "@modelcontextprotocol/sdk/types.js"
 
-export const IDLE_TIMEOUT = 10 * 60 * 1000 // 10 minutes
+// Time in milliseconds before considering a connection idle
+export const IDLE_TIMEOUT = 30 * 60 * 1000 // 30 minutes
 export const MAX_RETRIES = 3
 export const RETRY_DELAY = 1000
 export const HEARTBEAT_INTERVAL = 30000 // 30 seconds
@@ -17,6 +18,11 @@ export type IdleTimeoutManager = {
 	updateActivity: () => void
 	start: () => void
 	stop: () => void
+}
+
+export type IdleTimeoutCallbacks = {
+	onIdleDetected?: () => void
+	onActivityResumed?: () => void
 }
 
 export type HeartbeatManager = {
@@ -61,14 +67,30 @@ export const createHeartbeatManager = (
 	}
 }
 
+/**
+ * Creates an idle timeout manager that monitors activity and triggers callbacks
+ * when the connection becomes idle or resumes activity.
+ *
+ * @param onTimeout - Legacy callback for timeout (kept for compatibility)
+ * @param callbacks - Optional callbacks for idle state changes
+ * @param callbacks.onIdleDetected - Called when idle timeout is reached (after 10 minutes)
+ * @param callbacks.onActivityResumed - Called when activity resumes after being idle
+ */
 export const createIdleTimeoutManager = (
 	onTimeout: () => Promise<void>,
+	callbacks?: IdleTimeoutCallbacks,
 ): IdleTimeoutManager => {
 	let lastActivityTimestamp = Date.now()
 	let idleCheckInterval: NodeJS.Timeout | null = null
+	let isIdle = false
 
 	const updateActivity = () => {
 		lastActivityTimestamp = Date.now()
+		// Notify when activity resumes after being idle
+		if (isIdle && callbacks?.onActivityResumed) {
+			callbacks.onActivityResumed()
+			isIdle = false
+		}
 	}
 
 	const start = () => {
@@ -78,16 +100,15 @@ export const createIdleTimeoutManager = (
 		updateActivity() // Initialize the timestamp
 		idleCheckInterval = setInterval(() => {
 			const idleTime = Date.now() - lastActivityTimestamp
-			if (idleTime >= IDLE_TIMEOUT) {
+			if (idleTime >= IDLE_TIMEOUT && !isIdle) {
 				logWithTimestamp(
-					`[Runner] Connection idle for ${Math.round(idleTime / 60000)} minutes, initiating shutdown`,
+					`[Runner] Connection idle for ${Math.round(idleTime / 60000)} minutes`,
 				)
-				onTimeout().catch((error) => {
-					logWithTimestamp(
-						`[Runner] Error during idle timeout cleanup: ${error}`,
-					)
-					process.exit(1)
-				})
+				isIdle = true
+				// Notify that idle has been detected
+				if (callbacks?.onIdleDetected) {
+					callbacks.onIdleDetected()
+				}
 			}
 		}, 60000) // Check every minute
 	}

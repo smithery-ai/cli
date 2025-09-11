@@ -1,0 +1,60 @@
+name: Bug Report
+description: File a bug report.
+title: '[Bug]: replace with a clear understandable name'
+labels: ['bug', 'triage']
+
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to fill out this bug report! After filing this issue remember to select the related project to put a correct **Label**.e
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What actually happened?
+      description: | 
+        "What's the actual current behavior? Please describe the what happened in details as much as possible.
+        You can run `npx envinfo --system --browsers --binaries` to get the environment information."
+      placeholder: What do you see?
+      value: |
+        "Description:
+        Screenshots:
+        Terminal outputs:
+        Environment: (e.g. MacOS, Windows, Linux, node version, etc.)
+        "
+    validations:
+      required: true
+  - type: textarea
+    id: whats-expected
+    attributes:
+      label: What's the expected behavior?
+      description: Please describe what's the expected behavior ?
+      placeholder: What do you expect to see?
+      value: |
+        "Please describe what's the expected behavior as detail as possible
+        Design sketch (if applicable):
+        Example: Listing requested MCP server.
+        "
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Relevant terminal/log output
+      description: Please copy and paste any relevant log output and include the command you ran. This will be automatically formatted into code, so no need for backticks.
+      render: shell
+  - type: textarea
+    id: repo
+    attributes:
+      label: Steps to reproduce
+      description: What are the steps to reproduce the issue?
+    validations:
+      required: false
+  - type: textarea
+    id: additional
+    attributes:
+      label: Additional information (Optional)
+      description: Is there any additional information the team should know?
+      placeholder: 'Example: You ran into an authentication error with your token. '
+    validations:
+      required: false

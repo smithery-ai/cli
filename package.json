@@ -1,6 +1,6 @@
 {
 	"name": "@smithery/cli",
-	"version": "1.2.4",
+	"version": "1.2.22",
 	"type": "commonjs",
 	"private": false,
 	"homepage": "https://smithery.ai/",
@@ -20,16 +20,17 @@
 		"test:uninstall": "node --loader ts-node/esm src/index.ts uninstall",
 		"prepare": "npm run build",
 		"check": "npx @biomejs/biome check --write --unsafe",
-		"test": "jest"
+		"test": "vitest run",
+		"test:watch": "vitest"
 	},
 	"bin": {
-		"cli": "dist/index.js"
+		"smithery": "dist/index.js"
 	},
 	"dependencies": {
-		"@modelcontextprotocol/sdk": "^1.10.1",
+		"@modelcontextprotocol/sdk": "^1.17.0",
 		"@ngrok/ngrok": "^1.5.1",
 		"@smithery/registry": "^0.3.7",
-		"@smithery/sdk": "^1.4.3",
+		"@smithery/sdk": "^1.5.6",
 		"@types/uuid": "^10.0.0",
 		"chalk": "^4.1.2",
 		"commander": "^14.0.0",
@@ -42,7 +43,8 @@
 		"lodash": "^4.17.21",
 		"ora": "^8.2.0",
 		"uuid": "^11.1.0",
-		"uuidv7": "^1.0.2"
+		"uuidv7": "^1.0.2",
+		"yaml": "^2.3.4"
 	},
 	"devDependencies": {
 		"@biomejs/biome": "^1.5.3",
@@ -50,16 +52,14 @@
 		"@types/express": "^5.0.2",
 		"@types/inquirer": "^8.2.4",
 		"@types/inquirer-autocomplete-prompt": "^3.0.3",
-		"@types/jest": "^29.5.12",
 		"@types/json-schema": "^7.0.15",
 		"@types/lodash": "^4.17.14",
-		"@types/node": "^14.18.63",
+		"@types/node": "^20.19.11",
 		"dotenv": "^16.4.7",
-		"jest": "^29.7.0",
-		"ts-jest": "^29.1.2",
 		"ts-node": "^10.9.1",
 		"tsx": "^4.19.2",
-		"typescript": "^5.0.0"
+		"typescript": "^5.0.0",
+		"vitest": "^3.2.4"
 	},
 	"files": ["dist", "README.md", "package.json"],
 	"exports": {

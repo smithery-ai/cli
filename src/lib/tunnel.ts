@@ -1,4 +1,3 @@
-import ngrok from "@ngrok/ngrok"
 import chalk from "chalk"
 import { debug } from "../logger"
 
@@ -68,8 +67,11 @@ export async function startTunnel(
 	debug(chalk.gray("Getting tunnel credentials..."))
 	const { authtoken, domain } = await getTemporaryTunnelToken(apiKey)
 
+	// Dynamically import ngrok to prevent loading it during build commands
+	const ngrok = await import("@ngrok/ngrok")
+
 	// Start tunnel using ngrok SDK with temporary token
-	const listener = await ngrok.forward({
+	const listener = await ngrok.default.forward({
 		addr: port,
 		authtoken,
 		domain,

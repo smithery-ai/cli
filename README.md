@@ -23,6 +23,21 @@ npx @smithery/cli <command>
   - `--config <json>` - Provide configuration for the server
 - `list clients` - List available clients
 - `list servers --client <name>` - List installed servers for specific AI client
+- `login` - Login with an API key (interactive)
+- `dev [entryFile]` - Start development server with hot-reload and tunnel
+  - `--port <port>` - Port to run the server on (default: 8181)
+  - `--key <apikey>` - Provide an API key
+  - `--no-open` - Don't automatically open the playground
+  - `--prompt <prompt>` - Initial message to start the playground with
+  - `-c, --config <path>` - Path to config file (default: auto-detect smithery.config.js)
+- `build [entryFile]` - Build MCP server for production
+  - `-o, --out <outfile>` - Output file path (default: .smithery/index.cjs)
+  - `--transport <type>` - Transport type: shttp or stdio (default: shttp)
+  - `-c, --config <path>` - Path to config file (default: auto-detect smithery.config.js)
+- `playground` - Open MCP playground in browser
+  - `--port <port>` - Port to expose (default: 3000)
+  - `--key <apikey>` - Provide an API key
+  - Can pass command after `--` separator
 - `--help` - Show help message
 - `--verbose` - Show detailed logs for debugging
 
@@ -50,6 +65,21 @@ npx @smithery/cli inspect mcp-obsidian
 # Run a server with configuration
 npx @smithery/cli run mcp-obsidian --config '{"key":"value"}'
 
+# Login and set API key
+npx @smithery/cli login
+
+# Start development server with hot-reload
+npx @smithery/cli dev
+npx @smithery/cli dev server.ts --port 3000
+
+# Build server for production
+npx @smithery/cli build
+npx @smithery/cli build server.ts --out dist/server.cjs --transport stdio
+
+# Open playground in browser
+npx @smithery/cli playground
+npx @smithery/cli playground --port 3001 -- node dist/server.js
+
 # Show help menu
 npx @smithery/cli --help
 
@@ -59,10 +89,13 @@ npx @smithery/cli install mcp-obsidian --client claude --verbose
 
 ### Important Notes
 
+- Use `login` command to set your Smithery API key (required for some operations)
 - Remember to restart your AI client after installing or uninstalling servers
 - Use the `inspect` command for interactive server testing
 - Run without arguments to see the help menu
 - Use `--verbose` flag for detailed logs when troubleshooting
+- The `dev` command provides hot-reload for MCP server development
+- Use `playground` to test your MCP servers in an interactive web interface
 
 ## Development
 

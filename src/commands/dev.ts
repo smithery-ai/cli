@@ -13,6 +13,7 @@ interface DevOptions {
 	key?: string
 	open?: boolean
 	initialMessage?: string
+	configFile?: string
 }
 
 export async function dev(options: DevOptions = {}): Promise<void> {
@@ -116,6 +117,7 @@ export async function dev(options: DevOptions = {}): Promise<void> {
 		const buildContext = await buildMcpServer({
 			outFile,
 			entryFile: options.entryFile,
+			configFile: options.configFile,
 			watch: true,
 			onRebuild: () => {
 				startServer()
