@@ -39,7 +39,10 @@ export const createLocalPlaygroundRunner = async (
 	let tunnelListener: { close: () => Promise<void> } | undefined
 	const pendingRequests = new Map<
 		string,
-		{ resolve: Function; reject: Function }
+		{
+			resolve: (value: JSONRPCMessage) => void
+			reject: (reason: Error) => void
+		}
 	>()
 
 	const localPort = options.port || 6969

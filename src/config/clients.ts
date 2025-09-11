@@ -14,27 +14,27 @@ export enum Transport {
 export interface ClientConfiguration {
 	// Basic info
 	label: string
-	
+
 	// Transport capabilities
 	supportedTransports: Transport[]
-	
+
 	// Installation method
 	installType: "json" | "command" | "yaml" | "toml"
-	
+
 	// File path or command for installation
 	path?: string
 	command?: string
-	
+
 	// Command-specific configuration for MCP operations
 	commandConfig?: {
 		// Command templates for different transport types
 		stdio?: (name: string, command: string, args: string[]) => string[]
 		http?: (name: string, url: string) => string[]
 	}
-	
+
 	// Whether this client prefers HTTP over STDIO when both are available
 	preferHTTP?: boolean
-	
+
 	// Whether this client supports OAuth authentication (no API key needed in URL)
 	supportsOAuth?: boolean
 }
@@ -59,7 +59,11 @@ const platformPaths = {
 
 const platform = process.platform as keyof typeof platformPaths
 const { baseDir, vscodePath } = platformPaths[platform]
-const defaultClaudePath = path.join(baseDir, "Claude", "claude_desktop_config.json")
+const defaultClaudePath = path.join(
+	baseDir,
+	"Claude",
+	"claude_desktop_config.json",
+)
 
 export const CLIENT_CONFIGURATIONS: Record<string, ClientConfiguration> = {
 	claude: {
@@ -77,10 +81,20 @@ export const CLIENT_CONFIGURATIONS: Record<string, ClientConfiguration> = {
 		supportsOAuth: true,
 		commandConfig: {
 			stdio: (name: string, command: string, args: string[]) => [
-				"mcp", "add", name, "--", command, ...args
+				"mcp",
+				"add",
+				name,
+				"--",
+				command,
+				...args,
 			], // claude mcp add wonderwhy-er-desktop-commander -- npx -y @smithery/cli@latest run @wonderwhy-er/desktop-commander --key xxx
 			http: (name: string, url: string) => [
-				"mcp", "add", "--transport", "http", name, url
+				"mcp",
+				"add",
+				"--transport",
+				"http",
+				name,
+				url,
 			], // claude mcp add --transport http upstash-context-7-mcp "https://server.smithery.ai/@upstash/context7-mcp/mcp"
 		},
 	},
@@ -102,7 +116,13 @@ export const CLIENT_CONFIGURATIONS: Record<string, ClientConfiguration> = {
 		label: "Cline",
 		supportedTransports: [Transport.STDIO],
 		installType: "json",
-		path: path.join(baseDir, vscodePath, "saoudrizwan.claude-dev", "settings", "cline_mcp_settings.json"),
+		path: path.join(
+			baseDir,
+			vscodePath,
+			"saoudrizwan.claude-dev",
+			"settings",
+			"cline_mcp_settings.json",
+		),
 	},
 	witsy: {
 		label: "Witsy",
@@ -125,10 +145,12 @@ export const CLIENT_CONFIGURATIONS: Record<string, ClientConfiguration> = {
 		command: process.platform === "win32" ? "code.cmd" : "code",
 		commandConfig: {
 			stdio: (name: string, command: string, args: string[]) => [
-				"--add-mcp", JSON.stringify({ name, command, args })
+				"--add-mcp",
+				JSON.stringify({ name, command, args }),
 			], // code --add-mcp '{"name":"server","command":"npx","args":["@my/server"]}'
 			http: (name: string, url: string) => [
-				"--add-mcp", JSON.stringify({ name, type: "http", url })
+				"--add-mcp",
+				JSON.stringify({ name, type: "http", url }),
 			], // code --add-mcp '{"name":"server","type":"http","url":"https://..."}'
 		},
 	},
@@ -138,13 +160,16 @@ export const CLIENT_CONFIGURATIONS: Record<string, ClientConfiguration> = {
 		installType: "command",
 		preferHTTP: true,
 		supportsOAuth: true,
-		command: process.platform === "win32" ? "code-insiders.cmd" : "code-insiders",
+		command:
+			process.platform === "win32" ? "code-insiders.cmd" : "code-insiders",
 		commandConfig: {
 			stdio: (name: string, command: string, args: string[]) => [
-				"--add-mcp", JSON.stringify({ name, command, args })
+				"--add-mcp",
+				JSON.stringify({ name, command, args }),
 			],
 			http: (name: string, url: string) => [
-				"--add-mcp", JSON.stringify({ name, type: "http", url })
+				"--add-mcp",
+				JSON.stringify({ name, type: "http", url }),
 			],
 		},
 	},
@@ -152,7 +177,13 @@ export const CLIENT_CONFIGURATIONS: Record<string, ClientConfiguration> = {
 		label: "Roo Code",
 		supportedTransports: [Transport.STDIO],
 		installType: "json",
-		path: path.join(baseDir, vscodePath, "rooveterinaryinc.roo-cline", "settings", "mcp_settings.json"),
+		path: path.join(
+			baseDir,
+			vscodePath,
+			"rooveterinaryinc.roo-cline",
+			"settings",
+			"mcp_settings.json",
+		),
 	},
 	boltai: {
 		label: "BoltAI",
@@ -190,7 +221,11 @@ export const CLIENT_CONFIGURATIONS: Record<string, ClientConfiguration> = {
 		label: "LibreChat",
 		supportedTransports: [Transport.STDIO],
 		installType: "yaml",
-		path: path.join(process.env.LIBRECHAT_CONFIG_DIR || homeDir, "LibreChat", "librechat.yaml"),
+		path: path.join(
+			process.env.LIBRECHAT_CONFIG_DIR || homeDir,
+			"LibreChat",
+			"librechat.yaml",
+		),
 	},
 	"gemini-cli": {
 		label: "Gemini CLI",
@@ -209,28 +244,45 @@ export const CLIENT_CONFIGURATIONS: Record<string, ClientConfiguration> = {
 /**
  * Get client configuration by name
  */
-export function getClientConfiguration(clientName: string): ClientConfiguration | null {
-	return CLIENT_CONFIGURATIONS[clientName.toLowerCase()] || null
+export function getClientConfiguration(
+	clientName: string,
+): ClientConfiguration {
+	const normalizedClientName = clientName.toLowerCase()
+	const clientConfig = CLIENT_CONFIGURATIONS[normalizedClientName]
+
+	if (!clientConfig) {
+		const availableClients = Object.keys(CLIENT_CONFIGURATIONS).join(", ")
+		throw new Error(
+			`Unknown client: ${clientName}. Available clients: ${availableClients}`,
+		)
+	}
+
+	return clientConfig
 }
 
 /**
  * Check if a client supports a specific transport
  */
-export function clientSupportsTransport(clientName: string, transport: Transport): boolean {
+export function clientSupportsTransport(
+	clientName: string,
+	transport: Transport,
+): boolean {
 	const config = getClientConfiguration(clientName)
-	return config?.supportedTransports.includes(transport) || false
+	return config.supportedTransports.includes(transport)
 }
 
 /**
  * Get the preferred transport for a client when multiple are available
  */
-export function getPreferredTransport(clientName: string, availableTransports: Transport[]): Transport | null {
+export function getPreferredTransport(
+	clientName: string,
+	availableTransports: Transport[],
+): Transport | null {
 	const config = getClientConfiguration(clientName)
-	if (!config) return null
 
 	// Filter to only transports the client supports
-	const supportedAvailable = availableTransports.filter(transport => 
-		config.supportedTransports.includes(transport)
+	const supportedAvailable = availableTransports.filter((transport) =>
+		config.supportedTransports.includes(transport),
 	)
 
 	if (supportedAvailable.length === 0) return null
@@ -255,10 +307,9 @@ export function getPreferredTransport(clientName: string, availableTransports: T
  */
 export function isHttpOnlyClient(clientName: string): boolean {
 	const config = getClientConfiguration(clientName)
-	if (!config) return false
 
 	return (
-		config.supportedTransports.includes(Transport.HTTP) && 
+		config.supportedTransports.includes(Transport.HTTP) &&
 		!config.supportedTransports.includes(Transport.STDIO)
 	)
 }

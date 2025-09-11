@@ -1,5 +1,4 @@
 import inquirer from "inquirer"
-import chalk from "chalk"
 import { uuidv7 } from "uuidv7"
 import {
 	getAnalyticsConsent,

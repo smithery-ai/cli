@@ -2,9 +2,17 @@ import type {
 	ConnectionInfo,
 	ServerDetailResponse,
 } from "@smithery/registry/models/components"
-import type { ConfiguredServer, ServerConfig, StreamableHTTPConnection } from "../types/registry"
+import type {
+	ConfiguredServer,
+	ServerConfig,
+	StreamableHTTPConnection,
+} from "../types/registry"
 import type { JSONSchema } from "../types/registry"
-import { clientSupportsTransport, getPreferredTransport, getClientConfiguration, Transport } from "../config/clients"
+import {
+	getPreferredTransport,
+	getClientConfiguration,
+	Transport,
+} from "../config/clients"
 import inquirer from "inquirer"
 import chalk from "chalk"
 
@@ -396,7 +404,13 @@ export function formatServerConfig(
 ): ConfiguredServer {
 	// Check if we should use HTTP format
 	if (client && server && shouldUseHTTPFormat(client, server)) {
-		return createHTTPServerConfig(qualifiedName, userConfig, apiKey, profile, client)
+		return createHTTPServerConfig(
+			qualifiedName,
+			userConfig,
+			apiKey,
+			profile,
+			client,
+		)
 	}
 
 	// Default to STDIO format
@@ -442,11 +456,14 @@ export function formatServerConfig(
  * @param server - The server details
  * @returns True if HTTP format should be used
  */
-function shouldUseHTTPFormat(client: string, server: ServerDetailResponse): boolean {
+function shouldUseHTTPFormat(
+	client: string,
+	server: ServerDetailResponse,
+): boolean {
 	try {
 		// Check if server has HTTP connections available
 		const hasHTTPConnection = server.connections?.some(
-			(conn) => conn.type === "http" && "deploymentUrl" in conn
+			(conn) => conn.type === "http" && "deploymentUrl" in conn,
 		)
 
 		if (!hasHTTPConnection || !server.remote) {
@@ -456,12 +473,15 @@ function shouldUseHTTPFormat(client: string, server: ServerDetailResponse): bool
 		// Determine available transports based on server capabilities
 		const availableTransports: Transport[] = []
 		if (hasHTTPConnection) availableTransports.push(Transport.HTTP)
-		if (server.connections?.some(conn => conn.type === "stdio")) {
+		if (server.connections?.some((conn) => conn.type === "stdio")) {
 			availableTransports.push(Transport.STDIO)
 		}
 
 		// Use the client's preferred transport
-		const preferredTransport = getPreferredTransport(client, availableTransports)
+		const preferredTransport = getPreferredTransport(
+			client,
+			availableTransports,
+		)
 		return preferredTransport === Transport.HTTP
 	} catch (error) {
 		// If we can't determine client capabilities, default to STDIO

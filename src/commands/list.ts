@@ -1,5 +1,9 @@
-import { readConfig, getConfigPath } from "../utils/client-config"
-import { VALID_CLIENTS, type ValidClient } from "../config/clients"
+import { readConfig } from "../utils/client-config"
+import {
+	VALID_CLIENTS,
+	type ValidClient,
+	getClientConfiguration,
+} from "../config/clients"
 import chalk from "chalk"
 
 export async function list(
@@ -13,7 +17,7 @@ export async function list(
 			break
 		case "servers": {
 			/* check if client is command-type */
-			const configTarget = getConfigPath(client)
+			const configTarget = getClientConfiguration(client)
 			if (configTarget.installType === "command") {
 				console.log(
 					chalk.yellow(

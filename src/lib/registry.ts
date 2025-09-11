@@ -222,14 +222,11 @@ export const saveUserConfig = async (
 			Authorization: `Bearer ${apiKey}`,
 		}
 
-		const response = await fetch(
-			`${endpoint}/config/${serverQualifiedName}`,
-			{
-				method: "PUT",
-				headers,
-				body: JSON.stringify(requestBody),
-			},
-		)
+		const response = await fetch(`${endpoint}/config/${serverQualifiedName}`, {
+			method: "PUT",
+			headers,
+			body: JSON.stringify(requestBody),
+		})
 		verbose(`Response status: ${response.status}`)
 
 		if (!response.ok) {
@@ -283,7 +280,7 @@ export const searchServers = async (
 
 	try {
 		const response = await fetch(
-			`${endpoint}/servers?q=${encodeURIComponent(searchTerm)}&pageSize=20`,
+			`${endpoint}/servers?q=${encodeURIComponent(searchTerm)}&pageSize=10`,
 			{
 				headers: {
 					Authorization: `Bearer ${apiKey}`,
@@ -329,24 +326,31 @@ export const validateUserConfig = async (
 	verbose(`Validating user config for ${serverQualifiedName}`)
 
 	try {
-		const response = await fetch(`${endpoint}/config/${serverQualifiedName}/validate`, {
-			method: "GET",
-			headers: {
-				"Authorization": `Bearer ${apiKey}`,
-				"Content-Type": "application/json"
-			}
-		})
-		
+		const response = await fetch(
+			`${endpoint}/config/${serverQualifiedName}/validate`,
+			{
+				method: "GET",
+				headers: {
+					Authorization: `Bearer ${apiKey}`,
+					"Content-Type": "application/json",
+				},
+			},
+		)
+
 		if (!response.ok) {
 			throw new Error(`Config validation failed: ${response.statusText}`)
 		}
-		
+
 		const validationResult = await response.json()
-		verbose(`Config validation result: ${JSON.stringify(validationResult, null, 2)}`)
-		
+		verbose(
+			`Config validation result: ${JSON.stringify(validationResult, null, 2)}`,
+		)
+
 		return validationResult
 	} catch (error) {
-		verbose(`Config validation error: ${error instanceof Error ? error.message : String(error)}`)
+		verbose(
+			`Config validation error: ${error instanceof Error ? error.message : String(error)}`,
+		)
 		if (error instanceof Error) {
 			throw new Error(`Failed to validate config: ${error.message}`)
 		}

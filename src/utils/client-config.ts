@@ -5,32 +5,19 @@ import path from "node:path"
 import type { MCPConfig } from "../types/registry.js"
 import { verbose } from "../lib/logger.js"
 import { execFileSync } from "node:child_process"
-import { getClientConfiguration, type ClientConfiguration } from "../config/clients.js"
+import {
+	getClientConfiguration,
+	type ClientConfiguration,
+} from "../config/clients.js"
 
-export interface ClientConfig extends MCPConfig {
+export interface ClientMCPConfig extends MCPConfig {
 	[key: string]: any
 }
 
-// Legacy type alias for backward compatibility
-type ClientInstallTarget = ClientConfiguration
-
-export function getConfigPath(client?: string): ClientInstallTarget {
-	const normalizedClient = client?.toLowerCase() || "claude"
-	verbose(`Getting config path for client: ${normalizedClient}`)
-
-	const clientConfig = getClientConfiguration(normalizedClient)
-	if (!clientConfig) {
-		throw new Error(`Unknown client: ${normalizedClient}`)
-	}
-
-	verbose(`Config path resolved to: ${JSON.stringify(clientConfig)}`)
-	return clientConfig
-}
-
-export function readConfig(client: string): ClientConfig {
+export function readConfig(client: string): ClientMCPConfig {
 	verbose(`Reading config for client: ${client}`)
 	try {
-		const clientConfig = getConfigPath(client)
+		const clientConfig = getClientConfiguration(client)
 
 		// Command-based installers (i.e. VS Code) do not currently support listing servers
 		if (clientConfig.installType === "command") {
@@ -90,8 +77,9 @@ export function readConfig(client: string): ClientConfig {
 	}
 }
 
-export function writeConfig(config: ClientConfig, client?: string): void {
-	verbose(`Writing config for client: ${client || "default"}`)
+// Writes a complete client config into client config file
+export function writeConfig(config: ClientMCPConfig, client: string): void {
+	verbose(`Writing config for client: ${client}`)
 	verbose(`Config data: ${JSON.stringify(config, null, 2)}`)
 
 	if (!config.mcpServers || typeof config.mcpServers !== "object") {
@@ -99,20 +87,18 @@ export function writeConfig(config: ClientConfig, client?: string): void {
 		throw new Error("Invalid mcpServers structure")
 	}
 
-	const clientConfig = getConfigPath(client)
-	if (clientConfig.installType === "command") {
-		writeConfigCommand(config, clientConfig)
-	} else if (clientConfig.installType === "yaml") {
+	const clientConfig = getClientConfiguration(client)
+	if (clientConfig.installType === "yaml") {
 		writeConfigYaml(config, clientConfig)
 	} else if (clientConfig.installType === "toml") {
 		writeConfigToml(config, clientConfig)
 	} else {
-		writeConfigFile(config, clientConfig)
+		writeConfigJson(config, clientConfig)
 	}
 }
 
-function writeConfigCommand(
-	config: ClientConfig,
+export function runConfigCommand(
+	config: ClientMCPConfig,
 	clientConfig: ClientConfiguration,
 ): void {
 	const command = clientConfig.command
@@ -122,7 +108,9 @@ function writeConfigCommand(
 
 	const commandConfig = clientConfig.commandConfig
 	if (!commandConfig) {
-		throw new Error(`No command configuration defined for client: ${clientConfig.label}`)
+		throw new Error(
+			`No command configuration defined for client: ${clientConfig.label}`,
+		)
 	}
 
 	// Process each server
@@ -130,19 +118,24 @@ function writeConfigCommand(
 		let args: string[]
 
 		// Determine if this is an HTTP server configuration
-		const isHTTPServer = 'type' in server && server.type === 'http'
-		
-		if (isHTTPServer && 'url' in server && commandConfig.http) {
+		const isHTTPServer = "type" in server && server.type === "http"
+
+		if (isHTTPServer && "url" in server && commandConfig.http) {
 			// Use HTTP template function
 			args = commandConfig.http(name, server.url as string)
-		} else if (!isHTTPServer && 'command' in server && commandConfig.stdio) {
+		} else if (!isHTTPServer && "command" in server && commandConfig.stdio) {
 			// Use STDIO template function
 			const serverCommand = server.command as string
-			const serverArgs = ('args' in server && Array.isArray(server.args)) ? server.args as string[] : []
+			const serverArgs =
+				"args" in server && Array.isArray(server.args)
+					? (server.args as string[])
+					: []
 			args = commandConfig.stdio(name, serverCommand, serverArgs)
 		} else {
-			const transportType = isHTTPServer ? 'HTTP' : 'STDIO'
-			throw new Error(`No ${transportType} command configuration defined for client: ${clientConfig.label}`)
+			const transportType = isHTTPServer ? "HTTP" : "STDIO"
+			throw new Error(
+				`No ${transportType} command configuration defined for client: ${clientConfig.label}`,
+			)
 		}
 
 		verbose(`Running command: ${JSON.stringify([command, ...args])}`)
@@ -166,7 +159,10 @@ function writeConfigCommand(
 	}
 }
 
-function writeConfigFile(config: ClientConfig, clientConfig: ClientConfiguration): void {
+function writeConfigJson(
+	config: ClientMCPConfig,
+	clientConfig: ClientConfiguration,
+): void {
 	const configPath = clientConfig.path
 	if (!configPath) {
 		throw new Error(`No path defined for client: ${clientConfig.label}`)
@@ -180,7 +176,7 @@ function writeConfigFile(config: ClientConfig, clientConfig: ClientConfiguration
 		fs.mkdirSync(configDir, { recursive: true })
 	}
 
-	let existingConfig: ClientConfig = { mcpServers: {} }
+	let existingConfig: ClientMCPConfig = { mcpServers: {} }
 	try {
 		if (fs.existsSync(configPath)) {
 			verbose(`Reading existing config file for merging`)
@@ -208,7 +204,10 @@ function writeConfigFile(config: ClientConfig, clientConfig: ClientConfiguration
 	verbose(`Config successfully written`)
 }
 
-function writeConfigYaml(config: ClientConfig, clientConfig: ClientConfiguration): void {
+function writeConfigYaml(
+	config: ClientMCPConfig,
+	clientConfig: ClientConfiguration,
+): void {
 	const configPath = clientConfig.path
 	if (!configPath) {
 		throw new Error(`No path defined for client: ${clientConfig.label}`)
@@ -290,7 +289,10 @@ function writeConfigYaml(config: ClientConfig, clientConfig: ClientConfiguration
 	verbose(`YAML config successfully written`)
 }
 
-function writeConfigToml(config: ClientConfig, clientConfig: ClientConfiguration): void {
+function writeConfigToml(
+	config: ClientMCPConfig,
+	clientConfig: ClientConfiguration,
+): void {
 	const configPath = clientConfig.path
 	if (!configPath) {
 		throw new Error(`No path defined for client: ${clientConfig.label}`)

@@ -43,7 +43,10 @@ export const StreamableHTTPDeploymentConnectionSchema = z.object({
 export const StreamableHTTPConnectionSchema = z.object({
 	type: z.literal("http").describe("Connection type for HTTP servers."),
 	url: z.string().describe("The direct URL of the HTTP MCP server."),
-	headers: z.record(z.string(), z.string()).optional().describe("Optional HTTP headers to include."),
+	headers: z
+		.record(z.string(), z.string())
+		.optional()
+		.describe("Optional HTTP headers to include."),
 })
 
 export type StdioConnection = z.infer<typeof StdioConnectionSchema>
