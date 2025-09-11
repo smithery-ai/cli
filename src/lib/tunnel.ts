@@ -7,8 +7,9 @@ export async function getTemporaryTunnelToken(apiKey: string): Promise<{
 	domain: string
 }> {
 	try {
+		const registryEndpoint = process.env.REGISTRY_ENDPOINT || "https://registry.smithery.ai"
 		const response = await fetch(
-			`${process.env.REGISTRY_ENDPOINT}/uplink/token`,
+			`${registryEndpoint}/uplink/token`,
 			{
 				method: "POST",
 				headers: {

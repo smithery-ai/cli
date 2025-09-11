@@ -9,7 +9,15 @@ import { chooseConnection } from "../../utils/config.js"
 import { createStdioRunner as startSTDIOrunner } from "./stdio-runner.js"
 import { logWithTimestamp } from "./runner-utils.js"
 import { createStreamableHTTPRunner } from "./streamable-http-runner.js"
+import { createUplinkRunner } from "./uplink-runner.js"
+import { createLocalUplinkRunner } from "./local-uplink-runner.js"
 import type { ServerDetailResponse } from "@smithery/registry/models/components"
+
+interface RunOptions {
+	uplink?: boolean
+	open?: boolean
+	initialMessage?: string
+}
 
 /**
  * Runs a server with the specified configuration
@@ -18,6 +26,7 @@ import type { ServerDetailResponse } from "@smithery/registry/models/components"
  * @param {ServerConfig} config - Configuration values for the server
  * @param {string} apiKey - API key required for authentication
  * @param {string} [profile] - Optional profile name to use
+ * @param {RunOptions} [options] - Additional options for uplink functionality
  * @returns {Promise<void>} A promise that resolves when the server is running or fails
  * @throws {Error} If the server cannot be resolved or connection fails
  */
@@ -26,6 +35,7 @@ export async function run(
 	config: ServerConfig,
 	apiKey: string | undefined,
 	profile?: string,
+	options?: RunOptions,
 ) {
 	try {
 		const settingsResult = await initializeSettings()
@@ -58,6 +68,7 @@ export async function run(
 			analyticsEnabled,
 			apiKey,
 			profile,
+			options,
 		)
 	} catch (error) {
 		logWithTimestamp(
@@ -74,6 +85,8 @@ export async function run(
  * @param {ServerConfig} config - Configuration values for the server
  * @param {boolean} analyticsEnabled - Whether analytics are enabled for the server
  * @param {string} [apiKey] - Required for WS connections. Optional for stdio connections.
+ * @param {string} [profile] - Optional profile name to use
+ * @param {RunOptions} [options] - Additional options for uplink functionality
  * @returns {Promise<void>} A promise that resolves when the server is running
  * @throws {Error} If connection type is unsupported or deployment URL is missing for WS connections
  * @private
@@ -84,8 +97,47 @@ async function pickServerAndRun(
 	analyticsEnabled: boolean,
 	apiKey: string | undefined, // can be undefined because of optionality for local servers
 	profile: string | undefined,
+	options?: RunOptions,
 ): Promise<void> {
 	const connection = chooseConnection(serverDetails)
+
+	// If uplink option is enabled, choose the appropriate uplink runner
+	if (options?.uplink) {
+		if (!apiKey) {
+			throw new Error("API key is required for uplink connections")
+		}
+		
+		if (connection.type === "http") {
+			// Remote uplink mode - connect to deployed server via HTTP
+			if (!connection.deploymentUrl) {
+				throw new Error("Missing deployment URL")
+			}
+			await createUplinkRunner(
+				connection.deploymentUrl,
+				apiKey,
+				config,
+				profile,
+				{
+					open: options.open !== false, // default to true
+					initialMessage: options.initialMessage || "Say hello to the world!",
+				}
+			)
+		} else if (connection.type === "stdio") {
+			// Local uplink mode - start local STDIO server with HTTP tunnel
+			await createLocalUplinkRunner(
+				serverDetails,
+				config,
+				apiKey,
+				{
+					open: options.open !== false, // default to true
+					initialMessage: options.initialMessage || "Say hello to the world!",
+				}
+			)
+		} else {
+			throw new Error(`Uplink functionality does not support ${connection.type} connections`)
+		}
+		return
+	}
 
 	if (connection.type === "http") {
 		if (!connection.deploymentUrl) {
