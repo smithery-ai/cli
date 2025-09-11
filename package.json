@@ -11,7 +11,7 @@
 	"description": "A NPX command to install and list Model Context Protocols from Smithery",
 	"main": "dist/index.js",
 	"scripts": {
-		"build": "tsc && node build.mjs && chmod +x dist/index.js",
+		"build": "tsc && node build.mjs && shx chmod +x dist/index.js",
 		"start": "node dist/index.js",
 		"test:list": "node --loader ts-node/esm src/index.ts list",
 		"test:install": "node --loader ts-node/esm src/index.ts install",
@@ -43,6 +43,7 @@
 		"lodash": "^4.17.21",
 		"ora": "^8.2.0",
 		"smol-toml": "^1.4.2",
+		"shx": "^0.4.0",
 		"uuid": "^11.1.0",
 		"uuidv7": "^1.0.2",
 		"yaml": "^2.3.4"
