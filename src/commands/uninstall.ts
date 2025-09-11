@@ -10,10 +10,10 @@ process.on("warning", (warning) => {
 	console.warn(warning)
 })
 
-import type { ValidClient } from "../constants"
+import type { ValidClient } from "../config/clients"
 import { promptForRestart } from "../utils/client"
-import { getConfigPath } from "../client-config"
-import { readConfig, writeConfig } from "../client-config"
+import { getConfigPath } from "../utils/client-config"
+import { readConfig, writeConfig } from "../utils/client-config"
 import chalk from "chalk"
 
 /* uninstalls server for given client */
@@ -24,7 +24,7 @@ export async function uninstallServer(
 	try {
 		/* check if client is command-type */
 		const configTarget = getConfigPath(client)
-		if (configTarget.type === "command") {
+		if (configTarget.installType === "command") {
 			console.log(
 				chalk.yellow(`Uninstallation is currently not supported for ${client}`),
 			)
@@ -47,7 +47,7 @@ export async function uninstallServer(
 		writeConfig(config, client)
 
 		console.log(
-			chalk.green(`${qualifiedName} successfully uninstalled from ${client}`),
+			chalk.green(`✓ ${qualifiedName} successfully uninstalled from ${client}`),
 		)
 
 		await promptForRestart(client)

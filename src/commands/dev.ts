@@ -5,7 +5,7 @@ import { setupTunnelAndPlayground } from "../lib/dev-lifecycle"
 import { ensureApiKey } from "../utils/runtime"
 import { buildMcpServer } from "../lib/build"
 import { existsSync } from "node:fs"
-import { debug } from "../logger"
+import { debug } from "../lib/logger"
 
 interface DevOptions {
 	entryFile?: string

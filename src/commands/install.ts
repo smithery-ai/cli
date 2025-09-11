@@ -12,10 +12,10 @@ process.on("warning", (warning) => {
 
 import chalk from "chalk"
 import ora from "ora"
-import { readConfig, writeConfig } from "../client-config"
-import type { ValidClient } from "../constants"
-import { verbose } from "../logger"
-import { resolveServer, ResolveServerSource } from "../registry"
+import { readConfig, writeConfig } from "../utils/client-config"
+import type { ValidClient } from "../config/clients"
+import { verbose } from "../lib/logger"
+import { resolveServer, ResolveServerSource, saveUserConfig, validateUserConfig } from "../lib/registry"
 import type { ServerConfig } from "../types/registry"
 import { checkAnalyticsConsent } from "../utils/analytics"
 import { promptForRestart } from "../utils/client"
@@ -96,18 +96,71 @@ export async function installServer(
 		}
 		checkAndNotifyRemoteServer(server)
 
-		const collectedConfigValues = apiKey // Check if API key was provided as argument
-			? configValues || {} // If api key was provided as argument, don't prompt for additional config values
-			: await collectConfigValues(connection, configValues || {}) // if api key wasn't provided as argument, prompt for additional values
+		let collectedConfigValues: ServerConfig = configValues || {}
+
+		// Check existing config first
+		if (finalApiKey && Object.keys(configValues).length === 0) {
+			try {
+				verbose("Checking existing configuration...")
+				const validation = await validateUserConfig(qualifiedName, finalApiKey)
+				
+				if (validation.isComplete) {
+					// Check if there are any required fields at all
+					const hasRequiredFields = Object.keys(validation.fieldSchemas).length > 0
+					
+					if (hasRequiredFields) {
+						console.log(chalk.cyan("*") + " Using existing configuration from default profile")
+						console.log(chalk.dim(`  Update at: https://smithery.ai/account/profiles?server=${qualifiedName}`))
+					} else {
+						console.log(chalk.cyan("*") + " No configuration required")
+					}
+					collectedConfigValues = {} // Empty - will use saved config from smithery
+				} else {
+					console.log(chalk.yellow("!"), `Missing config: ${validation.missingFields.join(", ")}`)
+					// Only prompt for missing fields
+					collectedConfigValues = await collectConfigValues(connection, configValues || {})
+				}
+			} catch (error) {
+				verbose(`Config validation failed: ${error instanceof Error ? error.message : String(error)}`)
+				// Fall back to normal prompting
+				collectedConfigValues = await collectConfigValues(connection, configValues || {})
+			}
+		} else if (Object.keys(configValues).length === 0) {
+			// No API key or no existing config, prompt normally
+			collectedConfigValues = await collectConfigValues(connection, configValues || {})
+		}
 
 		verbose(`Config values: ${JSON.stringify(collectedConfigValues, null, 2)}`)
+
+		/* Save user config to cloud registry if API key is available */
+		let configSavedToCloud = false
+		if (finalApiKey && Object.keys(collectedConfigValues).length > 0) {
+			verbose("Saving configuration to cloud registry...")
+			try {
+				await saveUserConfig(qualifiedName, collectedConfigValues, finalApiKey)
+				verbose("Configuration successfully saved to smithery")
+				configSavedToCloud = true
+			} catch (error) {
+				verbose(
+					`Failed to save config to smithery: ${error instanceof Error ? error.message : String(error)}`,
+				)
+				// Don't fail the installation if cloud config save fails
+				console.warn(
+					chalk.yellow(
+						"Warning: Could not save configuration. Config will be saved locally.",
+					),
+				)
+			}
+		}
 
 		verbose("Formatting server configuration...")
 		const serverConfig = formatServerConfig(
 			qualifiedName,
-			collectedConfigValues,
+			configSavedToCloud ? {} : collectedConfigValues, // Use empty config if saved to smithery
 			finalApiKey,
 			profile,
+			client, // Pass client name to determine transport type
+			server, // Pass server details to check HTTP support
 		)
 		verbose(`Formatted server config: ${JSON.stringify(serverConfig, null, 2)}`)
 
@@ -125,7 +178,7 @@ export async function installServer(
 		verbose("Configuration successfully written")
 
 		console.log(
-			chalk.green(`${qualifiedName} successfully installed for ${client}`),
+			chalk.green(`✓ ${qualifiedName} successfully installed for ${client}`),
 		)
 		verbose("Prompting for client restart...")
 		await promptForRestart(client)

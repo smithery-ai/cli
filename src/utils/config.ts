@@ -2,8 +2,9 @@ import type {
 	ConnectionInfo,
 	ServerDetailResponse,
 } from "@smithery/registry/models/components"
-import type { ConfiguredServer, ServerConfig } from "../types/registry"
+import type { ConfiguredServer, ServerConfig, StreamableHTTPConnection } from "../types/registry"
 import type { JSONSchema } from "../types/registry"
+import { clientSupportsTransport, getPreferredTransport, getClientConfiguration, Transport } from "../config/clients"
 import inquirer from "inquirer"
 import chalk from "chalk"
 
@@ -380,8 +381,9 @@ export function getServerName(serverId: string): string {
  * @param qualifiedName - The fully qualified name of the server package
  * @param userConfig - The user configuration for the server
  * @param apiKey - Optional API key
- * @param configNeeded - Whether the config flag is needed (defaults to true)
  * @param profile - Optional profile name to use
+ * @param client - Optional client name to determine transport type
+ * @param server - Optional server details to check for HTTP support
  * @returns Configured server with command and arguments
  */
 export function formatServerConfig(
@@ -389,7 +391,15 @@ export function formatServerConfig(
 	userConfig: ServerConfig,
 	apiKey: string | undefined,
 	profile: string | undefined,
+	client?: string,
+	server?: ServerDetailResponse,
 ): ConfiguredServer {
+	// Check if we should use HTTP format
+	if (client && server && shouldUseHTTPFormat(client, server)) {
+		return createHTTPServerConfig(qualifiedName, userConfig, apiKey, profile, client)
+	}
+
+	// Default to STDIO format
 	// Base arguments for npx command
 	const npxArgs = ["-y", "@smithery/cli@latest", "run", qualifiedName]
 
@@ -423,5 +433,83 @@ export function formatServerConfig(
 	return {
 		command: "npx",
 		args: npxArgs,
+	}
+}
+
+/**
+ * Determines if HTTP format should be used based on client and server capabilities
+ * @param client - The client name
+ * @param server - The server details
+ * @returns True if HTTP format should be used
+ */
+function shouldUseHTTPFormat(client: string, server: ServerDetailResponse): boolean {
+	try {
+		// Check if server has HTTP connections available
+		const hasHTTPConnection = server.connections?.some(
+			(conn) => conn.type === "http" && "deploymentUrl" in conn
+		)
+
+		if (!hasHTTPConnection || !server.remote) {
+			return false // Server doesn't support HTTP or isn't remote
+		}
+
+		// Determine available transports based on server capabilities
+		const availableTransports: Transport[] = []
+		if (hasHTTPConnection) availableTransports.push(Transport.HTTP)
+		if (server.connections?.some(conn => conn.type === "stdio")) {
+			availableTransports.push(Transport.STDIO)
+		}
+
+		// Use the client's preferred transport
+		const preferredTransport = getPreferredTransport(client, availableTransports)
+		return preferredTransport === Transport.HTTP
+	} catch (error) {
+		// If we can't determine client capabilities, default to STDIO
+		return false
+	}
+}
+
+/**
+ * Creates HTTP server configuration for clients that support it
+ * @param qualifiedName - The fully qualified name of the server package
+ * @param userConfig - The user configuration for the server
+ * @param apiKey - Optional API key
+ * @param profile - Optional profile name to use
+ * @returns HTTP configuration
+ */
+function createHTTPServerConfig(
+	qualifiedName: string,
+	userConfig: ServerConfig,
+	apiKey: string | undefined,
+	profile: string | undefined,
+	client?: string,
+): StreamableHTTPConnection {
+	// Build the HTTP URL for the server
+	const baseUrl = `https://server.smithery.ai/${qualifiedName}/mcp`
+	const url = new URL(baseUrl)
+
+	// Check if client supports OAuth (don't add API key to URL)
+	const clientConfig = client ? getClientConfiguration(client) : null
+	const supportsOAuth = clientConfig?.supportsOAuth || false
+
+	// Add query parameters
+	if (apiKey && !supportsOAuth) {
+		url.searchParams.set("api_key", apiKey)
+	}
+
+	if (profile) {
+		url.searchParams.set("profile", profile)
+	}
+
+	// Add config as base64 encoded parameter if not empty
+	if (Object.keys(userConfig).length > 0) {
+		const configStr = JSON.stringify(userConfig)
+		url.searchParams.set("config", Buffer.from(configStr).toString("base64"))
+	}
+
+	return {
+		type: "http",
+		url: url.toString(),
+		headers: {},
 	}
 }

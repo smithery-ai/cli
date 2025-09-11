@@ -5,7 +5,7 @@ import { setupTunnelAndPlayground } from "../lib/dev-lifecycle"
 import { ensureApiKey } from "../utils/runtime"
 import { buildMcpServer } from "../lib/build"
 import { existsSync, writeFileSync, mkdirSync } from "node:fs"
-import { debug } from "../logger"
+import { debug } from "../lib/logger"
 
 interface UplinkOptions {
 	entryFile?: string

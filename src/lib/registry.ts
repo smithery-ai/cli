@@ -5,13 +5,13 @@ import {
 	type ServerConfig,
 	type StdioConnection,
 	StdioConnectionSchema,
-	type StreamableHTTPConnection,
-} from "./types/registry"
+	type StreamableHTTPDeploymentConnection,
+} from "../types/registry"
 import { SmitheryRegistry } from "@smithery/registry"
 import type { ServerDetailResponse } from "@smithery/registry/models/components"
-import { ANALYTICS_ENDPOINT } from "./constants"
-import { getSessionId } from "./utils/analytics"
-import { getUserId } from "./smithery-config"
+import { ANALYTICS_ENDPOINT } from "../constants"
+import { getSessionId } from "../utils/analytics"
+import { getUserId } from "../utils/smithery-config"
 import {
 	SDKValidationError,
 	ServerError,
@@ -173,7 +173,7 @@ export const fetchConnection = async (
 		verbose("Successfully received connection data from registry")
 		const data = (await response.json()) as {
 			success: boolean
-			result?: StdioConnection | StreamableHTTPConnection
+			result?: StdioConnection | StreamableHTTPDeploymentConnection
 		}
 		verbose(`Connection response received (success: ${data.success})`)
 
@@ -188,6 +188,167 @@ export const fetchConnection = async (
 		)
 		if (error instanceof Error) {
 			throw new Error(`Failed to fetch server connection: ${error.message}`)
+		}
+		throw error
+	}
+}
+
+/**
+ * Saves user configuration for a specific server to the registry
+ * @param serverQualifiedName The name of the server to save config for
+ * @param config User configuration to save
+ * @param apiKey API key for authentication
+ * @returns Promise that resolves when config is saved successfully
+ */
+export const saveUserConfig = async (
+	serverQualifiedName: string,
+	config: ServerConfig,
+	apiKey: string,
+): Promise<void> => {
+	const endpoint = getEndpoint()
+	verbose(
+		`Saving user config for ${serverQualifiedName} to registry at ${endpoint}`,
+	)
+	verbose(`Config to save (keys: ${Object.keys(config).join(", ")})`)
+
+	try {
+		const requestBody = {
+			config,
+		}
+		verbose(`Sending config save request for ${serverQualifiedName}`)
+
+		const headers: Record<string, string> = {
+			"Content-Type": "application/json",
+			Authorization: `Bearer ${apiKey}`,
+		}
+
+		const response = await fetch(
+			`${endpoint}/config/${serverQualifiedName}`,
+			{
+				method: "PUT",
+				headers,
+				body: JSON.stringify(requestBody),
+			},
+		)
+		verbose(`Response status: ${response.status}`)
+
+		if (!response.ok) {
+			const errorText = await response.text()
+			verbose(`Error response: ${errorText}`)
+			throw new Error(
+				`Config save request failed with status ${response.status}: ${errorText}`,
+			)
+		}
+
+		verbose("Successfully saved user config to registry")
+		const data = (await response.json()) as {
+			success: boolean
+			message?: string
+		}
+		verbose(`Config save response received (success: ${data.success})`)
+
+		if (!data.success) {
+			throw new Error(data.message || "Failed to save user configuration")
+		}
+	} catch (error) {
+		verbose(
+			`Config save error: ${error instanceof Error ? error.message : String(error)}`,
+		)
+		if (error instanceof Error) {
+			throw new Error(`Failed to save user config: ${error.message}`)
+		}
+		throw error
+	}
+}
+
+/**
+ * Search for servers in the registry
+ * @param searchTerm The search term to use
+ * @param apiKey API key for authentication
+ * @returns Promise that resolves with search results
+ */
+export const searchServers = async (
+	searchTerm: string,
+	apiKey: string,
+): Promise<
+	Array<{
+		qualifiedName: string
+		displayName?: string
+		description?: string
+		useCount: number
+	}>
+> => {
+	const endpoint = getEndpoint()
+	verbose(`Searching servers for term: ${searchTerm}`)
+
+	try {
+		const response = await fetch(
+			`${endpoint}/servers?q=${encodeURIComponent(searchTerm)}&pageSize=20`,
+			{
+				headers: {
+					Authorization: `Bearer ${apiKey}`,
+					"Content-Type": "application/json",
+				},
+			},
+		)
+
+		if (!response.ok) {
+			throw new Error(`Search failed: ${response.statusText}`)
+		}
+
+		const searchData = await response.json()
+		verbose(`Search returned ${searchData.servers?.length || 0} servers`)
+
+		return searchData.servers || []
+	} catch (error) {
+		verbose(
+			`Search error: ${error instanceof Error ? error.message : String(error)}`,
+		)
+		if (error instanceof Error) {
+			throw new Error(`Failed to search servers: ${error.message}`)
+		}
+		throw error
+	}
+}
+
+/**
+ * Validates if user has complete configuration for a server
+ * @param serverQualifiedName The name of the server to validate config for
+ * @param apiKey API key for authentication
+ * @returns Promise that resolves with validation result
+ */
+export const validateUserConfig = async (
+	serverQualifiedName: string,
+	apiKey: string,
+): Promise<{
+	isComplete: boolean
+	missingFields: string[]
+	fieldSchemas: Record<string, any>
+}> => {
+	const endpoint = getEndpoint()
+	verbose(`Validating user config for ${serverQualifiedName}`)
+
+	try {
+		const response = await fetch(`${endpoint}/config/${serverQualifiedName}/validate`, {
+			method: "GET",
+			headers: {
+				"Authorization": `Bearer ${apiKey}`,
+				"Content-Type": "application/json"
+			}
+		})
+		
+		if (!response.ok) {
+			throw new Error(`Config validation failed: ${response.statusText}`)
+		}
+		
+		const validationResult = await response.json()
+		verbose(`Config validation result: ${JSON.stringify(validationResult, null, 2)}`)
+		
+		return validationResult
+	} catch (error) {
+		verbose(`Config validation error: ${error instanceof Error ? error.message : String(error)}`)
+		if (error instanceof Error) {
+			throw new Error(`Failed to validate config: ${error.message}`)
 		}
 		throw error
 	}

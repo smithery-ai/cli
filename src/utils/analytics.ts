@@ -6,7 +6,7 @@ import {
 	setAnalyticsConsent,
 	hasAskedConsent,
 	initializeSettings,
-} from "../smithery-config"
+} from "./smithery-config"
 
 // Session management
 type Session = {
@@ -84,7 +84,7 @@ export async function checkAnalyticsConsent(): Promise<void> {
 				{
 					type: "confirm",
 					name: "EnableAnalytics",
-					message: `Would you like to help improve Smithery by sending anonymized usage data?\nFor information on Smithery's data policy, please visit: ${chalk.blue("https://smithery.ai/docs/data-policy")}`,
+					message: `Would you like to help improve Smithery by sending anonymized usage data?")}`,
 					default: true,
 				},
 			])

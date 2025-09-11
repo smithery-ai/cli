@@ -5,8 +5,8 @@ import { exec } from "node:child_process"
 import { promisify } from "node:util"
 import { getDefaultEnvironment } from "@modelcontextprotocol/sdk/client/stdio.js"
 import ora from "ora"
-import { verbose } from "../logger"
-import { getApiKey, setApiKey } from "../smithery-config"
+import { verbose } from "../lib/logger"
+import { getApiKey, setApiKey } from "./smithery-config"
 
 const execAsync = promisify(exec)
 
@@ -232,8 +232,8 @@ export function checkAndNotifyRemoteServer(server: {
 	if (remote) {
 		verbose("Remote server detected, showing security notice")
 		console.log(
-			chalk.blue(
-				`Installing remote server. Please ensure you trust the server author, especially when sharing sensitive data.\nFor information on Smithery's data policy, please visit: ${chalk.underline("https://smithery.ai/docs/data-policy")}`,
+			chalk.dim(
+				`Installing remote server. Please ensure you trust the server author, especially when sharing sensitive data.")}`,
 			),
 		)
 	}
