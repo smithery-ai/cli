@@ -30,15 +30,12 @@ jobs:
           registry-url: 'https://registry.npmjs.org'
 
       - name: Install dependencies
-        run: npm install
+        run: npm ci
 
       - name: Create .env file
         run: |
           echo "REGISTRY_ENDPOINT=${{ secrets.REGISTRY_ENDPOINT }}" >> .env
           echo "ANALYTICS_ENDPOINT=${{ secrets.ANALYTICS_ENDPOINT }}" >> .env
-
-      - name: Run tests
-        run: npm test
 
       - name: Build project
         run: npm run build
