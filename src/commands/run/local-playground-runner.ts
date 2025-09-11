@@ -42,7 +42,7 @@ export const createLocalPlaygroundRunner = async (
 		{ resolve: Function; reject: Function }
 	>()
 
-	const localPort = options.port || 3000
+	const localPort = options.port || 6969
 	const app = express()
 
 	// Enable CORS and JSON parsing
