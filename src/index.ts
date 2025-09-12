@@ -266,6 +266,7 @@ program
 	.action(async (term) => {
 		const apiKey = await ensureApiKey()
 		await interactiveServerSearch(apiKey, term)
+		// @TODO: add install flow
 	})
 
 // Login command
