@@ -103,7 +103,7 @@ export const CLIENT_CONFIGURATIONS: Record<string, ClientConfiguration> = {
 		supportedTransports: [Transport.STDIO, Transport.HTTP],
 		installType: "json",
 		preferHTTP: true,
-		supportsOAuth: true,
+		supportsOAuth: false,
 		path: path.join(homeDir, ".cursor", "mcp.json"),
 	},
 	windsurf: {
