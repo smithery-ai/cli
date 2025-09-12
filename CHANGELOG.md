@@ -10,6 +10,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Refactored CLI command prompts by extracting prompt utilities from main index file to `src/utils/command-prompts.ts`
 - Cleaned up unused dependencies: removed `@types/uuid` and `bufferutil` optional dependency
 - Improved code organization and maintainability of CLI interface
+- Added short form `-c` option as alias for `--client` across all commands (install, uninstall, list)
 
 ## [1.2.26] - 2025-09-11
 
