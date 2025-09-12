@@ -48,7 +48,7 @@ program
 	.command("install [server]")
 	.description("install a server")
 	.option(
-		"--client <name>",
+		"-c, --client <name>",
 		`Specify the AI client (${VALID_CLIENTS.join(", ")})`,
 	)
 	.option(
@@ -59,7 +59,7 @@ program
 	.option("--profile <name>", "Use a specific profile")
 	.action(async (server, options) => {
 		// Step 1: Select client if not provided
-		const selectedClient = await selectClient(options.client, "Installing")
+		const selectedClient = await selectClient(options.client, "Install")
 
 		// Step 2: Search and select server if not provided
 		const selectedServer = await selectServer(
@@ -90,14 +90,14 @@ program
 	.command("uninstall [server]")
 	.description("uninstall a server")
 	.option(
-		"--client <name>",
+		"-c, --client <name>",
 		`Specify the AI client (${VALID_CLIENTS.join(", ")})`,
 	)
 	.action(async (server, options) => {
 		const { readConfig } = await import("./utils/mcp-config")
 
 		// Step 1: Select client if not provided
-		const selectedClient = await selectClient(options.client, "Uninstalling")
+		const selectedClient = await selectClient(options.client, "Uninstall")
 
 		// Validate client
 		validateClient(selectedClient)
@@ -245,12 +245,12 @@ program
 program
 	.command("list")
 	.description("list installed servers")
-	.option("--client <name>", `Specify the client (${VALID_CLIENTS.join(", ")})`)
+	.option("-c, --client <name>", `Specify the client (${VALID_CLIENTS.join(", ")})`)
 	.action(async (options) => {
 		// If no client provided, show interactive selection
 		const selectedClient = await selectClient(
 			options.client,
-			"List installed servers for",
+			"List",
 		)
 
 		// Validate client
