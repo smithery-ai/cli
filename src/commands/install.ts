@@ -12,11 +12,7 @@ process.on("warning", (warning) => {
 
 import chalk from "chalk"
 import ora from "ora"
-import {
-	readConfig,
-	writeConfig,
-	runConfigCommand,
-} from "../utils/mcp-config"
+import { readConfig, writeConfig, runConfigCommand } from "../utils/mcp-config"
 import type { ValidClient } from "../config/clients"
 import { getClientConfiguration } from "../config/clients"
 import { verbose } from "../lib/logger"
@@ -88,7 +84,7 @@ export async function installServer(
 			apiKey,
 			ResolveServerSource.Install,
 		)
-		verbose(`Package resolved successfully: ${server.qualifiedName}`)
+		verbose(`Server resolved successfully: ${server.qualifiedName}`)
 		spinner.succeed(`Successfully resolved ${qualifiedName}`)
 
 		/* choose connection type */
@@ -125,15 +121,15 @@ export async function installServer(
 
 					if (hasRequiredFields) {
 						console.log(
-							`${chalk.cyan("*")} Using existing configuration from default profile`,
+							`${chalk.green("●")} ${chalk.dim("Using existing configuration from default profile")}`,
 						)
 						console.log(
 							chalk.dim(
-								`  Update configuration at: https://smithery.ai/account/profiles?server=${qualifiedName}`,
+								`${chalk.cyan("→ Update configuration")} at: https://smithery.ai/account/profiles?server=${qualifiedName}`,
 							),
 						)
 					} else {
-						console.log(`${chalk.cyan("*")} No configuration required`)
+						console.log(`${chalk.cyan("○")} No configuration required`)
 					}
 					collectedConfigValues = {} // Empty - will use saved config from smithery
 				} else {

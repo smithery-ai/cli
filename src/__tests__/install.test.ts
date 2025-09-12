@@ -1,7 +1,7 @@
 /**
  * Comprehensive Install Flow Tests
  * Matrix: Target Type × Transport
- * 
+ *
  * Tests the complete installation flow including:
  * - Config formatting (formatServerConfig)
  * - Target writing (writeConfig for files, runConfigCommand for commands)
@@ -11,7 +11,10 @@
 import { describe, test, expect, vi, beforeEach } from "vitest"
 import { Transport, type ClientConfiguration } from "../config/clients"
 import type { ServerDetailResponse } from "@smithery/registry/models/components"
-import type { StdioConnection, StreamableHTTPConnection } from "../types/registry"
+import type {
+	StdioConnection,
+	StreamableHTTPConnection,
+} from "../types/registry"
 
 // Mock all the dependencies using factory functions
 vi.mock("../utils/mcp-config", () => ({
@@ -56,13 +59,18 @@ vi.mock("../utils/client", () => ({
 }))
 
 // Mock process.exit to prevent tests from exiting
-vi.spyOn(process, 'exit').mockImplementation(() => undefined as never)
+vi.spyOn(process, "exit").mockImplementation(() => undefined as never)
 
 // Import after mocking
 import { installServer } from "../commands/install"
 import { writeConfig, runConfigCommand, readConfig } from "../utils/mcp-config"
 import { resolveServer } from "../lib/registry"
-import { chooseConnection, collectConfigValues, formatServerConfig, getServerName } from "../utils/session-config"
+import {
+	chooseConnection,
+	collectConfigValues,
+	formatServerConfig,
+	getServerName,
+} from "../utils/session-config"
 import { getClientConfiguration } from "../config/clients"
 
 // Get mocked functions
@@ -122,7 +130,7 @@ const TEST_CLIENT_CONFIGS: Record<string, ClientConfiguration> = {
 		installType: "toml",
 		path: "/tmp/test-client.toml",
 	},
-	
+
 	// Command-based clients
 	"command-stdio": {
 		label: "Command STDIO Client",
@@ -131,7 +139,10 @@ const TEST_CLIENT_CONFIGS: Record<string, ClientConfiguration> = {
 		command: "test-cli",
 		commandConfig: {
 			stdio: (name: string, command: string, args: string[]) => [
-				"--add-server", name, command, ...args
+				"--add-server",
+				name,
+				command,
+				...args,
 			],
 		},
 	},
@@ -143,7 +154,12 @@ const TEST_CLIENT_CONFIGS: Record<string, ClientConfiguration> = {
 		supportsOAuth: true,
 		commandConfig: {
 			http: (name: string, url: string) => [
-				"mcp", "add", "--transport", "http", name, url
+				"mcp",
+				"add",
+				"--transport",
+				"http",
+				name,
+				url,
 			],
 		},
 	},
@@ -152,7 +168,7 @@ const TEST_CLIENT_CONFIGS: Record<string, ClientConfiguration> = {
 describe("Installation Tests", () => {
 	beforeEach(() => {
 		vi.clearAllMocks()
-		
+
 		// Default mock setup
 		mockResolveServer.mockResolvedValue(mockStdioServer)
 		mockChooseConnection.mockReturnValue({ type: "stdio", configSchema: {} })
@@ -167,14 +183,27 @@ describe("Installation Tests", () => {
 				const clientConfig = TEST_CLIENT_CONFIGS["json-stdio"]
 				const expectedConfig = {
 					command: "npx",
-					args: ["-y", "@smithery/cli@latest", "run", "test-server", "--key", "test-api-key"]
+					args: [
+						"-y",
+						"@smithery/cli@latest",
+						"run",
+						"test-server",
+						"--key",
+						"test-api-key",
+					],
 				} as StdioConnection
 
 				mockGetClientConfiguration.mockReturnValue(clientConfig)
 				mockFormatServerConfig.mockReturnValue(expectedConfig)
 				mockResolveServer.mockResolvedValue(mockStdioServer)
 
-				await installServer("test-server", "json-stdio", {}, "test-api-key", undefined)
+				await installServer(
+					"test-server",
+					"json-stdio",
+					{},
+					"test-api-key",
+					undefined,
+				)
 
 				// Verify the complete flow
 				expect(mockFormatServerConfig).toHaveBeenCalledWith(
@@ -183,13 +212,13 @@ describe("Installation Tests", () => {
 					"test-api-key",
 					undefined, // profile
 					"json-stdio",
-					mockStdioServer
+					mockStdioServer,
 				)
 
 				// Verify config was written to file (not command executed)
 				expect(mockWriteConfig).toHaveBeenCalledWith(
 					{ mcpServers: { "test-server": expectedConfig } },
-					"json-stdio"
+					"json-stdio",
 				)
 				expect(mockRunConfigCommand).not.toHaveBeenCalled()
 			})
@@ -201,27 +230,33 @@ describe("Installation Tests", () => {
 				const expectedConfig = {
 					type: "http",
 					url: "https://server.smithery.ai/test-server/mcp",
-					headers: {}
+					headers: {},
 				} as StreamableHTTPConnection
 
 				mockGetClientConfiguration.mockReturnValue(clientConfig)
 				mockFormatServerConfig.mockReturnValue(expectedConfig)
 				mockResolveServer.mockResolvedValue(mockHttpServer)
 
-				await installServer("test-server", "json-http", {}, "test-api-key", undefined)
+				await installServer(
+					"test-server",
+					"json-http",
+					{},
+					"test-api-key",
+					undefined,
+				)
 
 				expect(mockFormatServerConfig).toHaveBeenCalledWith(
 					"test-server",
 					{},
-					"test-api-key", 
+					"test-api-key",
 					undefined,
 					"json-http",
-					mockHttpServer
+					mockHttpServer,
 				)
 
 				expect(mockWriteConfig).toHaveBeenCalledWith(
 					{ mcpServers: { "test-server": expectedConfig } },
-					"json-http"
+					"json-http",
 				)
 			})
 		})
@@ -233,17 +268,30 @@ describe("Installation Tests", () => {
 				const clientConfig = TEST_CLIENT_CONFIGS["yaml-stdio"]
 				const expectedConfig = {
 					command: "npx",
-					args: ["-y", "@smithery/cli@latest", "run", "test-server", "--key", "test-api-key"]
+					args: [
+						"-y",
+						"@smithery/cli@latest",
+						"run",
+						"test-server",
+						"--key",
+						"test-api-key",
+					],
 				} as StdioConnection
 
 				mockGetClientConfiguration.mockReturnValue(clientConfig)
 				mockFormatServerConfig.mockReturnValue(expectedConfig)
 
-				await installServer("test-server", "yaml-stdio", {}, "test-api-key", undefined)
+				await installServer(
+					"test-server",
+					"yaml-stdio",
+					{},
+					"test-api-key",
+					undefined,
+				)
 
 				expect(mockWriteConfig).toHaveBeenCalledWith(
 					{ mcpServers: { "test-server": expectedConfig } },
-					"yaml-stdio"
+					"yaml-stdio",
 				)
 			})
 		})
@@ -254,18 +302,31 @@ describe("Installation Tests", () => {
 			test("should format config and write to TOML file", async () => {
 				const clientConfig = TEST_CLIENT_CONFIGS["toml-stdio"]
 				const expectedConfig = {
-					command: "npx", 
-					args: ["-y", "@smithery/cli@latest", "run", "test-server", "--key", "test-api-key"]
+					command: "npx",
+					args: [
+						"-y",
+						"@smithery/cli@latest",
+						"run",
+						"test-server",
+						"--key",
+						"test-api-key",
+					],
 				} as StdioConnection
 
 				mockGetClientConfiguration.mockReturnValue(clientConfig)
 				mockFormatServerConfig.mockReturnValue(expectedConfig)
 
-				await installServer("test-server", "toml-stdio", {}, "test-api-key", undefined)
+				await installServer(
+					"test-server",
+					"toml-stdio",
+					{},
+					"test-api-key",
+					undefined,
+				)
 
 				expect(mockWriteConfig).toHaveBeenCalledWith(
 					{ mcpServers: { "test-server": expectedConfig } },
-					"toml-stdio"
+					"toml-stdio",
 				)
 			})
 		})
@@ -277,18 +338,31 @@ describe("Installation Tests", () => {
 				const clientConfig = TEST_CLIENT_CONFIGS["command-stdio"]
 				const expectedConfig = {
 					command: "npx",
-					args: ["-y", "@smithery/cli@latest", "run", "test-server", "--key", "test-api-key"]
+					args: [
+						"-y",
+						"@smithery/cli@latest",
+						"run",
+						"test-server",
+						"--key",
+						"test-api-key",
+					],
 				} as StdioConnection
 
 				mockGetClientConfiguration.mockReturnValue(clientConfig)
 				mockFormatServerConfig.mockReturnValue(expectedConfig)
 
-				await installServer("test-server", "command-stdio", {}, "test-api-key", undefined)
+				await installServer(
+					"test-server",
+					"command-stdio",
+					{},
+					"test-api-key",
+					undefined,
+				)
 
 				// Verify command was executed (not file written)
 				expect(mockRunConfigCommand).toHaveBeenCalledWith(
 					{ mcpServers: { "test-server": expectedConfig } },
-					clientConfig
+					clientConfig,
 				)
 				expect(mockWriteConfig).not.toHaveBeenCalled()
 			})
@@ -300,18 +374,24 @@ describe("Installation Tests", () => {
 				const expectedConfig = {
 					type: "http",
 					url: "https://server.smithery.ai/test-server/mcp",
-					headers: {}
+					headers: {},
 				} as StreamableHTTPConnection
 
 				mockGetClientConfiguration.mockReturnValue(clientConfig)
 				mockFormatServerConfig.mockReturnValue(expectedConfig)
 				mockResolveServer.mockResolvedValue(mockHttpServer)
 
-				await installServer("test-server", "command-http", {}, "test-api-key", undefined)
+				await installServer(
+					"test-server",
+					"command-http",
+					{},
+					"test-api-key",
+					undefined,
+				)
 
 				expect(mockRunConfigCommand).toHaveBeenCalledWith(
 					{ mcpServers: { "test-server": expectedConfig } },
-					clientConfig
+					clientConfig,
 				)
 				expect(mockWriteConfig).not.toHaveBeenCalled()
 			})
@@ -321,8 +401,10 @@ describe("Installation Tests", () => {
 	describe("matrix validation", () => {
 		test("should cover all target types", () => {
 			const targetTypes = ["json", "command", "yaml", "toml"]
-			const configuredTargets = Object.values(TEST_CLIENT_CONFIGS).map(c => c.installType)
-			
+			const configuredTargets = Object.values(TEST_CLIENT_CONFIGS).map(
+				(c) => c.installType,
+			)
+
 			for (const targetType of targetTypes) {
 				expect(configuredTargets).toContain(targetType)
 			}
@@ -330,9 +412,10 @@ describe("Installation Tests", () => {
 
 		test("should cover all transport types", () => {
 			const transports = [Transport.STDIO, Transport.HTTP]
-			const configuredTransports = Object.values(TEST_CLIENT_CONFIGS)
-				.flatMap(c => c.supportedTransports)
-			
+			const configuredTransports = Object.values(TEST_CLIENT_CONFIGS).flatMap(
+				(c) => c.supportedTransports,
+			)
+
 			for (const transport of transports) {
 				expect(configuredTransports).toContain(transport)
 			}

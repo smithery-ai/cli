@@ -251,7 +251,7 @@ function writeConfigYaml(
 			const existingServerNames = new Set<string>()
 			if (mcpServersNode.items) {
 				for (const item of mcpServersNode.items) {
-					if (item.key && item.key.value) {
+					if (item.key?.value) {
 						existingServerNames.add(item.key.value)
 					}
 				}
