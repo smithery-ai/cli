@@ -1,6 +1,6 @@
 {
 	"name": "@smithery/cli",
-	"version": "1.2.28",
+	"version": "1.2.29",
 	"type": "commonjs",
 	"private": false,
 	"homepage": "https://smithery.ai/",
@@ -62,7 +62,11 @@
 		"typescript": "^5.0.0",
 		"vitest": "^3.2.4"
 	},
-	"files": ["dist", "README.md", "package.json"],
+	"files": [
+		"dist",
+		"README.md",
+		"package.json"
+	],
 	"exports": {
 		".": {
 			"import": "./dist/index.js"
