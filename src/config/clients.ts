@@ -203,13 +203,6 @@ export const CLIENT_CONFIGURATIONS: Record<string, ClientConfiguration> = {
 		installType: "json",
 		path: path.join(homeDir, ".aws", "amazonq", "mcp.json"),
 	},
-	raycast: {
-		label: "Raycast",
-		supportedTransports: [Transport.STDIO],
-		installType: "json",
-		// Note: Raycast might use deep links instead of file config
-		path: path.join(homeDir, ".raycast", "mcp_config.json"),
-	},
 	tome: {
 		label: "Tome",
 		supportedTransports: [Transport.STDIO],

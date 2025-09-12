@@ -37,9 +37,7 @@ export async function uninstallServer(
 
 		/* check if server exists in config */
 		if (!config.mcpServers[qualifiedName]) {
-			console.log(
-				chalk.red(`${qualifiedName} is not installed for ${client}`),
-			)
+			console.log(chalk.red(`${qualifiedName} is not installed for ${client}`))
 			return
 		}
 

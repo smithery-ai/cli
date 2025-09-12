@@ -273,6 +273,8 @@ export const searchServers = async (
 		displayName?: string
 		description?: string
 		useCount: number
+		// @TODO: Add verified field when API supports it
+		// verified?: boolean
 	}>
 > => {
 	const endpoint = getEndpoint()

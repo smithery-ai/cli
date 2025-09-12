@@ -8,7 +8,7 @@
 		"type": "git",
 		"url": "git+https://github.com/smithery-ai/cli.git"
 	},
-	"description": "A NPX command to install and list Model Context Protocols from Smithery",
+	"description": "An NPX command to install and list Model Context Protocols from Smithery",
 	"main": "dist/index.js",
 	"scripts": {
 		"build": "tsc && node build.mjs && shx chmod +x dist/index.js",
@@ -63,11 +63,7 @@
 		"typescript": "^5.0.0",
 		"vitest": "^3.2.4"
 	},
-	"files": [
-		"dist",
-		"README.md",
-		"package.json"
-	],
+	"files": ["dist", "README.md", "package.json"],
 	"exports": {
 		".": {
 			"import": "./dist/index.js"
