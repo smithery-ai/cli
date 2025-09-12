@@ -245,13 +245,13 @@ program
 program
 	.command("list")
 	.description("list installed servers")
-	.option("-c, --client <name>", `Specify the client (${VALID_CLIENTS.join(", ")})`)
+	.option(
+		"-c, --client <name>",
+		`Specify the client (${VALID_CLIENTS.join(", ")})`,
+	)
 	.action(async (options) => {
 		// If no client provided, show interactive selection
-		const selectedClient = await selectClient(
-			options.client,
-			"List",
-		)
+		const selectedClient = await selectClient(options.client, "List")
 
 		// Validate client
 		validateClient(selectedClient)
