@@ -4,7 +4,14 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
-## [1.2.26] - 2025-01-11
+## [1.2.29] - 2025-09-12
+
+### Changed
+- Refactored CLI command prompts by extracting prompt utilities from main index file to `src/utils/command-prompts.ts`
+- Cleaned up unused dependencies: removed `@types/uuid` and `bufferutil` optional dependency
+- Improved code organization and maintainability of CLI interface
+
+## [1.2.26] - 2025-09-11
 
 ### Added
 - Interactive CLI commands: `smithery install`, `smithery uninstall`, and `smithery list` now support interactive client selection when no `--client` flag is provided
