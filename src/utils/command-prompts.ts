@@ -351,8 +351,14 @@ export async function interactiveServerSearch(
 				return
 			}
 
-			spinner.succeed(`☀ ${servers.length < 10 ? `Found ${servers.length} result${servers.length === 1 ? "" : "s"}:` : `Showing top (${servers.length}) results:`}`)
-			console.log(chalk.dim(`${chalk.cyan("→ View more")} at smithery.ai/search?q=${searchTerm.replace(/\s+/g, '+')}`))
+			spinner.succeed(
+				`☀ ${servers.length < 10 ? `Found ${servers.length} result${servers.length === 1 ? "" : "s"}:` : `Showing top (${servers.length}) results:`}`,
+			)
+			console.log(
+				chalk.dim(
+					`${chalk.cyan("→ View more")} at smithery.ai/search?q=${searchTerm.replace(/\s+/g, "+")}`,
+				),
+			)
 			console.log()
 
 			// Show interactive selection
