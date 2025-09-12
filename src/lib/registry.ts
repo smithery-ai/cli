@@ -17,6 +17,7 @@ import {
 	ServerError,
 	UnauthorizedError,
 } from "@smithery/registry/models/errors"
+// @TODO: add timeout
 
 dotenvConfig()
 
@@ -41,6 +42,7 @@ const getEndpoint = (): string => {
  * @param apiKey Optional API key for authentication
  * @param source Optional source of the call (install, run, inspect)
  * @returns Details about the server, including available connection options
+ * @TODO: add timeout
  */
 export enum ResolveServerSource {
 	Install = "install",
