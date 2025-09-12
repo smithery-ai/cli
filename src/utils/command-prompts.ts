@@ -18,7 +18,7 @@ export async function selectClient(
 		return providedClient as ValidClient
 	}
 
-	console.log(chalk.cyan("☀"), `${actionDescription} MCP server`)
+	console.log(chalk.cyan("*"), `${actionDescription} MCP server`)
 	console.log()
 
 	const inquirer = (await import("inquirer")).default
