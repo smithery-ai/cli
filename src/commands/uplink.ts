@@ -270,14 +270,30 @@ export async function uplink(options: UplinkOptions = {}): Promise<void> {
 						"https://smithery.ai/new",
 					)}\n\n`,
 				)
+
+				// Wait for process to exit after sending SIGTERM
+				const processExited = new Promise<void>((resolve) => {
+					if (childProcess) {
+						childProcess.on('exit', () => resolve())
+					} else {
+						resolve()
+					}
+				})
+
 				childProcess.kill("SIGTERM")
 
-				// Force kill after 5 seconds
-				setTimeout(() => {
-					if (childProcess && !childProcess.killed) {
-						childProcess.kill("SIGKILL")
-					}
-				}, 5000)
+				// Race between graceful exit and force kill
+				const forceKill = new Promise<void>((resolve) => {
+					setTimeout(() => {
+						if (childProcess && !childProcess.killed) {
+							childProcess.kill("SIGKILL")
+						}
+						resolve()
+					}, 5000)
+				})
+
+				// Wait for either graceful exit or force kill timeout
+				await Promise.race([processExited, forceKill])
 			}
 
 			process.exit(0)
