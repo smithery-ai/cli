@@ -1,5 +1,6 @@
 import type { ChildProcess } from "node:child_process"
 import chalk from "chalk"
+import { DEFAULT_PORT } from "../constants"
 import { setupTunnelAndPlayground } from "../lib/dev-lifecycle"
 import { debug } from "../lib/logger"
 import { startSubprocess } from "../lib/subprocess"
@@ -23,7 +24,7 @@ export async function playground(options: {
 			process.exit(1)
 		}
 
-		let finalPort = options.port || "8181"
+		let finalPort = options.port || DEFAULT_PORT.toString()
 		let childProcess: ChildProcess | undefined
 
 		// If command is provided, start it and detect port

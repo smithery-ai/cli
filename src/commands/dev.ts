@@ -2,6 +2,7 @@ import { type ChildProcess, spawn } from "node:child_process"
 import { existsSync } from "node:fs"
 import { join } from "node:path"
 import chalk from "chalk"
+import { DEFAULT_PORT } from "../constants"
 import { buildMcpServer } from "../lib/build"
 import { setupTunnelAndPlayground } from "../lib/dev-lifecycle"
 import { debug } from "../lib/logger"
@@ -23,7 +24,7 @@ export async function dev(options: DevOptions = {}): Promise<void> {
 
 		const smitheryDir = join(".smithery")
 		const outFile = join(smitheryDir, "index.cjs")
-		const finalPort = options.port || "8181"
+		const finalPort = options.port || DEFAULT_PORT.toString()
 
 		let childProcess: ChildProcess | undefined
 		let tunnelListener: { close: () => Promise<void> } | undefined

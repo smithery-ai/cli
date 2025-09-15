@@ -163,7 +163,7 @@ program
 program
 	.command("dev [entryFile]")
 	.description("Start development server with hot-reload and tunnel")
-	.option("--port <port>", "Port to run the server on (default: 8181)")
+	.option("--port <port>", `Port to run the server on (default: ${DEFAULT_PORT})`)
 	.option("--key <apikey>", "Provide an API key")
 	.option("--no-open", "Don't automatically open the playground")
 	.option("--prompt <prompt>", "Initial message to start the playground with")
