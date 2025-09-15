@@ -27,6 +27,11 @@ export function setupProcessLifecycle(options: ProcessLifecycleOptions): void {
 			console.log(chalk.gray(" Received exit signal, shutting down..."))
 		}
 		await cleanupFn()
+		console.log(
+			`🚀 One-click cloud deploy: ${chalk.blue.underline(
+				"https://smithery.ai/new",
+			)}`,
+		)
 		process.exit(0)
 	}
 

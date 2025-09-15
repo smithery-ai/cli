@@ -5,7 +5,6 @@ import { FORCE_KILL_TIMEOUT } from "../constants"
 export interface ChildProcessCleanupOptions {
 	childProcess: ChildProcess
 	processName: string
-	showThankYouMessage?: boolean
 }
 
 /**
@@ -15,7 +14,7 @@ export interface ChildProcessCleanupOptions {
 export async function cleanupChildProcess(
 	options: ChildProcessCleanupOptions,
 ): Promise<void> {
-	const { childProcess, processName, showThankYouMessage = false } = options
+	const { childProcess, processName } = options
 
 	// Skip if process is already killed or doesn't exist
 	if (!childProcess || childProcess.killed) {
@@ -23,20 +22,6 @@ export async function cleanupChildProcess(
 	}
 
 	console.log(chalk.yellow(`Stopping ${processName}...`))
-
-	if (showThankYouMessage) {
-		console.log(
-			`\n\n${chalk.rgb(
-				234,
-				88,
-				12,
-			)(
-				"Thanks for using Smithery!",
-			)}\n🚀 One-click cloud deploy: ${chalk.blue.underline(
-				"https://smithery.ai/new",
-			)}\n\n`,
-		)
-	}
 
 	// Wait for process to exit after sending SIGTERM
 	const processExited = new Promise<void>((resolve) => {

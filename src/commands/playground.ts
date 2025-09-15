@@ -62,7 +62,6 @@ export async function playground(options: {
 				await cleanupChildProcess({
 					childProcess,
 					processName: "server",
-					showThankYouMessage: false,
 				})
 			}
 		}

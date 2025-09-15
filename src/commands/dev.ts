@@ -151,7 +151,6 @@ export async function dev(options: DevOptions = {}): Promise<void> {
 				await cleanupChildProcess({
 					childProcess,
 					processName: "server",
-					showThankYouMessage: true,
 				})
 			}
 		}
