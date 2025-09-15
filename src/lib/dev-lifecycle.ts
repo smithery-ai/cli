@@ -1,4 +1,3 @@
-import chalk from "chalk"
 import { openPlayground } from "./browser"
 import { startTunnel } from "./tunnel"
 
@@ -14,6 +13,5 @@ export async function setupTunnelAndPlayground(
 		await openPlayground(url, initialMessage)
 	}
 
-	console.log(chalk.gray("Press Ctrl+C to stop the dev server"))
 	return { listener, url }
 }

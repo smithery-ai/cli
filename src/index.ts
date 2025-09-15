@@ -267,9 +267,7 @@ program
 		if (!command) {
 			console.error(chalk.red("❌ Command is required."))
 			console.error(
-				chalk.yellow(
-					"Usage: smithery playground-stdio -- <command>",
-				),
+				chalk.yellow("Usage: smithery playground-stdio -- <command>"),
 			)
 			console.error(
 				chalk.gray(
@@ -279,13 +277,19 @@ program
 			process.exit(1)
 		}
 
-		const { createArbitraryCommandRunner } = await import("./commands/run/arbitrary-command-runner.js")
-		
-		const cleanup = await createArbitraryCommandRunner(command, await ensureApiKey(options.key), {
-			port: options.port ? parseInt(options.port) : 6969,
-			open: options.open !== false,
-			initialMessage: options.prompt,
-		})
+		const { createArbitraryCommandRunner } = await import(
+			"./commands/run/arbitrary-command-runner.js"
+		)
+
+		const _cleanup = await createArbitraryCommandRunner(
+			command,
+			await ensureApiKey(options.key),
+			{
+				port: options.port ? parseInt(options.port, 10) : 6969,
+				open: options.open !== false,
+				initialMessage: options.prompt,
+			},
+		)
 
 		// Keep the process alive
 		process.stdin.resume()

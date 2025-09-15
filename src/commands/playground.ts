@@ -4,6 +4,7 @@ import { DEFAULT_PORT, FORCE_KILL_TIMEOUT } from "../constants"
 import { setupTunnelAndPlayground } from "../lib/dev-lifecycle"
 import { debug } from "../lib/logger"
 import { startSubprocess } from "../lib/subprocess"
+import { setupProcessLifecycle } from "../utils/process-lifecycle"
 
 export async function playground(options: {
 	port?: string
@@ -62,7 +63,7 @@ export async function playground(options: {
 				// Wait for process to exit after sending SIGTERM
 				const processExited = new Promise<void>((resolve) => {
 					if (childProcess) {
-						childProcess.on('exit', () => resolve())
+						childProcess.on("exit", () => resolve())
 					} else {
 						resolve()
 					}
@@ -83,28 +84,23 @@ export async function playground(options: {
 				// Wait for either graceful exit or force kill timeout
 				await Promise.race([processExited, forceKill])
 			}
-
-			process.exit(0)
 		}
 
-		// Set up signal handlers
-		process.on("SIGINT", cleanup)
-		process.on("SIGTERM", cleanup)
+		// Set up process lifecycle management
+		setupProcessLifecycle({
+			cleanupFn: cleanup,
+			processName: "dev server",
+		})
 
 		// If child process exits unexpectedly, also exit
 		if (childProcess) {
 			childProcess.on("exit", (code) => {
 				if (code !== 0) {
 					console.log(chalk.yellow(`\nSubprocess exited with code ${code}`))
-					cleanup()
+					cleanup().then(() => process.exit(0))
 				}
 			})
 		}
-
-		// Keep the process alive by keeping stdin open
-		process.stdin.resume()
-
-		await new Promise<void>(() => {})
 	} catch (error) {
 		console.error(chalk.red("❌ Playground failed:"), error)
 		process.exit(1)

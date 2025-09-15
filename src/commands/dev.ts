@@ -6,6 +6,7 @@ import { DEFAULT_PORT, FORCE_KILL_TIMEOUT } from "../constants"
 import { buildMcpServer } from "../lib/build"
 import { setupTunnelAndPlayground } from "../lib/dev-lifecycle"
 import { debug } from "../lib/logger"
+import { setupProcessLifecycle } from "../utils/process-lifecycle"
 import { ensureApiKey } from "../utils/runtime"
 
 interface DevOptions {
@@ -162,7 +163,7 @@ export async function dev(options: DevOptions = {}): Promise<void> {
 				// Wait for process to exit after sending SIGTERM
 				const processExited = new Promise<void>((resolve) => {
 					if (childProcess) {
-						childProcess.on('exit', () => resolve())
+						childProcess.on("exit", () => resolve())
 					} else {
 						resolve()
 					}
@@ -183,16 +184,13 @@ export async function dev(options: DevOptions = {}): Promise<void> {
 				// Wait for either graceful exit or force kill timeout
 				await Promise.race([processExited, forceKill])
 			}
-
-			process.exit(0)
 		}
 
-		// Set up signal handlers
-		process.on("SIGINT", cleanup)
-		process.on("SIGTERM", cleanup)
-
-		// Keep the process alive
-		await new Promise<void>(() => {})
+		// Set up process lifecycle management
+		setupProcessLifecycle({
+			cleanupFn: cleanup,
+			processName: "dev server",
+		})
 	} catch (error) {
 		console.error(chalk.red("❌ Dev server failed:"), error)
 		process.exit(1)
