@@ -18,8 +18,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Fixed
 - Resolved `Cannot find module '@biomejs/cli-linux-x64/biome'` CI error
-- Improved error handling in child process cleanup with proper edge case handling
-- Improve race condition protection in process exit handling
+- Improve error handling in child process cleanup
+- Improve race condition handling in process exit
 
 ## [1.2.29] - 2025-09-12
 
