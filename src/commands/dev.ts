@@ -129,7 +129,7 @@ export async function dev(options: DevOptions = {}): Promise<void> {
 
 		// Handle cleanup on exit
 		const cleanup = async () => {
-			console.log(chalk.yellow("\n👋 Shutting down dev server..."))
+			console.log(chalk.yellow("\n👋 Shutting down server..."))
 
 			// Stop watching
 			if (buildContext && "dispose" in buildContext) {
