@@ -2,6 +2,7 @@ import { type ChildProcess, spawn, spawnSync } from "node:child_process"
 import { existsSync, mkdirSync, writeFileSync } from "node:fs"
 import { join } from "node:path"
 import chalk from "chalk"
+import { DEFAULT_PORT, FORCE_KILL_TIMEOUT } from "../constants"
 import { buildMcpServer } from "../lib/build"
 import { setupTunnelAndPlayground } from "../lib/dev-lifecycle"
 import { debug } from "../lib/logger"
@@ -85,7 +86,7 @@ export async function uplink(options: UplinkOptions = {}): Promise<void> {
 
 		const smitheryDir = join(".smithery")
 		const outFile = join(smitheryDir, "index.cjs")
-		const finalPort = options.port || "8181"
+		const finalPort = options.port || DEFAULT_PORT.toString()
 
 		// Create scaffold if no entry file is provided
 		if (!options.entryFile) {
@@ -289,7 +290,7 @@ export async function uplink(options: UplinkOptions = {}): Promise<void> {
 							childProcess.kill("SIGKILL")
 						}
 						resolve()
-					}, 5000)
+					}, FORCE_KILL_TIMEOUT)
 				})
 
 				// Wait for either graceful exit or force kill timeout

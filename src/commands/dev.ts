@@ -2,7 +2,7 @@ import { type ChildProcess, spawn } from "node:child_process"
 import { existsSync } from "node:fs"
 import { join } from "node:path"
 import chalk from "chalk"
-import { DEFAULT_PORT } from "../constants"
+import { DEFAULT_PORT, FORCE_KILL_TIMEOUT } from "../constants"
 import { buildMcpServer } from "../lib/build"
 import { setupTunnelAndPlayground } from "../lib/dev-lifecycle"
 import { debug } from "../lib/logger"
@@ -177,7 +177,7 @@ export async function dev(options: DevOptions = {}): Promise<void> {
 							childProcess.kill("SIGKILL")
 						}
 						resolve()
-					}, 5000)
+					}, FORCE_KILL_TIMEOUT)
 				})
 
 				// Wait for either graceful exit or force kill timeout

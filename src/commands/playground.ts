@@ -1,6 +1,6 @@
 import type { ChildProcess } from "node:child_process"
 import chalk from "chalk"
-import { DEFAULT_PORT } from "../constants"
+import { DEFAULT_PORT, FORCE_KILL_TIMEOUT } from "../constants"
 import { setupTunnelAndPlayground } from "../lib/dev-lifecycle"
 import { debug } from "../lib/logger"
 import { startSubprocess } from "../lib/subprocess"
@@ -77,7 +77,7 @@ export async function playground(options: {
 							childProcess.kill("SIGKILL")
 						}
 						resolve()
-					}, 5000)
+					}, FORCE_KILL_TIMEOUT)
 				})
 
 				// Wait for either graceful exit or force kill timeout

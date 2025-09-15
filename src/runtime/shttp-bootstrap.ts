@@ -13,6 +13,7 @@ import chalk from "chalk"
 import cors from "cors"
 import express from "express"
 import type { z } from "zod"
+import { DEFAULT_PORT } from "../constants.js"
 
 // Type declaration for the user module
 interface SmitheryModule {
@@ -26,7 +27,7 @@ const entry: SmitheryModule = _entry
 
 async function startMcpServer() {
 	try {
-		const port = process.env.PORT || "8181"
+		const port = process.env.PORT || DEFAULT_PORT.toString()
 
 		console.log(
 			`${chalk.blue("[smithery]")} Starting MCP server on port ${port}`,

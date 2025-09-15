@@ -40,7 +40,7 @@ npx @smithery/cli <command>
 - `search [term]` - Search for servers in the Smithery registry (interactive)
 - `login` - Login with an API key (interactive)
 - `dev [entryFile]` - Start development server with hot-reload and tunnel
-  - `--port <port>` - Port to run the server on (default: 8181)
+  - `--port <port>` - Port to run the server on (default: 8081)
   - `--key <apikey>` - Provide an API key
   - `--no-open` - Don't automatically open the playground
   - `--prompt <prompt>` - Initial message to start the playground with
@@ -50,7 +50,7 @@ npx @smithery/cli <command>
   - `--transport <type>` - Transport type: shttp or stdio (default: shttp)
   - `-c, --config <path>` - Path to config file (default: auto-detect smithery.config.js)
 - `playground` - Open MCP playground in browser
-  - `--port <port>` - Port to expose (default: 3000)
+  - `--port <port>` - Port to expose (default: 8081)
   - `--key <apikey>` - Provide an API key
   - Can pass command after `--` separator
 - `--help` - Show help message
