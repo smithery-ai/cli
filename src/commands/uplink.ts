@@ -263,8 +263,7 @@ export async function uplink(options: UplinkOptions = {}): Promise<void> {
 			if (childProcess) {
 				await cleanupChildProcess({
 					childProcess,
-					processName: "MCP server",
-					showThankYouMessage: true,
+					processName: "server",
 				})
 			}
 		}
