@@ -150,7 +150,7 @@ export async function dev(options: DevOptions = {}): Promise<void> {
 			if (childProcess) {
 				await cleanupChildProcess({
 					childProcess,
-					processName: "MCP server",
+					processName: "server",
 					showThankYouMessage: true,
 				})
 			}
@@ -159,7 +159,7 @@ export async function dev(options: DevOptions = {}): Promise<void> {
 		// Set up process lifecycle management
 		setupProcessLifecycle({
 			cleanupFn: cleanup,
-			processName: "dev server",
+			processName: "server",
 		})
 	} catch (error) {
 		console.error(chalk.red("❌ Dev server failed:"), error)
