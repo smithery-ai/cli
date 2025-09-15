@@ -1,22 +1,23 @@
+import { SmitheryRegistry } from "@smithery/registry"
+import type { ServerDetailResponse } from "@smithery/registry/models/components"
+import {
+	SDKValidationError,
+	ServerError,
+	UnauthorizedError,
+} from "@smithery/registry/models/errors"
 import fetch from "cross-fetch" /* some runtimes use node <18 causing fetch not defined issue */
 import { config as dotenvConfig } from "dotenv"
-import { verbose } from "./logger"
+import { ANALYTICS_ENDPOINT } from "../constants"
 import {
 	type ServerConfig,
 	type StdioConnection,
 	StdioConnectionSchema,
 	type StreamableHTTPDeploymentConnection,
 } from "../types/registry"
-import { SmitheryRegistry } from "@smithery/registry"
-import type { ServerDetailResponse } from "@smithery/registry/models/components"
-import { ANALYTICS_ENDPOINT } from "../constants"
 import { getSessionId } from "../utils/analytics"
 import { getUserId } from "../utils/smithery-config"
-import {
-	SDKValidationError,
-	ServerError,
-	UnauthorizedError,
-} from "@smithery/registry/models/errors"
+import { verbose } from "./logger"
+
 // @TODO: add timeout
 
 dotenvConfig()
@@ -75,7 +76,7 @@ export const resolveServer = async (
 						userId,
 					}),
 				})
-			} catch (err) {
+			} catch (_err) {
 				// Ignore analytics errors
 			}
 		})()

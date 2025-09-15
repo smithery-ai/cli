@@ -1,19 +1,18 @@
+// These will be replaced by esbuild at build time.
+// @ts-expect-error
+import * as _entry from "virtual:user-module"
 import {
-	createStatefulServer,
 	type CreateServerFn as CreateStatefulServerFn,
+	createStatefulServer,
 } from "@smithery/sdk/server/stateful.js"
 import {
-	createStatelessServer,
 	type CreateStatelessServerFn,
+	createStatelessServer,
 } from "@smithery/sdk/server/stateless.js"
 import chalk from "chalk"
 import cors from "cors"
 import express from "express"
 import type { z } from "zod"
-
-// These will be replaced by esbuild at build time.
-// @ts-ignore
-import * as _entry from "virtual:user-module"
 
 // Type declaration for the user module
 interface SmitheryModule {
@@ -75,7 +74,7 @@ async function startMcpServer() {
 		}
 
 		// Start the server
-		server.app.listen(Number.parseInt(port))
+		server.app.listen(Number.parseInt(port, 10))
 		console.log(
 			`${chalk.green("[smithery]")} MCP server started successfully on port ${port}`,
 		)

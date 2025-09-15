@@ -1,4 +1,4 @@
-import { spawn, type ChildProcess } from "node:child_process"
+import { type ChildProcess, spawn } from "node:child_process"
 import { detectPortFromOutput } from "./tunnel"
 
 export interface SubprocessResult {

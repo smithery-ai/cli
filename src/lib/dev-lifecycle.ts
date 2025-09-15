@@ -1,6 +1,6 @@
 import chalk from "chalk"
-import { startTunnel } from "./tunnel"
 import { openPlayground } from "./browser"
+import { startTunnel } from "./tunnel"
 
 export async function setupTunnelAndPlayground(
 	port: string,

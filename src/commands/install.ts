@@ -12,25 +12,19 @@ process.on("warning", (warning) => {
 
 import chalk from "chalk"
 import ora from "ora"
-import { readConfig, writeConfig, runConfigCommand } from "../utils/mcp-config"
 import type { ValidClient } from "../config/clients"
 import { getClientConfiguration } from "../config/clients"
 import { verbose } from "../lib/logger"
 import {
-	resolveServer,
 	ResolveServerSource,
+	resolveServer,
 	saveUserConfig,
 	validateUserConfig,
 } from "../lib/registry"
 import type { ServerConfig } from "../types/registry"
 import { checkAnalyticsConsent } from "../utils/analytics"
 import { promptForRestart } from "../utils/client"
-import {
-	chooseConnection,
-	collectConfigValues,
-	formatServerConfig,
-	getServerName,
-} from "../utils/session-config"
+import { readConfig, runConfigCommand, writeConfig } from "../utils/mcp-config"
 import {
 	checkAndNotifyRemoteServer,
 	ensureApiKey,
@@ -38,6 +32,12 @@ import {
 	ensureUVInstalled,
 	isRemote,
 } from "../utils/runtime"
+import {
+	chooseConnection,
+	collectConfigValues,
+	formatServerConfig,
+	getServerName,
+} from "../utils/session-config"
 
 /**
  * Installs and configures a Smithery server for a specified client.

@@ -1,13 +1,12 @@
+// These will be replaced by esbuild at build time.
+// @ts-expect-error
+import * as _entry from "virtual:user-module"
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js"
 import type { CreateServerFn as CreateStatefulServerFn } from "@smithery/sdk/server/stateful.js"
 import chalk from "chalk"
 import _ from "lodash"
 import type { z } from "zod"
 import { zodToJsonSchema } from "zod-to-json-schema"
-
-// These will be replaced by esbuild at build time.
-// @ts-ignore
-import * as _entry from "virtual:user-module"
 
 // Type declaration for the user module
 interface SmitheryModule {

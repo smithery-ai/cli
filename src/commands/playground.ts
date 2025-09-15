@@ -1,8 +1,8 @@
-import chalk from "chalk"
 import type { ChildProcess } from "node:child_process"
-import { startSubprocess } from "../lib/subprocess"
+import chalk from "chalk"
 import { setupTunnelAndPlayground } from "../lib/dev-lifecycle"
 import { debug } from "../lib/logger"
+import { startSubprocess } from "../lib/subprocess"
 
 export async function playground(options: {
 	port?: string
@@ -50,7 +50,7 @@ export async function playground(options: {
 			try {
 				await listener.close()
 				debug(chalk.green("Tunnel closed"))
-			} catch (error) {
+			} catch (_error) {
 				debug(chalk.yellow("Tunnel already closed"))
 			}
 

@@ -1,11 +1,11 @@
-import chalk from "chalk"
-import { join } from "node:path"
-import { spawn, type ChildProcess } from "node:child_process"
-import { setupTunnelAndPlayground } from "../lib/dev-lifecycle"
-import { ensureApiKey } from "../utils/runtime"
-import { buildMcpServer } from "../lib/build"
+import { type ChildProcess, spawn } from "node:child_process"
 import { existsSync } from "node:fs"
+import { join } from "node:path"
+import chalk from "chalk"
+import { buildMcpServer } from "../lib/build"
+import { setupTunnelAndPlayground } from "../lib/dev-lifecycle"
 import { debug } from "../lib/logger"
+import { ensureApiKey } from "../utils/runtime"
 
 interface DevOptions {
 	entryFile?: string
@@ -138,7 +138,7 @@ export async function dev(options: DevOptions = {}): Promise<void> {
 				try {
 					await tunnelListener.close()
 					debug(chalk.green("Tunnel closed"))
-				} catch (error) {
+				} catch (_error) {
 					debug(chalk.yellow("Tunnel already closed"))
 				}
 			}

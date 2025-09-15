@@ -1,12 +1,12 @@
-import chalk from "chalk"
 import { exec } from "node:child_process"
 import { promisify } from "node:util"
+import chalk from "chalk"
 
 const execAsync = promisify(exec)
 
 export async function openPlayground(
 	tunnelUrl: string,
-	initialMessage?: string,
+	_initialMessage?: string,
 ): Promise<void> {
 	const playgroundUrl = `https://smithery.ai/playground?mcp=${encodeURIComponent(
 		`${tunnelUrl}/mcp`,
@@ -32,7 +32,7 @@ export async function openPlayground(
 
 		await execAsync(command)
 		console.log(chalk.green("🌐 Opened playground in browser"))
-	} catch (error) {
+	} catch (_error) {
 		console.log(chalk.yellow("Could not open browser automatically"))
 		console.log(chalk.gray("Please open the link manually"))
 	}

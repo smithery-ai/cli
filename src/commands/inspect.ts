@@ -13,14 +13,14 @@ process.on("warning", (warning) => {
 import { Client } from "@modelcontextprotocol/sdk/client/index.js"
 import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js"
 import { LoggingMessageNotificationSchema } from "@modelcontextprotocol/sdk/types.js"
-import { isEmpty } from "lodash"
-import inquirer from "inquirer"
 import chalk from "chalk"
+import inquirer from "inquirer"
+import { isEmpty } from "lodash"
 import ora from "ora"
-import { resolveServer, ResolveServerSource } from "../lib/registry"
-import { chooseConnection, collectConfigValues } from "../utils/session-config"
+import { debug, verbose } from "../lib/logger"
+import { ResolveServerSource, resolveServer } from "../lib/registry"
 import { getRuntimeEnvironment } from "../utils/runtime.js"
-import { verbose, debug } from "../lib/logger"
+import { chooseConnection, collectConfigValues } from "../utils/session-config"
 
 async function createClient() {
 	const client = new Client(
@@ -44,9 +44,9 @@ async function listPrimitives(client: Client) {
 	if (capabilities.resources) {
 		promises.push(
 			client.listResources().then(({ resources }) => {
-				resources.forEach((item) =>
-					primitives.push({ type: "resource", value: item }),
-				)
+				resources.forEach((item) => {
+					primitives.push({ type: "resource", value: item })
+				})
 			}),
 		)
 	}
@@ -54,7 +54,9 @@ async function listPrimitives(client: Client) {
 	if (capabilities.tools) {
 		promises.push(
 			client.listTools().then(({ tools }) => {
-				tools.forEach((item) => primitives.push({ type: "tool", value: item }))
+				tools.forEach((item) => {
+					primitives.push({ type: "tool", value: item })
+				})
 			}),
 		)
 	}
@@ -62,9 +64,9 @@ async function listPrimitives(client: Client) {
 	if (capabilities.prompts) {
 		promises.push(
 			client.listPrompts().then(({ prompts }) => {
-				prompts.forEach((item) =>
-					primitives.push({ type: "prompt", value: item }),
-				)
+				prompts.forEach((item) => {
+					primitives.push({ type: "prompt", value: item })
+				})
 			}),
 		)
 	}
@@ -188,7 +190,7 @@ async function connectServer(transport: any) {
 	}
 }
 
-async function readJSONSchemaInputs(schema: any) {
+async function _readJSONSchemaInputs(schema: any) {
 	if (!schema || isEmpty(schema)) {
 		return {}
 	}

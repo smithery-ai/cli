@@ -2,9 +2,9 @@ import inquirer from "inquirer"
 import { uuidv7 } from "uuidv7"
 import {
 	getAnalyticsConsent,
-	setAnalyticsConsent,
 	hasAskedConsent,
 	initializeSettings,
+	setAnalyticsConsent,
 } from "./smithery-config"
 
 // Session management

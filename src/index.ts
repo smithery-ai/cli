@@ -2,6 +2,7 @@
 
 import chalk from "chalk"
 import { Command } from "commander"
+import { build } from "./commands/build"
 import { dev } from "./commands/dev"
 import { inspectServer } from "./commands/inspect"
 import { installServer } from "./commands/install"
@@ -9,21 +10,20 @@ import { list } from "./commands/list"
 import { playground } from "./commands/playground"
 import { run } from "./commands/run/index"
 import { uninstallServer } from "./commands/uninstall"
-import { type ValidClient, VALID_CLIENTS } from "./config/clients"
-import { setVerbose, setDebug } from "./lib/logger"
-import type { ServerConfig } from "./types/registry"
-import { ensureApiKey, promptForApiKey } from "./utils/runtime"
-import { build } from "./commands/build"
-import { setApiKey } from "./utils/smithery-config"
+import { VALID_CLIENTS, type ValidClient } from "./config/clients"
 import { DEFAULT_PORT } from "./constants"
+import { setDebug, setVerbose } from "./lib/logger"
+import type { ServerConfig } from "./types/registry"
 import {
-	selectClient,
-	validateClient,
-	parseConfigOption,
-	selectServer,
-	selectInstalledServer,
 	interactiveServerSearch,
+	parseConfigOption,
+	selectClient,
+	selectInstalledServer,
+	selectServer,
+	validateClient,
 } from "./utils/command-prompts"
+import { ensureApiKey, promptForApiKey } from "./utils/runtime"
+import { setApiKey } from "./utils/smithery-config"
 
 const program = new Command()
 
@@ -33,7 +33,7 @@ program
 	.description("Smithery CLI - Manage and run MCP servers")
 	.option("--verbose", "Show detailed logs")
 	.option("--debug", "Show debug logs")
-	.hook("preAction", (thisCommand, actionCommand) => {
+	.hook("preAction", (thisCommand, _actionCommand) => {
 		// Set verbose mode if flag is present
 		const opts = thisCommand.opts()
 		if (opts.verbose) {

@@ -1,6 +1,6 @@
+import { promises as fs } from "node:fs"
 import { homedir, platform } from "node:os"
 import { join } from "node:path"
-import { promises as fs } from "node:fs"
 import { v4 as uuidv4 } from "uuid"
 import { verbose } from "../lib/logger"
 
