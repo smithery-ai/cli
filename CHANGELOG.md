@@ -6,14 +6,20 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Added
+- Created shared `cleanupChildProcess` utility for consistent process cleanup across commands
+
 ### Changed
 - Updated Biome from v1.5.3 to v2.2.4 for better cross-platform binary support
 - Updated biome.jsonc configuration for v2 compatibility
 - Updated Node.js requirement from >=18.0.0 to >=20.0.0 to match dependency requirements
 - Updated GitHub Actions to use Node.js 20
+- Refactored `dev`, `playground`, and `uplink` commands to use shared child process cleanup utility
 
 ### Fixed
 - Resolved `Cannot find module '@biomejs/cli-linux-x64/biome'` CI error
+- Improved error handling in child process cleanup with proper edge case handling
+- Improve race condition protection in process exit handling
 
 ## [1.2.29] - 2025-09-12
 
