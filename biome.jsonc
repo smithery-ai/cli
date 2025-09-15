@@ -1,3 +1,4 @@
+
 {
 	"$schema": "https://biomejs.dev/schemas/2.2.4/schema.json",
 	"files": {
@@ -62,7 +63,7 @@
 				"noNonNullAssertion": "off"
 			},
 			"suspicious": {
-				"noExplicitAny": "off"
+				"noExplicitAny": "warn"
 			},
 			"nursery": {}
 		}
