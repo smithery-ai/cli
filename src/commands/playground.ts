@@ -47,7 +47,15 @@ export async function playground(options: {
 
 		// Handle cleanup on exit
 		const cleanup = async () => {
-			console.log(chalk.yellow("\n👋 Shutting down tunnel..."))
+			console.log(chalk.yellow("\n👋 Shutting down playground..."))
+
+			// Kill child process (if it exists)
+			if (childProcess) {
+				await cleanupChildProcess({
+					childProcess,
+					processName: "server",
+				})
+			}
 
 			// Close tunnel
 			try {
@@ -55,14 +63,6 @@ export async function playground(options: {
 				debug(chalk.green("Tunnel closed"))
 			} catch (_error) {
 				debug(chalk.yellow("Tunnel already closed"))
-			}
-
-			// Kill child process if it exists
-			if (childProcess) {
-				await cleanupChildProcess({
-					childProcess,
-					processName: "server",
-				})
 			}
 		}
 

@@ -136,6 +136,14 @@ export async function dev(options: DevOptions = {}): Promise<void> {
 				await buildContext.dispose()
 			}
 
+			// Kill child process
+			if (childProcess) {
+				await cleanupChildProcess({
+					childProcess,
+					processName: "server",
+				})
+			}
+
 			// Close tunnel
 			if (tunnelListener) {
 				try {
@@ -144,14 +152,6 @@ export async function dev(options: DevOptions = {}): Promise<void> {
 				} catch (_error) {
 					debug(chalk.yellow("Tunnel already closed"))
 				}
-			}
-
-			// Kill child process
-			if (childProcess) {
-				await cleanupChildProcess({
-					childProcess,
-					processName: "server",
-				})
 			}
 		}
 
