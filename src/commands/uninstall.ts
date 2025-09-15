@@ -10,12 +10,12 @@ process.on("warning", (warning) => {
 	console.warn(warning)
 })
 
+import chalk from "chalk"
 import type { ValidClient } from "../config/clients"
-import { promptForRestart } from "../utils/client"
 // import { getConfig } from "../utils/client-config"
 import { getClientConfiguration } from "../config/clients.js"
+import { promptForRestart } from "../utils/client"
 import { readConfig, writeConfig } from "../utils/mcp-config"
-import chalk from "chalk"
 
 /* uninstalls server for given client */
 export async function uninstallServer(

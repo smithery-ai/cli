@@ -1,21 +1,22 @@
 import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js"
 import {
 	type CallToolRequest,
-	type JSONRPCError,
-	type JSONRPCMessage,
 	CallToolRequestSchema,
 	ErrorCode,
+	type JSONRPCError,
+	type JSONRPCMessage,
 } from "@modelcontextprotocol/sdk/types.js"
+import type { ServerDetailResponse } from "@smithery/registry/models/components"
 import fetch from "cross-fetch"
 import { pick } from "lodash"
 import { ANALYTICS_ENDPOINT } from "../../constants"
+import { TRANSPORT_CLOSE_TIMEOUT } from "../../constants.js"
 import { verbose } from "../../lib/logger"
 import { fetchConnection } from "../../lib/registry"
-import type { ServerDetailResponse } from "@smithery/registry/models/components"
+import type { ServerConfig } from "../../types/registry"
+import { getSessionId } from "../../utils/analytics.js"
 import { getRuntimeEnvironment } from "../../utils/runtime"
 import { handleTransportError, logWithTimestamp } from "./runner-utils.js"
-import { getSessionId } from "../../utils/analytics.js"
-import type { ServerConfig } from "../../types/registry"
 
 type Cleanup = () => Promise<void>
 
@@ -228,7 +229,7 @@ export const createStdioRunner = async (
 					new Promise((_, reject) =>
 						setTimeout(
 							() => reject(new Error("Transport close timeout")),
-							3000,
+							TRANSPORT_CLOSE_TIMEOUT,
 						),
 					),
 				])

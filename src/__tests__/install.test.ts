@@ -8,9 +8,9 @@
  * - Client-specific handling
  */
 
-import { describe, test, expect, vi, beforeEach } from "vitest"
-import { Transport, type ClientConfiguration } from "../config/clients"
 import type { ServerDetailResponse } from "@smithery/registry/models/components"
+import { beforeEach, describe, expect, test, vi } from "vitest"
+import { type ClientConfiguration, Transport } from "../config/clients"
 import type {
 	StdioConnection,
 	StreamableHTTPConnection,
@@ -63,15 +63,15 @@ vi.spyOn(process, "exit").mockImplementation(() => undefined as never)
 
 // Import after mocking
 import { installServer } from "../commands/install"
-import { writeConfig, runConfigCommand, readConfig } from "../utils/mcp-config"
+import { getClientConfiguration } from "../config/clients"
 import { resolveServer } from "../lib/registry"
+import { readConfig, runConfigCommand, writeConfig } from "../utils/mcp-config"
 import {
 	chooseConnection,
 	collectConfigValues,
 	formatServerConfig,
 	getServerName,
 } from "../utils/session-config"
-import { getClientConfiguration } from "../config/clients"
 
 // Get mocked functions
 const mockWriteConfig = vi.mocked(writeConfig)

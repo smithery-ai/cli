@@ -1,6 +1,8 @@
-import type { JSONRPCError } from "@modelcontextprotocol/sdk/types.js"
+import type {
+	JSONRPCError,
+	JSONRPCMessage,
+} from "@modelcontextprotocol/sdk/types.js"
 import { ErrorCode } from "@modelcontextprotocol/sdk/types.js"
-import type { JSONRPCMessage } from "@modelcontextprotocol/sdk/types.js"
 
 // Time in milliseconds before considering a connection idle
 export const IDLE_TIMEOUT = 30 * 60 * 1000 // 30 minutes
@@ -77,7 +79,7 @@ export const createHeartbeatManager = (
  * @param callbacks.onActivityResumed - Called when activity resumes after being idle
  */
 export const createIdleTimeoutManager = (
-	onTimeout: () => Promise<void>,
+	_onTimeout: () => Promise<void>,
 	callbacks?: IdleTimeoutCallbacks,
 ): IdleTimeoutManager => {
 	let lastActivityTimestamp = Date.now()

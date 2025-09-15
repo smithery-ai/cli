@@ -1,17 +1,17 @@
-import chalk from "chalk"
-import express from "express"
-import cors from "cors"
-import { spawn, type ChildProcess } from "node:child_process"
+import { type ChildProcess, spawn } from "node:child_process"
 import type {
-	JSONRPCMessage,
 	JSONRPCError,
+	JSONRPCMessage,
 } from "@modelcontextprotocol/sdk/types.js"
+import chalk from "chalk"
+import cors from "cors"
+import express from "express"
 import { setupTunnelAndPlayground } from "../../lib/dev-lifecycle.js"
 import {
-	logWithTimestamp,
-	handleTransportError,
-	createIdleTimeoutManager,
 	createHeartbeatManager,
+	createIdleTimeoutManager,
+	handleTransportError,
+	logWithTimestamp,
 } from "./runner-utils.js"
 
 interface ArbitraryCommandOptions {
@@ -137,7 +137,7 @@ export const createArbitraryCommandRunner = async (
 	})
 
 	// Health check endpoint
-	app.get("/health", (req: express.Request, res: express.Response) => {
+	app.get("/health", (_req: express.Request, res: express.Response) => {
 		res.json({
 			status: isReady ? "ready" : "not ready",
 			uptime: process.uptime(),
@@ -216,7 +216,7 @@ export const createArbitraryCommandRunner = async (
 						logWithTimestamp(
 							`[stdio listener] Command output: ${JSON.stringify(message)}`,
 						)
-					} catch (parseError) {
+					} catch (_parseError) {
 						// If it's not valid JSON-RPC, just log the raw output
 						logWithTimestamp(`[stdio listener] Raw stdout: ${line}`)
 					}
@@ -288,7 +288,7 @@ export const createArbitraryCommandRunner = async (
 		idleManager.stop()
 
 		// Reject all pending requests
-		for (const [id, { reject }] of pendingRequests) {
+		for (const [_id, { reject }] of pendingRequests) {
 			reject(new Error("Server shutting down"))
 		}
 		pendingRequests.clear()

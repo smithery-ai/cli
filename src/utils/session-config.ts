@@ -2,19 +2,19 @@ import type {
 	ConnectionInfo,
 	ServerDetailResponse,
 } from "@smithery/registry/models/components"
+import chalk from "chalk"
+import inquirer from "inquirer"
+import {
+	getClientConfiguration,
+	getPreferredTransport,
+	Transport,
+} from "../config/clients"
 import type {
 	ConfiguredServer,
+	JSONSchema,
 	ServerConfig,
 	StreamableHTTPConnection,
 } from "../types/registry"
-import type { JSONSchema } from "../types/registry"
-import {
-	getPreferredTransport,
-	getClientConfiguration,
-	Transport,
-} from "../config/clients"
-import inquirer from "inquirer"
-import chalk from "chalk"
 
 /**
  * Formats and validates configuration values according to the connection's schema
@@ -483,7 +483,7 @@ function shouldUseHTTPFormat(
 			availableTransports,
 		)
 		return preferredTransport === Transport.HTTP
-	} catch (error) {
+	} catch (_error) {
 		// If we can't determine client capabilities, default to STDIO
 		return false
 	}

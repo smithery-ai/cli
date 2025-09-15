@@ -1,11 +1,14 @@
-import chalk from "chalk"
-import { join } from "node:path"
-import { spawn, type ChildProcess } from "node:child_process"
-import { setupTunnelAndPlayground } from "../lib/dev-lifecycle"
-import { ensureApiKey } from "../utils/runtime"
-import { buildMcpServer } from "../lib/build"
+import { type ChildProcess, spawn } from "node:child_process"
 import { existsSync } from "node:fs"
+import { join } from "node:path"
+import chalk from "chalk"
+import { DEFAULT_PORT } from "../constants"
+import { buildMcpServer } from "../lib/build"
+import { setupTunnelAndPlayground } from "../lib/dev-lifecycle"
 import { debug } from "../lib/logger"
+import { cleanupChildProcess } from "../utils/child-process-cleanup"
+import { setupProcessLifecycle } from "../utils/process-lifecycle"
+import { ensureApiKey } from "../utils/runtime"
 
 interface DevOptions {
 	entryFile?: string
@@ -23,7 +26,7 @@ export async function dev(options: DevOptions = {}): Promise<void> {
 
 		const smitheryDir = join(".smithery")
 		const outFile = join(smitheryDir, "index.cjs")
-		const finalPort = options.port || "8181"
+		const finalPort = options.port || DEFAULT_PORT.toString()
 
 		let childProcess: ChildProcess | undefined
 		let tunnelListener: { close: () => Promise<void> } | undefined
@@ -126,11 +129,19 @@ export async function dev(options: DevOptions = {}): Promise<void> {
 
 		// Handle cleanup on exit
 		const cleanup = async () => {
-			console.log(chalk.yellow("\n👋 Shutting down dev server..."))
+			console.log(chalk.yellow("\n👋 Shutting down server..."))
 
 			// Stop watching
 			if (buildContext && "dispose" in buildContext) {
 				await buildContext.dispose()
+			}
+
+			// Kill child process
+			if (childProcess) {
+				await cleanupChildProcess({
+					childProcess,
+					processName: "server",
+				})
 			}
 
 			// Close tunnel
@@ -138,60 +149,17 @@ export async function dev(options: DevOptions = {}): Promise<void> {
 				try {
 					await tunnelListener.close()
 					debug(chalk.green("Tunnel closed"))
-				} catch (error) {
+				} catch (_error) {
 					debug(chalk.yellow("Tunnel already closed"))
 				}
 			}
-
-			// Kill child process
-			if (childProcess && !childProcess.killed) {
-				console.log(chalk.yellow("Stopping MCP server..."))
-				console.log(
-					`\n\n${chalk.rgb(
-						234,
-						88,
-						12,
-					)(
-						"Thanks for using Smithery!",
-					)}\n🚀 One-click cloud deploy: ${chalk.blue.underline(
-						"https://smithery.ai/new",
-					)}\n\n`,
-				)
-
-				// Wait for process to exit after sending SIGTERM
-				const processExited = new Promise<void>((resolve) => {
-					if (childProcess) {
-						childProcess.on('exit', () => resolve())
-					} else {
-						resolve()
-					}
-				})
-
-				childProcess.kill("SIGTERM")
-
-				// Race between graceful exit and force kill
-				const forceKill = new Promise<void>((resolve) => {
-					setTimeout(() => {
-						if (childProcess && !childProcess.killed) {
-							childProcess.kill("SIGKILL")
-						}
-						resolve()
-					}, 5000)
-				})
-
-				// Wait for either graceful exit or force kill timeout
-				await Promise.race([processExited, forceKill])
-			}
-
-			process.exit(0)
 		}
 
-		// Set up signal handlers
-		process.on("SIGINT", cleanup)
-		process.on("SIGTERM", cleanup)
-
-		// Keep the process alive
-		await new Promise<void>(() => {})
+		// Set up process lifecycle management
+		setupProcessLifecycle({
+			cleanupFn: cleanup,
+			processName: "server",
+		})
 	} catch (error) {
 		console.error(chalk.red("❌ Dev server failed:"), error)
 		process.exit(1)

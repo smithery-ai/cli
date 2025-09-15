@@ -1,8 +1,7 @@
 {
-	"$schema": "https://biomejs.dev/schemas/1.9.4/schema.json",
+	"$schema": "https://biomejs.dev/schemas/2.2.4/schema.json",
 	"files": {
-		"ignoreUnknown": false,
-		"ignore": ["node_modules", ".next"]
+		"ignoreUnknown": false
 	},
 	"vcs": {
 		"enabled": true,
@@ -24,8 +23,7 @@
 		"rules": {
 			"recommended": true,
 			"a11y": {
-				"useHtmlLang": "warn", // Not in recommended ruleset, turning on manually
-				"noHeaderScope": "warn", // Not in recommended ruleset, turning on manually
+				"useHtmlLang": "warn",
 				"useValidAriaRole": {
 					"level": "warn",
 					"options": {
@@ -33,51 +31,40 @@
 						"allowInvalidRoles": ["none", "text"]
 					}
 				},
-				"useSemanticElements": "off", // Rule is buggy, revisit later
-				"noSvgWithoutTitle": "off", // We do not intend to adhere to this rule
-				"useMediaCaption": "off", // We would need a cultural change to turn this on
-				"noAutofocus": "off", // We're highly intentional about when we use autofocus
-				"noBlankTarget": "off", // Covered by Conformance
+				"useSemanticElements": "off",
+				"noSvgWithoutTitle": "off",
+				"useMediaCaption": "off",
+				"noAutofocus": "off",
 				"useKeyWithClickEvents": "off",
 				"useButtonType": "off"
 			},
 			"complexity": {
-				"noUselessStringConcat": "warn", // Not in recommended ruleset, turning on manually
-				"noForEach": "off", // forEach is too familiar to ban
-				"noUselessSwitchCase": "off", // Turned off due to developer preferences
-				"noUselessThisAlias": "off" // Turned off due to developer preferences
+				"noUselessStringConcat": "warn",
+				"noForEach": "off",
+				"noUselessSwitchCase": "off",
+				"noUselessThisAlias": "off"
 			},
 			"correctness": {
-				"noUnusedImports": "warn", // Not in recommended ruleset, turning on manually
-				"useArrayLiterals": "warn", // Not in recommended ruleset, turning on manually
-				"noNewSymbol": "warn", // Not in recommended ruleset, turning on manually
-				"useJsxKeyInIterable": "off", // Rule is buggy, revisit later
-				"useExhaustiveDependencies": "off", // Community feedback on this rule has been poor, we will continue with ESLint
-				"noUnnecessaryContinue": "off" // Turned off due to developer preferences
+				"noUnusedImports": "warn",
+				"useJsxKeyInIterable": "off",
+				"useExhaustiveDependencies": "off"
 			},
 			"security": {
-				"noDangerouslySetInnerHtml": "off" // Covered by Conformance
+				"noDangerouslySetInnerHtml": "off"
 			},
 			"style": {
-				"useFragmentSyntax": "warn", // Not in recommended ruleset, turning on manually
-				"noYodaExpression": "warn", // Not in recommended ruleset, turning on manually
-				"useDefaultParameterLast": "warn", // Not in recommended ruleset, turning on manually
-				"useExponentiationOperator": "off", // Obscure and arguably not easily readable
-				"noUnusedTemplateLiteral": "off", // Stylistic opinion
-				"noUselessElse": "off", // Stylistic opinion
+				"useFragmentSyntax": "warn",
+				"noYodaExpression": "warn",
+				"useDefaultParameterLast": "warn",
+				"useExponentiationOperator": "off",
+				"noUnusedTemplateLiteral": "off",
+				"noUselessElse": "off",
 				"noNonNullAssertion": "off"
 			},
 			"suspicious": {
-				"noExplicitAny": "off" // We trust Vercelians to use any only when necessary
+				"noExplicitAny": "warn"
 			},
-			"nursery": {
-				"noStaticElementInteractions": "warn",
-				"noHeadImportInDocument": "warn",
-				"noDocumentImportInPage": "warn",
-				"noDuplicateElseIf": "warn",
-				"noIrregularWhitespace": "warn",
-				"useValidAutocomplete": "warn"
-			}
+			"nursery": {}
 		}
 	},
 	"javascript": {
@@ -107,6 +94,5 @@
 	"css": {
 		"formatter": { "enabled": false },
 		"linter": { "enabled": false }
-	},
-	"organizeImports": { "enabled": false }
+	}
 }

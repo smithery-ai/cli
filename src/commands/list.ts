@@ -1,10 +1,10 @@
-import { readConfig } from "../utils/mcp-config"
+import chalk from "chalk"
 import {
+	getClientConfiguration,
 	VALID_CLIENTS,
 	type ValidClient,
-	getClientConfiguration,
 } from "../config/clients"
-import chalk from "chalk"
+import { readConfig } from "../utils/mcp-config"
 
 export async function list(
 	subcommand: string | undefined,
@@ -13,7 +13,9 @@ export async function list(
 	switch (subcommand) {
 		case "clients":
 			console.log(chalk.bold("Available clients:"))
-			VALID_CLIENTS.forEach((client) => console.log(`  ${chalk.green(client)}`))
+			VALID_CLIENTS.forEach((client) => {
+				console.log(`  ${chalk.green(client)}`)
+			})
 			break
 		case "servers": {
 			/* check if client is command-type */

@@ -1,14 +1,14 @@
-import fs from "node:fs"
-import * as YAML from "yaml"
-import { parse as parseToml, stringify as stringifyToml } from "smol-toml"
-import path from "node:path"
-import type { MCPConfig } from "../types/registry.js"
-import { verbose } from "../lib/logger.js"
 import { execFileSync } from "node:child_process"
+import fs from "node:fs"
+import path from "node:path"
+import { parse as parseToml, stringify as stringifyToml } from "smol-toml"
+import * as YAML from "yaml"
 import {
-	getClientConfiguration,
 	type ClientConfiguration,
+	getClientConfiguration,
 } from "../config/clients.js"
+import { verbose } from "../lib/logger.js"
+import type { MCPConfig } from "../types/registry.js"
 
 export interface ClientMCPConfig extends MCPConfig {
 	[key: string]: any

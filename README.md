@@ -3,7 +3,7 @@
 The Smithery registry installer and manager for Model Context Protocol (MCP) servers, designed to be client-agnostic.
 
 ## Requirements
-- NodeJS version 18 or above
+- NodeJS version 20 or above
 
 ## Installation
 
@@ -40,7 +40,7 @@ npx @smithery/cli <command>
 - `search [term]` - Search for servers in the Smithery registry (interactive)
 - `login` - Login with an API key (interactive)
 - `dev [entryFile]` - Start development server with hot-reload and tunnel
-  - `--port <port>` - Port to run the server on (default: 8181)
+  - `--port <port>` - Port to run the server on (default: 8081)
   - `--key <apikey>` - Provide an API key
   - `--no-open` - Don't automatically open the playground
   - `--prompt <prompt>` - Initial message to start the playground with
@@ -50,7 +50,7 @@ npx @smithery/cli <command>
   - `--transport <type>` - Transport type: shttp or stdio (default: shttp)
   - `-c, --config <path>` - Path to config file (default: auto-detect smithery.config.js)
 - `playground` - Open MCP playground in browser
-  - `--port <port>` - Port to expose (default: 3000)
+  - `--port <port>` - Port to expose (default: 8081)
   - `--key <apikey>` - Provide an API key
   - Can pass command after `--` separator
 - `--help` - Show help message
@@ -60,19 +60,19 @@ npx @smithery/cli <command>
 
 ```bash
 # Install a server (interactive client selection)
-smithery install mcp-obsidian
+smithery install exa
 
 # Install a server for specific client (skips selection)
-smithery install mcp-obsidian --client claude
+smithery install exa --client claude
 
 # Install a server with pre-configured data (skips prompts)
-smithery install mcp-obsidian --client claude --config '{"vaultPath":"path/to/vault"}'
+smithery install exa --client claude --config '{"exaApiKey":"you_api_key"}'
 
 # Remove a server (interactive client selection)
-smithery uninstall mcp-obsidian
+smithery uninstall exa
 
 # Remove a server from specific client (skips selection)
-smithery uninstall mcp-obsidian --client claude
+smithery uninstall exa --client claude
 
 # List installed servers (interactive)
 smithery list
@@ -81,16 +81,16 @@ smithery list
 smithery list --client claude
 
 # Search for servers in the registry
-smithery search obsidian
+smithery search "web search"
 
 # Search interactively (prompts for term)
 smithery search
 
 # Inspect a specific server from smithery's registry
-smithery inspect mcp-obsidian
+smithery inspect exa
 
 # Run a server with configuration
-smithery run mcp-obsidian --config '{"key":"value"}'
+smithery run exa --config '{"key":"value"}'
 
 # Login and set API key
 smithery login

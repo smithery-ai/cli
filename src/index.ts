@@ -2,6 +2,7 @@
 
 import chalk from "chalk"
 import { Command } from "commander"
+import { build } from "./commands/build"
 import { dev } from "./commands/dev"
 import { inspectServer } from "./commands/inspect"
 import { installServer } from "./commands/install"
@@ -9,20 +10,20 @@ import { list } from "./commands/list"
 import { playground } from "./commands/playground"
 import { run } from "./commands/run/index"
 import { uninstallServer } from "./commands/uninstall"
-import { type ValidClient, VALID_CLIENTS } from "./config/clients"
-import { setVerbose, setDebug } from "./lib/logger"
+import { VALID_CLIENTS, type ValidClient } from "./config/clients"
+import { DEFAULT_PORT } from "./constants"
+import { setDebug, setVerbose } from "./lib/logger"
 import type { ServerConfig } from "./types/registry"
-import { ensureApiKey, promptForApiKey } from "./utils/runtime"
-import { build } from "./commands/build"
-import { setApiKey } from "./utils/smithery-config"
 import {
-	selectClient,
-	validateClient,
-	parseConfigOption,
-	selectServer,
-	selectInstalledServer,
 	interactiveServerSearch,
+	parseConfigOption,
+	selectClient,
+	selectInstalledServer,
+	selectServer,
+	validateClient,
 } from "./utils/command-prompts"
+import { ensureApiKey, promptForApiKey } from "./utils/runtime"
+import { setApiKey } from "./utils/smithery-config"
 
 const program = new Command()
 
@@ -32,7 +33,7 @@ program
 	.description("Smithery CLI - Manage and run MCP servers")
 	.option("--verbose", "Show detailed logs")
 	.option("--debug", "Show debug logs")
-	.hook("preAction", (thisCommand, actionCommand) => {
+	.hook("preAction", (thisCommand, _actionCommand) => {
 		// Set verbose mode if flag is present
 		const opts = thisCommand.opts()
 		if (opts.verbose) {
@@ -162,7 +163,10 @@ program
 program
 	.command("dev [entryFile]")
 	.description("Start development server with hot-reload and tunnel")
-	.option("--port <port>", "Port to run the server on (default: 8181)")
+	.option(
+		"--port <port>",
+		`Port to run the server on (default: ${DEFAULT_PORT})`,
+	)
 	.option("--key <apikey>", "Provide an API key")
 	.option("--no-open", "Don't automatically open the playground")
 	.option("--prompt <prompt>", "Initial message to start the playground with")
@@ -221,7 +225,7 @@ program
 program
 	.command("playground")
 	.description("open MCP playground in browser")
-	.option("--port <port>", "Port to expose (default: 3000)")
+	.option("--port <port>", `Port to expose (default: ${DEFAULT_PORT})`)
 	.option("--key <apikey>", "Provide an API key")
 	.allowUnknownOption() // Allow pass-through for command after --
 	.allowExcessArguments() // Allow extra args after -- without error
@@ -263,9 +267,7 @@ program
 		if (!command) {
 			console.error(chalk.red("❌ Command is required."))
 			console.error(
-				chalk.yellow(
-					"Usage: smithery playground-stdio -- <command>",
-				),
+				chalk.yellow("Usage: smithery playground-stdio -- <command>"),
 			)
 			console.error(
 				chalk.gray(
@@ -275,13 +277,19 @@ program
 			process.exit(1)
 		}
 
-		const { createArbitraryCommandRunner } = await import("./commands/run/arbitrary-command-runner.js")
-		
-		const cleanup = await createArbitraryCommandRunner(command, await ensureApiKey(options.key), {
-			port: options.port ? parseInt(options.port) : 6969,
-			open: options.open !== false,
-			initialMessage: options.prompt,
-		})
+		const { createArbitraryCommandRunner } = await import(
+			"./commands/run/arbitrary-command-runner.js"
+		)
+
+		const _cleanup = await createArbitraryCommandRunner(
+			command,
+			await ensureApiKey(options.key),
+			{
+				port: options.port ? parseInt(options.port, 10) : 6969,
+				open: options.open !== false,
+				initialMessage: options.prompt,
+			},
+		)
 
 		// Keep the process alive
 		process.stdin.resume()

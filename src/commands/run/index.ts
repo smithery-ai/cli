@@ -1,17 +1,17 @@
 #!/usr/bin/env node
-import { resolveServer, ResolveServerSource } from "../../lib/registry.js"
+import type { ServerDetailResponse } from "@smithery/registry/models/components"
+import { ResolveServerSource, resolveServer } from "../../lib/registry.js"
+import type { ServerConfig } from "../../types/registry.js"
+import { chooseConnection } from "../../utils/session-config.js"
 import {
 	getAnalyticsConsent,
 	initializeSettings,
 } from "../../utils/smithery-config.js"
-import type { ServerConfig } from "../../types/registry.js"
-import { chooseConnection } from "../../utils/session-config.js"
-import { createStdioRunner as startSTDIOrunner } from "./stdio-runner.js"
+import { createLocalPlaygroundRunner } from "./local-playground-runner.js"
 import { logWithTimestamp } from "./runner-utils.js"
+import { createStdioRunner as startSTDIOrunner } from "./stdio-runner.js"
 import { createStreamableHTTPRunner } from "./streamable-http-runner.js"
 import { createUplinkRunner } from "./uplink-runner.js"
-import { createLocalPlaygroundRunner } from "./local-playground-runner.js"
-import type { ServerDetailResponse } from "@smithery/registry/models/components"
 
 interface RunOptions {
 	playground?: boolean

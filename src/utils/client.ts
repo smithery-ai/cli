@@ -1,6 +1,6 @@
-import inquirer from "inquirer"
 import { exec } from "node:child_process"
 import { promisify } from "node:util"
+import inquirer from "inquirer"
 
 const execAsync = promisify(exec)
 
@@ -29,7 +29,7 @@ async function isClientRunning(client?: string): Promise<boolean> {
 			return !!stdout.trim()
 		}
 		return false
-	} catch (error) {
+	} catch (_error) {
 		return false
 	}
 }

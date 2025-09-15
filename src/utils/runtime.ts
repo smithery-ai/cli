@@ -1,9 +1,9 @@
-import type { ConnectionInfo } from "@smithery/registry/models/components"
-import inquirer from "inquirer"
-import chalk from "chalk"
 import { exec } from "node:child_process"
 import { promisify } from "node:util"
 import { getDefaultEnvironment } from "@modelcontextprotocol/sdk/client/stdio.js"
+import type { ConnectionInfo } from "@smithery/registry/models/components"
+import chalk from "chalk"
+import inquirer from "inquirer"
 import ora from "ora"
 import { verbose } from "../lib/logger"
 import { getApiKey, setApiKey } from "./smithery-config"
@@ -14,7 +14,7 @@ export async function checkUVInstalled(): Promise<boolean> {
 	try {
 		await execAsync("uvx --version")
 		return true
-	} catch (error) {
+	} catch (_error) {
 		return false
 	}
 }
@@ -55,7 +55,7 @@ export async function promptForUVInstall(): Promise<boolean> {
 
 		spinner.succeed("✓ UV installed successfully")
 		return true
-	} catch (error) {
+	} catch (_error) {
 		spinner.fail(
 			"Failed to install UV. You can install it manually from https://astral.sh/uv",
 		)
@@ -79,7 +79,7 @@ export async function checkBunInstalled(): Promise<boolean> {
 	try {
 		await execAsync("bun --version")
 		return true
-	} catch (error) {
+	} catch (_error) {
 		return false
 	}
 }
@@ -113,7 +113,7 @@ export async function promptForBunInstall(): Promise<boolean> {
 			try {
 				console.log("Attempting to install Bun via Homebrew...")
 				await execAsync("brew install oven-sh/bun/bun")
-			} catch (brewError) {
+			} catch (_brewError) {
 				console.log(
 					"Homebrew installation failed, trying direct installation...",
 				)

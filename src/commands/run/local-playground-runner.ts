@@ -1,22 +1,23 @@
-import chalk from "chalk"
-import express from "express"
-import cors from "cors"
 import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js"
 import type {
-	JSONRPCMessage,
 	JSONRPCError,
+	JSONRPCMessage,
 } from "@modelcontextprotocol/sdk/types.js"
+import type { ServerDetailResponse } from "@smithery/registry/models/components"
+import chalk from "chalk"
+import cors from "cors"
+import express from "express"
+import { TRANSPORT_CLOSE_TIMEOUT } from "../../constants.js"
 import { setupTunnelAndPlayground } from "../../lib/dev-lifecycle.js"
 import { fetchConnection } from "../../lib/registry.js"
+import type { ServerConfig } from "../../types/registry.js"
 import { getRuntimeEnvironment } from "../../utils/runtime.js"
 import {
-	logWithTimestamp,
-	handleTransportError,
-	createIdleTimeoutManager,
 	createHeartbeatManager,
+	createIdleTimeoutManager,
+	handleTransportError,
+	logWithTimestamp,
 } from "./runner-utils.js"
-import type { ServerDetailResponse } from "@smithery/registry/models/components"
-import type { ServerConfig } from "../../types/registry.js"
 
 interface LocalPlaygroundOptions {
 	open?: boolean
@@ -144,7 +145,7 @@ export const createLocalPlaygroundRunner = async (
 	})
 
 	// Health check endpoint
-	app.get("/health", (req: express.Request, res: express.Response) => {
+	app.get("/health", (_req: express.Request, res: express.Response) => {
 		res.json({
 			status: isReady ? "ready" : "not ready",
 			uptime: process.uptime(),
@@ -302,7 +303,7 @@ export const createLocalPlaygroundRunner = async (
 		idleManager.stop()
 
 		// Reject all pending requests
-		for (const [id, { reject }] of pendingRequests) {
+		for (const [_id, { reject }] of pendingRequests) {
 			reject(new Error("Server shutting down"))
 		}
 		pendingRequests.clear()
@@ -344,7 +345,7 @@ export const createLocalPlaygroundRunner = async (
 					new Promise((_, reject) =>
 						setTimeout(
 							() => reject(new Error("Transport close timeout")),
-							3000,
+							TRANSPORT_CLOSE_TIMEOUT,
 						),
 					),
 				])

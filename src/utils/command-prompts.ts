@@ -1,7 +1,7 @@
 import chalk from "chalk"
 import { VALID_CLIENTS, type ValidClient } from "../config/clients"
-import type { ServerConfig } from "../types/registry"
 import { searchServers } from "../lib/registry"
+import type { ServerConfig } from "../types/registry"
 import { ensureApiKey } from "./runtime"
 
 /**
@@ -455,10 +455,8 @@ export async function interactiveServerSearch(
 
 				if (action === "back") {
 					console.log()
-					continue // Go back to server selection for same search
 				} else if (action === "search") {
 					searchTerm = await getSearchTerm()
-					continue // New search
 				} else {
 					return // Exit
 				}
