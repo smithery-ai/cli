@@ -1,9 +1,10 @@
 import type { ChildProcess } from "node:child_process"
 import chalk from "chalk"
-import { DEFAULT_PORT, FORCE_KILL_TIMEOUT } from "../constants"
+import { DEFAULT_PORT } from "../constants"
 import { setupTunnelAndPlayground } from "../lib/dev-lifecycle"
 import { debug } from "../lib/logger"
 import { startSubprocess } from "../lib/subprocess"
+import { cleanupChildProcess } from "../utils/child-process-cleanup"
 import { setupProcessLifecycle } from "../utils/process-lifecycle"
 
 export async function playground(options: {
@@ -57,39 +58,19 @@ export async function playground(options: {
 			}
 
 			// Kill child process if it exists
-			if (childProcess && !childProcess.killed) {
-				console.log(chalk.yellow("Stopping subprocess..."))
-
-				// Wait for process to exit after sending SIGTERM
-				const processExited = new Promise<void>((resolve) => {
-					if (childProcess) {
-						childProcess.on("exit", () => resolve())
-					} else {
-						resolve()
-					}
+			if (childProcess) {
+				await cleanupChildProcess({
+					childProcess,
+					processName: "subprocess",
+					showThankYouMessage: false,
 				})
-
-				childProcess.kill("SIGTERM")
-
-				// Race between graceful exit and force kill
-				const forceKill = new Promise<void>((resolve) => {
-					setTimeout(() => {
-						if (childProcess && !childProcess.killed) {
-							childProcess.kill("SIGKILL")
-						}
-						resolve()
-					}, FORCE_KILL_TIMEOUT)
-				})
-
-				// Wait for either graceful exit or force kill timeout
-				await Promise.race([processExited, forceKill])
 			}
 		}
 
 		// Set up process lifecycle management
 		setupProcessLifecycle({
 			cleanupFn: cleanup,
-			processName: "dev server",
+			processName: "playground",
 		})
 
 		// If child process exits unexpectedly, also exit

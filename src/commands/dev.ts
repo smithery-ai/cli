@@ -2,10 +2,11 @@ import { type ChildProcess, spawn } from "node:child_process"
 import { existsSync } from "node:fs"
 import { join } from "node:path"
 import chalk from "chalk"
-import { DEFAULT_PORT, FORCE_KILL_TIMEOUT } from "../constants"
+import { DEFAULT_PORT } from "../constants"
 import { buildMcpServer } from "../lib/build"
 import { setupTunnelAndPlayground } from "../lib/dev-lifecycle"
 import { debug } from "../lib/logger"
+import { cleanupChildProcess } from "../utils/child-process-cleanup"
 import { setupProcessLifecycle } from "../utils/process-lifecycle"
 import { ensureApiKey } from "../utils/runtime"
 
@@ -146,43 +147,12 @@ export async function dev(options: DevOptions = {}): Promise<void> {
 			}
 
 			// Kill child process
-			if (childProcess && !childProcess.killed) {
-				console.log(chalk.yellow("Stopping MCP server..."))
-				console.log(
-					`\n\n${chalk.rgb(
-						234,
-						88,
-						12,
-					)(
-						"Thanks for using Smithery!",
-					)}\n🚀 One-click cloud deploy: ${chalk.blue.underline(
-						"https://smithery.ai/new",
-					)}\n\n`,
-				)
-
-				// Wait for process to exit after sending SIGTERM
-				const processExited = new Promise<void>((resolve) => {
-					if (childProcess) {
-						childProcess.on("exit", () => resolve())
-					} else {
-						resolve()
-					}
+			if (childProcess) {
+				await cleanupChildProcess({
+					childProcess,
+					processName: "MCP server",
+					showThankYouMessage: true,
 				})
-
-				childProcess.kill("SIGTERM")
-
-				// Race between graceful exit and force kill
-				const forceKill = new Promise<void>((resolve) => {
-					setTimeout(() => {
-						if (childProcess && !childProcess.killed) {
-							childProcess.kill("SIGKILL")
-						}
-						resolve()
-					}, FORCE_KILL_TIMEOUT)
-				})
-
-				// Wait for either graceful exit or force kill timeout
-				await Promise.race([processExited, forceKill])
 			}
 		}
 
