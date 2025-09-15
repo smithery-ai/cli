@@ -9,6 +9,7 @@ import type {
 import { setupTunnelAndPlayground } from "../../lib/dev-lifecycle.js"
 import { fetchConnection } from "../../lib/registry.js"
 import { getRuntimeEnvironment } from "../../utils/runtime.js"
+import { TRANSPORT_CLOSE_TIMEOUT } from "../../constants.js"
 import {
 	logWithTimestamp,
 	handleTransportError,
@@ -344,7 +345,7 @@ export const createLocalPlaygroundRunner = async (
 					new Promise((_, reject) =>
 						setTimeout(
 							() => reject(new Error("Transport close timeout")),
-							3000,
+							TRANSPORT_CLOSE_TIMEOUT,
 						),
 					),
 				])
