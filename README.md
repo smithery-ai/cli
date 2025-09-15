@@ -3,7 +3,7 @@
 The Smithery registry installer and manager for Model Context Protocol (MCP) servers, designed to be client-agnostic.
 
 ## Requirements
-- NodeJS version 18 or above
+- NodeJS version 20 or above
 
 ## Installation
 
@@ -60,19 +60,19 @@ npx @smithery/cli <command>
 
 ```bash
 # Install a server (interactive client selection)
-smithery install mcp-obsidian
+smithery install exa
 
 # Install a server for specific client (skips selection)
-smithery install mcp-obsidian --client claude
+smithery install exa --client claude
 
 # Install a server with pre-configured data (skips prompts)
-smithery install mcp-obsidian --client claude --config '{"vaultPath":"path/to/vault"}'
+smithery install exa --client claude --config '{"exaApiKey":"you_api_key"}'
 
 # Remove a server (interactive client selection)
-smithery uninstall mcp-obsidian
+smithery uninstall exa
 
 # Remove a server from specific client (skips selection)
-smithery uninstall mcp-obsidian --client claude
+smithery uninstall exa --client claude
 
 # List installed servers (interactive)
 smithery list
@@ -81,16 +81,16 @@ smithery list
 smithery list --client claude
 
 # Search for servers in the registry
-smithery search obsidian
+smithery search "web search"
 
 # Search interactively (prompts for term)
 smithery search
 
 # Inspect a specific server from smithery's registry
-smithery inspect mcp-obsidian
+smithery inspect exa
 
 # Run a server with configuration
-smithery run mcp-obsidian --config '{"key":"value"}'
+smithery run exa --config '{"key":"value"}'
 
 # Login and set API key
 smithery login
