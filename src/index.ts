@@ -15,6 +15,7 @@ import type { ServerConfig } from "./types/registry"
 import { ensureApiKey, promptForApiKey } from "./utils/runtime"
 import { build } from "./commands/build"
 import { setApiKey } from "./utils/smithery-config"
+import { DEFAULT_PORT } from "./constants"
 import {
 	selectClient,
 	validateClient,
@@ -221,7 +222,7 @@ program
 program
 	.command("playground")
 	.description("open MCP playground in browser")
-	.option("--port <port>", "Port to expose (default: 3000)")
+	.option("--port <port>", `Port to expose (default: ${DEFAULT_PORT})`)
 	.option("--key <apikey>", "Provide an API key")
 	.allowUnknownOption() // Allow pass-through for command after --
 	.allowExcessArguments() // Allow extra args after -- without error

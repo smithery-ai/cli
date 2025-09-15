@@ -14,6 +14,7 @@ import { fetchConnection } from "../../lib/registry"
 import type { ServerDetailResponse } from "@smithery/registry/models/components"
 import { getRuntimeEnvironment } from "../../utils/runtime"
 import { handleTransportError, logWithTimestamp } from "./runner-utils.js"
+import { TRANSPORT_CLOSE_TIMEOUT } from "../../constants.js"
 import { getSessionId } from "../../utils/analytics.js"
 import type { ServerConfig } from "../../types/registry"
 
@@ -228,7 +229,7 @@ export const createStdioRunner = async (
 					new Promise((_, reject) =>
 						setTimeout(
 							() => reject(new Error("Transport close timeout")),
-							3000,
+							TRANSPORT_CLOSE_TIMEOUT,
 						),
 					),
 				])

@@ -15,6 +15,7 @@ import {
 import { createStreamableHTTPTransportUrl } from "../../utils/url-utils.js"
 import { setupTunnelAndPlayground } from "../../lib/dev-lifecycle.js"
 import type { ServerConfig } from "../../types/registry.js"
+import { DEFAULT_PORT, TRANSPORT_CLOSE_TIMEOUT } from "../../constants.js"
 
 interface UplinkOptions {
 	open?: boolean
@@ -177,7 +178,7 @@ export const createUplinkRunner = async (
 				chalk.green("✅ Server connection established, setting up uplink..."),
 			)
 			const { listener } = await setupTunnelAndPlayground(
-				"3000", // Use a default port for the tunnel
+				DEFAULT_PORT.toString(), // Use a default port for the tunnel
 				apiKey,
 				options.open !== false,
 				options.initialMessage || "Say hello to the world!",
@@ -258,7 +259,7 @@ export const createUplinkRunner = async (
 							reject(
 								new Error("[Uplink Runner] Transport close timeout after 3s"),
 							),
-						3000,
+						TRANSPORT_CLOSE_TIMEOUT,
 					),
 				),
 			])
