@@ -1,6 +1,7 @@
 // These will be replaced by esbuild at build time.
 // @ts-expect-error
 import * as _entry from "virtual:user-module"
+import type { CallbackOAuthServerProvider } from "@smithery/sdk/server/oauth.js"
 import {
 	type CreateServerFn as CreateStatefulServerFn,
 	createStatefulServer,
@@ -21,6 +22,8 @@ interface SmitheryModule {
 	stateless?: boolean
 	// Default export (can be stateful or stateless server)
 	default?: CreateStatefulServerFn | CreateStatelessServerFn
+	// Optional OAuth provider instance. Provider carries its own options.
+	oauthProvider?: CallbackOAuthServerProvider
 }
 
 const entry: SmitheryModule = _entry
@@ -52,18 +55,22 @@ async function startMcpServer() {
 				`${chalk.blue("[smithery]")} Setting up ${entry.stateless ? "stateless" : "stateful"} server`,
 			)
 
+			const provider = entry.oauthProvider
+			if (provider) {
+				console.log(
+					`${chalk.blue("[smithery]")} OAuth detected. Mounting auth routes.`,
+				)
+			}
+
 			if (entry.stateless) {
 				server = createStatelessServer(
 					entry.default as CreateStatelessServerFn,
-					{
-						schema: entry.configSchema,
-						app,
-					},
+					{ app, oauthProvider: provider },
 				)
 			} else {
 				server = createStatefulServer(entry.default as CreateStatefulServerFn, {
-					schema: entry.configSchema,
 					app,
+					oauthProvider: provider,
 				})
 			}
 		} else {

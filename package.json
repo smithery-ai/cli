@@ -30,7 +30,7 @@
 		"@modelcontextprotocol/sdk": "^1.18.0",
 		"@ngrok/ngrok": "^1.5.1",
 		"@smithery/registry": "^0.3.7",
-		"@smithery/sdk": "^1.5.10",
+		"@smithery/sdk": "^1.6.1",
 		"chalk": "^4.1.2",
 		"commander": "^14.0.0",
 		"cors": "^2.8.5",
@@ -41,8 +41,8 @@
 		"inquirer-autocomplete-prompt": "^2.0.0",
 		"lodash": "^4.17.21",
 		"ora": "^8.2.0",
-		"smol-toml": "^1.4.2",
 		"shx": "^0.4.0",
+		"smol-toml": "^1.4.2",
 		"uuid": "^11.1.0",
 		"uuidv7": "^1.0.2",
 		"yaml": "^2.3.4"
