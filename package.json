@@ -1,7 +1,7 @@
 {
 	"name": "@smithery/cli",
 	"version": "1.3.0",
-	"type": "commonjs",
+	"type": "module",
 	"private": false,
 	"homepage": "https://smithery.ai/",
 	"repository": {
@@ -13,11 +13,11 @@
 	"scripts": {
 		"build": "tsc && node build.mjs && shx chmod +x dist/index.js",
 		"start": "node dist/index.js",
-		"test:list": "node --loader ts-node/esm src/index.ts list",
-		"test:install": "node --loader ts-node/esm src/index.ts install",
-		"test:installed": "node --loader ts-node/esm src/index.ts installed",
-		"extract": "node --loader ts-node/esm src/extractors/modelcontextprotocol-extractor.ts",
-		"test:uninstall": "node --loader ts-node/esm src/index.ts uninstall",
+		"test:list": "tsx src/index.ts list",
+		"test:install": "tsx src/index.ts install",
+		"test:installed": "tsx src/index.ts installed",
+		"extract": "tsx src/extractors/modelcontextprotocol-extractor.ts",
+		"test:uninstall": "tsx src/index.ts uninstall",
 		"prepare": "npm run build",
 		"check": "npx @biomejs/biome check --write --unsafe",
 		"test": "vitest run",
