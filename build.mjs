@@ -26,8 +26,8 @@ const shttpResult = await esbuild.build({
 	entryPoints: ["src/runtime/shttp-bootstrap.ts"],
 	bundle: true,
 	platform: "node",
-	target: "node18",
-	format: "cjs",
+	target: "node20",
+	format: "esm",
 	write: false,
 	external: ["virtual:user-module"],
 })
@@ -36,8 +36,8 @@ const stdioResult = await esbuild.build({
 	entryPoints: ["src/runtime/stdio-bootstrap.ts"],
 	bundle: true,
 	platform: "node",
-	target: "node18",
-	format: "cjs",
+	target: "node20",
+	format: "esm",
 	write: false,
 	external: ["virtual:user-module"],
 })
@@ -57,11 +57,15 @@ await esbuild.build({
 	entryPoints: ["src/index.ts"],
 	bundle: true,
 	platform: "node",
-	target: "node18",
+	target: "node20",
+	format: "esm",
 	minify: true,
 	treeShaking: true,
 	outfile: "dist/index.js",
 	external: ["@ngrok/ngrok", "esbuild"],
+	banner: {
+		js: `import { createRequire } from 'module'; const require = createRequire(import.meta.url);`,
+	},
 	define,
 })
 

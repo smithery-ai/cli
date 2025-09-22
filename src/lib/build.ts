@@ -146,8 +146,8 @@ export async function buildMcpServer(
 						: __SMITHERY_SHTTP_BOOTSTRAP__
 
 				const modifiedBootstrap = bootstrapCode.replace(
-					'require("virtual:user-module")',
-					`require(${JSON.stringify(entryFile)})`,
+					'await import("virtual:user-module")',
+					`await import(${JSON.stringify(entryFile)})`,
 				)
 
 				return {
