@@ -24,6 +24,7 @@ jobs:
           cache: npm
 
       - run: npm ci
+      - run: npm install -D @biomejs/cli-linux-x64  # biome platform binary for linux ci
       - run: npm run build
       - run: npm run check
 
