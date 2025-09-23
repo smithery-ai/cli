@@ -203,8 +203,8 @@ program
 		"Path to config file (default: auto-detect smithery.config.js)",
 	)
 	.option(
-		"--bundler <type>",
-		"Bundler to use: esbuild (default: auto-detect based on runtime)",
+		"--tool <type>",
+		"Build tool to use: esbuild, bun (default: auto-detect based on runtime)",
 	)
 	.action(async (entryFile, options) => {
 		// Validate transport option
@@ -218,20 +218,20 @@ program
 			process.exit(1)
 		}
 
-		// Validate bundler option - auto-detect if not specified
-		const bundler = options.bundler || getDefaultBundler()
-		if (!["esbuild", "bun"].includes(bundler)) {
+		// Validate tool option - auto-detect if not specified
+		const tool = options.tool || getDefaultBundler()
+		if (!["esbuild", "bun"].includes(tool)) {
 			console.error(
 				chalk.red(
-					`Invalid bundler "${bundler}". Valid options are: esbuild, bun`,
+					`Invalid tool "${tool}". Valid options are: esbuild, bun`,
 				),
 			)
 			process.exit(1)
 		}
 
-		// Prevent using Bun bundler on Node runtime
-		if (bundler === "bun" && typeof Bun === "undefined") {
-			console.error(chalk.red("Bun bundler requires running with Bun runtime"))
+		// Prevent using Bun tool on Node runtime
+		if (tool === "bun" && typeof Bun === "undefined") {
+			console.error(chalk.red("Bun tool requires running with Bun runtime"))
 			console.error(chalk.gray("Try: bun smithery build"))
 			process.exit(1)
 		}
@@ -242,7 +242,7 @@ program
 			transport: transport as "shttp" | "stdio",
 			configFile: options.config,
 			production: true,
-			buildTool: bundler as "esbuild" | "bun",
+			buildTool: tool as "esbuild" | "bun",
 		})
 	})
 
