@@ -11,7 +11,7 @@ import { run } from "./commands/run/index"
 import { uninstallServer } from "./commands/uninstall"
 import { VALID_CLIENTS, type ValidClient } from "./config/clients"
 import { DEFAULT_PORT } from "./constants"
-import { buildServer } from "./lib/build"
+import { build } from "./commands/build"
 import { setDebug, setVerbose } from "./lib/logger"
 import type { ServerConfig } from "./types/registry"
 import { getDefaultBundler } from "./utils/build"
@@ -234,12 +234,11 @@ program
 			process.exit(1)
 		}
 
-		await buildServer({
+		await build({
 			entryFile,
 			outFile: options.out,
 			transport: transport as "shttp" | "stdio",
 			configFile: options.config,
-			production: true,
 			buildTool: tool as "esbuild" | "bun",
 		})
 	})
