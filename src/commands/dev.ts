@@ -25,7 +25,7 @@ export async function dev(options: DevOptions = {}): Promise<void> {
 		const apiKey = await ensureApiKey(options.key)
 
 		const smitheryDir = join(".smithery")
-		const outFile = join(smitheryDir, "index.cjs")
+		const outFile = join(smitheryDir, "index.js")
 		const finalPort = options.port || DEFAULT_PORT.toString()
 
 		let childProcess: ChildProcess | undefined
