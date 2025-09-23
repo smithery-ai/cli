@@ -2,7 +2,6 @@
 
 import chalk from "chalk"
 import { Command } from "commander"
-import { build } from "./commands/build"
 import { dev } from "./commands/dev"
 import { inspectServer } from "./commands/inspect"
 import { installServer } from "./commands/install"
@@ -12,8 +11,10 @@ import { run } from "./commands/run/index"
 import { uninstallServer } from "./commands/uninstall"
 import { VALID_CLIENTS, type ValidClient } from "./config/clients"
 import { DEFAULT_PORT } from "./constants"
+import { buildServer } from "./lib/build"
 import { setDebug, setVerbose } from "./lib/logger"
 import type { ServerConfig } from "./types/registry"
+import { getDefaultBundler } from "./utils/build"
 import {
 	interactiveServerSearch,
 	parseConfigOption,
@@ -201,6 +202,10 @@ program
 		"-c, --config <path>",
 		"Path to config file (default: auto-detect smithery.config.js)",
 	)
+	.option(
+		"--bundler <type>",
+		"Bundler to use: esbuild (default: auto-detect based on runtime)",
+	)
 	.action(async (entryFile, options) => {
 		// Validate transport option
 		const transport = options.transport || "shttp"
@@ -213,11 +218,31 @@ program
 			process.exit(1)
 		}
 
-		await build({
+		// Validate bundler option - auto-detect if not specified
+		const bundler = options.bundler || getDefaultBundler()
+		if (!["esbuild", "bun"].includes(bundler)) {
+			console.error(
+				chalk.red(
+					`Invalid bundler "${bundler}". Valid options are: esbuild, bun`,
+				),
+			)
+			process.exit(1)
+		}
+
+		// Prevent using Bun bundler on Node runtime
+		if (bundler === "bun" && typeof Bun === "undefined") {
+			console.error(chalk.red("Bun bundler requires running with Bun runtime"))
+			console.error(chalk.gray("Try: bun smithery build"))
+			process.exit(1)
+		}
+
+		await buildServer({
 			entryFile,
 			outFile: options.out,
 			transport: transport as "shttp" | "stdio",
 			configFile: options.config,
+			production: true,
+			buildTool: bundler as "esbuild" | "bun",
 		})
 	})
 

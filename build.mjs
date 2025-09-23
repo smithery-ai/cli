@@ -3,7 +3,7 @@ import { config } from "dotenv"
 import * as esbuild from "esbuild"
 
 // Load environment variables into a define object
-config()
+config({ quiet: true })
 const define = {}
 
 const isDotSafeIdentifier = (str) => {

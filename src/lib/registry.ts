@@ -20,7 +20,7 @@ import { verbose } from "./logger"
 
 // @TODO: add timeout
 
-dotenvConfig()
+dotenvConfig({ quiet: true })
 
 const getEndpoint = (): string => {
 	if (

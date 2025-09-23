@@ -1,4 +1,4 @@
-import { buildMcpServer } from "../lib/build"
+import { buildServer } from "../lib/build"
 
 interface BuildOptions {
 	entryFile?: string
@@ -9,7 +9,7 @@ interface BuildOptions {
 
 export async function build(options: BuildOptions = {}): Promise<void> {
 	try {
-		await buildMcpServer({
+		await buildServer({
 			entryFile: options.entryFile,
 			outFile: options.outFile,
 			transport: options.transport,
