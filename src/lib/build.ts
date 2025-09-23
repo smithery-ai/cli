@@ -192,8 +192,10 @@ async function bunServer(
 		if (options.watch && options.onRebuild) {
 			console.log(chalk.dim(chalk.blue("Starting build in watch mode...")))
 
-			// Use Node.js built-in file watcher
-			const fs = await import("node:fs")
+			// Use filesystem watcher (Bun's native watchers when running on Bun, Node.js fs.watch otherwise)
+			// NOTE: Bun.build() doesn't have native watch mode yet (https://github.com/oven-sh/bun/issues/5866)
+			// This manual approach is the recommended workaround until native support lands
+			const { watch } = await import("node:fs/promises")
 
 			let isBuilding = false
 
@@ -225,26 +227,39 @@ async function bunServer(
 			// Initial build
 			await doBuild()
 
-			// Watch for changes using Node.js fs.watch
-			const watcher = fs.watch(
-				dirname(entryFile),
-				{ recursive: true },
-				(_eventType, filename) => {
-					if (
-						filename &&
-						(filename.endsWith(".ts") || filename.endsWith(".js"))
-					) {
-						console.log(chalk.blue(`File ${filename} changed, rebuilding...`))
-						doBuild()
-					}
-				},
-			)
+			// Watch for changes using async iterator pattern
+			const watcher = watch(dirname(entryFile), { recursive: true })
 
-			// Keep process alive
+			// Handle cleanup on SIGINT
+			let shouldStop = false
 			process.on("SIGINT", () => {
-				watcher.close()
+				shouldStop = true
+				console.log("\nClosing watcher...")
 				process.exit(0)
 			})
+
+			// Watch for file changes using async iterator
+			;(async () => {
+				try {
+					for await (const event of watcher) {
+						if (shouldStop) break
+
+						if (
+							event.filename &&
+							(event.filename.endsWith(".ts") || event.filename.endsWith(".js"))
+						) {
+							console.log(
+								chalk.blue(`File ${event.filename} changed, rebuilding...`),
+							)
+							doBuild()
+						}
+					}
+				} catch (error) {
+					if (!shouldStop) {
+						console.error("Watcher error:", error)
+					}
+				}
+			})()
 
 			return { success: true }
 		} else {
