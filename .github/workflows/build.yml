@@ -19,7 +19,6 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 20
-          cache: npm
 
       - run: npm ci
       - run: npm test
@@ -33,7 +32,6 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 20
-          cache: npm
 
       - run: npm ci
       - run: npm install -D @biomejs/cli-linux-x64  # biome platform binary for linux ci
