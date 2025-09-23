@@ -20,7 +20,7 @@ jobs:
         with:
           node-version: 20
 
-      - run: rm -rf package-lock.json node_modules
+      - run: rm -rf package-lock.json node_modules # workaround for bug with npm on optional deps
       - run: npm install
       - run: npm test
 

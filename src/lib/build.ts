@@ -267,9 +267,10 @@ async function bunServer(
 					if (outputs.length > 0 && existsSync(outputs[0])) {
 						const stats = statSync(outputs[0])
 						const fileName = basename(outputs[0])
+						const relativePath = outputs[0].replace(process.cwd() + "/", "")
 						const fileSize = formatFileSize(stats.size)
 						console.log(
-							`\n  ${fileName}  ${chalk.yellow(fileSize)}  ${chalk.gray("(entry point)")}\n`,
+							`\n  ${relativePath}  ${chalk.yellow(fileSize)}  ${chalk.gray("(entry point)")}\n`,
 						)
 					}
 
@@ -435,10 +436,11 @@ async function esbuildServer(
 		// Display file size info for the output file
 		if (existsSync(outFile)) {
 			const stats = statSync(outFile)
-			const fileName = basename(outFile)
+			// const fileName = basename(outFile)
+			const relativePath = outFile.replace(process.cwd() + "/", "")
 			const fileSize = formatFileSize(stats.size)
 			console.log(
-				`\n  ${fileName}  ${chalk.yellow(fileSize)}  ${chalk.gray("(entry point)")}\n`,
+				`\n  ${relativePath}  ${chalk.yellow(fileSize)}  ${chalk.gray("(entry point)")}\n`,
 			)
 		}
 
