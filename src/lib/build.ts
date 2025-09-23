@@ -361,7 +361,7 @@ async function esbuildServer(
 		platform: "node",
 		target: "node20",
 		outfile: outFile,
-		minify: true,
+		minify: options.production ?? true,
 		sourcemap: "inline",
 		format: "esm",
 		banner: {
