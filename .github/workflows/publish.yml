@@ -19,9 +19,8 @@ jobs:
         with:
           node-version: 20
 
-      - run: |
-          rm -rf package-lock.json node_modules
-          npm install
+      - run: rm -rf package-lock.json node_modules
+      - run: npm install
       - run: npm test
 
   build:
