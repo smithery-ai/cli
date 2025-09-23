@@ -222,9 +222,7 @@ program
 		const tool = options.tool || getDefaultBundler()
 		if (!["esbuild", "bun"].includes(tool)) {
 			console.error(
-				chalk.red(
-					`Invalid tool "${tool}". Valid options are: esbuild, bun`,
-				),
+				chalk.red(`Invalid tool "${tool}". Valid options are: esbuild, bun`),
 			)
 			process.exit(1)
 		}
