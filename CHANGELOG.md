@@ -8,6 +8,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Added
 - Created shared `cleanupChildProcess` utility for consistent process cleanup across commands
+- Added bun bundler support in addition to esbuild - detected automatically at runtime with optional override with `--tool` option (note: only when using bun runtime for esbuild bundle; node doesn't allow bun api)
 
 ### Changed
 - Updated Biome from v1.5.3 to v2.2.4 for better cross-platform binary support
@@ -15,11 +16,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Updated Node.js requirement from >=18.0.0 to >=20.0.0 to match dependency requirements
 - Updated GitHub Actions to use Node.js 20
 - Refactored `dev`, `playground`, and `uplink` commands to use shared child process cleanup utility
+- Changed default output format from CommonJS to ESM modules
+- Removed npm cache configuration from GitHub Actions workflows to resolve build issues
 
 ### Fixed
 - Resolved `Cannot find module '@biomejs/cli-linux-x64/biome'` CI error
 - Improve error handling in child process cleanup
 - Improve race condition handling in process exit
+- Fixed CI/CD build issues by removing npm cache configuration from workflow
 
 ## [1.2.29] - 2025-09-12
 

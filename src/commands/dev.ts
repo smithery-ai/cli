@@ -3,7 +3,7 @@ import { existsSync } from "node:fs"
 import { join } from "node:path"
 import chalk from "chalk"
 import { DEFAULT_PORT } from "../constants"
-import { buildMcpServer } from "../lib/build"
+import { buildServer } from "../lib/build"
 import { setupTunnelAndPlayground } from "../lib/dev-lifecycle"
 import { debug } from "../lib/logger"
 import { cleanupChildProcess } from "../utils/child-process-cleanup"
@@ -25,7 +25,7 @@ export async function dev(options: DevOptions = {}): Promise<void> {
 		const apiKey = await ensureApiKey(options.key)
 
 		const smitheryDir = join(".smithery")
-		const outFile = join(smitheryDir, "index.cjs")
+		const outFile = join(smitheryDir, "index.js")
 		const finalPort = options.port || DEFAULT_PORT.toString()
 
 		let childProcess: ChildProcess | undefined
@@ -54,6 +54,15 @@ export async function dev(options: DevOptions = {}): Promise<void> {
 					}
 				}, 50)
 			})
+
+			// Display the actual command being executed on first start (similar to bun run dev)
+			if (isFirstBuild) {
+				const relativeOutFile = join(process.cwd(), outFile).replace(
+					`${process.cwd()}/`,
+					"",
+				)
+				console.log(chalk.dim(`$ node --import tsx ${relativeOutFile}`))
+			}
 
 			// Start new process with tsx loader so .ts imports work in runtime bootstrap
 			childProcess = spawn(
@@ -99,7 +108,7 @@ export async function dev(options: DevOptions = {}): Promise<void> {
 
 			// Start tunnel and open playground on first successful start
 			if (isFirstBuild) {
-				console.log(chalk.green(`✅ Server starting on port ${finalPort}`))
+				console.log(`> Server starting on port ${chalk.green(finalPort)}`)
 				setupTunnelAndPlayground(
 					finalPort,
 					apiKey,
@@ -117,7 +126,7 @@ export async function dev(options: DevOptions = {}): Promise<void> {
 		}
 
 		// Set up build with watch mode
-		const buildContext = await buildMcpServer({
+		const buildContext = await buildServer({
 			outFile,
 			entryFile: options.entryFile,
 			configFile: options.configFile,
@@ -129,7 +138,7 @@ export async function dev(options: DevOptions = {}): Promise<void> {
 
 		// Handle cleanup on exit
 		const cleanup = async () => {
-			console.log(chalk.yellow("\n👋 Shutting down server..."))
+			console.log(chalk.yellow("\no/ Shutting down server..."))
 
 			// Stop watching
 			if (buildContext && "dispose" in buildContext) {

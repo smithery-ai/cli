@@ -3,7 +3,7 @@ import { existsSync, mkdirSync, writeFileSync } from "node:fs"
 import { join } from "node:path"
 import chalk from "chalk"
 import { DEFAULT_PORT } from "../constants"
-import { buildMcpServer } from "../lib/build"
+import { buildServer } from "../lib/build"
 import { setupTunnelAndPlayground } from "../lib/dev-lifecycle"
 import { debug } from "../lib/logger"
 import { cleanupChildProcess } from "../utils/child-process-cleanup"
@@ -231,7 +231,7 @@ export async function uplink(options: UplinkOptions = {}): Promise<void> {
 		}
 
 		// Set up build with watch mode
-		const buildContext = await buildMcpServer({
+		const buildContext = await buildServer({
 			outFile,
 			entryFile: options.entryFile,
 			watch: true,

@@ -49,6 +49,7 @@
 	},
 	"devDependencies": {
 		"@biomejs/biome": "^2.2.4",
+		"@types/bun": "^1.2.22",
 		"@types/cors": "^2.8.18",
 		"@types/express": "^5.0.2",
 		"@types/inquirer": "^8.2.4",

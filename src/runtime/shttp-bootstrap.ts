@@ -32,9 +32,9 @@ async function startMcpServer() {
 	try {
 		const port = process.env.PORT || DEFAULT_PORT.toString()
 
-		console.log(
-			`${chalk.blue("[smithery]")} Starting MCP server on port ${port}`,
-		)
+		// console.log(
+		// 	`${chalk.blue("[smithery]")} Starting MCP server on port ${port}`,
+		// )
 
 		let server: { app: express.Application }
 
@@ -42,7 +42,7 @@ async function startMcpServer() {
 
 		// Inject cors for development
 		if (process.env.NODE_ENV !== "production") {
-			console.log(`${chalk.blue("[smithery]")} Injecting cors middleware`)
+			console.log(`${chalk.dim("> Injecting cors middleware")}`)
 			app.use(
 				cors({
 					exposedHeaders: ["mcp-session-id"],
@@ -52,7 +52,9 @@ async function startMcpServer() {
 
 		if (entry.default && typeof entry.default === "function") {
 			console.log(
-				`${chalk.blue("[smithery]")} Setting up ${entry.stateless ? "stateless" : "stateful"} server`,
+				chalk.dim(
+					`> Setting up ${entry.stateless ? "stateless" : "stateful"} server`,
+				),
 			)
 
 			const provider = entry.oauthProvider
@@ -83,14 +85,11 @@ async function startMcpServer() {
 
 		// Start the server
 		server.app.listen(Number.parseInt(port, 10))
-		console.log(
-			`${chalk.green("[smithery]")} MCP server started successfully on port ${port}`,
-		)
+		// console.log(
+		// 	`${chalk.green("[smithery]")} MCP server started successfully on port ${port}`,
+		// )
 	} catch (error) {
-		console.error(
-			`${chalk.red("[smithery]")} Failed to start MCP server:`,
-			error,
-		)
+		console.error(`${chalk.red("✗ Failed to start MCP server:")}`, error)
 		process.exit(1)
 	}
 }
