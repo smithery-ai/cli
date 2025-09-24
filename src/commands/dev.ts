@@ -55,6 +55,15 @@ export async function dev(options: DevOptions = {}): Promise<void> {
 				}, 50)
 			})
 
+			// Display the actual command being executed on first start (similar to bun run dev)
+			if (isFirstBuild) {
+				const relativeOutFile = join(process.cwd(), outFile).replace(
+					`${process.cwd()}/`,
+					"",
+				)
+				console.log(chalk.dim(`$ node --import tsx ${relativeOutFile}`))
+			}
+
 			// Start new process with tsx loader so .ts imports work in runtime bootstrap
 			childProcess = spawn(
 				"node",
@@ -99,7 +108,7 @@ export async function dev(options: DevOptions = {}): Promise<void> {
 
 			// Start tunnel and open playground on first successful start
 			if (isFirstBuild) {
-				console.log(chalk.green(`✅ Server starting on port ${finalPort}`))
+				console.log(`> Server starting on port ${chalk.green(finalPort)}`)
 				setupTunnelAndPlayground(
 					finalPort,
 					apiKey,
@@ -129,7 +138,7 @@ export async function dev(options: DevOptions = {}): Promise<void> {
 
 		// Handle cleanup on exit
 		const cleanup = async () => {
-			console.log(chalk.yellow("\n👋 Shutting down server..."))
+			console.log(chalk.yellow("\no/ Shutting down server..."))
 
 			// Stop watching
 			if (buildContext && "dispose" in buildContext) {

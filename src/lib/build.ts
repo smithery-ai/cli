@@ -156,7 +156,9 @@ async function bunServer(
 
 	const transportDisplay = transport === "shttp" ? "streamable http" : transport
 	console.log(
-		`* Building ${chalk.cyan(serverType)} MCP server with ${chalk.cyan(transportDisplay)} transport...`,
+		chalk.dim(
+			`* Building MCP server with ${chalk.cyan(transportDisplay)} transport...`,
+		),
 	)
 
 	// Create temporary bootstrap file
@@ -337,7 +339,9 @@ async function esbuildServer(
 
 	const transportDisplay = transport === "shttp" ? "streamable http" : transport
 	console.log(
-		`* Building ${chalk.cyan(serverType)} MCP server with ${chalk.cyan(transportDisplay)} transport...`,
+		chalk.dim(
+			`* Building MCP server with ${chalk.cyan(transportDisplay)} transport...`,
+		),
 	)
 
 	// Create a unified plugin that handles both dev and production
@@ -416,9 +420,9 @@ async function esbuildServer(
 							return
 						}
 						if (!serverStarted) {
-							console.log(chalk.green("✓ Initial build complete"))
+							console.log(chalk.dim(chalk.green("✓ Initial build complete")))
 						} else {
-							console.log(chalk.green("✓ Rebuilt successfully"))
+							console.log(chalk.dim(chalk.green("✓ Rebuilt successfully")))
 						}
 						const outputs = result.outputFiles?.map((f) => f.path) || [outFile]
 						options.onRebuild?.(true, outputs)

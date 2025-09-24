@@ -368,8 +368,7 @@ export const createLocalPlaygroundRunner = async (
 				12,
 			)(
 				"Thanks for using Smithery Local Playground!",
-			)}\n🚀 One-click cloud deploy: ${chalk.blue.underline(
-				"https://smithery.ai/new",
+			)}\n${chalk.blue("⬆ One-click cloud deploy: https://smithery.ai/new")}
 			)}\n\n`,
 		)
 	}

@@ -278,9 +278,7 @@ export const createUplinkRunner = async (
 				12,
 			)(
 				"Thanks for using Smithery Uplink!",
-			)}\n🚀 One-click cloud deploy: ${chalk.blue.underline(
-				"https://smithery.ai/new",
-			)}\n\n`,
+			)}\n${chalk.blue("⬆ One-click cloud deploy: https://smithery.ai/new")}\n\n`,
 		)
 	}
 

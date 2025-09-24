@@ -56,3 +56,6 @@ loaders/
 
 # Ignore packages
 packages/
+
+# Other
+.todos
