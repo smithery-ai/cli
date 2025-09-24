@@ -41,6 +41,8 @@ export async function dev(options: DevOptions = {}): Promise<void> {
 
 		// Function to start the server process
 		const startServer = async () => {
+			const startTime = Date.now()
+
 			// Kill existing process
 			if (childProcess && !childProcess.killed) {
 				isRebuilding = true
@@ -140,6 +142,8 @@ export async function dev(options: DevOptions = {}): Promise<void> {
 					options.initialMessage,
 				)
 					.then(({ listener }) => {
+						const _startupTime = Date.now() - startTime
+						// console.log(chalk.dim(`⚡ Server startup completed in ${startupTime}ms`))
 						tunnelListener = listener
 						isFirstBuild = false
 					})
