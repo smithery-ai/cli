@@ -6,6 +6,7 @@ import { DEFAULT_PORT } from "../constants"
 import { buildServer } from "../lib/build"
 import { setupTunnelAndPlayground } from "../lib/dev-lifecycle"
 import { debug } from "../lib/logger"
+import { detectRuntime, getDefaultBundler } from "../utils/build"
 import { cleanupChildProcess } from "../utils/child-process-cleanup"
 import { setupProcessLifecycle } from "../utils/process-lifecycle"
 import { ensureApiKey } from "../utils/runtime"
@@ -17,12 +18,17 @@ interface DevOptions {
 	open?: boolean
 	initialMessage?: string
 	configFile?: string
+	buildTool?: "esbuild" | "bun"
 }
 
 export async function dev(options: DevOptions = {}): Promise<void> {
 	try {
 		// Ensure API key is available
 		const apiKey = await ensureApiKey(options.key)
+
+		// Detect build tool and runtime
+		const buildTool = options.buildTool || getDefaultBundler()
+		const runtime = detectRuntime()
 
 		const smitheryDir = join(".smithery")
 		const outFile = join(smitheryDir, "index.js")
@@ -35,6 +41,8 @@ export async function dev(options: DevOptions = {}): Promise<void> {
 
 		// Function to start the server process
 		const startServer = async () => {
+			const startTime = Date.now()
+
 			// Kill existing process
 			if (childProcess && !childProcess.killed) {
 				isRebuilding = true
@@ -61,21 +69,37 @@ export async function dev(options: DevOptions = {}): Promise<void> {
 					`${process.cwd()}/`,
 					"",
 				)
-				console.log(chalk.dim(`$ node --import tsx ${relativeOutFile}`))
+				const commandStr =
+					runtime === "bun"
+						? `bun --hot ${relativeOutFile}`
+						: `node --import tsx ${relativeOutFile}`
+				console.log(chalk.dim(`$ ${commandStr}`))
 			}
 
-			// Start new process with tsx loader so .ts imports work in runtime bootstrap
-			childProcess = spawn(
-				"node",
-				["--import", "tsx", join(process.cwd(), outFile)],
-				{
+			// Start new process with appropriate runtime
+			if (runtime === "bun") {
+				// When using Bun, spawn with bun directly using --hot for hot reloading
+				childProcess = spawn("bun", ["--hot", join(process.cwd(), outFile)], {
 					stdio: ["inherit", "pipe", "pipe"],
 					env: {
 						...process.env,
 						PORT: finalPort,
 					},
-				},
-			)
+				})
+			} else {
+				// When using Node, spawn with tsx loader so .ts imports work in runtime bootstrap
+				childProcess = spawn(
+					"node",
+					["--import", "tsx", join(process.cwd(), outFile)],
+					{
+						stdio: ["inherit", "pipe", "pipe"],
+						env: {
+							...process.env,
+							PORT: finalPort,
+						},
+					},
+				)
+			}
 
 			const processOutput = (data: Buffer) => {
 				const chunk = data.toString()
@@ -108,7 +132,9 @@ export async function dev(options: DevOptions = {}): Promise<void> {
 
 			// Start tunnel and open playground on first successful start
 			if (isFirstBuild) {
-				console.log(`> Server starting on port ${chalk.green(finalPort)}`)
+				console.log(
+					chalk.dim(`> Server starting on port ${chalk.green(finalPort)}`),
+				)
 				setupTunnelAndPlayground(
 					finalPort,
 					apiKey,
@@ -116,6 +142,8 @@ export async function dev(options: DevOptions = {}): Promise<void> {
 					options.initialMessage,
 				)
 					.then(({ listener }) => {
+						const _startupTime = Date.now() - startTime
+						// console.log(chalk.dim(`⚡ Server startup completed in ${startupTime}ms`))
 						tunnelListener = listener
 						isFirstBuild = false
 					})
@@ -130,6 +158,7 @@ export async function dev(options: DevOptions = {}): Promise<void> {
 			outFile,
 			entryFile: options.entryFile,
 			configFile: options.configFile,
+			buildTool,
 			watch: true,
 			onRebuild: () => {
 				startServer()

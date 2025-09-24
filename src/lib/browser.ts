@@ -13,7 +13,7 @@ export async function openPlayground(
 		`${tunnelUrl}/mcp`,
 	)}`
 
-	console.log(`* Playground: ${chalk.cyan(playgroundUrl)}`)
+	// URL is already displayed in dev-lifecycle.ts, so no need to log it again
 
 	try {
 		const platform = process.platform
