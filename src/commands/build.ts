@@ -1,4 +1,3 @@
-import chalk from "chalk"
 import { buildServer } from "../lib/build"
 
 interface BuildOptions {
@@ -11,8 +10,6 @@ interface BuildOptions {
 
 export async function build(options: BuildOptions = {}): Promise<void> {
 	try {
-		console.log(chalk.dim(`$ smithery build`))
-
 		await buildServer({
 			entryFile: options.entryFile,
 			outFile: options.outFile,

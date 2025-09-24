@@ -7,6 +7,7 @@ import { formatFileSize } from "../utils/build"
 // TypeScript declarations for global constants injected at build time
 declare const __SMITHERY_SHTTP_BOOTSTRAP__: string
 declare const __SMITHERY_STDIO_BOOTSTRAP__: string
+declare const __SMITHERY_VERSION__: string
 
 export type BuildResult = {
 	success: boolean
@@ -157,7 +158,7 @@ async function bunServer(
 	const transportDisplay = transport === "shttp" ? "streamable http" : transport
 	console.log(
 		chalk.dim(
-			`* Building MCP server with ${chalk.cyan(transportDisplay)} transport...`,
+			`${chalk.bold.italic.hex("#ea580c")("SMITHERY")} ${chalk.bold.italic.hex("#ea580c")(`v${__SMITHERY_VERSION__}`)} Building MCP server with ${chalk.cyan(transportDisplay)} transport...`,
 		),
 	)
 
@@ -206,13 +207,16 @@ async function bunServer(
 				isBuilding = true
 
 				try {
+					// Recreate bootstrap file for each build to ensure it exists
+					await fs.writeFile(tempBootstrap, bootstrapCode)
+
 					const result = await Bun.build(buildConfig)
 
 					if (result.success) {
 						const outputs = result.outputs.map(
 							(o: unknown) => (o as { path: string }).path,
 						)
-						console.log(chalk.green("✓ Rebuilt successfully"))
+						console.log(chalk.green("✓ Built successfully"))
 						options.onRebuild?.(true, outputs)
 					} else {
 						console.error(chalk.red("✗ Build error:"), result.logs)
@@ -234,11 +238,17 @@ async function bunServer(
 
 			// Handle cleanup on SIGINT
 			let shouldStop = false
-			process.on("SIGINT", () => {
+			const cleanup = async () => {
 				shouldStop = true
-				console.log("\nClosing watcher...")
+				console.log(chalk.dim("\nClosing watcher..."))
+				try {
+					await fs.unlink(tempBootstrap)
+				} catch {
+					// Ignore cleanup errors
+				}
 				process.exit(0)
-			})
+			}
+			process.on("SIGINT", cleanup)
 
 			// Watch for file changes using async iterator
 			;(async () => {
@@ -246,13 +256,22 @@ async function bunServer(
 					for await (const event of watcher) {
 						if (shouldStop) break
 
-						if (
-							event.filename &&
-							(event.filename.endsWith(".ts") || event.filename.endsWith(".js"))
-						) {
-							console.log(
-								chalk.blue(`File ${event.filename} changed, rebuilding...`),
-							)
+						const { filename } = event
+						if (!filename) continue
+
+						// Skip common ignore patterns
+						const shouldIgnore = [
+							"node_modules",
+							".git",
+							"dist",
+							".smithery",
+						].some((dir) => filename.includes(dir))
+
+						if (shouldIgnore) continue
+
+						// Only watch TypeScript and JavaScript files
+						if (filename.endsWith(".ts") || filename.endsWith(".js")) {
+							console.log(chalk.blue(`File ${filename} changed, rebuilding...`))
 							doBuild()
 						}
 					}
@@ -263,6 +282,7 @@ async function bunServer(
 				}
 			})()
 
+			// Don't cleanup temp file here in watch mode - it's handled by the cleanup function
 			return { success: true }
 		} else {
 			// Single build
@@ -340,7 +360,7 @@ async function esbuildServer(
 	const transportDisplay = transport === "shttp" ? "streamable http" : transport
 	console.log(
 		chalk.dim(
-			`* Building MCP server with ${chalk.cyan(transportDisplay)} transport...`,
+			`${chalk.bold.italic.hex("#ea580c")("SMITHERY")} ${chalk.bold.italic.hex("#ea580c")(`v${__SMITHERY_VERSION__}`)} Building MCP server with ${chalk.cyan(transportDisplay)} transport...`,
 		),
 	)
 
@@ -422,7 +442,7 @@ async function esbuildServer(
 						if (!serverStarted) {
 							console.log(chalk.dim(chalk.green("✓ Initial build complete")))
 						} else {
-							console.log(chalk.dim(chalk.green("✓ Rebuilt successfully")))
+							console.log(chalk.dim(chalk.green("✓ Built successfully")))
 						}
 						const outputs = result.outputFiles?.map((f) => f.path) || [outFile]
 						options.onRebuild?.(true, outputs)

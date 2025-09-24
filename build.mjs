@@ -1,4 +1,4 @@
-import { existsSync, mkdirSync } from "node:fs"
+import { existsSync, mkdirSync, readFileSync } from "node:fs"
 import { config } from "dotenv"
 import * as esbuild from "esbuild"
 
@@ -46,9 +46,13 @@ const stdioResult = await esbuild.build({
 const shttpBootstrapJs = shttpResult.outputFiles[0].text
 const stdioBootstrapJs = stdioResult.outputFiles[0].text
 
-// Inject bootstrap content as global constants
+// Get package version
+const packageJson = JSON.parse(readFileSync("package.json", "utf-8"))
+
+// Inject bootstrap content and version as global constants
 define.__SMITHERY_SHTTP_BOOTSTRAP__ = JSON.stringify(shttpBootstrapJs)
 define.__SMITHERY_STDIO_BOOTSTRAP__ = JSON.stringify(stdioBootstrapJs)
+define.__SMITHERY_VERSION__ = JSON.stringify(packageJson.version)
 
 console.log("✓ Compiled bootstrap files")
 
