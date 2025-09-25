@@ -1,7 +1,12 @@
 // These will be replaced by esbuild at build time.
 // @ts-expect-error
 import * as _entry from "virtual:user-module"
-import type { CallbackOAuthServerProvider } from "@smithery/sdk/server/oauth.js"
+import type { OAuthTokenVerifier } from "@modelcontextprotocol/sdk/server/auth/provider.js"
+import {
+	type CallbackOAuthServerProvider,
+	type IdentityHandler,
+	mountOAuth,
+} from "@smithery/sdk"
 import {
 	type CreateServerFn as CreateStatefulServerFn,
 	createStatefulServer,
@@ -23,7 +28,8 @@ interface SmitheryModule {
 	// Default export (can be stateful or stateless server)
 	default?: CreateStatefulServerFn | CreateStatelessServerFn
 	// Optional OAuth provider instance. Provider carries its own options.
-	oauthProvider?: CallbackOAuthServerProvider
+	oauth?: CallbackOAuthServerProvider | OAuthTokenVerifier
+	identity?: IdentityHandler
 }
 
 const entry: SmitheryModule = _entry
@@ -50,6 +56,21 @@ async function startMcpServer() {
 			)
 		}
 
+		// Auto-wire OAuth and/or Identity if configured
+		if (entry.oauth) {
+			console.log(
+				`${chalk.blue("[smithery]")} OAuth detected. Mounting auth routes.`,
+			)
+		}
+		if (entry.identity) {
+			console.log(
+				`${chalk.blue("[smithery]")} Identity detected. Mounting identity routes.`,
+			)
+		}
+		if (entry.oauth || entry.identity) {
+			mountOAuth(app, { provider: entry.oauth, identity: entry.identity })
+		}
+
 		if (entry.default && typeof entry.default === "function") {
 			console.log(
 				chalk.dim(
@@ -57,22 +78,18 @@ async function startMcpServer() {
 				),
 			)
 
-			const provider = entry.oauthProvider
-			if (provider) {
-				console.log(
-					`${chalk.blue("[smithery]")} OAuth detected. Mounting auth routes.`,
-				)
+			const oauth = entry.oauth
+			if (oauth) {
 			}
 
 			if (entry.stateless) {
 				server = createStatelessServer(
 					entry.default as CreateStatelessServerFn,
-					{ app, oauthProvider: provider },
+					{ app },
 				)
 			} else {
 				server = createStatefulServer(entry.default as CreateStatefulServerFn, {
 					app,
-					oauthProvider: provider,
 				})
 			}
 		} else {
