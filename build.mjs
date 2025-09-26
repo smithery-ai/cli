@@ -29,7 +29,13 @@ const shttpResult = await esbuild.build({
 	target: "node20",
 	format: "esm",
 	write: false,
-	external: ["virtual:user-module"],
+	external: [
+		"virtual:user-module",
+		"@smithery/sdk",
+		"@smithery/sdk/*",
+		"@modelcontextprotocol/sdk",
+		"@modelcontextprotocol/sdk/*",
+	],
 })
 
 const stdioResult = await esbuild.build({
@@ -39,7 +45,13 @@ const stdioResult = await esbuild.build({
 	target: "node20",
 	format: "esm",
 	write: false,
-	external: ["virtual:user-module"],
+	external: [
+		"virtual:user-module",
+		"@smithery/sdk",
+		"@smithery/sdk/*",
+		"@modelcontextprotocol/sdk",
+		"@modelcontextprotocol/sdk/*",
+	],
 })
 
 // Get the compiled code as strings and inject via define

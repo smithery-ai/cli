@@ -1,5 +1,5 @@
 import { existsSync, mkdirSync, readFileSync, statSync } from "node:fs"
-import { basename, dirname, join, resolve } from "node:path"
+import { dirname, join, resolve } from "node:path"
 import chalk from "chalk"
 import * as esbuild from "esbuild"
 import { formatFileSize } from "../utils/build"
@@ -9,13 +9,6 @@ declare const __SMITHERY_SHTTP_BOOTSTRAP__: string
 declare const __SMITHERY_STDIO_BOOTSTRAP__: string
 declare const __SMITHERY_VERSION__: string
 
-export type BuildResult = {
-	success: boolean
-	outputs?: string[]
-	errors?: string[]
-	logs?: string[]
-}
-
 export interface BuildOptions {
 	entryFile?: string
 	outFile?: string
@@ -24,7 +17,6 @@ export interface BuildOptions {
 	production?: boolean
 	transport?: "shttp" | "stdio"
 	configFile?: string
-	buildTool?: "esbuild" | "bun"
 }
 
 /**
@@ -77,11 +69,54 @@ Check that the file exists or update your package.json`,
 }
 
 /**
+ * Find nearest package.json directory from an entry file path.
+ */
+function findNearestPackageJsonDir(startFile: string): string {
+	let dir = dirname(startFile)
+	// Guard for cwd if startFile is already a directory
+	try {
+		while (true) {
+			const pkgPath = join(dir, "package.json")
+			if (existsSync(pkgPath)) return dir
+			const parent = dirname(dir)
+			if (parent === dir) break
+			dir = parent
+		}
+	} catch {}
+	return process.cwd()
+}
+
+/**
+ * Read user package dependencies (dependencies + peerDependencies + optionalDependencies)
+ */
+function readUserPackageDeps(entryFile: string): string[] {
+	const pkgDir = findNearestPackageJsonDir(entryFile)
+	const pkgPath = join(pkgDir, "package.json")
+	if (!existsSync(pkgPath)) return []
+	try {
+		const pkgRaw = readFileSync(pkgPath, "utf-8")
+		const pkg = JSON.parse(pkgRaw) as Record<string, unknown>
+		const deps = Object.keys((pkg.dependencies as Record<string, string>) || {})
+		const peerDeps = Object.keys(
+			(pkg.peerDependencies as Record<string, string>) || {},
+		)
+		const optDeps = Object.keys(
+			(pkg.optionalDependencies as Record<string, string>) || {},
+		)
+		const all = new Set<string>([...deps, ...peerDeps, ...optDeps])
+		return Array.from(all)
+	} catch {
+		return []
+	}
+}
+
+// no-op helper removed after Bun support was dropped
+
+/**
  * Load custom build configuration from file
  */
 async function loadCustomConfig(
 	configPath?: string,
-	buildTool: "esbuild" | "bun" = "esbuild",
 ): Promise<Record<string, unknown>> {
 	const possiblePaths = configPath
 		? [configPath]
@@ -93,7 +128,10 @@ async function loadCustomConfig(
 			try {
 				// Use dynamic import to support both ESM and CJS
 				const config = await import(resolvedPath)
-				return config.default?.[buildTool] || config[buildTool] || {}
+				const cfg = (config.default ?? config) as Record<string, unknown>
+				// Prefer tool-specific section if present; otherwise entire object
+				const esCfg = (cfg as { esbuild?: Record<string, unknown> }).esbuild
+				return (esCfg as Record<string, unknown>) || cfg || {}
 			} catch (error) {
 				console.warn(`Failed to load config from ${path}:`, error)
 			}
@@ -103,241 +141,7 @@ async function loadCustomConfig(
 	return {}
 }
 
-/**
- * Analyze entry file to determine if it's stateless or stateful
- */
-async function detectServerType(
-	entryFile: string,
-): Promise<"stateless" | "stateful"> {
-	try {
-		// Dynamically import the module to check its exports
-		const module = await import(entryFile)
-		return module.stateless === true ? "stateless" : "stateful"
-	} catch {
-		return "stateful" // Default fallback
-	}
-}
-
-/**
- * Create bootstrap code for build tools
- */
-function createBootstrapCode(
-	entryFile: string,
-	transport: "shttp" | "stdio",
-): string {
-	// Get the bootstrap code
-	const bootstrapCode =
-		transport === "stdio"
-			? __SMITHERY_STDIO_BOOTSTRAP__
-			: __SMITHERY_SHTTP_BOOTSTRAP__
-
-	return bootstrapCode.replace(
-		'import * as _entry from "virtual:user-module"',
-		`import * as _entry from ${JSON.stringify(entryFile)}`,
-	)
-}
-
-/**
- * Build MCP server using Bun
- */
-async function bunServer(
-	options: BuildOptions,
-	entryFile: string,
-	serverType: string,
-): Promise<BuildResult> {
-	const startTime = performance.now()
-	const outFile = options.outFile || ".smithery/index.js"
-	const transport = options.transport ?? "shttp"
-
-	// Create output directory if it doesn't exist
-	const outDir = dirname(outFile)
-	if (!existsSync(outDir)) {
-		mkdirSync(outDir, { recursive: true })
-	}
-
-	const transportDisplay = transport === "shttp" ? "streamable http" : transport
-	console.log(
-		chalk.dim(
-			`${chalk.bold.italic.hex("#ea580c")("SMITHERY")} ${chalk.bold.italic.hex("#ea580c")(`v${__SMITHERY_VERSION__}`)} Building MCP server with ${chalk.cyan(transportDisplay)} transport...`,
-		),
-	)
-
-	// Create temporary bootstrap file
-	const tempBootstrap = resolve(process.cwd(), "temp-bootstrap.ts")
-	const bootstrapCode = createBootstrapCode(entryFile, transport)
-
-	// Write bootstrap to temp file
-	const fs = await import("node:fs/promises")
-	await fs.writeFile(tempBootstrap, bootstrapCode)
-
-	try {
-		// Load custom config
-		const customConfig = await loadCustomConfig(options.configFile, "bun")
-
-		// Common build options
-		const buildConfig = {
-			entrypoints: [tempBootstrap],
-			outdir: dirname(outFile),
-			target: "node" as const,
-			minify: options.production ?? true,
-			sourcemap: "external" as const,
-			naming: {
-				entry: `${require("node:path").basename(outFile, ".js")}.[ext]`,
-			},
-			define: {
-				"process.env.NODE_ENV": JSON.stringify(
-					options.production ? "production" : "development",
-				),
-			},
-			...customConfig,
-		}
-
-		if (options.watch && options.onRebuild) {
-			console.log(chalk.dim(chalk.blue("Starting build in watch mode...")))
-
-			// Use filesystem watcher (Bun's native watchers when running on Bun, Node.js fs.watch otherwise)
-			// NOTE: Bun.build() doesn't have native watch mode yet (https://github.com/oven-sh/bun/issues/5866)
-			// This manual approach is the recommended workaround until native support lands
-			const { watch } = await import("node:fs/promises")
-
-			let isBuilding = false
-
-			const doBuild = async () => {
-				if (isBuilding) return
-				isBuilding = true
-
-				try {
-					// Recreate bootstrap file for each build to ensure it exists
-					await fs.writeFile(tempBootstrap, bootstrapCode)
-
-					const result = await Bun.build(buildConfig)
-
-					if (result.success) {
-						const outputs = result.outputs.map(
-							(o: unknown) => (o as { path: string }).path,
-						)
-						console.log(chalk.green("✓ Built successfully"))
-						options.onRebuild?.(true, outputs)
-					} else {
-						console.error(chalk.red("✗ Build error:"), result.logs)
-						options.onRebuild?.(false, [])
-					}
-				} catch (error) {
-					console.error(chalk.red("✗ Build error:"), error)
-					options.onRebuild?.(false, [])
-				} finally {
-					isBuilding = false
-				}
-			}
-
-			// Initial build
-			await doBuild()
-
-			// Watch for changes using async iterator pattern
-			const watcher = watch(dirname(entryFile), { recursive: true })
-
-			// Handle cleanup on SIGINT
-			let shouldStop = false
-			const cleanup = async () => {
-				shouldStop = true
-				console.log(chalk.dim("\nClosing watcher..."))
-				try {
-					await fs.unlink(tempBootstrap)
-				} catch {
-					// Ignore cleanup errors
-				}
-				process.exit(0)
-			}
-			process.on("SIGINT", cleanup)
-
-			// Watch for file changes using async iterator
-			;(async () => {
-				try {
-					for await (const event of watcher) {
-						if (shouldStop) break
-
-						const { filename } = event
-						if (!filename) continue
-
-						// Skip common ignore patterns
-						const shouldIgnore = [
-							"node_modules",
-							".git",
-							"dist",
-							".smithery",
-						].some((dir) => filename.includes(dir))
-
-						if (shouldIgnore) continue
-
-						// Only watch TypeScript and JavaScript files
-						if (filename.endsWith(".ts") || filename.endsWith(".js")) {
-							console.log(chalk.blue(`File ${filename} changed, rebuilding...`))
-							doBuild()
-						}
-					}
-				} catch (error) {
-					if (!shouldStop) {
-						console.error("Watcher error:", error)
-					}
-				}
-			})()
-
-			// Don't cleanup temp file here in watch mode - it's handled by the cleanup function
-			return { success: true }
-		} else {
-			// Single build
-			try {
-				const result = await Bun.build(buildConfig)
-
-				if (result.success) {
-					const endTime = performance.now()
-					const duration = Math.round(endTime - startTime)
-					const outputs = result.outputs.map(
-						(o: unknown) => (o as { path: string }).path,
-					)
-
-					console.log(
-						chalk.green(`✓ Built ${serverType} MCP server in ${duration}ms`),
-					)
-
-					// Display file size info for the main output
-					if (outputs.length > 0 && existsSync(outputs[0])) {
-						const stats = statSync(outputs[0])
-						const _fileName = basename(outputs[0])
-						const relativePath = outputs[0].replace(`${process.cwd()}/`, "")
-						const fileSize = formatFileSize(stats.size)
-						console.log(
-							`\n  ${relativePath}  ${chalk.yellow(fileSize)}  ${chalk.gray("(entry point)")}\n`,
-						)
-					}
-
-					return { success: true, outputs }
-				} else {
-					console.log(chalk.red("✗ Build failed"))
-					const logs = result.logs?.map((log: unknown) => String(log)) || []
-					for (const log of logs) {
-						console.error(log)
-					}
-					process.exit(1)
-				}
-			} catch (error) {
-				console.log(chalk.red("✗ Build failed"))
-				console.error(error)
-				process.exit(1)
-			}
-		}
-	} finally {
-		// Clean up temp file
-		try {
-			const fs = await import("node:fs/promises")
-			await fs.unlink(tempBootstrap)
-		} catch {
-			// Ignore cleanup errors
-		}
-	}
-
-	return { success: false }
-}
+// Bootstrap contents are inlined directly via the esbuild plugin below
 
 /**
  * Build MCP server using esbuild
@@ -345,10 +149,12 @@ async function bunServer(
 async function esbuildServer(
 	options: BuildOptions,
 	entryFile: string,
-	serverType: string,
 ): Promise<esbuild.BuildContext | esbuild.BuildResult> {
+	const userDeps = readUserPackageDeps(entryFile)
+	const bootstrapDeps = ["@smithery/sdk", "@modelcontextprotocol/sdk"]
+	const externals = new Set<string>([...userDeps, ...bootstrapDeps])
 	const startTime = performance.now()
-	const outFile = options.outFile || ".smithery/index.js"
+	const outFile = options.outFile || ".smithery/index.cjs"
 	const transport = options.transport ?? "shttp"
 
 	// Create output directory if it doesn't exist
@@ -394,18 +200,31 @@ async function esbuildServer(
 		},
 	})
 
+	// Externalize all bare imports that match user's dependencies
+	function externalizeUserDepsPlugin(_userEntryFile: string): esbuild.Plugin {
+		const bareImport = /^[A-Za-z0-9@][^:]*$/
+		return {
+			name: "smithery-externalize-user-deps",
+			setup(build) {
+				build.onResolve({ filter: bareImport }, (args) => {
+					if (externals.has(args.path)) {
+						return { path: args.path, external: true }
+					}
+					return null
+				})
+			},
+		}
+	}
+
 	// Common build options
 	const commonOptions: esbuild.BuildOptions = {
 		bundle: true,
 		platform: "node",
 		target: "node20",
 		outfile: outFile,
-		minify: options.production ?? true,
-		sourcemap: "inline",
-		format: "esm",
-		banner: {
-			js: `import { createRequire } from 'module'; const require = createRequire(import.meta.url);`,
-		},
+		minify: options.production === true,
+		sourcemap: options.production ? false : "inline",
+		format: "cjs",
 	}
 
 	let buildConfig: esbuild.BuildOptions
@@ -413,7 +232,7 @@ async function esbuildServer(
 	buildConfig = {
 		...commonOptions,
 		entryPoints: ["virtual:bootstrap"],
-		plugins: [createBootstrapPlugin()],
+		plugins: [externalizeUserDepsPlugin(entryFile), createBootstrapPlugin()],
 		define: {
 			"process.env.NODE_ENV": JSON.stringify(
 				options.production ? "production" : "development",
@@ -422,7 +241,7 @@ async function esbuildServer(
 	}
 
 	// Load custom config
-	const customConfig = await loadCustomConfig(options.configFile, "esbuild")
+	const customConfig = await loadCustomConfig(options.configFile)
 	buildConfig = { ...buildConfig, ...(customConfig as esbuild.BuildOptions) }
 
 	if (options.watch && options.onRebuild) {
@@ -468,9 +287,7 @@ async function esbuildServer(
 
 		const endTime = performance.now()
 		const duration = Math.round(endTime - startTime)
-		console.log(
-			chalk.green(`✓ Built ${serverType} MCP server in ${duration}ms`),
-		)
+		console.log(chalk.green(`✓ Built MCP server in ${duration}ms`))
 
 		// Display file size info for the output file
 		if (existsSync(outFile)) {
@@ -493,15 +310,7 @@ async function esbuildServer(
 
 export async function buildServer(
 	options: BuildOptions = {},
-): Promise<esbuild.BuildContext | esbuild.BuildResult | BuildResult> {
-	const buildTool = options.buildTool || "esbuild"
+): Promise<esbuild.BuildContext | esbuild.BuildResult> {
 	const entryFile = resolveEntryPoint(options.entryFile)
-	const serverType = await detectServerType(entryFile)
-
-	// Route to appropriate build implementation
-	if (buildTool === "bun") {
-		return await bunServer(options, entryFile, serverType)
-	} else {
-		return await esbuildServer(options, entryFile, serverType)
-	}
+	return await esbuildServer(options, entryFile)
 }

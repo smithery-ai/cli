@@ -14,7 +14,6 @@ import { VALID_CLIENTS, type ValidClient } from "./config/clients"
 import { DEFAULT_PORT } from "./constants"
 import { setDebug, setVerbose } from "./lib/logger"
 import type { ServerConfig } from "./types/registry"
-import { getDefaultBundler } from "./utils/build"
 import {
 	interactiveServerSearch,
 	parseConfigOption,
@@ -175,27 +174,7 @@ program
 		"-c, --config <path>",
 		"Path to config file (default: auto-detect smithery.config.js)",
 	)
-	.option(
-		"--tool <type>",
-		"Build tool to use: esbuild, bun (default: auto-detect based on runtime)",
-	)
 	.action(async (entryFile, options) => {
-		// Validate tool option - auto-detect if not specified
-		const tool = options.tool || getDefaultBundler()
-		if (!["esbuild", "bun"].includes(tool)) {
-			console.error(
-				chalk.red(`Invalid tool "${tool}". Valid options are: esbuild, bun`),
-			)
-			process.exit(1)
-		}
-
-		// Prevent using Bun tool on Node runtime
-		if (tool === "bun" && typeof Bun === "undefined") {
-			console.error(chalk.red("Bun tool requires running with Bun runtime"))
-			console.error(chalk.gray("Try: bun smithery dev"))
-			process.exit(1)
-		}
-
 		await dev({
 			entryFile,
 			port: options.port,
@@ -203,7 +182,6 @@ program
 			open: options.open,
 			initialMessage: options.prompt,
 			configFile: options.config,
-			buildTool: tool as "esbuild" | "bun",
 		})
 	})
 
@@ -223,10 +201,6 @@ program
 		"-c, --config <path>",
 		"Path to config file (default: auto-detect smithery.config.js)",
 	)
-	.option(
-		"--tool <type>",
-		"Build tool to use: esbuild, bun (default: auto-detect based on runtime)",
-	)
 	.action(async (entryFile, options) => {
 		// Validate transport option
 		const transport = options.transport || "shttp"
@@ -239,28 +213,11 @@ program
 			process.exit(1)
 		}
 
-		// Validate tool option - auto-detect if not specified
-		const tool = options.tool || getDefaultBundler()
-		if (!["esbuild", "bun"].includes(tool)) {
-			console.error(
-				chalk.red(`Invalid tool "${tool}". Valid options are: esbuild, bun`),
-			)
-			process.exit(1)
-		}
-
-		// Prevent using Bun tool on Node runtime
-		if (tool === "bun" && typeof Bun === "undefined") {
-			console.error(chalk.red("Bun tool requires running with Bun runtime"))
-			console.error(chalk.gray("Try: bun smithery build"))
-			process.exit(1)
-		}
-
 		await build({
 			entryFile,
 			outFile: options.out,
 			transport: transport as "shttp" | "stdio",
 			configFile: options.config,
-			buildTool: tool as "esbuild" | "bun",
 		})
 	})
 

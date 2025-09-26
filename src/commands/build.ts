@@ -5,7 +5,6 @@ interface BuildOptions {
 	outFile?: string
 	transport?: "shttp" | "stdio"
 	configFile?: string
-	buildTool?: "esbuild" | "bun"
 }
 
 export async function build(options: BuildOptions = {}): Promise<void> {
@@ -17,7 +16,6 @@ export async function build(options: BuildOptions = {}): Promise<void> {
 			watch: false,
 			production: true,
 			configFile: options.configFile,
-			buildTool: options.buildTool,
 		})
 	} catch (error) {
 		console.error("✗ Build failed:", error)
