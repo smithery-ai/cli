@@ -6,6 +6,21 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [1.4.1] - 2025-09-27
+
+### Added
+- Integration tests for stateful/stateless server behavior validation
+
+### Fixed
+- Fixed config schema not being passed into server bundle
+
+## [1.4.0] - TBD
+
+### Added
+- OAuth support
+
+## [1.3.0] - 2025-09-12
+
 ### Added
 - Created shared `cleanupChildProcess` utility for consistent process cleanup across commands
 - Added bun bundler support in addition to esbuild - detected automatically at runtime with optional override with `--tool` option (note: only when using bun runtime for esbuild bundle; node doesn't allow bun api)
