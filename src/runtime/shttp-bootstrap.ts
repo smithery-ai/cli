@@ -1,11 +1,11 @@
 // These will be replaced by esbuild at build time.
 // @ts-expect-error
 import * as _entry from "virtual:user-module"
-import type { OAuthTokenVerifier } from "@modelcontextprotocol/sdk/server/auth/provider.js"
 import {
-	type CallbackOAuthServerProvider,
 	type IdentityHandler,
 	mountOAuth,
+	type OAuthProvider,
+	type TokenVerifier,
 } from "@smithery/sdk"
 import {
 	type CreateServerFn as CreateStatefulServerFn,
@@ -28,7 +28,7 @@ interface SmitheryModule {
 	// Default export (can be stateful or stateless server)
 	default?: CreateStatefulServerFn | CreateStatelessServerFn
 	// Optional OAuth provider instance. Provider carries its own options.
-	oauth?: CallbackOAuthServerProvider | OAuthTokenVerifier
+	oauth?: OAuthProvider | TokenVerifier
 	identity?: IdentityHandler
 }
 
