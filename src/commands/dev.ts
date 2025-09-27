@@ -14,6 +14,7 @@ interface DevOptions {
 	entryFile?: string
 	port?: string
 	key?: string
+	tunnel?: boolean
 	open?: boolean
 	initialMessage?: string
 	configFile?: string
@@ -27,6 +28,7 @@ export async function dev(options: DevOptions = {}): Promise<void> {
 		const smitheryDir = join(".smithery")
 		const outFile = join(smitheryDir, "index.cjs")
 		const finalPort = options.port || DEFAULT_PORT.toString()
+		const shouldSetupTunnel = options.tunnel !== false
 
 		let childProcess: ChildProcess | undefined
 		let tunnelListener: { close: () => Promise<void> } | undefined
@@ -110,21 +112,25 @@ export async function dev(options: DevOptions = {}): Promise<void> {
 				console.log(
 					chalk.dim(`> Server starting on port ${chalk.green(finalPort)}`),
 				)
-				setupTunnelAndPlayground(
-					finalPort,
-					apiKey,
-					options.open !== false,
-					options.initialMessage,
-				)
-					.then(({ listener }) => {
-						const _startupTime = Date.now() - startTime
-						// console.log(chalk.dim(`⚡ Server startup completed in ${startupTime}ms`))
-						tunnelListener = listener
-						isFirstBuild = false
-					})
-					.catch((error) => {
-						console.error(chalk.red("❌ Failed to start tunnel:"), error)
-					})
+				if (shouldSetupTunnel) {
+					setupTunnelAndPlayground(
+						finalPort,
+						apiKey,
+						options.open !== false,
+						options.initialMessage,
+					)
+						.then(({ listener }) => {
+							const _startupTime = Date.now() - startTime
+							// console.log(chalk.dim(`⚡ Server startup completed in ${startupTime}ms`))
+							tunnelListener = listener
+							isFirstBuild = false
+						})
+						.catch((error) => {
+							console.error(chalk.red("❌ Failed to start tunnel:"), error)
+						})
+				} else {
+					isFirstBuild = false
+				}
 			}
 		}
 

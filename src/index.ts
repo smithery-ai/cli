@@ -168,6 +168,7 @@ program
 		`Port to run the server on (default: ${DEFAULT_PORT})`,
 	)
 	.option("--key <apikey>", "Provide an API key")
+	.option("--no-tunnel", "Don't start the tunnel")
 	.option("--no-open", "Don't automatically open the playground")
 	.option("--prompt <prompt>", "Initial message to start the playground with")
 	.option(
@@ -179,6 +180,7 @@ program
 			entryFile,
 			port: options.port,
 			key: options.key,
+			tunnel: options.tunnel,
 			open: options.open,
 			initialMessage: options.prompt,
 			configFile: options.config,
