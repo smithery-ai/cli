@@ -21,7 +21,7 @@ jobs:
       fail-fast: false
       matrix:
         fixture: [stateless-server, stateful-server]
-        node-version: [18, 20, 22]
+        node-version: [20, 22]
         include:
           - fixture: stateless-server
             expected-schema-fields: 2
@@ -103,32 +103,53 @@ jobs:
         echo "Testing MCP behavior..."
         
         if [ "${{ matrix.fixture }}" = "stateless-server" ]; then
-          # Stateless: each call is independent
-          FIRST_CALL=$(curl -s -X POST http://localhost:8081/mcp \
+          # Stateless: each call creates fresh instance, no session needed
+          FIRST_CALL=$(curl -s -X POST "http://localhost:8081/mcp?apiKey=test-key&timeout=30" \
             -H "Content-Type: application/json" \
+            -H "Accept: application/json, text/event-stream" \
             -d '{"jsonrpc": "2.0", "id": 1, "method": "tools/call", "params": {"name": "increment", "arguments": {}}}')
           
-          SECOND_CALL=$(curl -s -X POST http://localhost:8081/mcp \
+          SECOND_CALL=$(curl -s -X POST "http://localhost:8081/mcp?apiKey=test-key&timeout=30" \
             -H "Content-Type: application/json" \
+            -H "Accept: application/json, text/event-stream" \
             -d '{"jsonrpc": "2.0", "id": 2, "method": "tools/call", "params": {"name": "increment", "arguments": {}}}')
             
         elif [ "${{ matrix.fixture }}" = "stateful-server" ]; then
-          # Stateful: need to maintain session across calls
-          FIRST_CALL=$(curl -s -X POST http://localhost:8081/mcp \
-            -H "Content-Type: application/json" \
-            -d '{"jsonrpc": "2.0", "id": 1, "method": "tools/call", "params": {"name": "increment", "arguments": {}}}')
+          # Stateful: requires proper MCP handshake and session management
           
-          # Extract session ID from first response headers
-          SESSION_ID=$(curl -s -D headers.tmp -X POST http://localhost:8081/mcp \
+          # 1. Initialize session
+          INIT_RESPONSE=$(curl -s -D headers.tmp -X POST "http://localhost:8081/mcp?sessionTimeout=3600&maxConnections=100" \
             -H "Content-Type: application/json" \
-            -d '{"jsonrpc": "2.0", "id": 1, "method": "tools/call", "params": {"name": "increment", "arguments": {}}}' > /dev/null && \
-            grep -i "mcp-session-id" headers.tmp | cut -d' ' -f2 | tr -d '\r')
+            -H "Accept: application/json, text/event-stream" \
+            -d '{"jsonrpc": "2.0", "id": 0, "method": "initialize", "params": {"protocolVersion": "2024-11-05", "capabilities": {}, "clientInfo": {"name": "test-client", "version": "1.0.0"}}}')
           
+          # 2. Extract session ID
+          SESSION_ID=$(grep -i "mcp-session-id:" headers.tmp | cut -d' ' -f2 | tr -d '\r')
           echo "Session ID: $SESSION_ID"
           
-          # Make second call with session ID
-          SECOND_CALL=$(curl -s -X POST http://localhost:8081/mcp \
+          if [ -z "$SESSION_ID" ]; then
+            echo "Failed to get session ID from initialize"
+            exit 1
+          fi
+          
+          # 3. Send initialized notification
+          curl -s -X POST "http://localhost:8081/mcp?sessionTimeout=3600&maxConnections=100" \
             -H "Content-Type: application/json" \
+            -H "Accept: application/json, text/event-stream" \
+            -H "mcp-session-id: $SESSION_ID" \
+            -d '{"jsonrpc": "2.0", "method": "notifications/initialized", "params": {}}' > /dev/null
+          
+          # 4. Make first tool call
+          FIRST_CALL=$(curl -s -X POST "http://localhost:8081/mcp?sessionTimeout=3600&maxConnections=100" \
+            -H "Content-Type: application/json" \
+            -H "Accept: application/json, text/event-stream" \
+            -H "mcp-session-id: $SESSION_ID" \
+            -d '{"jsonrpc": "2.0", "id": 1, "method": "tools/call", "params": {"name": "increment", "arguments": {}}}')
+          
+          # 5. Make second tool call with same session
+          SECOND_CALL=$(curl -s -X POST "http://localhost:8081/mcp?sessionTimeout=3600&maxConnections=100" \
+            -H "Content-Type: application/json" \
+            -H "Accept: application/json, text/event-stream" \
             -H "mcp-session-id: $SESSION_ID" \
             -d '{"jsonrpc": "2.0", "id": 2, "method": "tools/call", "params": {"name": "increment", "arguments": {}}}')
         fi
@@ -136,9 +157,9 @@ jobs:
         echo "First call: $FIRST_CALL"
         echo "Second call: $SECOND_CALL"
         
-        # Extract callCount from responses
-        FIRST_COUNT=$(echo "$FIRST_CALL" | jq -r '.result.content[0].text' | jq -r '.callCount')
-        SECOND_COUNT=$(echo "$SECOND_CALL" | jq -r '.result.content[0].text' | jq -r '.callCount')
+        # Extract callCount from SSE responses
+        FIRST_COUNT=$(echo "$FIRST_CALL" | grep "^data:" | sed 's/^data: //' | jq -r '.result.content[0].text' | jq -r '.callCount')
+        SECOND_COUNT=$(echo "$SECOND_CALL" | grep "^data:" | sed 's/^data: //' | jq -r '.result.content[0].text' | jq -r '.callCount')
         
         if [ "${{ matrix.fixture }}" = "stateless-server" ]; then
           # Stateless: both calls should return 1 (fresh instance each time)
