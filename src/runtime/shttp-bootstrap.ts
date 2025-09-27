@@ -43,14 +43,12 @@ async function startMcpServer() {
 		const app = express()
 
 		// Inject cors for development
-		if (process.env.NODE_ENV !== "production") {
-			console.log(`${chalk.dim("> Injecting cors middleware")}`)
-			app.use(
-				cors({
-					exposedHeaders: ["mcp-session-id"],
-				}),
-			)
-		}
+		console.log(`${chalk.dim("> Injecting cors middleware")}`)
+		app.use(
+			cors({
+				exposedHeaders: ["mcp-session-id"],
+			}),
+		)
 
 		// Auto-wire OAuth and/or Identity if configured
 		if (entry.oauth) {
