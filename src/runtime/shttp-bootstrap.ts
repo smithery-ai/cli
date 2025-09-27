@@ -38,10 +38,6 @@ async function startMcpServer() {
 	try {
 		const port = process.env.PORT || DEFAULT_PORT.toString()
 
-		// console.log(
-		// 	`${chalk.blue("[smithery]")} Starting MCP server on port ${port}`,
-		// )
-
 		let server: { app: express.Application }
 
 		const app = express()
@@ -58,14 +54,10 @@ async function startMcpServer() {
 
 		// Auto-wire OAuth and/or Identity if configured
 		if (entry.oauth) {
-			console.log(
-				`${chalk.blue("[smithery]")} OAuth detected. Mounting auth routes.`,
-			)
+			console.log(chalk.dim(`> OAuth detected. Mounting auth routes.`))
 		}
 		if (entry.identity) {
-			console.log(
-				`${chalk.blue("[smithery]")} Identity detected. Mounting identity routes.`,
-			)
+			console.log(chalk.dim(`> Identity detected. Mounting identity routes.`))
 		}
 		if (entry.oauth || entry.identity) {
 			mountOAuth(app, { provider: entry.oauth, identity: entry.identity })
@@ -78,6 +70,24 @@ async function startMcpServer() {
 				),
 			)
 
+			// Show detected config schema
+			if (entry.configSchema) {
+				try {
+					const { zodToJsonSchema } = await import("zod-to-json-schema")
+					const schema = zodToJsonSchema(entry.configSchema) as any
+					const total = Object.keys(schema.properties || {}).length
+					const required = (schema.required || []).length
+					if (total > 0)
+						console.log(
+							chalk.dim(
+								`> Config schema: ${total} field${total === 1 ? "" : "s"} (${required} required)`,
+							),
+						)
+				} catch {
+					console.log(chalk.dim(`> Config schema detected`))
+				}
+			}
+
 			const oauth = entry.oauth
 			if (oauth) {
 			}
@@ -85,11 +95,12 @@ async function startMcpServer() {
 			if (entry.stateless) {
 				server = createStatelessServer(
 					entry.default as CreateStatelessServerFn,
-					{ app },
+					{ app, schema: entry.configSchema },
 				)
 			} else {
 				server = createStatefulServer(entry.default as CreateStatefulServerFn, {
 					app,
+					schema: entry.configSchema,
 				})
 			}
 		} else {

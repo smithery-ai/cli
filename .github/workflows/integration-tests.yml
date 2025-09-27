@@ -1,0 +1,179 @@
+name: Runtime Integration Tests
+
+on:
+  push:
+    branches: [ main, develop ]
+    paths: 
+      - 'src/runtime/**'
+      - 'test/fixtures/**'
+      - '.github/workflows/integration-tests.yml'
+  pull_request:
+    branches: [ main ]
+    paths:
+      - 'src/runtime/**'
+      - 'test/fixtures/**'
+      - '.github/workflows/integration-tests.yml'
+
+jobs:
+  test-runtime-behaviors:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        fixture: [stateless-server, stateful-server]
+        node-version: [18, 20, 22]
+        include:
+          - fixture: stateless-server
+            expected-schema-fields: 2
+            expected-required: 1
+          - fixture: stateful-server  
+            expected-schema-fields: 2
+            expected-required: 0
+
+    name: Test ${{ matrix.fixture }} (Node ${{ matrix.node-version }})
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Setup Node.js ${{ matrix.node-version }}
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ matrix.node-version }}
+        cache: 'npm'
+
+    - name: Install CLI dependencies
+      run: |
+        npm install
+        npm run build
+
+    - name: Install fixture dependencies
+      run: |
+        cd test/fixtures/${{ matrix.fixture }}
+        npm install
+
+    - name: Build test server
+      run: |
+        cd test/fixtures/${{ matrix.fixture }}
+        node ../../../dist/index.js build src/index.ts
+
+    - name: Start test server
+      run: |
+        cd test/fixtures/${{ matrix.fixture }}
+        # Start server in background
+        PORT=8081 node .smithery/index.cjs &
+        echo $! > server.pid
+        # Wait for server to be ready
+        sleep 3
+
+    - name: Test config schema endpoint
+      run: |
+        cd test/fixtures/${{ matrix.fixture }}
+        
+        # Test that server is responding
+        curl -f http://localhost:8081/.well-known/mcp-config > schema.json
+        
+        # Validate schema structure
+        FIELD_COUNT=$(cat schema.json | jq -r '.properties | keys | length')
+        REQUIRED_COUNT=$(cat schema.json | jq -r '.required | length // 0')
+        
+        echo "Expected fields: ${{ matrix.expected-schema-fields }}, Got: $FIELD_COUNT"
+        echo "Expected required: ${{ matrix.expected-required }}, Got: $REQUIRED_COUNT"
+        
+        if [ "$FIELD_COUNT" != "${{ matrix.expected-schema-fields }}" ]; then
+            echo "Field count mismatch"
+          cat schema.json | jq .
+          exit 1
+        fi
+        
+        if [ "$REQUIRED_COUNT" != "${{ matrix.expected-required }}" ]; then
+          echo "Required field count mismatch"  
+          cat schema.json | jq .
+          exit 1
+        fi
+        
+        echo "Schema validation passed"
+        cat schema.json | jq .
+
+    - name: Test MCP stateless/stateful behavior
+      run: |
+        cd test/fixtures/${{ matrix.fixture }}
+        
+        # Test MCP tool calls to verify stateless vs stateful behavior
+        echo "Testing MCP behavior..."
+        
+        if [ "${{ matrix.fixture }}" = "stateless-server" ]; then
+          # Stateless: each call is independent
+          FIRST_CALL=$(curl -s -X POST http://localhost:8081/mcp \
+            -H "Content-Type: application/json" \
+            -d '{"jsonrpc": "2.0", "id": 1, "method": "tools/call", "params": {"name": "increment", "arguments": {}}}')
+          
+          SECOND_CALL=$(curl -s -X POST http://localhost:8081/mcp \
+            -H "Content-Type: application/json" \
+            -d '{"jsonrpc": "2.0", "id": 2, "method": "tools/call", "params": {"name": "increment", "arguments": {}}}')
+            
+        elif [ "${{ matrix.fixture }}" = "stateful-server" ]; then
+          # Stateful: need to maintain session across calls
+          FIRST_CALL=$(curl -s -X POST http://localhost:8081/mcp \
+            -H "Content-Type: application/json" \
+            -d '{"jsonrpc": "2.0", "id": 1, "method": "tools/call", "params": {"name": "increment", "arguments": {}}}')
+          
+          # Extract session ID from first response headers
+          SESSION_ID=$(curl -s -D headers.tmp -X POST http://localhost:8081/mcp \
+            -H "Content-Type: application/json" \
+            -d '{"jsonrpc": "2.0", "id": 1, "method": "tools/call", "params": {"name": "increment", "arguments": {}}}' > /dev/null && \
+            grep -i "mcp-session-id" headers.tmp | cut -d' ' -f2 | tr -d '\r')
+          
+          echo "Session ID: $SESSION_ID"
+          
+          # Make second call with session ID
+          SECOND_CALL=$(curl -s -X POST http://localhost:8081/mcp \
+            -H "Content-Type: application/json" \
+            -H "mcp-session-id: $SESSION_ID" \
+            -d '{"jsonrpc": "2.0", "id": 2, "method": "tools/call", "params": {"name": "increment", "arguments": {}}}')
+        fi
+        
+        echo "First call: $FIRST_CALL"
+        echo "Second call: $SECOND_CALL"
+        
+        # Extract callCount from responses
+        FIRST_COUNT=$(echo "$FIRST_CALL" | jq -r '.result.content[0].text' | jq -r '.callCount')
+        SECOND_COUNT=$(echo "$SECOND_CALL" | jq -r '.result.content[0].text' | jq -r '.callCount')
+        
+        if [ "${{ matrix.fixture }}" = "stateless-server" ]; then
+          # Stateless: both calls should return 1 (fresh instance each time)
+          if [ "$FIRST_COUNT" = "1" ] && [ "$SECOND_COUNT" = "1" ]; then
+            echo "Stateless behavior confirmed: each call returns 1"
+          else
+            echo "Stateless behavior failed: expected both calls to return 1, got $FIRST_COUNT and $SECOND_COUNT"
+            exit 1
+          fi
+        elif [ "${{ matrix.fixture }}" = "stateful-server" ]; then
+          # Stateful: should increment (1, then 2)
+          if [ "$FIRST_COUNT" = "1" ] && [ "$SECOND_COUNT" = "2" ]; then
+            echo "Stateful behavior confirmed: calls incremented from $FIRST_COUNT to $SECOND_COUNT"
+          else
+            echo "Stateful behavior failed: expected 1 then 2, got $FIRST_COUNT and $SECOND_COUNT"
+            exit 1
+          fi
+        fi
+
+    - name: Cleanup
+      if: always()
+      run: |
+        cd test/fixtures/${{ matrix.fixture }}
+        if [ -f server.pid ]; then
+          kill $(cat server.pid) 2>/dev/null || true
+        fi
+        # Kill any remaining processes on port 8081/8082
+        pkill -f "node .smithery/index.cjs" || true
+
+    - name: Upload artifacts on failure
+      if: failure()
+      uses: actions/upload-artifact@v4
+      with:
+        name: test-artifacts-${{ matrix.fixture }}-node${{ matrix.node-version }}
+        path: |
+          test/fixtures/${{ matrix.fixture }}/schema.json
+          test/fixtures/${{ matrix.fixture }}/startup.log
+          test/fixtures/${{ matrix.fixture }}/.smithery/
