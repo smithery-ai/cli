@@ -8,7 +8,6 @@ import cors from "cors"
 import express from "express"
 import { TRANSPORT_CLOSE_TIMEOUT } from "../../constants.js"
 import { setupTunnelAndPlayground } from "../../lib/dev-lifecycle.js"
-import type { ServerConfig } from "../../types/registry.js"
 import { getRuntimeEnvironment } from "../../utils/runtime.js"
 import {
 	createHeartbeatManager,
@@ -29,7 +28,7 @@ export const createLocalPlaygroundRunner = async (
 	command: string,
 	args: string[],
 	env: Record<string, string>,
-	serverQualifiedName: string, // @TODO: add analytics
+	_serverQualifiedName: string, // @TODO: add analytics
 	apiKey: string,
 	options: LocalPlaygroundOptions = {},
 ): Promise<Cleanup> => {

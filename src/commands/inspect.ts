@@ -20,7 +20,7 @@ import ora from "ora"
 import { debug, verbose } from "../lib/logger"
 import { ResolveServerSource, resolveServer } from "../lib/registry"
 import { getRuntimeEnvironment } from "../utils/runtime.js"
-import { chooseConnection, collectConfigValues } from "../utils/session-config"
+import { collectConfigValues } from "../utils/session-config"
 
 async function createClient() {
 	const client = new Client(
@@ -257,7 +257,10 @@ export async function inspectServer(
 		spinner.succeed(`Successfully resolved ${qualifiedName}`)
 
 		// Choose a connection from available options
-		const connection = chooseConnection(server)
+		if (!server.connections?.length) {
+			throw new Error("No connection configuration found for server")
+		}
+		const connection = server.connections[0]
 		verbose(`Selected connection type: ${connection.type}`)
 
 		// Collect configuration values if needed

@@ -55,13 +55,20 @@ async function downloadBundle(
 /**
  * Extracts a .mcpb bundle using the @anthropic/mcpb CLI
  */
-async function extractBundle(mcpbPath: string, extractDir: string): Promise<void> {
+async function extractBundle(
+	mcpbPath: string,
+	extractDir: string,
+): Promise<void> {
 	verbose(`Extracting bundle to: ${extractDir}`)
 
 	return new Promise((resolve, reject) => {
-		const proc = spawn("npx", ["-y", "@anthropic-ai/mcpb", "unpack", mcpbPath, extractDir], {
-			stdio: "pipe",
-		})
+		const proc = spawn(
+			"npx",
+			["-y", "@anthropic-ai/mcpb", "unpack", mcpbPath, extractDir],
+			{
+				stdio: "pipe",
+			},
+		)
 
 		let stderr = ""
 		proc.stderr?.on("data", (data) => {
@@ -127,10 +134,7 @@ export async function ensureBundleInstalled(
 
 	// Download and extract
 	verbose(`Bundle ${qualifiedName} not found, downloading...`)
-	return await downloadAndExtractBundle(
-		qualifiedName,
-		bundleUrl,
-	)
+	return await downloadAndExtractBundle(qualifiedName, bundleUrl)
 }
 
 /**
@@ -144,41 +148,46 @@ export async function ensureBundleInstalled(
  * @param bundleDir - Directory containing the extracted bundle
  * @returns Command and args from manifest
  */
-export function getBundleCommand(bundleDir: string): { command: string; args: string[] } {
+export function getBundleCommand(bundleDir: string): {
+	command: string
+	args: string[]
+} {
 	const manifestPath = path.join(bundleDir, "manifest.json")
 	if (!fs.existsSync(manifestPath)) {
 		throw new Error(`Bundle manifest not found: ${manifestPath}`)
 	}
-	
+
 	const manifest = JSON.parse(fs.readFileSync(manifestPath, "utf-8"))
 	const mcpConfig = manifest.server?.mcp_config
-	
+
 	if (!mcpConfig?.command) {
 		throw new Error("Bundle manifest missing server.mcp_config.command")
 	}
-	
+
 	const args = (mcpConfig.args || []).map((arg: string) =>
-		arg.replace(/\$\{__dirname\}/g, bundleDir)
+		arg.replace(/\$\{__dirname\}/g, bundleDir),
 	)
-	
+
 	return {
 		command: mcpConfig.command,
-		args
+		args,
 	}
 }
 
-export function getBundleEntrypoint(bundleDir: string, runtime: string = "node"): string {
+export function getBundleEntrypoint(
+	bundleDir: string,
+	_runtime: string = "node",
+): string {
 	// Read entry point from manifest.json
 	const manifestPath = path.join(bundleDir, "manifest.json")
 	if (!fs.existsSync(manifestPath)) {
 		throw new Error(`Bundle manifest not found: ${manifestPath}`)
 	}
-	
+
 	const manifest = JSON.parse(fs.readFileSync(manifestPath, "utf-8"))
 	if (!manifest.server?.entry_point) {
 		throw new Error("Bundle manifest missing server.entry_point")
 	}
-	
+
 	return path.join(bundleDir, manifest.server.entry_point)
 }
-

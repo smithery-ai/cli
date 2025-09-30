@@ -2,12 +2,11 @@
 import type { ServerDetailResponse } from "@smithery/registry/models/components"
 import { ResolveServerSource, resolveServer } from "../../lib/registry.js"
 import type { ServerConfig } from "../../types/registry.js"
-import { chooseConnection } from "../../utils/session-config.js"
+import { prepareStdioConnection } from "../../utils/prepare-stdio-connection.js"
 import {
 	getAnalyticsConsent,
 	initializeSettings,
 } from "../../utils/smithery-config.js"
-import { prepareStdioConnection } from "../../utils/prepare-stdio-connection.js"
 import { createLocalPlaygroundRunner } from "./local-playground-runner.js"
 import { logWithTimestamp } from "./runner-utils.js"
 import { createStdioRunner as startSTDIOrunner } from "./stdio-runner.js"
@@ -87,7 +86,11 @@ async function pickServerAndRun(
 	profile: string | undefined,
 	options?: RunOptions,
 ): Promise<void> {
-	const connection = chooseConnection(serverDetails)
+	if (!serverDetails.connections?.length) {
+		throw new Error("No connection configuration found for server")
+	}
+
+	const connection = serverDetails.connections[0]
 
 	if (connection.type === "http") {
 		if (!connection.deploymentUrl) {
@@ -96,7 +99,7 @@ async function pickServerAndRun(
 		if (!apiKey) {
 			throw new Error("API key is required for remote connections")
 		}
-		
+
 		if (options?.playground) {
 			await createUplinkRunner(
 				connection.deploymentUrl,
@@ -123,7 +126,7 @@ async function pickServerAndRun(
 			config,
 			apiKey,
 		)
-		
+
 		if (options?.playground) {
 			if (!apiKey) {
 				throw new Error("API key is required for playground connections")

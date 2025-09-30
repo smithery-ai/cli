@@ -33,7 +33,6 @@ import {
 	isRemote,
 } from "../utils/runtime"
 import {
-	chooseConnection,
 	collectConfigValues,
 	formatServerConfig,
 	getServerName,
@@ -89,7 +88,10 @@ export async function installServer(
 
 		/* choose connection type */
 		verbose("Choosing connection type...")
-		const connection = chooseConnection(server)
+		if (!server.connections?.length) {
+			throw new Error("No connection configuration found for server")
+		}
+		const connection = server.connections[0]
 		verbose(`Selected connection: ${JSON.stringify(connection, null, 2)}`)
 
 		/* Check for required runtimes and install if needed */

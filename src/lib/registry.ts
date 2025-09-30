@@ -198,6 +198,71 @@ export const fetchConnection = async (
 }
 
 /**
+ * Gets saved user configuration for a specific server from the registry
+ * @param serverQualifiedName The name of the server to get config for
+ * @param apiKey API key for authentication
+ * @param profile Optional profile qualified name
+ * @returns Promise that resolves with the saved configuration, or null if not found
+ */
+export const getUserConfig = async (
+	serverQualifiedName: string,
+	apiKey: string,
+	profile?: string,
+): Promise<ServerConfig | null> => {
+	const endpoint = getEndpoint()
+	verbose(
+		`Getting user config for ${serverQualifiedName} from registry at ${endpoint}`,
+	)
+
+	try {
+		const headers: Record<string, string> = {
+			"Content-Type": "application/json",
+			Authorization: `Bearer ${apiKey}`,
+		}
+
+		const url = new URL(`${endpoint}/config/${serverQualifiedName}`)
+		if (profile) {
+			url.searchParams.set("profile", profile)
+		}
+
+		const response = await fetch(url.toString(), {
+			method: "GET",
+			headers,
+		})
+		verbose(`Response status: ${response.status}`)
+
+		if (response.status === 404) {
+			verbose("No saved config found")
+			return null
+		}
+
+		if (!response.ok) {
+			const errorText = await response.text()
+			verbose(`Error response: ${errorText}`)
+			throw new Error(
+				`Config get request failed with status ${response.status}: ${errorText}`,
+			)
+		}
+
+		verbose("Successfully retrieved user config from registry")
+		const data = (await response.json()) as {
+			config: ServerConfig
+		}
+		verbose(`Config retrieved (keys: ${Object.keys(data.config).join(", ")})`)
+
+		return data.config
+	} catch (error) {
+		verbose(
+			`Config get error: ${error instanceof Error ? error.message : String(error)}`,
+		)
+		if (error instanceof Error) {
+			throw new Error(`Failed to get user config: ${error.message}`)
+		}
+		throw error
+	}
+}
+
+/**
  * Saves user configuration for a specific server to the registry
  * @param serverQualifiedName The name of the server to save config for
  * @param config User configuration to save

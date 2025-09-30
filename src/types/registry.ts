@@ -36,7 +36,9 @@ export const StdioConnectionSchema = z.object({
 
 // bundle connection (stdio with bundleUrl where the bundle/binary is stored)
 export const BundleConnectionSchema = z.object({
-	bundleUrl: z.string().describe("The URL where the downloadable bundle is stored."),
+	bundleUrl: z
+		.string()
+		.describe("The URL where the downloadable bundle is stored."),
 	runtime: z
 		.enum(["node"])
 		.optional()
