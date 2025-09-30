@@ -1,4 +1,4 @@
-import { SmitheryRegistry } from "@smithery/registry"
+import { SmitheryRegistry, type SDKOptions } from "@smithery/registry"
 import type { ServerDetailResponse } from "@smithery/registry/models/components"
 import {
 	SDKValidationError,
@@ -82,7 +82,7 @@ export const resolveServer = async (
 		})()
 	}
 
-	const options: Record<string, string> = {
+	const options: SDKOptions = {
 		bearerAuth: apiKey ?? process.env.SMITHERY_BEARER_AUTH ?? "",
 	}
 	if (
