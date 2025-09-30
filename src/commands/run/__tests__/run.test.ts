@@ -53,11 +53,11 @@ vi.mock("../../../utils/smithery-config", () => ({
 	getAnalyticsConsent: vi.fn().mockResolvedValue(false),
 }))
 
+import { resolveServer } from "../../../lib/registry"
+import { prepareStdioConnection } from "../../../utils/prepare-stdio-connection"
 import { run } from "../index"
 import { createStdioRunner } from "../stdio-runner"
 import { createStreamableHTTPRunner } from "../streamable-http-runner"
-import { resolveServer } from "../../../lib/registry"
-import { prepareStdioConnection } from "../../../utils/prepare-stdio-connection"
 
 describe("run command", () => {
 	beforeEach(() => {
@@ -110,12 +110,19 @@ describe("run command", () => {
 		vi.mocked(resolveServer).mockResolvedValue(studioBundleServer)
 		vi.mocked(prepareStdioConnection).mockResolvedValue({
 			command: "node",
-			args: ["/home/.smithery/cache/servers/author/bundle-server/current/index.js"],
+			args: [
+				"/home/.smithery/cache/servers/author/bundle-server/current/index.js",
+			],
 			env: { API_KEY: "test" },
 			qualifiedName: "author/bundle-server",
 		})
 
-		await run("author/bundle-server", { API_KEY: "test" }, "test-api-key", "default")
+		await run(
+			"author/bundle-server",
+			{ API_KEY: "test" },
+			"test-api-key",
+			"default",
+		)
 
 		expect(prepareStdioConnection).toHaveBeenCalledWith(
 			studioBundleServer,

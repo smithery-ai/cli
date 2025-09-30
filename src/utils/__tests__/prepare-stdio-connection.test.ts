@@ -21,7 +21,10 @@ vi.mock("../../commands/run/runner-utils", () => ({
 	logWithTimestamp: vi.fn(),
 }))
 
-import { ensureBundleInstalled, getBundleCommand } from "../../lib/bundle-manager"
+import {
+	ensureBundleInstalled,
+	getBundleCommand,
+} from "../../lib/bundle-manager"
 import { fetchConnection, getUserConfig } from "../../lib/registry"
 import { prepareStdioConnection } from "../prepare-stdio-connection"
 
@@ -81,7 +84,9 @@ describe("prepareStdioConnection", () => {
 		)
 		vi.mocked(getBundleCommand).mockReturnValue({
 			command: "node",
-			args: ["/home/.smithery/cache/servers/author/bundle-server/current/index.js"],
+			args: [
+				"/home/.smithery/cache/servers/author/bundle-server/current/index.js",
+			],
 		})
 		vi.mocked(getUserConfig).mockResolvedValue({
 			API_KEY: "saved-key",
@@ -110,7 +115,9 @@ describe("prepareStdioConnection", () => {
 
 		expect(result).toEqual({
 			command: "node",
-			args: ["/home/.smithery/cache/servers/author/bundle-server/current/index.js"],
+			args: [
+				"/home/.smithery/cache/servers/author/bundle-server/current/index.js",
+			],
 			env: {
 				API_KEY: "runtime-key", // Runtime config overrides saved
 				BASE_URL: "https://api.example.com", // From saved config
@@ -138,7 +145,9 @@ describe("prepareStdioConnection", () => {
 		)
 		vi.mocked(getBundleCommand).mockReturnValue({
 			command: "node",
-			args: ["/home/.smithery/cache/servers/author/bundle-server/current/index.js"],
+			args: [
+				"/home/.smithery/cache/servers/author/bundle-server/current/index.js",
+			],
 		})
 		vi.mocked(getUserConfig).mockResolvedValue(null)
 
@@ -237,7 +246,8 @@ describe("prepareStdioConnection", () => {
 			],
 		} as unknown as ServerDetailResponse
 
-		const bundleDir = "/home/.smithery/cache/servers/author/bundle-server/current"
+		const bundleDir =
+			"/home/.smithery/cache/servers/author/bundle-server/current"
 		vi.mocked(ensureBundleInstalled).mockResolvedValue(bundleDir)
 		vi.mocked(getBundleCommand).mockReturnValue({
 			command: "node",
