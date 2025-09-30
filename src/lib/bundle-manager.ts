@@ -5,23 +5,11 @@ import * as path from "node:path"
 import fetch from "cross-fetch"
 import { verbose } from "./logger"
 
-export interface PlatformInfo {
-	platform: NodeJS.Platform
-	arch: string
-}
-
-export interface BundleMetadata {
-	version: string
-	platform: string
-	arch: string
-	extractedAt: string
-}
-
 /**
  * Gets the cache directory for a specific server
  */
 export function getServerCacheDir(qualifiedName: string): string {
-	return path.join(os.homedir(), ".smithery", "servers", qualifiedName)
+	return path.join(os.homedir(), ".smithery", "cache", "servers", qualifiedName)
 }
 
 /**
@@ -36,8 +24,8 @@ export function getBundleDir(qualifiedName: string): string {
  */
 export function isBundleCached(qualifiedName: string): boolean {
 	const bundleDir = getBundleDir(qualifiedName)
-	const metadataPath = path.join(bundleDir, "metadata.json")
-	return fs.existsSync(metadataPath)
+	const manifestPath = path.join(bundleDir, "manifest.json")
+	return fs.existsSync(manifestPath)
 }
 
 /**
@@ -69,7 +57,7 @@ async function extractBundle(mcpbPath: string, extractDir: string): Promise<void
 	verbose(`Extracting bundle to: ${extractDir}`)
 
 	return new Promise((resolve, reject) => {
-		const proc = spawn("npx", ["@anthropic-ai/mcpb", "unpack", mcpbPath, extractDir], {
+		const proc = spawn("npx", ["-y", "@anthropic-ai/mcpb", "unpack", mcpbPath, extractDir], {
 			stdio: "pipe",
 		})
 
@@ -94,27 +82,14 @@ async function extractBundle(mcpbPath: string, extractDir: string): Promise<void
 }
 
 /**
- * Writes metadata file for a bundle
- */
-function writeMetadata(
-	bundleDir: string,
-	metadata: Omit<BundleMetadata, "version">,
-): void {
-	const metadataPath = path.join(bundleDir, "metadata.json")
-	fs.writeFileSync(metadataPath, JSON.stringify(metadata, null, 2))
-}
-
-/**
  * Downloads and extracts a bundle to the local cache
  * @param qualifiedName - Server qualified name (e.g., @user/server)
  * @param bundleUrl - URL to download the .mcpb bundle from
- * @param platformInfo - Platform and architecture information
  * @returns Path to the extracted bundle directory
  */
 export async function downloadAndExtractBundle(
 	qualifiedName: string,
 	bundleUrl: string,
-	platformInfo: PlatformInfo,
 ): Promise<string> {
 	const bundleDir = getBundleDir(qualifiedName)
 
@@ -122,7 +97,7 @@ export async function downloadAndExtractBundle(
 	fs.mkdirSync(bundleDir, { recursive: true })
 
 	// Download bundle
-	const mcpbPath = path.join(bundleDir, "bundle.mcpb")
+	const mcpbPath = path.join(bundleDir, "server.mcpb")
 	await downloadBundle(bundleUrl, mcpbPath)
 
 	// Extract bundle using @anthropic/mcpb CLI
@@ -130,13 +105,6 @@ export async function downloadAndExtractBundle(
 
 	// Clean up mcpb file
 	fs.unlinkSync(mcpbPath)
-
-	// Write metadata
-	writeMetadata(bundleDir, {
-		platform: platformInfo.platform,
-		arch: platformInfo.arch,
-		extractedAt: new Date().toISOString(),
-	})
 
 	return bundleDir
 }
@@ -148,7 +116,6 @@ export async function downloadAndExtractBundle(
 export async function ensureBundleInstalled(
 	qualifiedName: string,
 	bundleUrl: string,
-	platformInfo: PlatformInfo,
 ): Promise<string> {
 	// Check if already cached
 	if (isBundleCached(qualifiedName)) {
@@ -161,7 +128,6 @@ export async function ensureBundleInstalled(
 	return await downloadAndExtractBundle(
 		qualifiedName,
 		bundleUrl,
-		platformInfo,
 	)
 }
 
@@ -189,9 +155,13 @@ export function getBundleCommand(bundleDir: string): { command: string; args: st
 		throw new Error("Bundle manifest missing server.mcp_config.command")
 	}
 	
+	const args = (mcpConfig.args || []).map((arg: string) =>
+		arg.replace(/\$\{__dirname\}/g, bundleDir)
+	)
+	
 	return {
 		command: mcpConfig.command,
-		args: mcpConfig.args || []
+		args
 	}
 }
 
@@ -210,19 +180,3 @@ export function getBundleEntrypoint(bundleDir: string, runtime: string = "node")
 	return path.join(bundleDir, manifest.server.entry_point)
 }
 
-/**
- * Makes a file executable (Unix systems only)
- * Only needed for binary runtime
- */
-export async function makeExecutable(filePath: string): Promise<void> {
-	if (process.platform === "win32") {
-		return // Not needed on Windows
-	}
-
-	try {
-		await fs.promises.chmod(filePath, 0o755)
-		verbose(`Made file executable: ${filePath}`)
-	} catch (error) {
-		throw new Error(`Failed to make file executable: ${error}`)
-	}
-}

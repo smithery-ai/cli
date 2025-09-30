@@ -133,15 +133,9 @@ async function pickServerAndRun(
 			if (bundleConnection.bundleUrl) {
 				logWithTimestamp("[Runner] Bundle connection detected for playground, downloading...")
 
-				const platformInfo = {
-					platform: process.platform,
-					arch: process.arch,
-				}
-
 				const bundleDir = await ensureBundleInstalled(
 					serverDetails.qualifiedName,
 					bundleConnection.bundleUrl,
-					platformInfo,
 				)
 
 				const { command, args } = getBundleCommand(bundleDir)
@@ -192,16 +186,10 @@ async function pickServerAndRun(
 		if (bundleConnection.bundleUrl) {
 			logWithTimestamp("[Runner] Bundle connection detected, downloading...")
 
-			const platformInfo = {
-				platform: process.platform,
-				arch: process.arch,
-			}
-
 			// Ensure bundle is downloaded and extracted
 			const bundleDir = await ensureBundleInstalled(
 				serverDetails.qualifiedName,
 				bundleConnection.bundleUrl,
-				platformInfo,
 			)
 
 			const { command, args } = getBundleCommand(bundleDir)
