@@ -92,22 +92,37 @@ export const createStdioRunner = async (
 		logWithTimestamp("[Runner] Starting child process setup...")
 		const stdioConnection = serverDetails.connections.find(
 			(conn) => conn.type === "stdio",
-		)
+		) as any
 		if (!stdioConnection) {
 			throw new Error("No STDIO connection found")
 		}
-		// Process config values and fetch server configuration
-		const serverConfig = await fetchConnection(
-			serverDetails.qualifiedName,
-			config,
-			apiKey,
-		)
 
-		if (!serverConfig || "type" in serverConfig) {
-			throw new Error("Failed to get valid stdio server configuration")
+		// For bundle connections, command and args are already set
+		let command: string
+		let args: string[] = []
+		let env: Record<string, string> = {}
+
+		if (stdioConnection.command && stdioConnection.args) {
+			// Bundle connection - use pre-configured command/args
+			command = stdioConnection.command
+			args = stdioConnection.args
+			logWithTimestamp("[Runner] Using bundle connection")
+		} else {
+			// Regular stdio connection - fetch from registry
+			const serverConfig = await fetchConnection(
+				serverDetails.qualifiedName,
+				config,
+				apiKey,
+			)
+
+			if (!serverConfig || "type" in serverConfig) {
+				throw new Error("Failed to get valid stdio server configuration")
+			}
+
+			command = serverConfig.command
+			args = serverConfig.args || []
+			env = serverConfig.env || {}
 		}
-
-		const { command, args = [], env = {} } = serverConfig
 
 		// Use runtime environment with proper PATH setup
 		const runtimeEnv = getRuntimeEnvironment(env)
@@ -118,7 +133,7 @@ export const createStdioRunner = async (
 		)
 
 		let finalCommand = command
-		let finalArgs = args
+		let finalArgs = args || []
 
 		// Resolve npx path upfront if needed
 		if (finalCommand === "npx") {

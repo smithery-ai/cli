@@ -7,6 +7,10 @@ import {
 	getAnalyticsConsent,
 	initializeSettings,
 } from "../../utils/smithery-config.js"
+import {
+	ensureBundleInstalled,
+	getBundleCommand,
+} from "../../lib/bundle-manager.js"
 import { createLocalPlaygroundRunner } from "./local-playground-runner.js"
 import { logWithTimestamp } from "./runner-utils.js"
 import { createStdioRunner as startSTDIOrunner } from "./stdio-runner.js"
@@ -123,8 +127,40 @@ async function pickServerAndRun(
 				},
 			)
 		} else if (connection.type === "stdio") {
+			// Check if this is a bundle connection
+			let playgroundServerDetails = serverDetails
+			const bundleConnection = connection as typeof connection & { bundleUrl?: string; runtime?: string }
+			if (bundleConnection.bundleUrl) {
+				logWithTimestamp("[Runner] Bundle connection detected for playground, downloading...")
+
+				const platformInfo = {
+					platform: process.platform,
+					arch: process.arch,
+				}
+
+				const bundleDir = await ensureBundleInstalled(
+					serverDetails.qualifiedName,
+					bundleConnection.bundleUrl,
+					platformInfo,
+				)
+
+				const { command, args } = getBundleCommand(bundleDir)
+
+				playgroundServerDetails = {
+					...serverDetails,
+					connections: [
+						{
+							...(connection as Record<string, unknown>),
+							type: "stdio",
+							command,
+							args,
+						} as unknown as typeof connection,
+					],
+				}
+			}
+
 			// Local playground mode - start local STDIO server with HTTP tunnel
-			await createLocalPlaygroundRunner(serverDetails, config, apiKey, {
+			await createLocalPlaygroundRunner(playgroundServerDetails, config, apiKey, {
 				open: options.open !== false, // default to true
 				initialMessage: options.initialMessage || "Say hello to the world!",
 			})
@@ -151,7 +187,44 @@ async function pickServerAndRun(
 			profile, // profile can be undefined
 		)
 	} else if (connection.type === "stdio") {
-		await startSTDIOrunner(serverDetails, config, apiKey, analyticsEnabled) // here, api key can be undefined
+		// Check if this is a bundle connection (has bundleUrl)
+		const bundleConnection = connection as typeof connection & { bundleUrl?: string; runtime?: string }
+		if (bundleConnection.bundleUrl) {
+			logWithTimestamp("[Runner] Bundle connection detected, downloading...")
+
+			const platformInfo = {
+				platform: process.platform,
+				arch: process.arch,
+			}
+
+			// Ensure bundle is downloaded and extracted
+			const bundleDir = await ensureBundleInstalled(
+				serverDetails.qualifiedName,
+				bundleConnection.bundleUrl,
+				platformInfo,
+			)
+
+			const { command, args } = getBundleCommand(bundleDir)
+			logWithTimestamp(`[Runner] Running bundle: ${command} ${args.join(" ")}`)
+
+			// Modify server details to use the bundle
+			const bundleServerDetails: ServerDetailResponse = {
+				...serverDetails,
+				connections: [
+					{
+						...(connection as Record<string, unknown>),
+						type: "stdio",
+						command,
+						args,
+					} as unknown as typeof connection,
+				],
+			}
+
+			await startSTDIOrunner(bundleServerDetails, config, apiKey, analyticsEnabled)
+		} else {
+			// Regular stdio connection
+			await startSTDIOrunner(serverDetails, config, apiKey, analyticsEnabled)
+		}
 	} else {
 		throw new Error(
 			`Unsupported connection type: ${(connection as { type: string }).type}`,

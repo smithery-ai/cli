@@ -102,6 +102,7 @@ export const resolveServer = async (
 			qualifiedName: serverQualifiedName,
 		})
 		verbose("Successfully received server data from Smithery SDK")
+		verbose(`Server data: ${JSON.stringify(result, null, 2)}`)
 		return result
 	} catch (error) {
 		if (error instanceof SDKValidationError) {
