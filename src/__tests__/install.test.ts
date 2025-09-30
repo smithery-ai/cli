@@ -26,12 +26,12 @@ vi.mock("../utils/mcp-config", () => ({
 vi.mock("../lib/registry", () => ({
 	resolveServer: vi.fn(),
 	ResolveServerSource: { Install: "install" },
+	getUserConfig: vi.fn(),
 	saveUserConfig: vi.fn(),
 	validateUserConfig: vi.fn(),
 }))
 
 vi.mock("../utils/session-config", () => ({
-	chooseConnection: vi.fn(),
 	collectConfigValues: vi.fn(),
 	formatServerConfig: vi.fn(),
 	getServerName: vi.fn(),
@@ -67,7 +67,6 @@ import { getClientConfiguration } from "../config/clients"
 import { resolveServer } from "../lib/registry"
 import { readConfig, runConfigCommand, writeConfig } from "../utils/mcp-config"
 import {
-	chooseConnection,
 	collectConfigValues,
 	formatServerConfig,
 	getServerName,
@@ -78,7 +77,6 @@ const mockWriteConfig = vi.mocked(writeConfig)
 const mockRunConfigCommand = vi.mocked(runConfigCommand)
 const mockReadConfig = vi.mocked(readConfig)
 const mockResolveServer = vi.mocked(resolveServer)
-const mockChooseConnection = vi.mocked(chooseConnection)
 const mockCollectConfigValues = vi.mocked(collectConfigValues)
 const mockFormatServerConfig = vi.mocked(formatServerConfig)
 const mockGetServerName = vi.mocked(getServerName)
@@ -88,7 +86,9 @@ const mockGetClientConfiguration = vi.mocked(getClientConfiguration)
 const mockStdioServer: ServerDetailResponse = {
 	qualifiedName: "test-server",
 	remote: false,
-	connections: [{ type: "stdio", command: "npx", args: ["test-server"] }],
+	connections: [
+		{ type: "stdio", command: "npx", args: ["test-server"], configSchema: {} },
+	],
 } as unknown as ServerDetailResponse
 
 const mockHttpServer: ServerDetailResponse = {
@@ -98,6 +98,7 @@ const mockHttpServer: ServerDetailResponse = {
 		{
 			type: "http",
 			deploymentUrl: "https://server.smithery.ai/test-server/mcp",
+			configSchema: {},
 		},
 	],
 } as unknown as ServerDetailResponse
@@ -171,7 +172,6 @@ describe("Installation Tests", () => {
 
 		// Default mock setup
 		mockResolveServer.mockResolvedValue(mockStdioServer)
-		mockChooseConnection.mockReturnValue({ type: "stdio", configSchema: {} })
 		mockCollectConfigValues.mockResolvedValue({})
 		mockGetServerName.mockReturnValue("test-server")
 		mockReadConfig.mockReturnValue({ mcpServers: {} })

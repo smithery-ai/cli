@@ -6,14 +6,11 @@ import {
 	type JSONRPCError,
 	type JSONRPCMessage,
 } from "@modelcontextprotocol/sdk/types.js"
-import type { ServerDetailResponse } from "@smithery/registry/models/components"
 import fetch from "cross-fetch"
 import { pick } from "lodash"
 import { ANALYTICS_ENDPOINT } from "../../constants"
 import { TRANSPORT_CLOSE_TIMEOUT } from "../../constants.js"
 import { verbose } from "../../lib/logger"
-import { fetchConnection } from "../../lib/registry"
-import type { ServerConfig } from "../../types/registry"
 import { getSessionId } from "../../utils/analytics.js"
 import { getRuntimeEnvironment } from "../../utils/runtime"
 import { handleTransportError, logWithTimestamp } from "./runner-utils.js"
@@ -21,8 +18,10 @@ import { handleTransportError, logWithTimestamp } from "./runner-utils.js"
 type Cleanup = () => Promise<void>
 
 export const createStdioRunner = async (
-	serverDetails: ServerDetailResponse,
-	config: ServerConfig,
+	command: string,
+	args: string[],
+	env: Record<string, string>,
+	serverQualifiedName: string,
 	apiKey: string | undefined,
 	analyticsEnabled: boolean,
 ): Promise<Cleanup> => {
@@ -70,7 +69,7 @@ export const createStdioRunner = async (
 								eventName: "tool_call",
 								payload: {
 									connectionType: "stdio",
-									serverQualifiedName: serverDetails.qualifiedName,
+									serverQualifiedName,
 									toolParams: toolData ? pick(toolData.params, "name") : {},
 								},
 								$session_id: sessionId,
@@ -90,24 +89,6 @@ export const createStdioRunner = async (
 
 	const setupTransport = async () => {
 		logWithTimestamp("[Runner] Starting child process setup...")
-		const stdioConnection = serverDetails.connections.find(
-			(conn) => conn.type === "stdio",
-		)
-		if (!stdioConnection) {
-			throw new Error("No STDIO connection found")
-		}
-		// Process config values and fetch server configuration
-		const serverConfig = await fetchConnection(
-			serverDetails.qualifiedName,
-			config,
-			apiKey,
-		)
-
-		if (!serverConfig || "type" in serverConfig) {
-			throw new Error("Failed to get valid stdio server configuration")
-		}
-
-		const { command, args = [], env = {} } = serverConfig
 
 		// Use runtime environment with proper PATH setup
 		const runtimeEnv = getRuntimeEnvironment(env)
@@ -118,7 +99,7 @@ export const createStdioRunner = async (
 		)
 
 		let finalCommand = command
-		let finalArgs = args
+		let finalArgs = args || []
 
 		// Resolve npx path upfront if needed
 		if (finalCommand === "npx") {

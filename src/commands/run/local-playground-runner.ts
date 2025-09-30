@@ -3,14 +3,11 @@ import type {
 	JSONRPCError,
 	JSONRPCMessage,
 } from "@modelcontextprotocol/sdk/types.js"
-import type { ServerDetailResponse } from "@smithery/registry/models/components"
 import chalk from "chalk"
 import cors from "cors"
 import express from "express"
 import { TRANSPORT_CLOSE_TIMEOUT } from "../../constants.js"
 import { setupTunnelAndPlayground } from "../../lib/dev-lifecycle.js"
-import { fetchConnection } from "../../lib/registry.js"
-import type { ServerConfig } from "../../types/registry.js"
 import { getRuntimeEnvironment } from "../../utils/runtime.js"
 import {
 	createHeartbeatManager,
@@ -28,8 +25,10 @@ interface LocalPlaygroundOptions {
 type Cleanup = () => Promise<void>
 
 export const createLocalPlaygroundRunner = async (
-	serverDetails: ServerDetailResponse,
-	config: ServerConfig,
+	command: string,
+	args: string[],
+	env: Record<string, string>,
+	_serverQualifiedName: string, // @TODO: add analytics
 	apiKey: string,
 	options: LocalPlaygroundOptions = {},
 ): Promise<Cleanup> => {
@@ -155,25 +154,6 @@ export const createLocalPlaygroundRunner = async (
 	const setupStdioTransport = async () => {
 		logWithTimestamp("[Local Playground] Starting STDIO process setup...")
 
-		const stdioConnection = serverDetails.connections.find(
-			(conn) => conn.type === "stdio",
-		)
-		if (!stdioConnection) {
-			throw new Error("No STDIO connection found")
-		}
-
-		// Process config values and fetch server configuration
-		const serverConfig = await fetchConnection(
-			serverDetails.qualifiedName,
-			config,
-			apiKey,
-		)
-
-		if (!serverConfig || "type" in serverConfig) {
-			throw new Error("Failed to get valid stdio server configuration")
-		}
-
-		const { command, args = [], env = {} } = serverConfig
 		const runtimeEnv = getRuntimeEnvironment(env)
 
 		let finalCommand = command

@@ -17,6 +17,7 @@ export interface BuildOptions {
 	production?: boolean
 	transport?: "shttp" | "stdio"
 	configFile?: string
+	bundleAll?: boolean
 }
 
 /**
@@ -152,7 +153,9 @@ async function esbuildServer(
 ): Promise<esbuild.BuildContext | esbuild.BuildResult> {
 	const userDeps = readUserPackageDeps(entryFile)
 	const bootstrapDeps = ["@smithery/sdk", "@modelcontextprotocol/sdk"]
-	const externals = new Set<string>([...userDeps, ...bootstrapDeps])
+	const externals = options.bundleAll
+		? new Set<string>()
+		: new Set<string>([...userDeps, ...bootstrapDeps])
 	const startTime = performance.now()
 	const outFile = options.outFile || ".smithery/index.cjs"
 	const transport = options.transport ?? "shttp"

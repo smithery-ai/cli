@@ -264,72 +264,6 @@ async function promptForConfigValue(
 }
 
 /**
- * Chooses the best stdio connection from available connections
- * @param connections - Array of available connection details
- * @returns The best stdio connection or null if none found
- */
-export function chooseStdioConnection(
-	connections: ConnectionInfo[],
-): ConnectionInfo | null {
-	const stdioConnections = connections.filter((conn) => conn.type === "stdio")
-	if (!stdioConnections.length) return null
-
-	const priorityOrder = ["npx", "uvx", "docker"]
-
-	/* Try published connections first */
-	for (const priority of priorityOrder) {
-		const connection = stdioConnections.find(
-			(conn) => conn.stdioFunction?.startsWith(priority) && conn.published,
-		)
-		if (connection) return connection
-	}
-
-	/* Try unpublished connections */
-	for (const priority of priorityOrder) {
-		const connection = stdioConnections.find((conn) =>
-			conn.stdioFunction?.startsWith(priority),
-		)
-		if (connection) return connection
-	}
-
-	/* Return first stdio connection if no priority matches */
-	return stdioConnections[0]
-}
-
-/**
- * Selects the most appropriate connection for a server
- * @param server - The server to choose a connection for
- * @returns The chosen connection details
- * @throws Error if no connection configuration is found
- */
-export function chooseConnection(server: ServerDetailResponse): ConnectionInfo {
-	if (!server.connections?.length) {
-		throw new Error("No connection configuration found")
-	}
-
-	/* For local servers, try stdio first */
-	if (!server.remote) {
-		const stdioConnection = chooseStdioConnection(server.connections)
-		if (stdioConnection) return stdioConnection
-	}
-
-	/* For remote servers, try HTTP */
-	if (server.remote) {
-		const httpConnection = server.connections.find(
-			(conn) => conn.type === "http",
-		)
-		if (httpConnection) return httpConnection
-	}
-
-	/* If still no connection found, try stdio again */
-	const stdioConnection = chooseStdioConnection(server.connections)
-	if (stdioConnection) return stdioConnection
-
-	/* Final fallback to first available connection */
-	return server.connections[0]
-}
-
-/**
  * Converts environment variables to command line arguments
  * @param envVars - Record of environment variables
  * @returns Array of command line arguments
@@ -463,7 +397,7 @@ function shouldUseHTTPFormat(
 	try {
 		// Check if server has HTTP connections available
 		const hasHTTPConnection = server.connections?.some(
-			(conn) => conn.type === "http" && "deploymentUrl" in conn,
+			(conn: ConnectionInfo) => conn.type === "http" && "deploymentUrl" in conn,
 		)
 
 		if (!hasHTTPConnection || !server.remote) {
@@ -473,7 +407,9 @@ function shouldUseHTTPFormat(
 		// Determine available transports based on server capabilities
 		const availableTransports: Transport[] = []
 		if (hasHTTPConnection) availableTransports.push(Transport.HTTP)
-		if (server.connections?.some((conn) => conn.type === "stdio")) {
+		if (
+			server.connections?.some((conn: ConnectionInfo) => conn.type === "stdio")
+		) {
 			availableTransports.push(Transport.STDIO)
 		}
 
