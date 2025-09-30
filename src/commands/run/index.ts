@@ -7,10 +7,7 @@ import {
 	getAnalyticsConsent,
 	initializeSettings,
 } from "../../utils/smithery-config.js"
-import {
-	ensureBundleInstalled,
-	getBundleCommand,
-} from "../../lib/bundle-manager.js"
+import { prepareStdioConnection } from "../../utils/prepare-stdio-connection.js"
 import { createLocalPlaygroundRunner } from "./local-playground-runner.js"
 import { logWithTimestamp } from "./runner-utils.js"
 import { createStdioRunner as startSTDIOrunner } from "./stdio-runner.js"
@@ -82,19 +79,6 @@ export async function run(
 	}
 }
 
-/**
- * Picks the correct runner and starts the server based on available connection types.
- *
- * @param {ServerDetailResponse} serverDetails - Details of the server to run, including connection options
- * @param {ServerConfig} config - Configuration values for the server
- * @param {boolean} analyticsEnabled - Whether analytics are enabled for the server
- * @param {string} [apiKey] - Required for WS connections. Optional for stdio connections.
- * @param {string} [profile] - Optional profile name to use
- * @param {RunOptions} [options] - Additional options for playground functionality
- * @returns {Promise<void>} A promise that resolves when the server is running
- * @throws {Error} If connection type is unsupported or deployment URL is missing for WS connections
- * @private
- */
 async function pickServerAndRun(
 	serverDetails: ServerDetailResponse,
 	config: ServerConfig,
@@ -105,113 +89,65 @@ async function pickServerAndRun(
 ): Promise<void> {
 	const connection = chooseConnection(serverDetails)
 
-	// If playground option is enabled, choose the appropriate playground runner
-	if (options?.playground) {
-		if (!apiKey) {
-			throw new Error("API key is required for playground connections")
+	if (connection.type === "http") {
+		if (!connection.deploymentUrl) {
+			throw new Error("Missing deployment URL")
 		}
-
-		if (connection.type === "http") {
-			// Remote playground mode - connect to deployed server via HTTP
-			if (!connection.deploymentUrl) {
-				throw new Error("Missing deployment URL")
-			}
+		if (!apiKey) {
+			throw new Error("API key is required for remote connections")
+		}
+		
+		if (options?.playground) {
 			await createUplinkRunner(
 				connection.deploymentUrl,
 				apiKey,
 				config,
 				profile,
 				{
-					open: options.open !== false, // default to true
+					open: options.open !== false,
 					initialMessage: options.initialMessage || "Say hello to the world!",
 				},
 			)
-		} else if (connection.type === "stdio") {
-			// Check if this is a bundle connection
-			let playgroundServerDetails = serverDetails
-			const bundleConnection = connection as typeof connection & { bundleUrl?: string; runtime?: string }
-			if (bundleConnection.bundleUrl) {
-				logWithTimestamp("[Runner] Bundle connection detected for playground, downloading...")
-
-				const bundleDir = await ensureBundleInstalled(
-					serverDetails.qualifiedName,
-					bundleConnection.bundleUrl,
-				)
-
-				const { command, args } = getBundleCommand(bundleDir)
-
-				playgroundServerDetails = {
-					...serverDetails,
-					connections: [
-						{
-							...(connection as Record<string, unknown>),
-							type: "stdio",
-							command,
-							args,
-						} as unknown as typeof connection,
-					],
-				}
-			}
-
-			// Local playground mode - start local STDIO server with HTTP tunnel
-			await createLocalPlaygroundRunner(playgroundServerDetails, config, apiKey, {
-				open: options.open !== false, // default to true
-				initialMessage: options.initialMessage || "Say hello to the world!",
-			})
 		} else {
-			throw new Error(
-				`Playground functionality does not support ${connection.type} connections`,
+			await createStreamableHTTPRunner(
+				connection.deploymentUrl,
+				apiKey,
+				config,
+				profile,
 			)
 		}
-		return
-	}
-
-	if (connection.type === "http") {
-		if (!connection.deploymentUrl) {
-			throw new Error("Missing deployment URL")
-		}
-		if (!apiKey) {
-			// eventually make it required for all connections
-			throw new Error("API key is required for remote connections")
-		}
-		await createStreamableHTTPRunner(
-			connection.deploymentUrl,
-			apiKey, // api key can't be undefined here
-			config,
-			profile, // profile can be undefined
-		)
 	} else if (connection.type === "stdio") {
-		// Check if this is a bundle connection (has bundleUrl)
-		const bundleConnection = connection as typeof connection & { bundleUrl?: string; runtime?: string }
-		if (bundleConnection.bundleUrl) {
-			logWithTimestamp("[Runner] Bundle connection detected, downloading...")
-
-			// Ensure bundle is downloaded and extracted
-			const bundleDir = await ensureBundleInstalled(
-				serverDetails.qualifiedName,
-				bundleConnection.bundleUrl,
-			)
-
-			const { command, args } = getBundleCommand(bundleDir)
-			logWithTimestamp(`[Runner] Running bundle: ${command} ${args.join(" ")}`)
-
-			// Modify server details to use the bundle
-			const bundleServerDetails: ServerDetailResponse = {
-				...serverDetails,
-				connections: [
-					{
-						...(connection as Record<string, unknown>),
-						type: "stdio",
-						command,
-						args,
-					} as unknown as typeof connection,
-				],
+		const preparedConnection = await prepareStdioConnection(
+			serverDetails,
+			connection,
+			config,
+			apiKey,
+		)
+		
+		if (options?.playground) {
+			if (!apiKey) {
+				throw new Error("API key is required for playground connections")
 			}
-
-			await startSTDIOrunner(bundleServerDetails, config, apiKey, analyticsEnabled)
+			await createLocalPlaygroundRunner(
+				preparedConnection.command,
+				preparedConnection.args,
+				preparedConnection.env,
+				preparedConnection.qualifiedName,
+				apiKey,
+				{
+					open: options.open !== false,
+					initialMessage: options.initialMessage || "Say hello to the world!",
+				},
+			)
 		} else {
-			// Regular stdio connection
-			await startSTDIOrunner(serverDetails, config, apiKey, analyticsEnabled)
+			await startSTDIOrunner(
+				preparedConnection.command,
+				preparedConnection.args,
+				preparedConnection.env,
+				preparedConnection.qualifiedName,
+				apiKey,
+				analyticsEnabled,
+			)
 		}
 	} else {
 		throw new Error(

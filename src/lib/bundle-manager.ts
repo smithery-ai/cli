@@ -5,6 +5,8 @@ import * as path from "node:path"
 import fetch from "cross-fetch"
 import { verbose } from "./logger"
 
+const BUNDLE_FILENAME = "server.mcpb"
+
 /**
  * Gets the cache directory for a specific server
  */
@@ -97,7 +99,7 @@ export async function downloadAndExtractBundle(
 	fs.mkdirSync(bundleDir, { recursive: true })
 
 	// Download bundle
-	const mcpbPath = path.join(bundleDir, "server.mcpb")
+	const mcpbPath = path.join(bundleDir, BUNDLE_FILENAME)
 	await downloadBundle(bundleUrl, mcpbPath)
 
 	// Extract bundle using @anthropic/mcpb CLI
