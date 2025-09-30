@@ -64,6 +64,7 @@ describe("prepareStdioConnection", () => {
 
 		expect(ensureBundleInstalled).not.toHaveBeenCalled()
 		expect(fetchConnection).not.toHaveBeenCalled()
+		expect(getUserConfig).not.toHaveBeenCalled()
 	})
 
 	test("handles bundle connection with config merging", async () => {
@@ -191,6 +192,8 @@ describe("prepareStdioConnection", () => {
 			{ DEBUG: "true" },
 			"test-api-key",
 		)
+
+		expect(getUserConfig).not.toHaveBeenCalled()
 
 		expect(result).toEqual({
 			command: "python",
