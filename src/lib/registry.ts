@@ -82,7 +82,7 @@ export const resolveServer = async (
 		})()
 	}
 
-	const options: Record<string, any> = {
+	const options: Record<string, string> = {
 		bearerAuth: apiKey ?? process.env.SMITHERY_BEARER_AUTH ?? "",
 	}
 	if (
@@ -104,7 +104,7 @@ export const resolveServer = async (
 		verbose("Successfully received server data from Smithery SDK")
 		verbose(`Server data: ${JSON.stringify(result, null, 2)}`)
 		return result
-	} catch (error) {
+	} catch (error: unknown) {
 		if (error instanceof SDKValidationError) {
 			verbose(`SDK validation error: ${error.pretty()}`)
 			verbose(JSON.stringify(error.rawValue))
@@ -119,7 +119,7 @@ export const resolveServer = async (
 			verbose(`Unknown error: ${error.message}`)
 			throw error
 		} else {
-			throw new Error(`Failed to resolve package: ${error}`)
+			throw new Error(`Failed to resolve package: ${String(error)}`)
 		}
 	}
 }
@@ -391,7 +391,7 @@ export const validateUserConfig = async (
 ): Promise<{
 	isComplete: boolean
 	missingFields: string[]
-	fieldSchemas: Record<string, any>
+	fieldSchemas: Record<string, unknown>
 }> => {
 	const endpoint = getEndpoint()
 	verbose(`Validating user config for ${serverQualifiedName}`)

@@ -1,5 +1,8 @@
 #!/usr/bin/env node
-import type { ServerDetailResponse } from "@smithery/registry/models/components"
+import type {
+	ConnectionInfo,
+	ServerDetailResponse,
+} from "@smithery/registry/models/components"
 import { ResolveServerSource, resolveServer } from "../../lib/registry.js"
 import type { ServerConfig } from "../../types/registry.js"
 import { prepareStdioConnection } from "../../utils/prepare-stdio-connection.js"
@@ -57,7 +60,9 @@ export async function run(
 		logWithTimestamp(
 			`[Runner] Connecting to server: ${JSON.stringify({
 				id: resolvedServer.qualifiedName,
-				connectionTypes: resolvedServer.connections.map((c) => c.type),
+				connectionTypes: resolvedServer.connections.map(
+					(c: ConnectionInfo) => c.type,
+				),
 			})}`,
 		)
 

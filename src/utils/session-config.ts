@@ -397,7 +397,7 @@ function shouldUseHTTPFormat(
 	try {
 		// Check if server has HTTP connections available
 		const hasHTTPConnection = server.connections?.some(
-			(conn) => conn.type === "http" && "deploymentUrl" in conn,
+			(conn: ConnectionInfo) => conn.type === "http" && "deploymentUrl" in conn,
 		)
 
 		if (!hasHTTPConnection || !server.remote) {
@@ -407,7 +407,9 @@ function shouldUseHTTPFormat(
 		// Determine available transports based on server capabilities
 		const availableTransports: Transport[] = []
 		if (hasHTTPConnection) availableTransports.push(Transport.HTTP)
-		if (server.connections?.some((conn) => conn.type === "stdio")) {
+		if (
+			server.connections?.some((conn: ConnectionInfo) => conn.type === "stdio")
+		) {
 			availableTransports.push(Transport.STDIO)
 		}
 
