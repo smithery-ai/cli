@@ -19,7 +19,6 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 20
-          cache: ''
 
       - run: rm -rf package-lock.json node_modules # workaround for bug with npm on optional deps
       - run: npm install
@@ -34,7 +33,6 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 20
-          cache: ''
 
       - run: npm ci
       - run: npm install -D @biomejs/cli-linux-x64  # biome platform binary for linux ci
