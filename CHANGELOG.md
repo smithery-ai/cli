@@ -6,6 +6,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Added
+- Added profile support for stdio connections to load saved configurations from specified profiles
+- Added functions for downloading, caching, and running bundled MCP servers
+- Added test fixtures for run command
+
 ## [1.4.1] - 2025-09-27
 
 ### Added
