@@ -125,6 +125,7 @@ async function pickServerAndRun(
 			connection,
 			config,
 			apiKey,
+			profile,
 		)
 
 		if (options?.playground) {

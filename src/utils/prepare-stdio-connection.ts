@@ -19,6 +19,7 @@ export async function prepareStdioConnection(
 	connection: (typeof serverDetails.connections)[number],
 	config: ServerConfig,
 	apiKey: string | undefined,
+	profile?: string,
 ): Promise<PreparedStdioConnection> {
 	const bundleConnection = connection as typeof connection & {
 		bundleUrl?: string
@@ -50,6 +51,7 @@ export async function prepareStdioConnection(
 			const savedConfig = await getUserConfig(
 				serverDetails.qualifiedName,
 				apiKey,
+				profile,
 			)
 			if (savedConfig) {
 				mergedConfig = { ...savedConfig, ...config }

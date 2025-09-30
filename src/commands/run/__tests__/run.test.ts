@@ -93,6 +93,7 @@ describe("run command", () => {
 			stdioRegularServer.connections[0],
 			{},
 			"test-api-key",
+			"default",
 		)
 
 		expect(createStdioRunner).toHaveBeenCalledWith(
@@ -121,6 +122,7 @@ describe("run command", () => {
 			studioBundleServer.connections[0],
 			{ API_KEY: "test" },
 			"test-api-key",
+			"default",
 		)
 
 		expect(createStdioRunner).toHaveBeenCalledWith(

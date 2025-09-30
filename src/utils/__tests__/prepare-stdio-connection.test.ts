@@ -105,6 +105,7 @@ describe("prepareStdioConnection", () => {
 		expect(getUserConfig).toHaveBeenCalledWith(
 			"author/bundle-server",
 			"test-api-key",
+			undefined,
 		)
 
 		expect(result).toEqual({
