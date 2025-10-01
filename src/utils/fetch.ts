@@ -33,7 +33,7 @@ const DEFAULT_BACKOFF: BackoffConfig = {
  * @returns Promise that resolves with the fetch response
  * @throws Error if all retries fail or request times out
  */
-export const withTimeout = async (
+export const fetchWithTimeout = async (
 	url: string,
 	options: RequestInit = {},
 	config: {
