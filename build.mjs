@@ -1,6 +1,6 @@
-import { existsSync, mkdirSync, readFileSync } from "node:fs"
 import { config } from "dotenv"
 import * as esbuild from "esbuild"
+import { existsSync, mkdirSync, readFileSync } from "node:fs"
 
 // Load environment variables into a define object
 config({ quiet: true })
@@ -29,13 +29,7 @@ const shttpResult = await esbuild.build({
 	target: "node20",
 	format: "esm",
 	write: false,
-	external: [
-		"virtual:user-module",
-		"@smithery/sdk",
-		"@smithery/sdk/*",
-		"@modelcontextprotocol/sdk",
-		"@modelcontextprotocol/sdk/*",
-	],
+	packages: "external",
 })
 
 const stdioResult = await esbuild.build({
@@ -45,13 +39,7 @@ const stdioResult = await esbuild.build({
 	target: "node20",
 	format: "esm",
 	write: false,
-	external: [
-		"virtual:user-module",
-		"@smithery/sdk",
-		"@smithery/sdk/*",
-		"@modelcontextprotocol/sdk",
-		"@modelcontextprotocol/sdk/*",
-	],
+	packages: "external",
 })
 
 // Get the compiled code as strings and inject via define

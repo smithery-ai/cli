@@ -1,7 +1,7 @@
-import { existsSync, mkdirSync, readFileSync, statSync } from "node:fs"
-import { dirname, join, resolve } from "node:path"
 import chalk from "chalk"
 import * as esbuild from "esbuild"
+import { existsSync, mkdirSync, readFileSync, statSync } from "node:fs"
+import { dirname, join, resolve } from "node:path"
 import { formatFileSize } from "../utils/build"
 
 // TypeScript declarations for global constants injected at build time
@@ -69,48 +69,6 @@ Check that the file exists or update your package.json`,
 	return resolvedPath
 }
 
-/**
- * Find nearest package.json directory from an entry file path.
- */
-function findNearestPackageJsonDir(startFile: string): string {
-	let dir = dirname(startFile)
-	// Guard for cwd if startFile is already a directory
-	try {
-		while (true) {
-			const pkgPath = join(dir, "package.json")
-			if (existsSync(pkgPath)) return dir
-			const parent = dirname(dir)
-			if (parent === dir) break
-			dir = parent
-		}
-	} catch {}
-	return process.cwd()
-}
-
-/**
- * Read user package dependencies (dependencies + peerDependencies + optionalDependencies)
- */
-function readUserPackageDeps(entryFile: string): string[] {
-	const pkgDir = findNearestPackageJsonDir(entryFile)
-	const pkgPath = join(pkgDir, "package.json")
-	if (!existsSync(pkgPath)) return []
-	try {
-		const pkgRaw = readFileSync(pkgPath, "utf-8")
-		const pkg = JSON.parse(pkgRaw) as Record<string, unknown>
-		const deps = Object.keys((pkg.dependencies as Record<string, string>) || {})
-		const peerDeps = Object.keys(
-			(pkg.peerDependencies as Record<string, string>) || {},
-		)
-		const optDeps = Object.keys(
-			(pkg.optionalDependencies as Record<string, string>) || {},
-		)
-		const all = new Set<string>([...deps, ...peerDeps, ...optDeps])
-		return Array.from(all)
-	} catch {
-		return []
-	}
-}
-
 // no-op helper removed after Bun support was dropped
 
 /**
@@ -142,8 +100,6 @@ async function loadCustomConfig(
 	return {}
 }
 
-// Bootstrap contents are inlined directly via the esbuild plugin below
-
 /**
  * Build MCP server using esbuild
  */
@@ -151,11 +107,6 @@ async function esbuildServer(
 	options: BuildOptions,
 	entryFile: string,
 ): Promise<esbuild.BuildContext | esbuild.BuildResult> {
-	const userDeps = readUserPackageDeps(entryFile)
-	const bootstrapDeps = ["@smithery/sdk", "@modelcontextprotocol/sdk"]
-	const externals = options.bundleAll
-		? new Set<string>()
-		: new Set<string>([...userDeps, ...bootstrapDeps])
 	const startTime = performance.now()
 	const outFile = options.outFile || ".smithery/index.cjs"
 	const transport = options.transport ?? "shttp"
@@ -203,22 +154,6 @@ async function esbuildServer(
 		},
 	})
 
-	// Externalize all bare imports that match user's dependencies
-	function externalizeUserDepsPlugin(_userEntryFile: string): esbuild.Plugin {
-		const bareImport = /^[A-Za-z0-9@][^:]*$/
-		return {
-			name: "smithery-externalize-user-deps",
-			setup(build) {
-				build.onResolve({ filter: bareImport }, (args) => {
-					if (externals.has(args.path)) {
-						return { path: args.path, external: true }
-					}
-					return null
-				})
-			},
-		}
-	}
-
 	// Common build options
 	const commonOptions: esbuild.BuildOptions = {
 		bundle: true,
@@ -235,7 +170,7 @@ async function esbuildServer(
 	buildConfig = {
 		...commonOptions,
 		entryPoints: ["virtual:bootstrap"],
-		plugins: [externalizeUserDepsPlugin(entryFile), createBootstrapPlugin()],
+		plugins: [createBootstrapPlugin()],
 		define: {
 			"process.env.NODE_ENV": JSON.stringify(
 				options.production ? "production" : "development",
