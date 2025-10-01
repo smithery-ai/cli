@@ -1,11 +1,10 @@
-import { SmitheryRegistry, type SDKOptions } from "@smithery/registry"
+import { type SDKOptions, SmitheryRegistry } from "@smithery/registry"
 import type { ServerDetailResponse } from "@smithery/registry/models/components"
 import {
 	SDKValidationError,
 	ServerError,
 	UnauthorizedError,
 } from "@smithery/registry/models/errors"
-import fetch from "cross-fetch" /* some runtimes use node <18 causing fetch not defined issue */
 import { config as dotenvConfig } from "dotenv"
 import { ANALYTICS_ENDPOINT } from "../constants"
 import {
@@ -15,10 +14,9 @@ import {
 	type StreamableHTTPDeploymentConnection,
 } from "../types/registry"
 import { getSessionId } from "../utils/analytics"
+import { fetchWithTimeout } from "../utils/fetch"
 import { getUserId } from "../utils/smithery-config"
 import { verbose } from "./logger"
-
-// @TODO: add timeout
 
 dotenvConfig({ quiet: true })
 
@@ -43,7 +41,6 @@ const getEndpoint = (): string => {
  * @param apiKey Optional API key for authentication
  * @param source Optional source of the call (install, run, inspect)
  * @returns Details about the server, including available connection options
- * @TODO: add timeout
  */
 export enum ResolveServerSource {
 	Install = "install",
@@ -62,7 +59,7 @@ export const resolveServer = async (
 			try {
 				const sessionId = getSessionId()
 				const userId = await getUserId()
-				await fetch(ANALYTICS_ENDPOINT, {
+				await fetchWithTimeout(ANALYTICS_ENDPOINT, {
 					method: "POST",
 					headers: { "Content-Type": "application/json" },
 					body: JSON.stringify({
@@ -84,6 +81,17 @@ export const resolveServer = async (
 
 	const options: SDKOptions = {
 		bearerAuth: apiKey ?? process.env.SMITHERY_BEARER_AUTH ?? "",
+		timeoutMs: 5000, // 5 second timeout
+		retryConfig: {
+			strategy: "backoff",
+			backoff: {
+				initialInterval: 1000,
+				maxInterval: 4000,
+				exponent: 2,
+				maxElapsedTime: 15000, // Total max time across all retries
+			},
+			retryConnectionErrors: true,
+		},
 	}
 	if (
 		process.env.NODE_ENV === "development" &&
@@ -159,11 +167,14 @@ export const fetchConnection = async (
 			headers.Authorization = `Bearer ${apiKey}`
 		}
 
-		const response = await fetch(`${endpoint}/servers/${serverQualifiedName}`, {
-			method: "POST",
-			headers,
-			body: JSON.stringify(requestBody),
-		})
+		const response = await fetchWithTimeout(
+			`${endpoint}/servers/${serverQualifiedName}`,
+			{
+				method: "POST",
+				headers,
+				body: JSON.stringify(requestBody),
+			},
+		)
 		verbose(`Response status: ${response.status}`)
 
 		if (!response.ok) {
@@ -225,7 +236,7 @@ export const getUserConfig = async (
 			url.searchParams.set("profile", profile)
 		}
 
-		const response = await fetch(url.toString(), {
+		const response = await fetchWithTimeout(url.toString(), {
 			method: "GET",
 			headers,
 		})
@@ -291,11 +302,14 @@ export const saveUserConfig = async (
 			Authorization: `Bearer ${apiKey}`,
 		}
 
-		const response = await fetch(`${endpoint}/config/${serverQualifiedName}`, {
-			method: "PUT",
-			headers,
-			body: JSON.stringify(requestBody),
-		})
+		const response = await fetchWithTimeout(
+			`${endpoint}/config/${serverQualifiedName}`,
+			{
+				method: "PUT",
+				headers,
+				body: JSON.stringify(requestBody),
+			},
+		)
 		verbose(`Response status: ${response.status}`)
 
 		if (!response.ok) {
@@ -350,7 +364,7 @@ export const searchServers = async (
 	verbose(`Searching servers for term: ${searchTerm}`)
 
 	try {
-		const response = await fetch(
+		const response = await fetchWithTimeout(
 			`${endpoint}/servers?q=${encodeURIComponent(searchTerm)}&pageSize=10`,
 			{
 				headers: {
@@ -397,7 +411,7 @@ export const validateUserConfig = async (
 	verbose(`Validating user config for ${serverQualifiedName}`)
 
 	try {
-		const response = await fetch(
+		const response = await fetchWithTimeout(
 			`${endpoint}/config/${serverQualifiedName}/validate`,
 			{
 				method: "GET",
