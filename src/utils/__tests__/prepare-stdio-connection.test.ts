@@ -118,12 +118,11 @@ describe("prepareStdioConnection", () => {
 			command: "node",
 			args: [
 				"/home/.smithery/cache/servers/author/bundle-server/current/index.js",
+				"API_KEY=runtime-key", // Runtime config overrides saved
+				"BASE_URL=https://api.example.com", // From saved config
+				"DEBUG=true", // From runtime config
 			],
-			env: {
-				API_KEY: "runtime-key", // Runtime config overrides saved
-				BASE_URL: "https://api.example.com", // From saved config
-				DEBUG: "true", // From runtime config
-			},
+			env: {},
 			qualifiedName: "author/bundle-server",
 		})
 	})
@@ -159,7 +158,8 @@ describe("prepareStdioConnection", () => {
 			"test-api-key",
 		)
 
-		expect(result.env).toEqual({ DEBUG: "true" })
+		expect(result.args).toContain("DEBUG=true")
+		expect(result.env).toEqual({})
 	})
 
 	test("fetches connection from registry when no command or bundleUrl", async () => {
@@ -203,7 +203,7 @@ describe("prepareStdioConnection", () => {
 		})
 	})
 
-	test("converts config values to strings for env vars in bundle path", async () => {
+	test("converts config values to strings for CLI args in bundle path", async () => {
 		const server: ServerDetailResponse = {
 			qualifiedName: "author/bundle-server",
 			remote: false,
@@ -230,10 +230,9 @@ describe("prepareStdioConnection", () => {
 			"test-api-key",
 		)
 
-		expect(result.env).toEqual({
-			PORT: "8080",
-			ENABLED: "true",
-		})
+		expect(result.args).toContain("PORT=8080")
+		expect(result.args).toContain("ENABLED=true")
+		expect(result.env).toEqual({})
 	})
 
 	test("bundle unpacks to current directory for version management", async () => {

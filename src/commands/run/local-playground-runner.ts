@@ -62,9 +62,7 @@ export const createLocalPlaygroundRunner = async (
 			"[Local Playground] Received exit signal, initiating shutdown...",
 		)
 		await cleanup()
-		if (!isShuttingDown) {
-			process.exit(0)
-		}
+		process.exit(0)
 	}
 
 	const idleManager = createIdleTimeoutManager(handleExit)
