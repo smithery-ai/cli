@@ -6,14 +6,24 @@ import fetch from "cross-fetch"
 const DEFAULT_TIMEOUT_MS = 5000 // 5 seconds
 
 /**
- * Default number of retry attempts
+ * Backoff configuration for retries
  */
-const DEFAULT_RETRIES = 3
+export type BackoffConfig = {
+	initialInterval: number
+	maxInterval: number
+	exponent: number
+	maxElapsedTime: number
+}
 
 /**
- * Base delay between retries in milliseconds (for exponential backoff)
+ * Default backoff configuration
  */
-const BASE_RETRY_DELAY_MS = 1000
+const DEFAULT_BACKOFF: BackoffConfig = {
+	initialInterval: 1000,
+	maxInterval: 4000,
+	exponent: 2,
+	maxElapsedTime: 15000, // Total max time across all retries
+}
 
 /**
  * Fetch with timeout and retry support using exponential backoff
@@ -28,17 +38,20 @@ export const withTimeout = async (
 	options: RequestInit = {},
 	config: {
 		timeout?: number
-		retries?: number
-		baseRetryDelay?: number
+		backoff?: Partial<BackoffConfig>
 	} = {},
 ): Promise<Response> => {
 	const timeout = config.timeout ?? DEFAULT_TIMEOUT_MS
-	const maxRetries = config.retries ?? DEFAULT_RETRIES
-	const baseDelay = config.baseRetryDelay ?? BASE_RETRY_DELAY_MS
+	const backoff: BackoffConfig = {
+		...DEFAULT_BACKOFF,
+		...config.backoff,
+	}
 
+	const startTime = Date.now()
+	let attempt = 0
 	let lastError: Error | undefined
 
-	for (let attempt = 0; attempt <= maxRetries; attempt++) {
+	while (true) {
 		const controller = new AbortController()
 		const timeoutId = setTimeout(() => controller.abort(), timeout)
 
@@ -64,17 +77,26 @@ export const withTimeout = async (
 				lastError = new Error(String(error))
 			}
 
-			// Don't retry on the last attempt
-			if (attempt < maxRetries) {
-				// Exponential backoff: 1s, 2s, 4s, etc.
-				const delay = baseDelay * 2 ** attempt
-				await new Promise((resolve) => setTimeout(resolve, delay))
+			const elapsedTime = Date.now() - startTime
+
+			// Check if we've exceeded max elapsed time
+			if (elapsedTime >= backoff.maxElapsedTime) {
+				throw new Error(`Failed after ${elapsedTime}ms: ${lastError?.message}`)
 			}
+
+			// Calculate next retry delay using exponential backoff
+			const delay = Math.min(
+				backoff.initialInterval * backoff.exponent ** attempt,
+				backoff.maxInterval,
+			)
+
+			// Check if next attempt would exceed max elapsed time
+			if (elapsedTime + delay >= backoff.maxElapsedTime) {
+				throw new Error(`Failed after ${elapsedTime}ms: ${lastError?.message}`)
+			}
+
+			await new Promise((resolve) => setTimeout(resolve, delay))
+			attempt++
 		}
 	}
-
-	throw new Error(
-		`Failed after ${maxRetries + 1} attempts: ${lastError?.message}`,
-	)
 }
-

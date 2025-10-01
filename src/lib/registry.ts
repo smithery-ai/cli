@@ -1,4 +1,4 @@
-import { SmitheryRegistry, type SDKOptions } from "@smithery/registry"
+import { type SDKOptions, SmitheryRegistry } from "@smithery/registry"
 import type { ServerDetailResponse } from "@smithery/registry/models/components"
 import {
 	SDKValidationError,
@@ -82,6 +82,17 @@ export const resolveServer = async (
 
 	const options: SDKOptions = {
 		bearerAuth: apiKey ?? process.env.SMITHERY_BEARER_AUTH ?? "",
+		timeoutMs: 5000, // 5 second timeout
+		retryConfig: {
+			strategy: "backoff",
+			backoff: {
+				initialInterval: 1000,
+				maxInterval: 4000,
+				exponent: 2,
+				maxElapsedTime: 15000, // Total max time across all retries
+			},
+			retryConnectionErrors: true,
+		},
 	}
 	if (
 		process.env.NODE_ENV === "development" &&
