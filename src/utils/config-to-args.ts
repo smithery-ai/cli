@@ -51,4 +51,3 @@ export function convertConfigToDotArgs(config: ServerConfig): string[] {
 
 	return args
 }
-
