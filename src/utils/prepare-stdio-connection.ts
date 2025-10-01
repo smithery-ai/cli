@@ -6,6 +6,7 @@ import {
 } from "../lib/bundle-manager.js"
 import { fetchConnection, getUserConfig } from "../lib/registry.js"
 import type { ServerConfig } from "../types/registry.js"
+import { convertConfigToDotArgs } from "./config-to-args.js"
 
 export interface PreparedStdioConnection {
 	command: string
@@ -59,15 +60,13 @@ export async function prepareStdioConnection(
 			}
 		}
 
-		const env: Record<string, string> = {}
-		for (const [key, value] of Object.entries(mergedConfig)) {
-			env[key] = String(value)
-		}
+		// Convert config to dot-notation CLI args (e.g., model.name=gpt-4)
+		const configArgs = convertConfigToDotArgs(mergedConfig)
 
 		return {
 			command,
-			args,
-			env,
+			args: [...args, ...configArgs],
+			env: bundleConnection.env || {},
 			qualifiedName: serverDetails.qualifiedName,
 		}
 	}
