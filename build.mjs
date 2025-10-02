@@ -1,6 +1,6 @@
+import { existsSync, mkdirSync, readFileSync } from "node:fs"
 import { config } from "dotenv"
 import * as esbuild from "esbuild"
-import { existsSync, mkdirSync, readFileSync } from "node:fs"
 
 // Load environment variables into a define object
 config({ quiet: true })
