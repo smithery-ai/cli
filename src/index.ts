@@ -25,12 +25,18 @@ import {
 import { ensureApiKey, promptForApiKey } from "./utils/runtime"
 import { setApiKey } from "./utils/smithery-config"
 
+// TypeScript declaration for global constant injected at build time
+declare const __SMITHERY_VERSION__: string
+
 const program = new Command()
 
 // Configure the CLI
 program
 	.name("smithery")
-	.description("Smithery CLI - Manage and run MCP servers")
+	.version(__SMITHERY_VERSION__)
+	.description(
+		`${chalk.bold.italic.hex("#ea580c")("SMITHERY CLI")} ${chalk.bold.italic.hex("#ea580c")(`v${__SMITHERY_VERSION__}`)} - Manage and run MCP servers`,
+	)
 	.option("--verbose", "Show detailed logs")
 	.option("--debug", "Show debug logs")
 	.hook("preAction", (thisCommand, _actionCommand) => {

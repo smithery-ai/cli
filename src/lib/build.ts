@@ -1,7 +1,7 @@
-import chalk from "chalk"
-import * as esbuild from "esbuild"
 import { existsSync, mkdirSync, readFileSync, statSync } from "node:fs"
 import { dirname, join, resolve } from "node:path"
+import chalk from "chalk"
+import * as esbuild from "esbuild"
 import { formatFileSize } from "../utils/build"
 
 // TypeScript declarations for global constants injected at build time
