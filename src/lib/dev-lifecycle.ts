@@ -65,7 +65,7 @@ export async function setupTunnelAndPlayground(
 		`${chalk.bold("Cursor")}: ${chalk.cyan(clickableCursorLink)}`,
 		`${chalk.bold("VS Code")}: ${chalk.cyan(clickableVSCodeLink)}`,
 		"",
-		`${chalk.dim("Tip: Attach config using URL params")}`,
+		`${chalk.dim("Note: If required config needed, attach using URL params")}`,
 		`${chalk.dim("e.g.")} ${chalk.dim.cyan("https://server.com/mcp")}${chalk.cyan("?weatherApiKey=abc123")}`,
 	].join("\n")
 
