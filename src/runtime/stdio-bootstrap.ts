@@ -2,6 +2,7 @@
 // @ts-expect-error
 import * as _entry from "virtual:user-module"
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js"
+import type { Server } from "@modelcontextprotocol/sdk/server/index.js"
 import type { Logger } from "@smithery/sdk/server/logger.js"
 import type { CreateServerFn as CreateStatefulServerFn } from "@smithery/sdk/server/stateful.js"
 import chalk from "chalk"
@@ -132,7 +133,7 @@ async function startMcpServer() {
 			process.exit(1)
 		}
 
-		let mcpServer
+		let mcpServer: Server
 		if (entry.default && typeof entry.default === "function") {
 			logger.info("Creating server")
 			mcpServer = entry.default({ sessionId: uuidv7(), config, logger })
