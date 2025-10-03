@@ -6,12 +6,27 @@ import fetch from "cross-fetch"
 import { verbose } from "./logger"
 
 const BUNDLE_FILENAME = "server.mcpb"
+const CACHE_META_FILENAME = ".cache-meta.json"
+
+interface CacheMetadata {
+	etag: string | null
+	lastModified: string | null
+	cachedAt: string
+	bundleUrl: string
+}
 
 /**
  * Gets the cache directory for a specific server
  */
 export function getServerCacheDir(qualifiedName: string): string {
 	return path.join(os.homedir(), ".smithery", "cache", "servers", qualifiedName)
+}
+
+/**
+ * Gets the path to the cache metadata file
+ */
+function getCacheMetaPath(qualifiedName: string): string {
+	return path.join(getBundleDir(qualifiedName), CACHE_META_FILENAME)
 }
 
 /**
@@ -31,12 +46,79 @@ export function isBundleCached(qualifiedName: string): boolean {
 }
 
 /**
- * Downloads a bundle file from a URL
+ * Checks if a bundle needs to be updated by comparing ETags
+ * Uses a lightweight HEAD request to avoid downloading the entire bundle
+ */
+async function needsBundleUpdate(
+	qualifiedName: string,
+	bundleUrl: string,
+): Promise<boolean> {
+	const cacheMetaPath = getCacheMetaPath(qualifiedName)
+
+	// If no metadata exists, bundle needs to be downloaded
+	if (!fs.existsSync(cacheMetaPath)) {
+		verbose(`No cache metadata found for ${qualifiedName}`)
+		return true
+	}
+
+	try {
+		// Make a HEAD request to get ETag without downloading the file
+		verbose(`Checking for updates: ${bundleUrl}`)
+		const response = await fetch(bundleUrl, { method: "HEAD" })
+
+		if (!response.ok) {
+			verbose(`HEAD request failed: ${response.status} ${response.statusText}`)
+			return true // If HEAD fails, try to download
+		}
+
+		const remoteETag = response.headers.get("etag")
+		const remoteLastModified = response.headers.get("last-modified")
+
+		// Read cached metadata
+		const cached: CacheMetadata = JSON.parse(
+			fs.readFileSync(cacheMetaPath, "utf-8"),
+		)
+
+		// Compare ETags first (most reliable)
+		if (remoteETag && cached.etag) {
+			if (cached.etag === remoteETag) {
+				verbose(`Bundle ${qualifiedName} is up-to-date (ETag: ${remoteETag})`)
+				return false // No update needed
+			}
+			verbose(
+				`Bundle ${qualifiedName} has updates (ETag changed: ${cached.etag} → ${remoteETag})`,
+			)
+			return true
+		}
+
+		// Fallback to Last-Modified if ETag not available
+		if (remoteLastModified && cached.lastModified) {
+			if (cached.lastModified === remoteLastModified) {
+				verbose(
+					`Bundle ${qualifiedName} is up-to-date (Last-Modified: ${remoteLastModified})`,
+				)
+				return false
+			}
+			verbose(`Bundle ${qualifiedName} has updates (Last-Modified changed)`)
+			return true
+		}
+
+		// If neither ETag nor Last-Modified available, download to be safe
+		verbose(`No cache headers found, will download bundle`)
+		return true
+	} catch (error) {
+		verbose(`Error checking for updates: ${error}`)
+		return true // On error, try to download
+	}
+}
+
+/**
+ * Downloads a bundle file from a URL and returns the response for metadata extraction
  */
 async function downloadBundle(
 	bundleUrl: string,
 	destinationPath: string,
-): Promise<void> {
+): Promise<{ etag: string | null; lastModified: string | null }> {
 	verbose(`Downloading bundle from: ${bundleUrl}`)
 
 	const response = await fetch(bundleUrl)
@@ -50,6 +132,12 @@ async function downloadBundle(
 	fs.writeFileSync(destinationPath, buffer)
 
 	verbose(`Bundle downloaded to: ${destinationPath}`)
+
+	// Return cache headers for metadata
+	return {
+		etag: response.headers.get("etag"),
+		lastModified: response.headers.get("last-modified"),
+	}
 }
 
 /**
@@ -107,10 +195,21 @@ export async function downloadAndExtractBundle(
 
 	// Download bundle
 	const mcpbPath = path.join(bundleDir, BUNDLE_FILENAME)
-	await downloadBundle(bundleUrl, mcpbPath)
+	const { etag, lastModified } = await downloadBundle(bundleUrl, mcpbPath)
 
 	// Extract bundle using @anthropic/mcpb CLI
 	await extractBundle(mcpbPath, bundleDir)
+
+	// Save cache metadata for future ETag comparisons
+	const cacheMetadata: CacheMetadata = {
+		etag,
+		lastModified,
+		cachedAt: new Date().toISOString(),
+		bundleUrl,
+	}
+	const cacheMetaPath = getCacheMetaPath(qualifiedName)
+	fs.writeFileSync(cacheMetaPath, JSON.stringify(cacheMetadata, null, 2))
+	verbose(`Cache metadata saved for ${qualifiedName}`)
 
 	// Clean up mcpb file
 	fs.unlinkSync(mcpbPath)
@@ -120,20 +219,33 @@ export async function downloadAndExtractBundle(
 
 /**
  * Ensures a bundle is installed locally, downloading if necessary
+ * Uses ETag-based caching to efficiently check for updates
  * Returns the path to the bundle directory
  */
 export async function ensureBundleInstalled(
 	qualifiedName: string,
 	bundleUrl: string,
 ): Promise<string> {
-	// Check if already cached
+	const bundleDir = getBundleDir(qualifiedName)
+
+	// Check if bundle is cached locally
 	if (isBundleCached(qualifiedName)) {
-		verbose(`Bundle ${qualifiedName} already cached`)
-		return getBundleDir(qualifiedName)
+		verbose(`Bundle ${qualifiedName} found in cache`)
+
+		// Check if bundle needs update using lightweight HEAD request
+		const needsUpdate = await needsBundleUpdate(qualifiedName, bundleUrl)
+
+		if (!needsUpdate) {
+			verbose(`Using cached bundle for ${qualifiedName}`)
+			return bundleDir
+		}
+
+		verbose(`Updating bundle ${qualifiedName}...`)
+	} else {
+		verbose(`Bundle ${qualifiedName} not found, downloading...`)
 	}
 
-	// Download and extract
-	verbose(`Bundle ${qualifiedName} not found, downloading...`)
+	// Download and extract (either first time or update needed)
 	return await downloadAndExtractBundle(qualifiedName, bundleUrl)
 }
 

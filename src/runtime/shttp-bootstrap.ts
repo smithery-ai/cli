@@ -90,15 +90,23 @@ async function startMcpServer() {
 			if (oauth) {
 			}
 
+			// Read log level from environment (default: info)
+			const logLevel = (process.env.LOG_LEVEL || "info") as
+				| "debug"
+				| "info"
+				| "warn"
+				| "error"
+
 			if (entry.stateless) {
 				server = createStatelessServer(
 					entry.default as CreateStatelessServerFn,
-					{ app, schema: entry.configSchema },
+					{ app, schema: entry.configSchema, logLevel },
 				)
 			} else {
 				server = createStatefulServer(entry.default as CreateStatefulServerFn, {
 					app,
 					schema: entry.configSchema,
+					logLevel,
 				})
 			}
 		} else {
