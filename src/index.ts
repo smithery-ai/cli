@@ -209,10 +209,6 @@ program
 		"-c, --config <path>",
 		"Path to config file (default: auto-detect smithery.config.js)",
 	)
-	.option(
-		"--bundle-all",
-		"Bundle all dependencies (no externals) for portable bundles",
-	)
 	.action(async (entryFile, options) => {
 		// Validate transport option
 		const transport = options.transport || "shttp"

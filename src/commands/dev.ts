@@ -75,6 +75,8 @@ export async function dev(options: DevOptions = {}): Promise<void> {
 				env: {
 					...process.env,
 					PORT: finalPort,
+					FORCE_COLOR: "1", // Enable chalk colors even when piped
+					LOG_LEVEL: process.env.LOG_LEVEL || "debug", // Default to debug in dev mode
 				},
 			})
 

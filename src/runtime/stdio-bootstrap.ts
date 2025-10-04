@@ -1,10 +1,13 @@
 // These will be replaced by esbuild at build time.
 // @ts-expect-error
 import * as _entry from "virtual:user-module"
+import type { Server } from "@modelcontextprotocol/sdk/server/index.js"
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js"
+import type { Logger } from "@smithery/sdk/server/logger.js"
 import type { CreateServerFn as CreateStatefulServerFn } from "@smithery/sdk/server/stateful.js"
 import chalk from "chalk"
 import _ from "lodash"
+import { uuidv7 } from "uuidv7"
 import type { z } from "zod"
 import { zodToJsonSchema } from "zod-to-json-schema"
 
@@ -16,6 +19,36 @@ interface SmitheryModule {
 }
 
 const entry: SmitheryModule = _entry
+
+// Simple stderr logger for stdio mode
+const formatLog = (
+	level: string,
+	color: (str: string) => string,
+	msgOrObj: unknown,
+	msg?: string,
+) => {
+	const time = new Date().toISOString().split("T")[1].split(".")[0]
+	const timestamp = chalk.dim(time)
+	const levelStr = color(level)
+
+	if (typeof msgOrObj === "string") {
+		return `${timestamp} ${levelStr} ${msgOrObj}`
+	}
+	const message = msg || ""
+	const data = JSON.stringify(msgOrObj, null, 2)
+	return `${timestamp} ${levelStr} ${message}\n${chalk.dim(data)}`
+}
+
+const logger: Logger = {
+	info: (msgOrObj: unknown, msg?: string) =>
+		console.error(formatLog("INFO", chalk.blue, msgOrObj, msg)),
+	error: (msgOrObj: unknown, msg?: string) =>
+		console.error(formatLog("ERROR", chalk.red, msgOrObj, msg)),
+	warn: (msgOrObj: unknown, msg?: string) =>
+		console.error(formatLog("WARN", chalk.yellow, msgOrObj, msg)),
+	debug: (msgOrObj: unknown, msg?: string) =>
+		console.error(formatLog("DEBUG", chalk.cyan, msgOrObj, msg)),
+} as Logger
 
 /**
  * Parses CLI arguments in dot notation format (e.g., field.subfield=value)
@@ -71,14 +104,12 @@ function parseCliConfig<T = Record<string, unknown>>(
 			})
 
 			// Print schema information
-			console.error(
-				`\n${chalk.red("[smithery]")} Configuration validation failed:`,
-			)
-			console.error(errors.join("\n"))
-			console.error("\nExpected schema:")
-			console.error(JSON.stringify(jsonSchema, null, 2))
-			console.error("\nExample usage:")
-			console.error(
+			logger.error("Configuration validation failed:")
+			logger.error(errors.join("\n"))
+			logger.error("Expected schema:")
+			logger.error(JSON.stringify(jsonSchema, null, 2))
+			logger.error("Example usage:")
+			logger.error(
 				"  node server.js server.host=localhost server.port=8080 debug=true",
 			)
 
@@ -92,9 +123,7 @@ function parseCliConfig<T = Record<string, unknown>>(
 
 async function startMcpServer() {
 	try {
-		console.error(
-			`${chalk.blue("[smithery]")} Starting MCP server with stdio transport`,
-		)
+		logger.info("Starting MCP server with stdio transport")
 
 		// Parse CLI arguments (skip first two: node executable and script path)
 		const args = process.argv.slice(2)
@@ -104,16 +133,14 @@ async function startMcpServer() {
 			process.exit(1)
 		}
 
-		let mcpServer: any
+		let mcpServer: Server
 		if (entry.default && typeof entry.default === "function") {
-			const sessionId = `stdio-${Date.now()}-${Math.random().toString(36).substring(2)}`
-			console.error(`${chalk.blue("[smithery]")} Creating server.`)
-
-			mcpServer = entry.default({ sessionId, config })
+			logger.info("Creating server")
+			mcpServer = entry.default({ sessionId: uuidv7(), config, logger })
 		} else {
 			throw new Error(
 				"No valid server export found. Please export:\n" +
-					"- export default function({ sessionId, config }) { ... }",
+					"- export default function({ sessionId, config, logger }) { ... }",
 			)
 		}
 
@@ -121,24 +148,19 @@ async function startMcpServer() {
 		const transport = new StdioServerTransport()
 		await mcpServer.connect(transport)
 
-		console.error(
-			`${chalk.green("[smithery]")} MCP server connected to stdio transport`,
-		)
+		logger.info("MCP server connected to stdio transport")
 
 		// If config was provided, show what was parsed
 		if (Object.keys(config).length > 0) {
-			console.error(`${chalk.blue("[smithery]")} Configuration loaded:`, config)
+			logger.info({ config }, "Configuration loaded")
 		}
 	} catch (error) {
-		console.error(
-			`${chalk.red("[smithery]")} Failed to start MCP server:`,
-			error,
-		)
+		logger.error({ error }, "Failed to start MCP server")
 		process.exit(1)
 	}
 }
 
 startMcpServer().catch((error) => {
-	console.error(`${chalk.red("[smithery]")} Unhandled error:`, error)
+	logger.error({ error }, "Unhandled error")
 	process.exit(1)
 })
