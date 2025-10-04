@@ -6,7 +6,7 @@ import fetch from "cross-fetch"
 import { verbose } from "./logger"
 
 const BUNDLE_FILENAME = "server.mcpb"
-const CACHE_META_FILENAME = ".cache-meta.json"
+const CACHE_META_FILENAME = ".metadata.json"
 
 interface CacheMetadata {
 	etag: string | null
