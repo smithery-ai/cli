@@ -1,6 +1,6 @@
 {
 	"name": "@smithery/cli",
-	"version": "1.4.6",
+	"version": "1.4.7",
 	"type": "module",
 	"private": false,
 	"homepage": "https://smithery.ai/",
