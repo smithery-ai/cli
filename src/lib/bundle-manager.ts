@@ -288,7 +288,7 @@ export function getBundleCommand(bundleDir: string): {
 
 export function getBundleEntrypoint(
 	bundleDir: string,
-	_runtime: string = "node",
+	_runtime = "node",
 ): string {
 	// Read entry point from manifest.json
 	const manifestPath = path.join(bundleDir, "manifest.json")

@@ -294,7 +294,7 @@ program
 			command,
 			await ensureApiKey(options.key),
 			{
-				port: options.port ? parseInt(options.port, 10) : 6969,
+				port: options.port ? Number.parseInt(options.port, 10) : 6969,
 				open: options.open !== false,
 				initialMessage: options.prompt,
 			},

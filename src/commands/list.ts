@@ -1,8 +1,8 @@
 import chalk from "chalk"
 import {
-	getClientConfiguration,
 	VALID_CLIENTS,
 	type ValidClient,
+	getClientConfiguration,
 } from "../config/clients"
 import { readConfig } from "../utils/mcp-config"
 
