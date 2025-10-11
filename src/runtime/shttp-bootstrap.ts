@@ -3,9 +3,9 @@
 import * as _entry from "virtual:user-module"
 import {
 	type IdentityHandler,
+	mountOAuth,
 	type OAuthProvider,
 	type TokenVerifier,
-	mountOAuth,
 } from "@smithery/sdk"
 import {
 	type CreateServerFn as CreateStatefulServerFn,

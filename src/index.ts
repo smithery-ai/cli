@@ -13,6 +13,7 @@ import { uninstallServer } from "./commands/uninstall"
 import { VALID_CLIENTS, type ValidClient } from "./config/clients"
 import { DEFAULT_PORT } from "./constants"
 import { setDebug, setVerbose } from "./lib/logger"
+import { validateApiKey } from "./lib/registry"
 import type { ServerConfig } from "./types/registry"
 import {
 	interactiveServerSearch,
@@ -346,6 +347,10 @@ program
 
 		try {
 			const apiKey = await promptForApiKey()
+
+			// Validate API key before saving
+			await validateApiKey(apiKey)
+
 			const result = await setApiKey(apiKey)
 
 			if (result.success) {

@@ -5,9 +5,9 @@ import type {
 import chalk from "chalk"
 import inquirer from "inquirer"
 import {
-	Transport,
 	getClientConfiguration,
 	getPreferredTransport,
+	Transport,
 } from "../config/clients"
 import type {
 	ConfiguredServer,

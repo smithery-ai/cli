@@ -36,6 +36,35 @@ const getEndpoint = (): string => {
 }
 
 /**
+ * Creates SDK options with common configuration
+ * @param apiKey Optional API key for authentication
+ * @returns SDK options configured for the registry
+ */
+const createSDKOptions = (apiKey?: string): SDKOptions => {
+	const options: SDKOptions = {
+		bearerAuth: apiKey ?? process.env.SMITHERY_BEARER_AUTH ?? "",
+		timeoutMs: 5000,
+		retryConfig: {
+			strategy: "backoff",
+			backoff: {
+				initialInterval: 1000,
+				maxInterval: 4000,
+				exponent: 2,
+				maxElapsedTime: 15000,
+			},
+			retryConnectionErrors: true,
+		},
+	}
+	if (
+		process.env.NODE_ENV === "development" &&
+		process.env.LOCAL_REGISTRY_ENDPOINT
+	) {
+		options.serverURL = process.env.LOCAL_REGISTRY_ENDPOINT
+	}
+	return options
+}
+
+/**
  * Get server details from registry
  * @param qualifiedName The unique name of the server to resolve
  * @param apiKey Optional API key for authentication
@@ -79,27 +108,7 @@ export const resolveServer = async (
 		})()
 	}
 
-	const options: SDKOptions = {
-		bearerAuth: apiKey ?? process.env.SMITHERY_BEARER_AUTH ?? "",
-		timeoutMs: 5000, // 5 second timeout
-		retryConfig: {
-			strategy: "backoff",
-			backoff: {
-				initialInterval: 1000,
-				maxInterval: 4000,
-				exponent: 2,
-				maxElapsedTime: 15000, // Total max time across all retries
-			},
-			retryConnectionErrors: true,
-		},
-	}
-	if (
-		process.env.NODE_ENV === "development" &&
-		process.env.LOCAL_REGISTRY_ENDPOINT
-	) {
-		options.serverURL = process.env.LOCAL_REGISTRY_ENDPOINT
-	}
-
+	const options = createSDKOptions(apiKey)
 	const smitheryRegistry = new SmitheryRegistry(options)
 	verbose(
 		`Resolving package ${serverQualifiedName} using Smithery SDK at ${options.serverURL || "<default>"}`,
@@ -439,6 +448,32 @@ export const validateUserConfig = async (
 		if (error instanceof Error) {
 			throw new Error(`Failed to validate config: ${error.message}`)
 		}
+		throw error
+	}
+}
+
+/**
+ * Validates an API key by making a test request to the registry
+ * @param apiKey API key to validate
+ * @returns Promise that resolves to true if valid, throws error if invalid
+ * @throws UnauthorizedError if API key is invalid
+ */
+export const validateApiKey = async (apiKey: string): Promise<boolean> => {
+	const options = createSDKOptions(apiKey)
+	const smitheryRegistry = new SmitheryRegistry(options)
+	verbose("Validating API key with Smithery SDK")
+
+	try {
+		await smitheryRegistry.servers.list({ pageSize: 1 })
+		verbose("API key validation successful")
+		return true
+	} catch (error: unknown) {
+		verbose(`API key validation failed: ${JSON.stringify(error)}`)
+		if (error instanceof UnauthorizedError) {
+			verbose("API key is invalid (unauthorized)")
+			throw error
+		}
+		// Re-throw other errors
 		throw error
 	}
 }

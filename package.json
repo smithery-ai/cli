@@ -64,7 +64,11 @@
 		"typescript": "^5.0.0",
 		"vitest": "^3.2.4"
 	},
-	"files": ["dist", "README.md", "package.json"],
+	"files": [
+		"dist",
+		"README.md",
+		"package.json"
+	],
 	"exports": {
 		".": {
 			"import": "./dist/index.js"

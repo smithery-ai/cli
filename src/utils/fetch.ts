@@ -27,6 +27,7 @@ const DEFAULT_BACKOFF: BackoffConfig = {
 
 /**
  * Fetch with timeout and retry support using exponential backoff
+ * Only retries on 5xx errors and network errors. Non-5xx HTTP errors are thrown immediately.
  * @param url URL to fetch
  * @param options Fetch options
  * @param config Configuration for timeout and retries
@@ -61,11 +62,26 @@ export const fetchWithTimeout = async (
 				signal: controller.signal,
 			})
 			clearTimeout(timeoutId)
+
+			// If response has non-5xx error status, throw immediately without retry
+			if (!response.ok && (response.status < 500 || response.status >= 600)) {
+				const errorText = await response.text().catch(() => "")
+				throw new Error(
+					`HTTP ${response.status}: ${errorText || response.statusText}`,
+				)
+			}
+
 			return response
 		} catch (error) {
 			clearTimeout(timeoutId)
 
 			if (error instanceof Error) {
+				// Check if this is an HTTP error (non-5xx)
+				if (error.message.startsWith("HTTP ")) {
+					// Don't retry, throw immediately
+					throw error
+				}
+
 				if (error.name === "AbortError") {
 					lastError = new Error(
 						`Request timed out after ${timeout}ms when calling ${url}`,
