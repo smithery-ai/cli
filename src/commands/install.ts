@@ -108,55 +108,8 @@ export async function installServer(
 
 		let collectedConfigValues: ServerConfig = configValues || {}
 
-		// Check existing config first
-		if (finalApiKey && Object.keys(configValues).length === 0) {
-			try {
-				verbose("Checking existing configuration...")
-				const configSpinner = ora("Validating configuration...").start()
-				const validation = await validateUserConfig(qualifiedName, finalApiKey)
-				configSpinner.stop()
-
-				if (validation.isComplete) {
-					// Check if there are any required fields at all
-					const hasRequiredFields =
-						Object.keys(validation.fieldSchemas).length > 0
-
-					if (hasRequiredFields) {
-						console.log(
-							`${chalk.green("●")} ${chalk.dim("Using existing configuration from default profile")}`,
-						)
-						console.log(
-							chalk.dim(
-								`${chalk.cyan("→ Update configuration")} at: https://smithery.ai/account/profiles?server=${qualifiedName}`,
-							),
-						)
-					} else {
-						console.log(`${chalk.cyan("○")} No configuration required`)
-					}
-					collectedConfigValues = {} // Empty - will use saved config from smithery
-				} else {
-					console.log(
-						chalk.yellow("!"),
-						`Missing config: ${validation.missingFields.join(", ")}`,
-					)
-					// Prompt for all fields @TODO: is there a better flow?
-					collectedConfigValues = await collectConfigValues(
-						connection,
-						configValues || {},
-					)
-				}
-			} catch (error) {
-				verbose(
-					`Config validation failed: ${error instanceof Error ? error.message : String(error)}`,
-				)
-				// Fall back to normal prompting
-				collectedConfigValues = await collectConfigValues(
-					connection,
-					configValues || {},
-				)
-			}
-		} else if (Object.keys(configValues).length === 0) {
-			// No API key or no existing config, prompt normally
+		// Prompt for config values if not provided
+		if (Object.keys(configValues).length === 0) {
 			collectedConfigValues = await collectConfigValues(
 				connection,
 				configValues || {},
