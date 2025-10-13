@@ -273,6 +273,13 @@ export const getUserConfig = async (
 
 		return data.config
 	} catch (error) {
+		// Handle 404 errors gracefully - no saved config is not an error
+		// TODO: use better pattern here
+		if (error instanceof Error && error.message.startsWith("HTTP 404")) {
+			verbose("No saved config found (404)")
+			return null
+		}
+		
 		verbose(
 			`Config get error: ${error instanceof Error ? error.message : String(error)}`,
 		)
