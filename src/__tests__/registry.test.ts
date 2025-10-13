@@ -52,8 +52,13 @@ describe("Registry API", () => {
 
 			await validateUserConfig("@ref-tools/ref-tools-mcp", "test-api-key")
 
+			// Verify exact endpoint path
+			const callUrl = mockFetchWithTimeout.mock.calls[0][0] as string
+			expect(callUrl).toContain("/config/%40ref-tools%2Fref-tools-mcp/validate")
+			expect(callUrl).not.toContain("/config/validate/%40ref-tools") // Wrong pattern
+			
 			expect(mockFetchWithTimeout).toHaveBeenCalledWith(
-				expect.stringContaining("/config/validate/%40ref-tools%2Fref-tools-mcp"),
+				expect.any(String),
 				expect.objectContaining({
 					method: "GET",
 					headers: {

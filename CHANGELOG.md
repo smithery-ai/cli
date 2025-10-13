@@ -14,8 +14,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - New tests covering installation flows and registry API calls
 
 ### Changed
-- **BREAKING**: Config validation endpoint changed from `/config/{server}/validate` to `/config/validate/{server}`
 - Improved configuration prompting: required fields first, then optional fields
+- Enhanced installation UX with better messaging and visual indicators
 
 ### Fixed
 - Fixed URL encoding bug for server names
