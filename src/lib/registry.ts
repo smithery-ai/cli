@@ -426,7 +426,7 @@ export const validateUserConfig = async (
 
 	try {
 		const url = new URL(
-			`${endpoint}/config/${encodeURIComponent(serverQualifiedName)}/validate`,
+			`${endpoint}/config/status/${encodeURIComponent(serverQualifiedName)}`,
 		)
 		if (profile) {
 			url.searchParams.set("profile", profile)

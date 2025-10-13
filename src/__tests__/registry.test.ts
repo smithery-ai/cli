@@ -54,8 +54,10 @@ describe("Registry API", () => {
 
 			// Verify exact endpoint path
 			const callUrl = mockFetchWithTimeout.mock.calls[0][0] as string
-			expect(callUrl).toContain("/config/%40ref-tools%2Fref-tools-mcp/validate")
-			expect(callUrl).not.toContain("/config/validate/%40ref-tools") // Wrong pattern
+			expect(callUrl).toContain("/config/status/%40ref-tools%2Fref-tools-mcp")
+			expect(callUrl).not.toContain(
+				"/config/%40ref-tools%2Fref-tools-mcp/validate",
+			) // Old pattern
 
 			expect(mockFetchWithTimeout).toHaveBeenCalledWith(
 				expect.any(String),
