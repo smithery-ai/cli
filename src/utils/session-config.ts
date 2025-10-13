@@ -166,6 +166,26 @@ export async function collectConfigValues(
 
 	// Collect missing values
 	const properties = connection.configSchema.properties
+	const required = new Set<string>(connection.configSchema.required || [])
+
+	// Check if there are any optional fields that need prompting
+	const hasOptionalFields = Object.keys(properties).some(
+		(key) => !required.has(key) && baseConfig[key] === undefined,
+	)
+
+	// If there are optional fields, ask user if they want to configure them
+	let configureOptional = true
+	if (hasOptionalFields) {
+		const { configure } = await inquirer.prompt([
+			{
+				type: "confirm",
+				name: "configure",
+				message: "Would you like to add optional configuration?",
+				default: false,
+			},
+		])
+		configureOptional = configure
+	}
 
 	const collectedConfig = await Object.entries(properties).reduce(
 		async (configPromise, [key, prop]) => {
@@ -185,6 +205,12 @@ export async function collectConfigValues(
 				return { ...config, [key]: baseConfig[key] }
 			}
 
+			// Skip optional fields if user doesn't want to configure them
+			const isRequired = required.has(key)
+			if (!isRequired && !configureOptional) {
+				return config
+			}
+
 			// Prompt for missing value
 			const value = await promptForConfigValue(
 				key,
@@ -193,7 +219,7 @@ export async function collectConfigValues(
 					default: defaultValue,
 					type,
 				},
-				new Set(connection.configSchema.required || []),
+				required,
 			)
 			return { ...config, [key]: value !== undefined ? value : defaultValue }
 		},
@@ -229,7 +255,7 @@ async function promptForConfigValue(
 ): Promise<unknown> {
 	const requiredText = required.has(key)
 		? chalk.red(" (required)")
-		: " (optional, press enter to skip)"
+		: " (press enter to skip)"
 
 	const promptType = key.toLowerCase().includes("key")
 		? "password"
