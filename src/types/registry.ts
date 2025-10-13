@@ -76,6 +76,14 @@ export interface ServerConfig {
 	[key: string]: unknown
 }
 
+// Validation response from the config validation endpoint
+export interface ValidationResponse {
+	isComplete: boolean
+	hasExistingConfig: boolean
+	missingFields: string[]
+	fieldSchemas: Record<string, unknown>
+}
+
 // Connection type schema (for registry API)
 export const ConnectionTypeSchema = z.union([
 	z.object({

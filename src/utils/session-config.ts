@@ -61,12 +61,13 @@ export async function validateAndFormatConfig(
 				}
 			}
 
-			// Skip optional fields with no value and no default
-			if (finalValue === undefined) {
+			// Skip optional fields with no value (even if they have defaults)
+			// Defaults should be applied at runtime, not stored in the registry
+			if (processedValue === undefined) {
 				continue
 			}
 
-			// Convert and include the value
+			// Convert and include the value (only user-provided values)
 			formattedValues[key] = convertValueToType(finalValue, schemaProp.type)
 		} catch (error) {
 			const errorMessage =
@@ -168,13 +169,48 @@ export async function collectConfigValues(
 	const properties = connection.configSchema.properties
 	const required = new Set<string>(connection.configSchema.required || [])
 
-	// Check if there are any optional fields that need prompting
+	const collectedConfig: ServerConfig = {}
+
+	// STEP 1: Prompt for all required fields first
+	for (const [key, prop] of Object.entries(properties)) {
+		const {
+			description,
+			default: defaultValue,
+			type,
+		} = prop as {
+			description?: string
+			default?: unknown
+			type?: string
+		}
+
+		// Use existing value if available
+		if (baseConfig[key] !== undefined) {
+			collectedConfig[key] = baseConfig[key]
+			continue
+		}
+
+		// Only prompt for required fields in this step
+		if (required.has(key)) {
+			const value = await promptForConfigValue(
+				key,
+				{
+					description,
+					default: defaultValue,
+					type,
+				},
+				required,
+			)
+			collectedConfig[key] = value !== undefined ? value : defaultValue
+		}
+	}
+
+	// STEP 2: Check if there are any optional fields that need prompting
 	const hasOptionalFields = Object.keys(properties).some(
 		(key) => !required.has(key) && baseConfig[key] === undefined,
 	)
 
-	// If there are optional fields, ask user if they want to configure them
-	let configureOptional = true
+	// STEP 3: Ask if user wants to configure optional fields (after required)
+	let configureOptional = false
 	if (hasOptionalFields) {
 		const { configure } = await inquirer.prompt([
 			{
@@ -187,9 +223,9 @@ export async function collectConfigValues(
 		configureOptional = configure
 	}
 
-	const collectedConfig = await Object.entries(properties).reduce(
-		async (configPromise, [key, prop]) => {
-			const config = await configPromise
+	// STEP 4: Prompt for optional fields if requested
+	if (configureOptional) {
+		for (const [key, prop] of Object.entries(properties)) {
 			const {
 				description,
 				default: defaultValue,
@@ -200,18 +236,11 @@ export async function collectConfigValues(
 				type?: string
 			}
 
-			// Skip if value already exists
-			if (baseConfig[key] !== undefined) {
-				return { ...config, [key]: baseConfig[key] }
+			// Skip if already collected or is required
+			if (collectedConfig[key] !== undefined || required.has(key)) {
+				continue
 			}
 
-			// Skip optional fields if user doesn't want to configure them
-			const isRequired = required.has(key)
-			if (!isRequired && !configureOptional) {
-				return config
-			}
-
-			// Prompt for missing value
 			const value = await promptForConfigValue(
 				key,
 				{
@@ -221,10 +250,11 @@ export async function collectConfigValues(
 				},
 				required,
 			)
-			return { ...config, [key]: value !== undefined ? value : defaultValue }
-		},
-		Promise.resolve({} as ServerConfig),
-	)
+			if (value !== undefined || defaultValue !== undefined) {
+				collectedConfig[key] = value !== undefined ? value : defaultValue
+			}
+		}
+	}
 
 	// Final validation and formatting
 	try {

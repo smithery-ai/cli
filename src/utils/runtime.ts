@@ -232,9 +232,7 @@ export function checkAndNotifyRemoteServer(server: {
 	if (remote) {
 		verbose("Remote server detected, showing security notice")
 		console.log(
-			chalk.dim(
-				`Installing remote server. Please ensure you trust the server author, especially when sharing sensitive data.`,
-			),
+			`${chalk.yellow("*")} ${chalk.dim("Installing remote server. Please ensure you trust the server author, especially when sharing sensitive data.")}`,
 		)
 	}
 

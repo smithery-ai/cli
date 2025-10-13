@@ -12,6 +12,7 @@ import {
 	type StdioConnection,
 	StdioConnectionSchema,
 	type StreamableHTTPDeploymentConnection,
+	type ValidationResponse,
 } from "../types/registry"
 import { getSessionId } from "../utils/analytics"
 import { fetchWithTimeout } from "../utils/fetch"
@@ -287,12 +288,14 @@ export const getUserConfig = async (
  * @param serverQualifiedName The name of the server to save config for
  * @param config User configuration to save
  * @param apiKey API key for authentication
+ * @param profile Optional profile qualified name
  * @returns Promise that resolves when config is saved successfully
  */
 export const saveUserConfig = async (
 	serverQualifiedName: string,
 	config: ServerConfig,
 	apiKey: string,
+	profile?: string,
 ): Promise<void> => {
 	const endpoint = getEndpoint()
 	verbose(
@@ -311,14 +314,18 @@ export const saveUserConfig = async (
 			Authorization: `Bearer ${apiKey}`,
 		}
 
-		const response = await fetchWithTimeout(
-			`${endpoint}/config/${serverQualifiedName}`,
-			{
-				method: "PUT",
-				headers,
-				body: JSON.stringify(requestBody),
-			},
+		const url = new URL(
+			`${endpoint}/config/${encodeURIComponent(serverQualifiedName)}`,
 		)
+		if (profile) {
+			url.searchParams.set("profile", profile)
+		}
+
+		const response = await fetchWithTimeout(url.toString(), {
+			method: "PUT",
+			headers,
+			body: JSON.stringify(requestBody),
+		})
 		verbose(`Response status: ${response.status}`)
 
 		if (!response.ok) {
@@ -406,30 +413,32 @@ export const searchServers = async (
  * Validates if user has complete configuration for a server
  * @param serverQualifiedName The name of the server to validate config for
  * @param apiKey API key for authentication
+ * @param profile Optional profile qualified name
  * @returns Promise that resolves with validation result
  */
 export const validateUserConfig = async (
 	serverQualifiedName: string,
 	apiKey: string,
-): Promise<{
-	isComplete: boolean
-	missingFields: string[]
-	fieldSchemas: Record<string, unknown>
-}> => {
+	profile?: string,
+): Promise<ValidationResponse> => {
 	const endpoint = getEndpoint()
 	verbose(`Validating user config for ${serverQualifiedName}`)
 
 	try {
-		const response = await fetchWithTimeout(
-			`${endpoint}/config/${serverQualifiedName}/validate`,
-			{
-				method: "GET",
-				headers: {
-					Authorization: `Bearer ${apiKey}`,
-					"Content-Type": "application/json",
-				},
-			},
+		const url = new URL(
+			`${endpoint}/config/validate/${encodeURIComponent(serverQualifiedName)}`,
 		)
+		if (profile) {
+			url.searchParams.set("profile", profile)
+		}
+
+		const response = await fetchWithTimeout(url.toString(), {
+			method: "GET",
+			headers: {
+				Authorization: `Bearer ${apiKey}`,
+				"Content-Type": "application/json",
+			},
+		})
 
 		if (!response.ok) {
 			throw new Error(`Config validation failed: ${response.statusText}`)
