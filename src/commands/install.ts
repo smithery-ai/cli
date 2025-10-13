@@ -84,7 +84,9 @@ export async function installServer(
 			ResolveServerSource.Install,
 		)
 		verbose(`Server resolved successfully: ${server.qualifiedName}`)
-		spinner.succeed(`Successfully resolved ${qualifiedName}`)
+		spinner.succeed(
+			chalk.dim(`Successfully resolved ${chalk.cyan(qualifiedName)}`),
+		)
 
 		/* choose connection type */
 		verbose("Choosing connection type...")
@@ -108,8 +110,76 @@ export async function installServer(
 
 		let collectedConfigValues: ServerConfig = configValues || {}
 
-		// Prompt for config values if not provided
-		if (Object.keys(configValues).length === 0) {
+		// Check existing config first
+		if (finalApiKey && Object.keys(configValues).length === 0) {
+			let configSpinner: ReturnType<typeof ora> | undefined
+			try {
+				verbose("Checking existing configuration...")
+				configSpinner = ora("Validating configuration...").start()
+				const validation = await validateUserConfig(
+					qualifiedName,
+					finalApiKey,
+					profile,
+				)
+				configSpinner.succeed(chalk.dim("Configuration valid"))
+				configSpinner = undefined
+
+				if (validation.isComplete) {
+					// Check if there are any config fields at all (required or optional)
+					const hasConfigFields =
+						Object.keys(validation.fieldSchemas).length > 0
+
+					if (hasConfigFields) {
+						// Show different message based on whether config actually exists
+						if (validation.hasExistingConfig) {
+							const profileMsg = profile
+								? `Found existing configuration from profile: ${chalk.cyan(profile)}`
+								: "Found existing configuration from default profile"
+							console.log(`${chalk.green("●")} ${chalk.dim(profileMsg)}`)
+
+							// Don't prompt to update - they can use the web UI link
+							collectedConfigValues = {} // Use existing saved config
+						} else {
+							console.log(
+								`${chalk.cyan("○")} ${chalk.dim("No configuration saved yet")}`,
+							)
+
+							// No existing config, offer to add optional fields
+							collectedConfigValues = await collectConfigValues(
+								connection,
+								configValues || {},
+							)
+						}
+					} else {
+						console.log()
+						console.log(`${chalk.cyan("○")} No configuration required`)
+						collectedConfigValues = {} // No config needed at all
+					}
+				} else {
+					console.log(
+						chalk.yellow("!"),
+						`Missing required config: ${validation.missingFields.join(", ")}`,
+					)
+					// Prompt for all fields
+					collectedConfigValues = await collectConfigValues(
+						connection,
+						configValues || {},
+					)
+					// Link will be shown after saving
+				}
+			} catch (error) {
+				configSpinner?.stop()
+				verbose(
+					`Config validation failed: ${error instanceof Error ? error.message : String(error)}`,
+				)
+				// Fall back to normal prompting
+				collectedConfigValues = await collectConfigValues(
+					connection,
+					configValues || {},
+				)
+			}
+		} else if (Object.keys(configValues).length === 0) {
+			// No API key or no existing config, prompt normally
 			collectedConfigValues = await collectConfigValues(
 				connection,
 				configValues || {},
@@ -122,20 +192,48 @@ export async function installServer(
 		let configSavedToSmithery = false
 		if (finalApiKey && Object.keys(collectedConfigValues).length > 0) {
 			verbose("Saving configuration to smithery...")
+			const saveSpinner = ora("Saving configuration...").start()
 			try {
-				await saveUserConfig(qualifiedName, collectedConfigValues, finalApiKey)
+				await saveUserConfig(
+					qualifiedName,
+					collectedConfigValues,
+					finalApiKey,
+					profile,
+				)
 				verbose("Configuration successfully saved to smithery")
+				saveSpinner.succeed(chalk.dim("Configuration saved"))
 				configSavedToSmithery = true
+
+				// Show manage config link after successful save
+				const configUrl = profile
+					? `https://smithery.ai/account/profiles/${profile}/${qualifiedName}`
+					: `https://smithery.ai/account/profiles?server=${qualifiedName}`
+				console.log()
+				console.log(`${chalk.cyan("→ Manage configuration:")} ${configUrl}`)
 			} catch (error) {
 				verbose(
 					`Failed to save config to smithery: ${error instanceof Error ? error.message : String(error)}`,
 				)
+				saveSpinner.fail(chalk.dim("Failed to save configuration"))
 				// Don't fail the installation if config save fails
 				console.warn(
 					chalk.yellow(
 						"Warning: Could not save configuration. Config will be saved locally.",
 					),
 				)
+			}
+		} else if (finalApiKey) {
+			// Show manage config link if there's existing config (even if nothing new to save)
+			const hasConfigToManage =
+				connection.configSchema?.properties &&
+				Object.keys(connection.configSchema.properties).length > 0
+
+			if (hasConfigToManage) {
+				const configUrl = profile
+					? `https://smithery.ai/account/profiles/${profile}/${qualifiedName}`
+					: `https://smithery.ai/account/profiles?server=${qualifiedName}`
+				console.log()
+				console.log(`${chalk.cyan("→ Manage configuration:")} ${configUrl}`)
 			}
 		}
 
