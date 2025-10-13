@@ -6,10 +6,21 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [1.5.0] - 2025-10-13
+
 ### Added
-- Added profile support for stdio connections to load saved configurations from specified profiles
-- Added functions for downloading, caching, and running bundled MCP servers
-- Added test fixtures for run command
+- Configuration validation flow during server installation with saved config detection
+- Profile support across all configuration endpoints
+- New tests covering installation flows and registry API calls
+
+### Changed
+- **BREAKING**: Config validation endpoint changed from `/config/{server}/validate` to `/config/validate/{server}`
+- Improved configuration prompting: required fields first, then optional fields
+
+### Fixed
+- Fixed URL encoding bug for server names
+- Fixed route pattern conflict in registry validation endpoint
+- Fixed profile parameter not being passed to config operations
 
 ## [1.4.1] - 2025-09-27
 
