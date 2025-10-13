@@ -112,15 +112,17 @@ export async function installServer(
 
 		// Check existing config first
 		if (finalApiKey && Object.keys(configValues).length === 0) {
+			let configSpinner: ReturnType<typeof ora> | undefined
 			try {
 				verbose("Checking existing configuration...")
-				const configSpinner = ora("Validating configuration...").start()
+				configSpinner = ora("Validating configuration...").start()
 				const validation = await validateUserConfig(
 					qualifiedName,
 					finalApiKey,
 					profile,
 				)
 				configSpinner.succeed(chalk.dim("Configuration valid"))
+				configSpinner = undefined
 
 				if (validation.isComplete) {
 					// Check if there are any config fields at all (required or optional)
@@ -166,6 +168,7 @@ export async function installServer(
 					// Link will be shown after saving
 				}
 			} catch (error) {
+				configSpinner?.stop()
 				verbose(
 					`Config validation failed: ${error instanceof Error ? error.message : String(error)}`,
 				)
