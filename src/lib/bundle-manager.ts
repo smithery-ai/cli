@@ -1,7 +1,7 @@
-import { spawn } from "node:child_process"
 import * as fs from "node:fs"
 import * as os from "node:os"
 import * as path from "node:path"
+import { unpackExtension } from "@anthropic-ai/mcpb"
 import fetch from "cross-fetch"
 import { verbose } from "./logger"
 
@@ -141,7 +141,7 @@ async function downloadBundle(
 }
 
 /**
- * Extracts a .mcpb bundle using the @anthropic/mcpb CLI
+ * Extracts a .mcpb bundle using the @anthropic-ai/mcpb library
  */
 async function extractBundle(
 	mcpbPath: string,
@@ -149,33 +149,17 @@ async function extractBundle(
 ): Promise<void> {
 	verbose(`Extracting bundle to: ${extractDir}`)
 
-	return new Promise((resolve, reject) => {
-		const proc = spawn(
-			"npx",
-			["-y", "@anthropic-ai/mcpb", "unpack", mcpbPath, extractDir],
-			{
-				stdio: "pipe",
-			},
-		)
-
-		let stderr = ""
-		proc.stderr?.on("data", (data) => {
-			stderr += data.toString()
-		})
-
-		proc.on("close", (code) => {
-			if (code === 0) {
-				verbose("Bundle extracted successfully")
-				resolve()
-			} else {
-				reject(new Error(`Failed to extract bundle: ${stderr}`))
-			}
-		})
-
-		proc.on("error", (error) => {
-			reject(new Error(`Failed to spawn mcpb CLI: ${error.message}`))
-		})
+	const success = await unpackExtension({
+		mcpbPath,
+		outputDir: extractDir,
+		silent: true,
 	})
+
+	if (!success) {
+		throw new Error("Failed to extract bundle")
+	}
+
+	verbose("Bundle extracted successfully")
 }
 
 /**
@@ -260,9 +244,74 @@ export async function ensureBundleInstalled(
  * @param bundleDir - Directory containing the extracted bundle
  * @returns Command and args from manifest
  */
+/**
+ * Resolves template strings in environment variables
+ * @param env - Environment variables with template strings
+ * @param userConfig - User configuration values
+ * @param bundleDir - Bundle directory for __dirname resolution
+ * @returns Resolved environment variables
+ */
+export function resolveEnvTemplates(
+	env: Record<string, string>,
+	userConfig: Record<string, any> = {},
+	bundleDir?: string
+): Record<string, string> {
+	const resolved: Record<string, string> = {}
+
+	for (const [key, value] of Object.entries(env)) {
+		resolved[key] = resolveTemplateString(value, userConfig, bundleDir)
+	}
+
+	return resolved
+}
+
+/**
+ * Resolves a single template string
+ * @param template - Template string like "${user_config.apiKey}" or "${__dirname}"
+ * @param userConfig - User configuration values
+ * @param bundleDir - Bundle directory for __dirname resolution
+ * @returns Resolved string
+ */
+export function resolveTemplateString(
+	template: string,
+	userConfig: Record<string, any>,
+	bundleDir?: string
+): string {
+	return template.replace(/\$\{([^}]+)\}/g, (match, path) => {
+		// Handle __dirname replacement
+		if (path === '__dirname' && bundleDir) {
+			return bundleDir
+		}
+
+		// Handle user_config paths like "user_config.apiKey"
+		if (path.startsWith('user_config.')) {
+			const configPath = path.replace('user_config.', '')
+			const parts = configPath.split('.')
+			let value: any = userConfig
+
+			for (const part of parts) {
+				if (value && typeof value === 'object') {
+					value = value[part]
+				} else {
+					// If path doesn't exist in userConfig, return the original template
+					return match
+				}
+			}
+
+			// If value exists and is not null/undefined, return it as string
+			// Otherwise return the original template
+			return value != null ? String(value) : match
+		}
+
+		// For other template patterns, return as-is (could be extended for more patterns)
+		return match
+	})
+}
+
 export function getBundleCommand(bundleDir: string): {
 	command: string
 	args: string[]
+	env?: Record<string, string>
 } {
 	const manifestPath = path.join(bundleDir, "manifest.json")
 	if (!fs.existsSync(manifestPath)) {
@@ -276,13 +325,18 @@ export function getBundleCommand(bundleDir: string): {
 		throw new Error("Bundle manifest missing server.mcp_config.command")
 	}
 
+	// Resolve __dirname in args (user_config templates remain as-is for later resolution)
 	const args = (mcpConfig.args || []).map((arg: string) =>
-		arg.replace(/\$\{__dirname\}/g, bundleDir),
+		arg.replace(/\$\{__dirname\}/g, bundleDir || '${__dirname}'),
 	)
+
+	// Include env vars if present (raw templates that need resolution later)
+	const env = mcpConfig.env
 
 	return {
 		command: mcpConfig.command,
 		args,
+		env,
 	}
 }
 

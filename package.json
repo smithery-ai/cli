@@ -27,6 +27,7 @@
 		"smithery": "dist/index.js"
 	},
 	"dependencies": {
+		"@anthropic-ai/mcpb": "^1.1.1",
 		"@modelcontextprotocol/sdk": "^1.19.0",
 		"@ngrok/ngrok": "^1.5.1",
 		"@smithery/registry": "^0.4.2",

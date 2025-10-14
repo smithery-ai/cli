@@ -1,0 +1,8 @@
+{
+  "apiKey": "my-api-key",
+  "database": {
+    "connectionString": "postgresql://user:pass@localhost:5432/db",
+    "role": "admin"
+  }
+}
+
