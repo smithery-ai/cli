@@ -3,10 +3,11 @@ import { logWithTimestamp } from "../commands/run/runner-utils.js"
 import {
 	ensureBundleInstalled,
 	getBundleCommand,
+	resolveEnvTemplates,
+	resolveTemplateString,
 } from "../lib/bundle-manager.js"
 import { fetchConnection, getUserConfig } from "../lib/registry.js"
 import type { ServerConfig } from "../types/registry.js"
-import { convertConfigToDotArgs } from "./config-to-args.js"
 
 export interface PreparedStdioConnection {
 	command: string
@@ -44,7 +45,7 @@ export async function prepareStdioConnection(
 			serverDetails.qualifiedName,
 			bundleConnection.bundleUrl,
 		)
-		const { command, args } = getBundleCommand(bundleDir)
+		const { command, args, env } = getBundleCommand(bundleDir)
 
 		let mergedConfig = { ...config }
 		if (apiKey) {
@@ -60,13 +61,16 @@ export async function prepareStdioConnection(
 			}
 		}
 
-		// Convert config to dot-notation CLI args (e.g., model.name=gpt-4)
-		const configArgs = convertConfigToDotArgs(mergedConfig)
+		// Resolve templates in args (both ${__dirname} and ${user_config.*})
+		const resolvedArgs = args.map(arg => resolveTemplateString(arg, mergedConfig, bundleDir))
+
+		// Resolve environment variable templates
+		const resolvedEnv = env ? resolveEnvTemplates(env, mergedConfig, bundleDir) : {}
 
 		return {
 			command,
-			args: [...args, ...configArgs],
-			env: bundleConnection.env || {},
+			args: resolvedArgs,
+			env: resolvedEnv,
 			qualifiedName: serverDetails.qualifiedName,
 		}
 	}

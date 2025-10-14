@@ -4,7 +4,15 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
-## [Unreleased]
+## [1.5.2] - 2025-10-14
+
+### Fixed
+- Fixed integration tests to use actual resolution functions instead of custom mocks in `prepare-stdio-connection.test.ts`
+- Replaced subprocess calls to `npx @anthropic-ai/mcpb unpack` with direct imports from `@anthropic-ai/mcpb` library for better reliability and performance
+- Improved stdio command creation for bundles to properly resolve environment variables and arguments from manifest.json using actual template resolution functions
+
+### Added
+- Tests for bundle manager covering template resolution, manifest parsing, and error conditions
 
 ## [1.5.0] - 2025-10-13
 

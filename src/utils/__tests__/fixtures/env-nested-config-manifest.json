@@ -1,0 +1,25 @@
+{
+  "manifest_version": "0.2",
+  "name": "test-env-nested",
+  "version": "1.0.0",
+  "description": "Test server with env vars using nested config",
+  "author": {
+    "name": "test"
+  },
+  "server": {
+    "type": "node",
+    "entry_point": "server.js",
+    "mcp_config": {
+      "command": "node",
+      "args": [
+        "${__dirname}/server.js"
+      ],
+      "env": {
+        "API_KEY": "${user_config.apiKey}",
+        "DATABASE_URL": "${user_config.database.host}:${user_config.database.port}",
+        "LOG_LEVEL": "${user_config.logging.level}"
+      }
+    }
+  }
+}
+

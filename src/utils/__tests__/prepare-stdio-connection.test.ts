@@ -10,6 +10,8 @@ import { beforeEach, describe, expect, test, vi } from "vitest"
 vi.mock("../../lib/bundle-manager", () => ({
 	ensureBundleInstalled: vi.fn(),
 	getBundleCommand: vi.fn(),
+	resolveEnvTemplates: vi.fn(),
+	resolveTemplateString: vi.fn(),
 }))
 
 vi.mock("../../lib/registry", () => ({
@@ -24,6 +26,8 @@ vi.mock("../../commands/run/runner-utils", () => ({
 import {
 	ensureBundleInstalled,
 	getBundleCommand,
+	resolveEnvTemplates,
+	resolveTemplateString,
 } from "../../lib/bundle-manager"
 import { fetchConnection, getUserConfig } from "../../lib/registry"
 import { prepareStdioConnection } from "../prepare-stdio-connection"
@@ -67,7 +71,7 @@ describe("prepareStdioConnection", () => {
 		expect(getUserConfig).not.toHaveBeenCalled()
 	})
 
-	test("handles bundle connection with config merging", async () => {
+	test("handles bundle connection with args template resolution", async () => {
 		const server: ServerDetailResponse = {
 			qualifiedName: "author/bundle-server",
 			remote: false,
@@ -80,24 +84,27 @@ describe("prepareStdioConnection", () => {
 			],
 		} as unknown as ServerDetailResponse
 
-		vi.mocked(ensureBundleInstalled).mockResolvedValue(
-			"/home/.smithery/cache/servers/author/bundle-server/current",
-		)
+		const bundleDir = "/home/.smithery/cache/servers/author/bundle-server/current"
+		
+		vi.mocked(ensureBundleInstalled).mockResolvedValue(bundleDir)
 		vi.mocked(getBundleCommand).mockReturnValue({
 			command: "node",
 			args: [
-				"/home/.smithery/cache/servers/author/bundle-server/current/index.js",
+				"${__dirname}/index.js",
+				"apiKey=${user_config.apiKey}",
 			],
 		})
 		vi.mocked(getUserConfig).mockResolvedValue({
-			API_KEY: "saved-key",
-			BASE_URL: "https://api.example.com",
+			apiKey: "saved-key",
 		})
+		vi.mocked(resolveTemplateString)
+			.mockReturnValueOnce(`${bundleDir}/index.js`)
+			.mockReturnValueOnce("apiKey=saved-key")
 
 		const result = await prepareStdioConnection(
 			server,
 			server.connections[0],
-			{ API_KEY: "runtime-key", DEBUG: "true" },
+			{},
 			"test-api-key",
 		)
 
@@ -105,9 +112,7 @@ describe("prepareStdioConnection", () => {
 			"author/bundle-server",
 			"https://smithery.ai/bundles/author/bundle-server.mcpb",
 		)
-		expect(getBundleCommand).toHaveBeenCalledWith(
-			"/home/.smithery/cache/servers/author/bundle-server/current",
-		)
+		expect(getBundleCommand).toHaveBeenCalledWith(bundleDir)
 		expect(getUserConfig).toHaveBeenCalledWith(
 			"author/bundle-server",
 			"test-api-key",
@@ -117,10 +122,8 @@ describe("prepareStdioConnection", () => {
 		expect(result).toEqual({
 			command: "node",
 			args: [
-				"/home/.smithery/cache/servers/author/bundle-server/current/index.js",
-				"API_KEY=runtime-key", // Runtime config overrides saved
-				"BASE_URL=https://api.example.com", // From saved config
-				"DEBUG=true", // From runtime config
+				`${bundleDir}/index.js`,
+				"apiKey=saved-key",
 			],
 			env: {},
 			qualifiedName: "author/bundle-server",
@@ -140,16 +143,15 @@ describe("prepareStdioConnection", () => {
 			],
 		} as unknown as ServerDetailResponse
 
-		vi.mocked(ensureBundleInstalled).mockResolvedValue(
-			"/home/.smithery/cache/servers/author/bundle-server/current",
-		)
+		const bundleDir = "/home/.smithery/cache/servers/author/bundle-server/current"
+		
+		vi.mocked(ensureBundleInstalled).mockResolvedValue(bundleDir)
 		vi.mocked(getBundleCommand).mockReturnValue({
 			command: "node",
-			args: [
-				"/home/.smithery/cache/servers/author/bundle-server/current/index.js",
-			],
+			args: ["${__dirname}/index.js"],
 		})
 		vi.mocked(getUserConfig).mockResolvedValue(null)
+		vi.mocked(resolveTemplateString).mockReturnValue(`${bundleDir}/index.js`)
 
 		const result = await prepareStdioConnection(
 			server,
@@ -158,7 +160,7 @@ describe("prepareStdioConnection", () => {
 			"test-api-key",
 		)
 
-		expect(result.args).toContain("DEBUG=true")
+		expect(result.args).toEqual([`${bundleDir}/index.js`])
 		expect(result.env).toEqual({})
 	})
 
@@ -203,7 +205,7 @@ describe("prepareStdioConnection", () => {
 		})
 	})
 
-	test("converts config values to strings for CLI args in bundle path", async () => {
+	test("resolves args templates with runtime config overriding saved config", async () => {
 		const server: ServerDetailResponse = {
 			qualifiedName: "author/bundle-server",
 			remote: false,
@@ -216,22 +218,33 @@ describe("prepareStdioConnection", () => {
 			],
 		} as unknown as ServerDetailResponse
 
-		vi.mocked(ensureBundleInstalled).mockResolvedValue("/cache/dir")
+		const bundleDir = "/cache/dir"
+		
+		vi.mocked(ensureBundleInstalled).mockResolvedValue(bundleDir)
 		vi.mocked(getBundleCommand).mockReturnValue({
 			command: "node",
-			args: ["index.js"],
+			args: [
+				"${__dirname}/index.js",
+				"port=${user_config.port}",
+			],
 		})
-		vi.mocked(getUserConfig).mockResolvedValue(null)
+		vi.mocked(getUserConfig).mockResolvedValue({ port: 3000 })
+		vi.mocked(resolveTemplateString)
+			.mockReturnValueOnce(`${bundleDir}/index.js`)
+			.mockReturnValueOnce("port=8080")
 
 		const result = await prepareStdioConnection(
 			server,
 			server.connections[0],
-			{ PORT: 8080, ENABLED: true } as any,
+			{ port: 8080 } as any,
 			"test-api-key",
 		)
 
-		expect(result.args).toContain("PORT=8080")
-		expect(result.args).toContain("ENABLED=true")
+		// Runtime config (8080) should override saved config (3000)
+		expect(result.args).toEqual([
+			`${bundleDir}/index.js`,
+			"port=8080",
+		])
 		expect(result.env).toEqual({})
 	})
 
@@ -253,9 +266,10 @@ describe("prepareStdioConnection", () => {
 		vi.mocked(ensureBundleInstalled).mockResolvedValue(bundleDir)
 		vi.mocked(getBundleCommand).mockReturnValue({
 			command: "node",
-			args: [`${bundleDir}/index.js`],
+			args: ["${__dirname}/index.js"],
 		})
 		vi.mocked(getUserConfig).mockResolvedValue(null)
+		vi.mocked(resolveTemplateString).mockReturnValue(`${bundleDir}/index.js`)
 
 		await prepareStdioConnection(
 			server,
@@ -266,5 +280,242 @@ describe("prepareStdioConnection", () => {
 
 		expect(vi.mocked(ensureBundleInstalled)).toHaveBeenCalled()
 		expect(bundleDir).toContain("/current")
+	})
+
+	test("resolves environment variable templates from bundle manifest", async () => {
+		const server: ServerDetailResponse = {
+			qualifiedName: "author/bundle-server",
+			remote: false,
+			connections: [
+				{
+					type: "stdio",
+					bundleUrl: "https://smithery.ai/bundles/author/bundle-server.mcpb",
+					configSchema: {},
+				},
+			],
+		} as unknown as ServerDetailResponse
+
+		const bundleDir = "/home/.smithery/cache/servers/author/bundle-server/current"
+		
+		vi.mocked(ensureBundleInstalled).mockResolvedValue(bundleDir)
+		vi.mocked(getBundleCommand).mockReturnValue({
+			command: "node",
+			args: ["${__dirname}/index.js"],
+			env: {
+				API_KEY: "${user_config.apiKey}",
+				DATABASE_URL: "${user_config.database.host}:${user_config.database.port}",
+			},
+		})
+		vi.mocked(getUserConfig).mockResolvedValue({
+			apiKey: "secret-key-123",
+			database: { host: "localhost", port: 5432 },
+		})
+		vi.mocked(resolveTemplateString).mockReturnValue(`${bundleDir}/index.js`)
+		vi.mocked(resolveEnvTemplates).mockReturnValue({
+			API_KEY: "secret-key-123",
+			DATABASE_URL: "localhost:5432",
+		})
+
+		const result = await prepareStdioConnection(
+			server,
+			server.connections[0],
+			{},
+			"test-api-key",
+		)
+
+		expect(resolveEnvTemplates).toHaveBeenCalledWith(
+			{
+				API_KEY: "${user_config.apiKey}",
+				DATABASE_URL: "${user_config.database.host}:${user_config.database.port}",
+			},
+			{
+				apiKey: "secret-key-123",
+				database: { host: "localhost", port: 5432 },
+			},
+			bundleDir,
+		)
+
+		expect(result.env).toEqual({
+			API_KEY: "secret-key-123",
+			DATABASE_URL: "localhost:5432",
+		})
+	})
+})
+
+describe("prepareStdioConnection - Integration Tests with Real Resolution", () => {
+	beforeEach(() => {
+		vi.clearAllMocks()
+	})
+
+	test("resolves nested config in env vars (integration)", async () => {
+		const { readFileSync } = await import("fs")
+		const { join } = await import("path")
+		
+		const fixturesDir = join(__dirname, "fixtures")
+		const manifest = JSON.parse(
+			readFileSync(join(fixturesDir, "env-nested-config-manifest.json"), "utf-8")
+		)
+		const userConfig = JSON.parse(
+			readFileSync(join(fixturesDir, "env-nested-user-config.json"), "utf-8")
+		)
+
+		const server: ServerDetailResponse = {
+			qualifiedName: "test/env-nested",
+			remote: false,
+			connections: [
+				{
+					type: "stdio",
+					bundleUrl: "https://example.com/bundle.mcpb",
+					configSchema: {},
+				},
+			],
+		} as unknown as ServerDetailResponse
+
+		const bundleDir = "/test/bundle/dir"
+		
+		vi.mocked(ensureBundleInstalled).mockResolvedValue(bundleDir)
+		vi.mocked(getBundleCommand).mockReturnValue({
+			command: manifest.server.mcp_config.command,
+			args: manifest.server.mcp_config.args,
+			env: manifest.server.mcp_config.env,
+		})
+		vi.mocked(getUserConfig).mockResolvedValue(userConfig)
+
+		const actualBundleManager = await vi.importActual<typeof import("../../lib/bundle-manager")>("../../lib/bundle-manager")
+		
+		vi.mocked(resolveTemplateString).mockImplementation(actualBundleManager.resolveTemplateString)
+		vi.mocked(resolveEnvTemplates).mockImplementation(actualBundleManager.resolveEnvTemplates)
+
+		const result = await prepareStdioConnection(
+			server,
+			server.connections[0],
+			{},
+			"test-api-key",
+		)
+
+		expect(result.command).toBe("node")
+		expect(result.args).toEqual([`${bundleDir}/server.js`])
+		expect(result.env).toEqual({
+			API_KEY: "secret-key-123",
+			DATABASE_URL: "localhost:5432",
+			LOG_LEVEL: "debug",
+		})
+		expect(result.qualifiedName).toBe("test/env-nested")
+	})
+
+	test("resolves nested config in args (integration)", async () => {
+		const { readFileSync } = await import("fs")
+		const { join } = await import("path")
+		
+		const fixturesDir = join(__dirname, "fixtures")
+		const manifest = JSON.parse(
+			readFileSync(join(fixturesDir, "args-nested-config-manifest.json"), "utf-8")
+		)
+		const userConfig = JSON.parse(
+			readFileSync(join(fixturesDir, "args-nested-user-config.json"), "utf-8")
+		)
+
+		const server: ServerDetailResponse = {
+			qualifiedName: "test/args-nested",
+			remote: false,
+			connections: [
+				{
+					type: "stdio",
+					bundleUrl: "https://example.com/bundle.mcpb",
+					configSchema: {},
+				},
+			],
+		} as unknown as ServerDetailResponse
+
+		const bundleDir = "/test/bundle/dir"
+		
+		vi.mocked(ensureBundleInstalled).mockResolvedValue(bundleDir)
+		vi.mocked(getBundleCommand).mockReturnValue({
+			command: manifest.server.mcp_config.command,
+			args: manifest.server.mcp_config.args,
+			env: manifest.server.mcp_config.env,
+		})
+		vi.mocked(getUserConfig).mockResolvedValue(userConfig)
+
+		const actualBundleManager = await vi.importActual<typeof import("../../lib/bundle-manager")>("../../lib/bundle-manager")
+		
+		vi.mocked(resolveTemplateString).mockImplementation(actualBundleManager.resolveTemplateString)
+		vi.mocked(resolveEnvTemplates).mockImplementation(actualBundleManager.resolveEnvTemplates)
+
+		const result = await prepareStdioConnection(
+			server,
+			server.connections[0],
+			{},
+			"test-api-key",
+		)
+
+		expect(result.command).toBe("node")
+		expect(result.args).toEqual([
+			`${bundleDir}/index.js`,
+			"connectionString=postgresql://user:pass@localhost:5432/db",
+			"role=admin",
+			"apiKey=my-api-key",
+		])
+		expect(result.env).toEqual({})
+		expect(result.qualifiedName).toBe("test/args-nested")
+	})
+
+	test("resolves nested config in both args and env (integration)", async () => {
+		const { readFileSync } = await import("fs")
+		const { join } = await import("path")
+		
+		const fixturesDir = join(__dirname, "fixtures")
+		const manifest = JSON.parse(
+			readFileSync(join(fixturesDir, "mixed-nested-config-manifest.json"), "utf-8")
+		)
+		const userConfig = JSON.parse(
+			readFileSync(join(fixturesDir, "mixed-nested-user-config.json"), "utf-8")
+		)
+
+		const server: ServerDetailResponse = {
+			qualifiedName: "test/mixed-nested",
+			remote: false,
+			connections: [
+				{
+					type: "stdio",
+					bundleUrl: "https://example.com/bundle.mcpb",
+					configSchema: {},
+				},
+			],
+		} as unknown as ServerDetailResponse
+
+		const bundleDir = "/test/bundle/dir"
+		
+		vi.mocked(ensureBundleInstalled).mockResolvedValue(bundleDir)
+		vi.mocked(getBundleCommand).mockReturnValue({
+			command: manifest.server.mcp_config.command,
+			args: manifest.server.mcp_config.args,
+			env: manifest.server.mcp_config.env,
+		})
+		vi.mocked(getUserConfig).mockResolvedValue(userConfig)
+
+		const actualBundleManager = await vi.importActual<typeof import("../../lib/bundle-manager")>("../../lib/bundle-manager")
+		
+		vi.mocked(resolveTemplateString).mockImplementation(actualBundleManager.resolveTemplateString)
+		vi.mocked(resolveEnvTemplates).mockImplementation(actualBundleManager.resolveEnvTemplates)
+
+		const result = await prepareStdioConnection(
+			server,
+			server.connections[0],
+			{},
+			"test-api-key",
+		)
+
+		expect(result.command).toBe("node")
+		expect(result.args).toEqual([
+			`${bundleDir}/server.js`,
+			"--port=8080",
+			"--host=0.0.0.0",
+		])
+		expect(result.env).toEqual({
+			API_KEY: "test-api-key-456",
+			SECRET: "super-secret-value",
+		})
+		expect(result.qualifiedName).toBe("test/mixed-nested")
 	})
 })
