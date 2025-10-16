@@ -1,11 +1,10 @@
 {
-  "apiKey": "secret-key-123",
-  "database": {
-    "host": "localhost",
-    "port": 5432
-  },
-  "logging": {
-    "level": "debug"
-  }
+	"apiKey": "secret-key-123",
+	"database": {
+		"host": "localhost",
+		"port": 5432
+	},
+	"logging": {
+		"level": "debug"
+	}
 }
-

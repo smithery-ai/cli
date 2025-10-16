@@ -62,10 +62,14 @@ export async function prepareStdioConnection(
 		}
 
 		// Resolve templates in args (both ${__dirname} and ${user_config.*})
-		const resolvedArgs = args.map(arg => resolveTemplateString(arg, mergedConfig, bundleDir))
+		const resolvedArgs = args.map((arg) =>
+			resolveTemplateString(arg, mergedConfig, bundleDir),
+		)
 
 		// Resolve environment variable templates
-		const resolvedEnv = env ? resolveEnvTemplates(env, mergedConfig, bundleDir) : {}
+		const resolvedEnv = env
+			? resolveEnvTemplates(env, mergedConfig, bundleDir)
+			: {}
 
 		return {
 			command,

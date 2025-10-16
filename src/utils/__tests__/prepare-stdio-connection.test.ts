@@ -84,15 +84,13 @@ describe("prepareStdioConnection", () => {
 			],
 		} as unknown as ServerDetailResponse
 
-		const bundleDir = "/home/.smithery/cache/servers/author/bundle-server/current"
-		
+		const bundleDir =
+			"/home/.smithery/cache/servers/author/bundle-server/current"
+
 		vi.mocked(ensureBundleInstalled).mockResolvedValue(bundleDir)
 		vi.mocked(getBundleCommand).mockReturnValue({
 			command: "node",
-			args: [
-				"${__dirname}/index.js",
-				"apiKey=${user_config.apiKey}",
-			],
+			args: ["${__dirname}/index.js", "apiKey=${user_config.apiKey}"],
 		})
 		vi.mocked(getUserConfig).mockResolvedValue({
 			apiKey: "saved-key",
@@ -121,10 +119,7 @@ describe("prepareStdioConnection", () => {
 
 		expect(result).toEqual({
 			command: "node",
-			args: [
-				`${bundleDir}/index.js`,
-				"apiKey=saved-key",
-			],
+			args: [`${bundleDir}/index.js`, "apiKey=saved-key"],
 			env: {},
 			qualifiedName: "author/bundle-server",
 		})
@@ -143,8 +138,9 @@ describe("prepareStdioConnection", () => {
 			],
 		} as unknown as ServerDetailResponse
 
-		const bundleDir = "/home/.smithery/cache/servers/author/bundle-server/current"
-		
+		const bundleDir =
+			"/home/.smithery/cache/servers/author/bundle-server/current"
+
 		vi.mocked(ensureBundleInstalled).mockResolvedValue(bundleDir)
 		vi.mocked(getBundleCommand).mockReturnValue({
 			command: "node",
@@ -219,14 +215,11 @@ describe("prepareStdioConnection", () => {
 		} as unknown as ServerDetailResponse
 
 		const bundleDir = "/cache/dir"
-		
+
 		vi.mocked(ensureBundleInstalled).mockResolvedValue(bundleDir)
 		vi.mocked(getBundleCommand).mockReturnValue({
 			command: "node",
-			args: [
-				"${__dirname}/index.js",
-				"port=${user_config.port}",
-			],
+			args: ["${__dirname}/index.js", "port=${user_config.port}"],
 		})
 		vi.mocked(getUserConfig).mockResolvedValue({ port: 3000 })
 		vi.mocked(resolveTemplateString)
@@ -241,10 +234,7 @@ describe("prepareStdioConnection", () => {
 		)
 
 		// Runtime config (8080) should override saved config (3000)
-		expect(result.args).toEqual([
-			`${bundleDir}/index.js`,
-			"port=8080",
-		])
+		expect(result.args).toEqual([`${bundleDir}/index.js`, "port=8080"])
 		expect(result.env).toEqual({})
 	})
 
@@ -295,15 +285,17 @@ describe("prepareStdioConnection", () => {
 			],
 		} as unknown as ServerDetailResponse
 
-		const bundleDir = "/home/.smithery/cache/servers/author/bundle-server/current"
-		
+		const bundleDir =
+			"/home/.smithery/cache/servers/author/bundle-server/current"
+
 		vi.mocked(ensureBundleInstalled).mockResolvedValue(bundleDir)
 		vi.mocked(getBundleCommand).mockReturnValue({
 			command: "node",
 			args: ["${__dirname}/index.js"],
 			env: {
 				API_KEY: "${user_config.apiKey}",
-				DATABASE_URL: "${user_config.database.host}:${user_config.database.port}",
+				DATABASE_URL:
+					"${user_config.database.host}:${user_config.database.port}",
 			},
 		})
 		vi.mocked(getUserConfig).mockResolvedValue({
@@ -326,7 +318,8 @@ describe("prepareStdioConnection", () => {
 		expect(resolveEnvTemplates).toHaveBeenCalledWith(
 			{
 				API_KEY: "${user_config.apiKey}",
-				DATABASE_URL: "${user_config.database.host}:${user_config.database.port}",
+				DATABASE_URL:
+					"${user_config.database.host}:${user_config.database.port}",
 			},
 			{
 				apiKey: "secret-key-123",
@@ -348,15 +341,18 @@ describe("prepareStdioConnection - Integration Tests with Real Resolution", () =
 	})
 
 	test("resolves nested config in env vars (integration)", async () => {
-		const { readFileSync } = await import("fs")
-		const { join } = await import("path")
-		
+		const { readFileSync } = await import("node:fs")
+		const { join } = await import("node:path")
+
 		const fixturesDir = join(__dirname, "fixtures")
 		const manifest = JSON.parse(
-			readFileSync(join(fixturesDir, "env-nested-config-manifest.json"), "utf-8")
+			readFileSync(
+				join(fixturesDir, "env-nested-config-manifest.json"),
+				"utf-8",
+			),
 		)
 		const userConfig = JSON.parse(
-			readFileSync(join(fixturesDir, "env-nested-user-config.json"), "utf-8")
+			readFileSync(join(fixturesDir, "env-nested-user-config.json"), "utf-8"),
 		)
 
 		const server: ServerDetailResponse = {
@@ -372,7 +368,7 @@ describe("prepareStdioConnection - Integration Tests with Real Resolution", () =
 		} as unknown as ServerDetailResponse
 
 		const bundleDir = "/test/bundle/dir"
-		
+
 		vi.mocked(ensureBundleInstalled).mockResolvedValue(bundleDir)
 		vi.mocked(getBundleCommand).mockReturnValue({
 			command: manifest.server.mcp_config.command,
@@ -381,10 +377,16 @@ describe("prepareStdioConnection - Integration Tests with Real Resolution", () =
 		})
 		vi.mocked(getUserConfig).mockResolvedValue(userConfig)
 
-		const actualBundleManager = await vi.importActual<typeof import("../../lib/bundle-manager")>("../../lib/bundle-manager")
-		
-		vi.mocked(resolveTemplateString).mockImplementation(actualBundleManager.resolveTemplateString)
-		vi.mocked(resolveEnvTemplates).mockImplementation(actualBundleManager.resolveEnvTemplates)
+		const actualBundleManager = await vi.importActual<
+			typeof import("../../lib/bundle-manager")
+		>("../../lib/bundle-manager")
+
+		vi.mocked(resolveTemplateString).mockImplementation(
+			actualBundleManager.resolveTemplateString,
+		)
+		vi.mocked(resolveEnvTemplates).mockImplementation(
+			actualBundleManager.resolveEnvTemplates,
+		)
 
 		const result = await prepareStdioConnection(
 			server,
@@ -404,15 +406,18 @@ describe("prepareStdioConnection - Integration Tests with Real Resolution", () =
 	})
 
 	test("resolves nested config in args (integration)", async () => {
-		const { readFileSync } = await import("fs")
-		const { join } = await import("path")
-		
+		const { readFileSync } = await import("node:fs")
+		const { join } = await import("node:path")
+
 		const fixturesDir = join(__dirname, "fixtures")
 		const manifest = JSON.parse(
-			readFileSync(join(fixturesDir, "args-nested-config-manifest.json"), "utf-8")
+			readFileSync(
+				join(fixturesDir, "args-nested-config-manifest.json"),
+				"utf-8",
+			),
 		)
 		const userConfig = JSON.parse(
-			readFileSync(join(fixturesDir, "args-nested-user-config.json"), "utf-8")
+			readFileSync(join(fixturesDir, "args-nested-user-config.json"), "utf-8"),
 		)
 
 		const server: ServerDetailResponse = {
@@ -428,7 +433,7 @@ describe("prepareStdioConnection - Integration Tests with Real Resolution", () =
 		} as unknown as ServerDetailResponse
 
 		const bundleDir = "/test/bundle/dir"
-		
+
 		vi.mocked(ensureBundleInstalled).mockResolvedValue(bundleDir)
 		vi.mocked(getBundleCommand).mockReturnValue({
 			command: manifest.server.mcp_config.command,
@@ -437,10 +442,16 @@ describe("prepareStdioConnection - Integration Tests with Real Resolution", () =
 		})
 		vi.mocked(getUserConfig).mockResolvedValue(userConfig)
 
-		const actualBundleManager = await vi.importActual<typeof import("../../lib/bundle-manager")>("../../lib/bundle-manager")
-		
-		vi.mocked(resolveTemplateString).mockImplementation(actualBundleManager.resolveTemplateString)
-		vi.mocked(resolveEnvTemplates).mockImplementation(actualBundleManager.resolveEnvTemplates)
+		const actualBundleManager = await vi.importActual<
+			typeof import("../../lib/bundle-manager")
+		>("../../lib/bundle-manager")
+
+		vi.mocked(resolveTemplateString).mockImplementation(
+			actualBundleManager.resolveTemplateString,
+		)
+		vi.mocked(resolveEnvTemplates).mockImplementation(
+			actualBundleManager.resolveEnvTemplates,
+		)
 
 		const result = await prepareStdioConnection(
 			server,
@@ -461,15 +472,18 @@ describe("prepareStdioConnection - Integration Tests with Real Resolution", () =
 	})
 
 	test("resolves nested config in both args and env (integration)", async () => {
-		const { readFileSync } = await import("fs")
-		const { join } = await import("path")
-		
+		const { readFileSync } = await import("node:fs")
+		const { join } = await import("node:path")
+
 		const fixturesDir = join(__dirname, "fixtures")
 		const manifest = JSON.parse(
-			readFileSync(join(fixturesDir, "mixed-nested-config-manifest.json"), "utf-8")
+			readFileSync(
+				join(fixturesDir, "mixed-nested-config-manifest.json"),
+				"utf-8",
+			),
 		)
 		const userConfig = JSON.parse(
-			readFileSync(join(fixturesDir, "mixed-nested-user-config.json"), "utf-8")
+			readFileSync(join(fixturesDir, "mixed-nested-user-config.json"), "utf-8"),
 		)
 
 		const server: ServerDetailResponse = {
@@ -485,7 +499,7 @@ describe("prepareStdioConnection - Integration Tests with Real Resolution", () =
 		} as unknown as ServerDetailResponse
 
 		const bundleDir = "/test/bundle/dir"
-		
+
 		vi.mocked(ensureBundleInstalled).mockResolvedValue(bundleDir)
 		vi.mocked(getBundleCommand).mockReturnValue({
 			command: manifest.server.mcp_config.command,
@@ -494,10 +508,16 @@ describe("prepareStdioConnection - Integration Tests with Real Resolution", () =
 		})
 		vi.mocked(getUserConfig).mockResolvedValue(userConfig)
 
-		const actualBundleManager = await vi.importActual<typeof import("../../lib/bundle-manager")>("../../lib/bundle-manager")
-		
-		vi.mocked(resolveTemplateString).mockImplementation(actualBundleManager.resolveTemplateString)
-		vi.mocked(resolveEnvTemplates).mockImplementation(actualBundleManager.resolveEnvTemplates)
+		const actualBundleManager = await vi.importActual<
+			typeof import("../../lib/bundle-manager")
+		>("../../lib/bundle-manager")
+
+		vi.mocked(resolveTemplateString).mockImplementation(
+			actualBundleManager.resolveTemplateString,
+		)
+		vi.mocked(resolveEnvTemplates).mockImplementation(
+			actualBundleManager.resolveEnvTemplates,
+		)
 
 		const result = await prepareStdioConnection(
 			server,

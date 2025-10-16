@@ -1,24 +1,23 @@
 {
-  "manifest_version": "0.2",
-  "name": "test-args-nested",
-  "version": "1.0.0",
-  "description": "Test server with args using nested config",
-  "author": {
-    "name": "test"
-  },
-  "server": {
-    "type": "node",
-    "entry_point": "index.js",
-    "mcp_config": {
-      "command": "node",
-      "args": [
-        "${__dirname}/index.js",
-        "connectionString=${user_config.database.connectionString}",
-        "role=${user_config.database.role}",
-        "apiKey=${user_config.apiKey}"
-      ],
-      "env": {}
-    }
-  }
+	"manifest_version": "0.2",
+	"name": "test-args-nested",
+	"version": "1.0.0",
+	"description": "Test server with args using nested config",
+	"author": {
+		"name": "test"
+	},
+	"server": {
+		"type": "node",
+		"entry_point": "index.js",
+		"mcp_config": {
+			"command": "node",
+			"args": [
+				"${__dirname}/index.js",
+				"connectionString=${user_config.database.connectionString}",
+				"role=${user_config.database.role}",
+				"apiKey=${user_config.apiKey}"
+			],
+			"env": {}
+		}
+	}
 }
-
