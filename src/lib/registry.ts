@@ -279,7 +279,7 @@ export const getUserConfig = async (
 			verbose("No saved config found (404)")
 			return null
 		}
-		
+
 		verbose(
 			`Config get error: ${error instanceof Error ? error.message : String(error)}`,
 		)

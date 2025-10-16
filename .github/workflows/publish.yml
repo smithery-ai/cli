@@ -36,6 +36,9 @@ jobs:
       - run: npm ci
       - run: npm install -D @biomejs/cli-linux-x64  # biome platform binary for linux ci
       - run: npm run build
+        env:
+          ANALYTICS_ENDPOINT: ${{ secrets.ANALYTICS_ENDPOINT }}
+          REGISTRY_ENDPOINT: ${{ secrets.REGISTRY_ENDPOINT }}
       - run: npm run check
 
   integration-tests:
@@ -60,3 +63,5 @@ jobs:
       - run: npm publish --provenance --access public
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+          ANALYTICS_ENDPOINT: ${{ secrets.ANALYTICS_ENDPOINT }}
+          REGISTRY_ENDPOINT: ${{ secrets.REGISTRY_ENDPOINT }}

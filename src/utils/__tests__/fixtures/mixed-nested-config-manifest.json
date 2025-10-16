@@ -1,26 +1,25 @@
 {
-  "manifest_version": "0.2",
-  "name": "test-mixed-nested",
-  "version": "1.0.0",
-  "description": "Test server with both args and env using nested config",
-  "author": {
-    "name": "test"
-  },
-  "server": {
-    "type": "node",
-    "entry_point": "server.js",
-    "mcp_config": {
-      "command": "node",
-      "args": [
-        "${__dirname}/server.js",
-        "--port=${user_config.server.port}",
-        "--host=${user_config.server.host}"
-      ],
-      "env": {
-        "API_KEY": "${user_config.auth.apiKey}",
-        "SECRET": "${user_config.auth.secret}"
-      }
-    }
-  }
+	"manifest_version": "0.2",
+	"name": "test-mixed-nested",
+	"version": "1.0.0",
+	"description": "Test server with both args and env using nested config",
+	"author": {
+		"name": "test"
+	},
+	"server": {
+		"type": "node",
+		"entry_point": "server.js",
+		"mcp_config": {
+			"command": "node",
+			"args": [
+				"${__dirname}/server.js",
+				"--port=${user_config.server.port}",
+				"--host=${user_config.server.host}"
+			],
+			"env": {
+				"API_KEY": "${user_config.auth.apiKey}",
+				"SECRET": "${user_config.auth.secret}"
+			}
+		}
+	}
 }
-

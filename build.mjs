@@ -12,7 +12,16 @@ const isDotSafeIdentifier = (str) => {
 
 for (const k in process.env) {
 	/* Skip environment variables that should be evaluated at runtime */
-	if (["HOME", "USER", "XDG_CONFIG_HOME"].includes(k)) continue
+	// Keep these dynamic so code isn't tree-shaken based on CI build env
+	if (
+		[
+			"HOME",
+			"USER",
+			"XDG_CONFIG_HOME",
+			"SMITHERY_BEARER_AUTH",
+		].includes(k)
+	)
+		continue
 
 	// Skip variables whose names are not dot-safe identifiers (e.g., those containing hyphens, parentheses, etc.)
 	if (!isDotSafeIdentifier(k)) continue
