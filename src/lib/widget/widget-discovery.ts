@@ -18,7 +18,7 @@ export function discoverWidgets(cwd: string = process.cwd()): WidgetInfo[] {
 
 	const files = readdirSync(webSrcDir)
 	const widgetFiles = files.filter(
-		(f) => f.endsWith(".tsx") && !f.startsWith("types"),
+		(f) => f.endsWith(".tsx") && !f.startsWith("types") && f !== "index.tsx",
 	)
 
 	if (widgetFiles.length === 0) {
