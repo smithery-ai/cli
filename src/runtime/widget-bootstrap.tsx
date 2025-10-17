@@ -1,5 +1,5 @@
 import Widget from "virtual:widget-component"
-import React, { StrictMode } from "react"
+import { StrictMode } from "react"
 import { createRoot } from "react-dom/client"
 
 const root = document.getElementById("virtual:widget-name-root")
