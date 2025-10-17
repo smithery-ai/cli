@@ -6,7 +6,6 @@ import { formatFileSize } from "../../utils/build"
 import type { WidgetInfo } from "./widget-discovery"
 
 function resolveEntryPoint(cwd: string): string {
-	// Look for user-provided index file
 	const possibleEntries = [
 		resolve(cwd, "app/web/src/index.tsx"),
 		resolve(cwd, "app/web/src/index.ts"),
@@ -20,7 +19,9 @@ function resolveEntryPoint(cwd: string): string {
 		}
 	}
 
-	throw new Error("No index file found in app/web/src/. Please create app/web/src/index.tsx")
+	throw new Error(
+		"No index file found. Please create app/web/src/index.tsx to mount your component."
+	)
 }
 
 async function buildWidget(
@@ -39,11 +40,8 @@ async function buildWidget(
 		mkdirSync(outDir, { recursive: true })
 	}
 
-	// Use user-defined index.tsx entry point
 	const entryPoint = resolveEntryPoint(cwd)
-	console.log(chalk.dim(`    Using entry: ${entryPoint}`))
 
-	// Simple build config following OpenAI's pattern
 	const buildConfig: esbuild.BuildOptions = {
 		entryPoints: [entryPoint],
 		bundle: true,
@@ -55,7 +53,7 @@ async function buildWidget(
 		target: "es2020",
 		platform: "browser",
 		loader: {
-			".css": "text", // Simple CSS loading like manual build
+			".css": "text",
 		},
 		define: {
 			"process.env.NODE_ENV": JSON.stringify(
