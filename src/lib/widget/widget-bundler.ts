@@ -14,13 +14,13 @@ function createCSSInjectionPlugin(): esbuild.Plugin {
 			build.onLoad({ filter: /\.css$/ }, async (args) => {
 				const { readFile } = await import("node:fs/promises")
 				const css = await readFile(args.path, "utf8")
-				
+
 				const contents = `
 					const style = document.createElement('style');
 					style.textContent = ${JSON.stringify(css)};
 					document.head.appendChild(style);
 				`
-				
+
 				return {
 					contents,
 					loader: "js",
