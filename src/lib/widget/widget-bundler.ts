@@ -7,6 +7,29 @@ import type { WidgetInfo } from "./widget-discovery"
 
 declare const __SMITHERY_WIDGET_BOOTSTRAP__: string
 
+function createCSSInjectionPlugin(): esbuild.Plugin {
+	return {
+		name: "css-injection-plugin",
+		setup(build) {
+			build.onLoad({ filter: /\.css$/ }, async (args) => {
+				const { readFile } = await import("node:fs/promises")
+				const css = await readFile(args.path, "utf8")
+				
+				const contents = `
+					const style = document.createElement('style');
+					style.textContent = ${JSON.stringify(css)};
+					document.head.appendChild(style);
+				`
+				
+				return {
+					contents,
+					loader: "js",
+				}
+			})
+		},
+	}
+}
+
 function createWidgetEntryPlugin(widget: WidgetInfo): esbuild.Plugin {
 	return {
 		name: "widget-entry-plugin",
@@ -63,10 +86,7 @@ async function buildWidget(
 		jsx: "automatic",
 		target: "es2020",
 		platform: "browser",
-		loader: {
-			".css": "css",
-		},
-		plugins: [createWidgetEntryPlugin(widget)],
+		plugins: [createCSSInjectionPlugin(), createWidgetEntryPlugin(widget)],
 		define: {
 			"process.env.NODE_ENV": JSON.stringify(
 				options.production ? "production" : "development",
