@@ -2,7 +2,7 @@ import { existsSync, mkdirSync, statSync } from "node:fs"
 import { dirname, join, resolve } from "node:path"
 import chalk from "chalk"
 import * as esbuild from "esbuild"
-import { formatFileSize } from "../utils/build"
+import { formatFileSize } from "../../utils/build"
 import type { WidgetInfo } from "./widget-discovery"
 
 function generateWidgetEntry(widgetName: string, componentPath: string): string {

@@ -4,9 +4,9 @@ import chalk from "chalk"
 import * as esbuild from "esbuild"
 import { formatFileSize } from "../utils/build"
 import { isWidgetProject } from "./config"
-import { buildWidgets } from "./widget-bundler"
-import { discoverWidgets } from "./widget-discovery"
-import { validateWidgetProject } from "./widget-validation"
+import { buildWidgets } from "./widget/widget-bundler"
+import { discoverWidgets } from "./widget/widget-discovery"
+import { validateWidgetProject } from "./widget/widget-validation"
 
 // TypeScript declarations for global constants injected at build time
 declare const __SMITHERY_SHTTP_BOOTSTRAP__: string

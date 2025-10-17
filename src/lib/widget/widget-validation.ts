@@ -1,7 +1,7 @@
 import { existsSync } from "node:fs"
 import { join } from "node:path"
 import chalk from "chalk"
-import { readSmitheryConfig } from "./config"
+import { readSmitheryConfig } from "../config"
 import { discoverWidgets } from "./widget-discovery"
 
 export function validateWidgetProject(cwd: string = process.cwd()): void {
