@@ -22,6 +22,7 @@ export interface BuildOptions {
 	transport?: "shttp" | "stdio"
 	configFile?: string
 	bundleAll?: boolean
+	minify?: boolean
 }
 
 /**
@@ -159,13 +160,14 @@ async function esbuildServer(
 	})
 
 	// Common build options
+	const shouldMinify = options.minify ?? true // Default to minified
 	const commonOptions: esbuild.BuildOptions = {
 		bundle: true,
 		platform: "node",
 		target: "node20",
 		outfile: outFile,
-		minify: options.production === true,
-		sourcemap: options.production ? false : "inline",
+		minify: shouldMinify,
+		sourcemap: shouldMinify ? false : "inline",
 		format: "cjs",
 	}
 
@@ -237,8 +239,9 @@ async function esbuildServer(
 			// const fileName = basename(outFile)
 			const relativePath = outFile.replace(`${process.cwd()}/`, "")
 			const fileSize = formatFileSize(stats.size)
+			const buildMode = shouldMinify ? "" : " (not minified)"
 			console.log(
-				`\n  ${relativePath}  ${chalk.yellow(fileSize)}  ${chalk.gray("(entry point)")}\n`,
+				`\n  ${relativePath}  ${chalk.yellow(fileSize)}  ${chalk.gray("(entry point)")}${buildMode}\n`,
 			)
 		}
 

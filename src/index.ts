@@ -182,6 +182,7 @@ program
 		"-c, --config <path>",
 		"Path to config file (default: auto-detect smithery.config.js)",
 	)
+	.option("--no-minify", "Build widgets without minification for easier debugging")
 	.action(async (entryFile, options) => {
 		await dev({
 			entryFile,
@@ -191,6 +192,7 @@ program
 			open: options.open,
 			initialMessage: options.prompt,
 			configFile: options.config,
+			minify: options.minify,
 		})
 	})
 

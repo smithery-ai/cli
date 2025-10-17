@@ -22,6 +22,7 @@ interface DevOptions {
 	open?: boolean
 	initialMessage?: string
 	configFile?: string
+	minify?: boolean
 }
 
 export async function dev(options: DevOptions = {}): Promise<void> {
@@ -152,6 +153,7 @@ export async function dev(options: DevOptions = {}): Promise<void> {
 			entryFile: options.entryFile,
 			configFile: options.configFile,
 			watch: true,
+			minify: options.minify,
 			onRebuild: () => {
 				startServer()
 			},
@@ -163,7 +165,7 @@ export async function dev(options: DevOptions = {}): Promise<void> {
 
 			if (widgets.length > 0) {
 				// Build widgets initially
-				await buildWidgets(widgets, { production: false })
+				await buildWidgets(widgets, { production: false, minify: options.minify })
 
 				// Watch for changes in app/web/src
 				const webSrcDir = join(process.cwd(), "app/web/src")
@@ -186,7 +188,7 @@ export async function dev(options: DevOptions = {}): Promise<void> {
 							rebuildTimeout = setTimeout(async () => {
 								console.log(chalk.dim(`\n📦 Widget file changed: ${filename}`))
 								const currentWidgets = discoverWidgets()
-								await buildWidgets(currentWidgets, { production: false })
+								await buildWidgets(currentWidgets, { production: false, minify: options.minify })
 								console.log(chalk.green("✓ Widgets rebuilt"))
 							}, 100)
 						},

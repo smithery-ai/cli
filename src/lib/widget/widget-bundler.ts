@@ -26,10 +26,11 @@ function resolveEntryPoint(cwd: string): string {
 
 async function buildWidget(
 	widget: WidgetInfo,
-	options: { production?: boolean; cwd?: string },
+	options: { production?: boolean; minify?: boolean; cwd?: string },
 ): Promise<void> {
 	const { name, bundlePath } = widget
 	const cwd = options.cwd || process.cwd()
+	const shouldMinify = options.minify ?? true // Default to minified
 
 	console.log(chalk.dim(`  Building widget: ${chalk.cyan(name)}`))
 
@@ -47,8 +48,8 @@ async function buildWidget(
 		bundle: true,
 		format: "esm",
 		outfile: outFile,
-		minify: options.production === true,
-		sourcemap: options.production ? false : "inline",
+		minify: shouldMinify,
+		sourcemap: shouldMinify ? false : "inline",
 		treeShaking: true,
 		target: "es2020",
 		platform: "browser",
@@ -77,7 +78,7 @@ async function buildWidget(
 	if (existsSync(outFile)) {
 		const stats = statSync(outFile)
 		const fileSize = formatFileSize(stats.size)
-		const buildMode = options.production ? "" : " (dev)"
+		const buildMode = shouldMinify ? "" : " (not minified)"
 		console.log(
 			chalk.dim(`    ${bundlePath}  ${chalk.yellow(fileSize)}${buildMode}`),
 		)
@@ -86,7 +87,7 @@ async function buildWidget(
 
 export async function buildWidgets(
 	widgets: WidgetInfo[],
-	options: { production?: boolean; cwd?: string } = {},
+	options: { production?: boolean; minify?: boolean; cwd?: string } = {},
 ): Promise<void> {
 	if (widgets.length === 0) {
 		return
