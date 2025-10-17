@@ -13,14 +13,7 @@ const isDotSafeIdentifier = (str) => {
 for (const k in process.env) {
 	/* Skip environment variables that should be evaluated at runtime */
 	// Keep these dynamic so code isn't tree-shaken based on CI build env
-	if (
-		[
-			"HOME",
-			"USER",
-			"XDG_CONFIG_HOME",
-			"SMITHERY_BEARER_AUTH",
-		].includes(k)
-	)
+	if (["HOME", "USER", "XDG_CONFIG_HOME", "SMITHERY_BEARER_AUTH"].includes(k))
 		continue
 
 	// Skip variables whose names are not dot-safe identifiers (e.g., those containing hyphens, parentheses, etc.)
@@ -51,9 +44,21 @@ const stdioResult = await esbuild.build({
 	packages: "external",
 })
 
+const widgetResult = await esbuild.build({
+	entryPoints: ["src/runtime/widget-bootstrap.tsx"],
+	bundle: true,
+	platform: "browser",
+	target: "es2020",
+	format: "esm",
+	jsx: "automatic",
+	write: false,
+	packages: "external",
+})
+
 // Get the compiled code as strings and inject via define
 const shttpBootstrapJs = shttpResult.outputFiles[0].text
 const stdioBootstrapJs = stdioResult.outputFiles[0].text
+const widgetBootstrapJs = widgetResult.outputFiles[0].text
 
 // Get package version
 const packageJson = JSON.parse(readFileSync("package.json", "utf-8"))
@@ -61,6 +66,7 @@ const packageJson = JSON.parse(readFileSync("package.json", "utf-8"))
 // Inject bootstrap content and version as global constants
 define.__SMITHERY_SHTTP_BOOTSTRAP__ = JSON.stringify(shttpBootstrapJs)
 define.__SMITHERY_STDIO_BOOTSTRAP__ = JSON.stringify(stdioBootstrapJs)
+define.__SMITHERY_WIDGET_BOOTSTRAP__ = JSON.stringify(widgetBootstrapJs)
 define.__SMITHERY_VERSION__ = JSON.stringify(packageJson.version)
 
 console.log("✓ Compiled bootstrap files")
