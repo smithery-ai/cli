@@ -1,18 +1,4 @@
 /**
- * Detect the current JavaScript runtime environment
- */
-export function detectRuntime(): "bun" | "node" {
-	return typeof Bun !== "undefined" ? "bun" : "node"
-}
-
-/**
- * Get the default bundler based on current runtime
- */
-export function getDefaultBundler(): "bun" | "esbuild" {
-	return detectRuntime() === "bun" ? "bun" : "esbuild"
-}
-
-/**
  * Format file size in human readable format
  */
 export function formatFileSize(bytes: number): string {

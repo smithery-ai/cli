@@ -22,9 +22,7 @@ export function discoverWidgets(cwd: string = process.cwd()): WidgetInfo[] {
 	)
 
 	if (widgetFiles.length === 0) {
-		console.warn(
-			chalk.yellow("⚠️  No .tsx widgets found in app/web/src/"),
-		)
+		console.warn(chalk.yellow("⚠️  No .tsx widgets found in app/web/src/"))
 		return []
 	}
 
@@ -32,7 +30,7 @@ export function discoverWidgets(cwd: string = process.cwd()): WidgetInfo[] {
 		const name = file.replace(".tsx", "")
 		const cssFile = `${name}.css`
 		const cssPath = join(webSrcDir, cssFile)
-		
+
 		return {
 			name,
 			componentFile: join("app/web/src", file),
@@ -46,7 +44,7 @@ export function discoverWidgets(cwd: string = process.cwd()): WidgetInfo[] {
 			`Found ${widgets.length} widget(s): ${widgets.map((w) => w.name).join(", ")}`,
 		),
 	)
-	
+
 	const widgetsWithCss = widgets.filter((w) => w.cssFile)
 	if (widgetsWithCss.length > 0) {
 		console.log(
@@ -58,4 +56,3 @@ export function discoverWidgets(cwd: string = process.cwd()): WidgetInfo[] {
 
 	return widgets
 }
-

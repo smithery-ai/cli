@@ -32,9 +32,7 @@ export function validateWidgetProject(cwd: string = process.cwd()): void {
 			),
 		)
 		console.warn(
-			chalk.dim(
-				`   Create a widget component like app/web/src/my-widget.tsx`,
-			),
+			chalk.dim(`   Create a widget component like app/web/src/my-widget.tsx`),
 		)
 	}
 
@@ -50,4 +48,3 @@ export function validateWidgetProject(cwd: string = process.cwd()): void {
 
 	console.log(chalk.dim("✓ Widget project structure validated"))
 }
-

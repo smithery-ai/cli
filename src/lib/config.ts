@@ -10,7 +10,9 @@ export interface SmitheryConfig {
 	startCommand?: Record<string, unknown>
 }
 
-export function readSmitheryConfig(cwd: string = process.cwd()): SmitheryConfig {
+export function readSmitheryConfig(
+	cwd: string = process.cwd(),
+): SmitheryConfig {
 	const configPath = join(cwd, "smithery.yaml")
 
 	if (!existsSync(configPath)) {
@@ -45,4 +47,3 @@ export function isWidgetProject(cwd: string = process.cwd()): boolean {
 		return false
 	}
 }
-

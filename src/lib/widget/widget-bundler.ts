@@ -1,26 +1,11 @@
 import { existsSync, mkdirSync, statSync } from "node:fs"
-import { dirname, join, resolve } from "node:path"
+import { dirname, resolve } from "node:path"
 import chalk from "chalk"
 import * as esbuild from "esbuild"
 import { formatFileSize } from "../../utils/build"
 import type { WidgetInfo } from "./widget-discovery"
 
-function generateWidgetEntry(widgetName: string, componentPath: string): string {
-	return `
-import React, { StrictMode } from "react"
-import { createRoot } from "react-dom/client"
-import Widget from ${JSON.stringify(componentPath)}
-
-const root = document.getElementById("${widgetName}-root")
-if (root) {
-  createRoot(root).render(
-    <StrictMode>
-      <Widget />
-    </StrictMode>
-  )
-}
-`.trim()
-}
+declare const __SMITHERY_WIDGET_BOOTSTRAP__: string
 
 function createWidgetEntryPlugin(widget: WidgetInfo): esbuild.Plugin {
 	return {
@@ -33,11 +18,17 @@ function createWidgetEntryPlugin(widget: WidgetInfo): esbuild.Plugin {
 
 			build.onLoad({ filter: /.*/, namespace: "widget-entry" }, () => {
 				const componentPath = resolve(process.cwd(), widget.componentFile)
-				const entryCode = generateWidgetEntry(widget.name, componentPath)
+
+				const modifiedBootstrap = __SMITHERY_WIDGET_BOOTSTRAP__
+					.replace('"virtual:widget-component"', JSON.stringify(componentPath))
+					.replace(
+						'"virtual:widget-name-root"',
+						JSON.stringify(`${widget.name}-root`),
+					)
 
 				return {
-					contents: entryCode,
-					loader: "tsx",
+					contents: modifiedBootstrap,
+					loader: "js",
 					resolveDir: process.cwd(),
 				}
 			})
@@ -99,7 +90,9 @@ async function buildWidget(
 		const stats = statSync(outFile)
 		const fileSize = formatFileSize(stats.size)
 		const buildMode = options.production ? "" : " (dev)"
-		console.log(chalk.dim(`    ${bundlePath}  ${chalk.yellow(fileSize)}${buildMode}`))
+		console.log(
+			chalk.dim(`    ${bundlePath}  ${chalk.yellow(fileSize)}${buildMode}`),
+		)
 	}
 }
 
@@ -117,4 +110,3 @@ export async function buildWidgets(
 
 	console.log(chalk.green(`✓ Widgets built successfully\n`))
 }
-

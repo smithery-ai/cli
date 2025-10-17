@@ -254,14 +254,14 @@ export async function buildServer(
 	options: BuildOptions = {},
 ): Promise<esbuild.BuildContext | esbuild.BuildResult> {
 	const entryFile = resolveEntryPoint(options.entryFile)
-	
+
 	// Validate widget project structure if applicable
 	if (isWidgetProject()) {
 		validateWidgetProject()
 	}
-	
+
 	const serverResult = await esbuildServer(options, entryFile)
-	
+
 	// Build widgets if this is a widget project
 	if (!options.watch && isWidgetProject()) {
 		const widgets = discoverWidgets()
@@ -269,6 +269,6 @@ export async function buildServer(
 			await buildWidgets(widgets, { production: options.production })
 		}
 	}
-	
+
 	return serverResult
 }

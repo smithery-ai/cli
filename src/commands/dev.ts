@@ -30,7 +30,7 @@ export async function dev(options: DevOptions = {}): Promise<void> {
 		if (isWidgetProject()) {
 			validateWidgetProject()
 		}
-		
+
 		// Ensure API key is available
 		const apiKey = await ensureApiKey(options.key)
 
@@ -160,38 +160,38 @@ export async function dev(options: DevOptions = {}): Promise<void> {
 		// Set up widget watching if this is a widget project
 		if (isWidgetProject()) {
 			const widgets = discoverWidgets()
-			
+
 			if (widgets.length > 0) {
 				// Build widgets initially
 				await buildWidgets(widgets, { production: false })
-				
+
 				// Watch for changes in app/web/src
 				const webSrcDir = join(process.cwd(), "app/web/src")
 				if (existsSync(webSrcDir)) {
 					let rebuildTimeout: NodeJS.Timeout | undefined
-					
+
 					widgetWatcher = fsWatch(
 						webSrcDir,
 						{ recursive: true },
-						async (eventType, filename) => {
+						async (_eventType, filename) => {
 							if (!filename || !filename.endsWith(".tsx")) {
 								return
 							}
-							
+
 							// Debounce rebuilds
 							if (rebuildTimeout) {
 								clearTimeout(rebuildTimeout)
 							}
-							
+
 							rebuildTimeout = setTimeout(async () => {
 								console.log(chalk.dim(`\n📦 Widget file changed: ${filename}`))
 								const currentWidgets = discoverWidgets()
 								await buildWidgets(currentWidgets, { production: false })
 								console.log(chalk.green("✓ Widgets rebuilt"))
 							}, 100)
-						}
+						},
 					)
-					
+
 					console.log(chalk.dim("👀 Watching for widget changes..."))
 				}
 			}
@@ -205,7 +205,7 @@ export async function dev(options: DevOptions = {}): Promise<void> {
 			if (buildContext && "dispose" in buildContext) {
 				await buildContext.dispose()
 			}
-			
+
 			// Stop widget watcher
 			if (widgetWatcher) {
 				widgetWatcher.close()
