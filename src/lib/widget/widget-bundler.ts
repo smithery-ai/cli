@@ -5,58 +5,22 @@ import * as esbuild from "esbuild"
 import { formatFileSize } from "../../utils/build"
 import type { WidgetInfo } from "./widget-discovery"
 
-declare const __SMITHERY_WIDGET_BOOTSTRAP__: string
+function resolveEntryPoint(cwd: string): string {
+	// Look for user-provided index file
+	const possibleEntries = [
+		resolve(cwd, "app/web/src/index.tsx"),
+		resolve(cwd, "app/web/src/index.ts"),
+		resolve(cwd, "app/web/src/index.jsx"),
+		resolve(cwd, "app/web/src/index.js"),
+	]
 
-function createCSSInjectionPlugin(): esbuild.Plugin {
-	return {
-		name: "css-injection-plugin",
-		setup(build) {
-			build.onLoad({ filter: /\.css$/ }, async (args) => {
-				const { readFile } = await import("node:fs/promises")
-				const css = await readFile(args.path, "utf8")
-
-				const contents = `
-					const style = document.createElement('style');
-					style.textContent = ${JSON.stringify(css)};
-					document.head.appendChild(style);
-				`
-
-				return {
-					contents,
-					loader: "js",
-				}
-			})
-		},
+	for (const entry of possibleEntries) {
+		if (existsSync(entry)) {
+			return entry
+		}
 	}
-}
 
-function createWidgetEntryPlugin(widget: WidgetInfo): esbuild.Plugin {
-	return {
-		name: "widget-entry-plugin",
-		setup(build) {
-			build.onResolve({ filter: /^virtual:widget-entry$/ }, () => ({
-				path: "virtual:widget-entry",
-				namespace: "widget-entry",
-			}))
-
-			build.onLoad({ filter: /.*/, namespace: "widget-entry" }, () => {
-				const componentPath = resolve(process.cwd(), widget.componentFile)
-
-				const modifiedBootstrap = __SMITHERY_WIDGET_BOOTSTRAP__
-					.replace('"virtual:widget-component"', JSON.stringify(componentPath))
-					.replace(
-						'"virtual:widget-name-root"',
-						JSON.stringify(`${widget.name}-root`),
-					)
-
-				return {
-					contents: modifiedBootstrap,
-					loader: "js",
-					resolveDir: process.cwd(),
-				}
-			})
-		},
-	}
+	throw new Error("No index file found in app/web/src/. Please create app/web/src/index.tsx")
 }
 
 async function buildWidget(
@@ -75,18 +39,24 @@ async function buildWidget(
 		mkdirSync(outDir, { recursive: true })
 	}
 
+	// Use user-defined index.tsx entry point
+	const entryPoint = resolveEntryPoint(cwd)
+	console.log(chalk.dim(`    Using entry: ${entryPoint}`))
+
+	// Simple build config following OpenAI's pattern
 	const buildConfig: esbuild.BuildOptions = {
-		entryPoints: ["virtual:widget-entry"],
+		entryPoints: [entryPoint],
 		bundle: true,
 		format: "esm",
 		outfile: outFile,
 		minify: options.production === true,
 		sourcemap: options.production ? false : "inline",
 		treeShaking: true,
-		jsx: "automatic",
 		target: "es2020",
 		platform: "browser",
-		plugins: [createCSSInjectionPlugin(), createWidgetEntryPlugin(widget)],
+		loader: {
+			".css": "text", // Simple CSS loading like manual build
+		},
 		define: {
 			"process.env.NODE_ENV": JSON.stringify(
 				options.production ? "production" : "development",
