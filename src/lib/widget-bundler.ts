@@ -72,6 +72,9 @@ async function buildWidget(
 		jsx: "automatic",
 		target: "es2020",
 		platform: "browser",
+		loader: {
+			".css": "css",
+		},
 		plugins: [createWidgetEntryPlugin(widget)],
 		define: {
 			"process.env.NODE_ENV": JSON.stringify(

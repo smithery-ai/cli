@@ -5,6 +5,7 @@ import chalk from "chalk"
 export interface WidgetInfo {
 	name: string
 	componentFile: string
+	cssFile?: string
 	bundlePath: string
 }
 
@@ -29,9 +30,13 @@ export function discoverWidgets(cwd: string = process.cwd()): WidgetInfo[] {
 
 	const widgets = widgetFiles.map((file) => {
 		const name = file.replace(".tsx", "")
+		const cssFile = `${name}.css`
+		const cssPath = join(webSrcDir, cssFile)
+		
 		return {
 			name,
 			componentFile: join("app/web/src", file),
+			cssFile: existsSync(cssPath) ? join("app/web/src", cssFile) : undefined,
 			bundlePath: join(".smithery", `${name}.js`),
 		}
 	})
@@ -41,6 +46,15 @@ export function discoverWidgets(cwd: string = process.cwd()): WidgetInfo[] {
 			`Found ${widgets.length} widget(s): ${widgets.map((w) => w.name).join(", ")}`,
 		),
 	)
+	
+	const widgetsWithCss = widgets.filter((w) => w.cssFile)
+	if (widgetsWithCss.length > 0) {
+		console.log(
+			chalk.dim(
+				`  ${widgetsWithCss.length} widget(s) with CSS: ${widgetsWithCss.map((w) => w.name).join(", ")}`,
+			),
+		)
+	}
 
 	return widgets
 }
