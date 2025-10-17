@@ -68,6 +68,7 @@ async function buildWidget(
 		outfile: outFile,
 		minify: options.production === true,
 		sourcemap: options.production ? false : "inline",
+		treeShaking: true,
 		jsx: "automatic",
 		target: "es2020",
 		platform: "browser",
@@ -94,7 +95,8 @@ async function buildWidget(
 	if (existsSync(outFile)) {
 		const stats = statSync(outFile)
 		const fileSize = formatFileSize(stats.size)
-		console.log(chalk.dim(`    ${bundlePath}  ${chalk.yellow(fileSize)}`))
+		const buildMode = options.production ? "" : " (dev)"
+		console.log(chalk.dim(`    ${bundlePath}  ${chalk.yellow(fileSize)}${buildMode}`))
 	}
 }
 
