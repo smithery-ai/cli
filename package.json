@@ -28,10 +28,9 @@
 	},
 	"dependencies": {
 		"@anthropic-ai/mcpb": "^1.1.1",
-		"@modelcontextprotocol/sdk": "^1.19.0",
+		"@modelcontextprotocol/sdk": "^1.20.0",
 		"@ngrok/ngrok": "^1.5.1",
 		"@smithery/registry": "^0.4.2",
-		"@smithery/sdk": "^1.6.8",
 		"boxen": "^8.0.1",
 		"chalk": "^4.1.2",
 		"commander": "^14.0.0",
