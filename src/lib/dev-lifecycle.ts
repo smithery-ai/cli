@@ -50,10 +50,10 @@ export async function setupTunnelAndPlayground(
 	)
 	console.log("")
 	console.log(
-		`  ${chalk.green(chalk.dim("➜"))}  ${chalk.bold(chalk.dim("Local:"))}      ${chalk.cyan(`http://localhost:${port}/`)}`,
+		`  ${chalk.green(chalk.dim("➜"))}  ${chalk.bold(chalk.dim("Local:"))}      ${chalk.cyan(`http://localhost:${port}/mcp`)}`,
 	)
 	console.log(
-		`  ${chalk.green(chalk.dim("➜"))}  ${chalk.bold(chalk.dim("Remote:"))}     ${chalk.cyan(url)}`,
+		`  ${chalk.green(chalk.dim("➜"))}  ${chalk.bold(chalk.dim("Remote:"))}     ${chalk.cyan(`${url}/mcp`)}`,
 	)
 	console.log(
 		`  ${chalk.green("➜")}  ${chalk.bold("Playground")}: ${chalk.cyan(playgroundUrl)}`,
