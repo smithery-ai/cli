@@ -179,7 +179,6 @@ export const createUplinkRunner = async (
 				DEFAULT_PORT.toString(), // Use a default port for the tunnel
 				apiKey,
 				options.open !== false,
-				options.initialMessage || "Say hello to the world!",
 			)
 			tunnelListener = listener
 			console.log(

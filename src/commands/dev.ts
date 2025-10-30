@@ -126,12 +126,7 @@ export async function dev(options: DevOptions = {}): Promise<void> {
 					chalk.dim(`> Server starting on port ${chalk.green(finalPort)}`),
 				)
 				if (shouldSetupTunnel) {
-					setupTunnelAndPlayground(
-						finalPort,
-						apiKey,
-						options.open !== false,
-						options.initialMessage,
-					)
+					setupTunnelAndPlayground(finalPort, apiKey, options.open !== false)
 						.then(({ listener }) => {
 							const _startupTime = Date.now() - startTime
 							// console.log(chalk.dim(`⚡ Server startup completed in ${startupTime}ms`))
@@ -165,7 +160,10 @@ export async function dev(options: DevOptions = {}): Promise<void> {
 
 			if (widgets.length > 0) {
 				// Build widgets initially
-				await buildWidgets(widgets, { production: false, minify: options.minify })
+				await buildWidgets(widgets, {
+					production: false,
+					minify: options.minify,
+				})
 
 				// Watch for changes in app/web/src
 				const webSrcDir = join(process.cwd(), "app/web/src")
@@ -188,7 +186,10 @@ export async function dev(options: DevOptions = {}): Promise<void> {
 							rebuildTimeout = setTimeout(async () => {
 								console.log(chalk.dim(`\n📦 Widget file changed: ${filename}`))
 								const currentWidgets = discoverWidgets()
-								await buildWidgets(currentWidgets, { production: false, minify: options.minify })
+								await buildWidgets(currentWidgets, {
+									production: false,
+									minify: options.minify,
+								})
 								console.log(chalk.green("✓ Widgets rebuilt"))
 							}, 100)
 						},

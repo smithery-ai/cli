@@ -20,7 +20,7 @@ function resolveEntryPoint(cwd: string): string {
 	}
 
 	throw new Error(
-		"No index file found. Please create app/web/src/index.tsx to mount your component."
+		"No index file found. Please create app/web/src/index.tsx to mount your component.",
 	)
 }
 

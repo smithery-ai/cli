@@ -214,12 +214,7 @@ export async function uplink(options: UplinkOptions = {}): Promise<void> {
 				console.log(
 					chalk.green(`✅ Uplink server starting on port ${finalPort}`),
 				)
-				setupTunnelAndPlayground(
-					finalPort,
-					apiKey,
-					options.open !== false,
-					options.initialMessage,
-				)
+				setupTunnelAndPlayground(finalPort, apiKey, options.open !== false)
 					.then(({ listener }) => {
 						tunnelListener = listener
 						isFirstBuild = false

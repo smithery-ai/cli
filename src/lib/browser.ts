@@ -4,14 +4,10 @@ import chalk from "chalk"
 
 const execAsync = promisify(exec)
 
-export async function openPlayground(
-	tunnelUrl: string,
-	_port: string,
-	_initialMessage?: string,
-): Promise<void> {
+export async function openPlayground(tunnelUrl: string): Promise<void> {
 	const playgroundUrl = `https://smithery.ai/playground?mcp=${encodeURIComponent(
 		`${tunnelUrl}/mcp`,
-	)}`
+	)}&dev`
 
 	// URL is already displayed in dev-lifecycle.ts, so no need to log it again
 

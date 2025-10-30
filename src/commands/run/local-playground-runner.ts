@@ -374,7 +374,6 @@ export const createLocalPlaygroundRunner = async (
 			String(localPort),
 			apiKey,
 			options.open !== false,
-			options.initialMessage || "Say hello to the world!",
 		)
 		tunnelListener = listener
 		console.log(

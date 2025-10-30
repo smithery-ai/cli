@@ -15,7 +15,6 @@ export async function setupTunnelAndPlayground(
 	port: string,
 	apiKey: string,
 	autoOpen = true,
-	initialMessage?: string,
 ): Promise<{ listener: any; url: string }> {
 	const { listener, url } = await startTunnel(port, apiKey)
 
@@ -81,7 +80,7 @@ export async function setupTunnelAndPlayground(
 	console.log("")
 
 	if (autoOpen) {
-		await openPlayground(url, port, initialMessage)
+		await openPlayground(url)
 	}
 
 	return { listener, url }
