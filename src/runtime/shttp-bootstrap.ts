@@ -30,6 +30,8 @@ interface SmitheryModule {
 	// Optional OAuth provider instance. Provider carries its own options.
 	oauth?: OAuthProvider | TokenVerifier
 	identity?: IdentityHandler
+	// Optional function to initialize the app
+	initApp?(): express.Application
 }
 
 const entry: SmitheryModule = _entry
@@ -40,7 +42,7 @@ async function startMcpServer() {
 
 		let server: { app: express.Application }
 
-		const app = express()
+		const app = entry.initApp ? entry.initApp() : express()
 
 		// Inject cors for development
 		console.log(`${chalk.dim("> Injecting cors middleware")}`)
@@ -112,8 +114,8 @@ async function startMcpServer() {
 		} else {
 			throw new Error(
 				"No valid server export found. Please export:\n" +
-					"- export default function({ sessionId, config }) { ... } (stateful)\n" +
-					"- export default function({ config }) { ... } (stateless)",
+				"- export default function({ sessionId, config }) { ... } (stateful)\n" +
+				"- export default function({ config }) { ... } (stateless)",
 			)
 		}
 
