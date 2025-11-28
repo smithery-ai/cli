@@ -9,6 +9,7 @@ import path from "node:path"
 export enum Transport {
 	STDIO = "stdio",
 	HTTP = "http",
+	SSE = "sse",
 }
 
 export interface ClientConfiguration {
@@ -30,10 +31,14 @@ export interface ClientConfiguration {
 		// Command templates for different transport types
 		stdio?: (name: string, command: string, args: string[]) => string[]
 		http?: (name: string, url: string) => string[]
+		sse?: (name: string, url: string) => string[]
 	}
 
 	// Whether this client prefers HTTP over STDIO when both are available
 	preferHTTP?: boolean
+
+	// Whether this client prefers SSE over STDIO when both are available
+	preferSSE?: boolean
 
 	// Whether this client supports OAuth authentication (no API key needed in URL)
 	supportsOAuth?: boolean
@@ -232,6 +237,14 @@ export const CLIENT_CONFIGURATIONS: Record<string, ClientConfiguration> = {
 		installType: "toml",
 		path: path.join(homeDir, ".codex", "config.toml"),
 	},
+	opencode: {
+		label: "OpenCode",
+		supportedTransports: [Transport.STDIO, Transport.SSE],
+		installType: "json",
+		preferSSE: true,
+		supportsOAuth: false,
+		path: path.join(homeDir, ".config", "opencode", "opencode.json"),
+	},
 }
 
 /**
@@ -284,6 +297,11 @@ export function getPreferredTransport(
 	// If client prefers HTTP and it's available, use it
 	if (config.preferHTTP && supportedAvailable.includes(Transport.HTTP)) {
 		return Transport.HTTP
+	}
+
+	// If client prefers SSE and it's available, use it
+	if (config.preferSSE && supportedAvailable.includes(Transport.SSE)) {
+		return Transport.SSE
 	}
 
 	// Otherwise prefer STDIO if available (more reliable)

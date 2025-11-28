@@ -1,3 +1,4 @@
+import type { Server } from "node:http"
 import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js"
 import type {
 	JSONRPCError,
@@ -35,7 +36,7 @@ export const createLocalPlaygroundRunner = async (
 	let isShuttingDown = false
 	let isReady = false
 	let transport: StdioClientTransport | null = null
-	let httpServer: any = null
+	let httpServer: Server | null = null
 	let tunnelListener: { close: () => Promise<void> } | undefined
 	const pendingRequests = new Map<
 		string,
@@ -302,7 +303,7 @@ export const createLocalPlaygroundRunner = async (
 			try {
 				logWithTimestamp("[Local Playground] Closing HTTP server...")
 				await new Promise<void>((resolve) => {
-					httpServer.close(() => {
+					httpServer!.close(() => {
 						logWithTimestamp("[Local Playground] HTTP server closed")
 						resolve()
 					})

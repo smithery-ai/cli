@@ -9,6 +9,7 @@ import {
 	getPreferredTransport,
 	Transport,
 } from "../config/clients"
+import { verbose } from "../lib/logger"
 import type {
 	ConfiguredServer,
 	JSONSchema,
@@ -489,7 +490,9 @@ function shouldUseHTTPFormat(
 		return preferredTransport === Transport.HTTP
 	} catch (error) {
 		// Log the error for debugging purposes
-		verbose(`Error determining SSE format for client ${client}: ${error instanceof Error ? error.message : String(error)}`)
+		verbose(
+			`Error determining SSE format for client ${client}: ${error instanceof Error ? error.message : String(error)}`,
+		)
 		// If we can't determine client capabilities, default to STDIO
 		return false
 	}
@@ -533,15 +536,19 @@ function createHTTPServerConfig(
 		try {
 			const configStr = JSON.stringify(userConfig)
 			const base64Config = Buffer.from(configStr).toString("base64")
-			
+
 			// Validate base64 encoded config size (limit to 4KB to prevent URL bloat)
 			if (base64Config.length > 4096) {
-				verbose(`Warning: Config size (${base64Config.length} chars) exceeds recommended limit for SSE URLs`)
+				verbose(
+					`Warning: Config size (${base64Config.length} chars) exceeds recommended limit for SSE URLs`,
+				)
 			}
-			
+
 			url.searchParams.set("config", base64Config)
 		} catch (error) {
-			verbose(`Warning: Failed to encode user config as base64: ${error instanceof Error ? error.message : String(error)}`)
+			verbose(
+				`Warning: Failed to encode user config as base64: ${error instanceof Error ? error.message : String(error)}`,
+			)
 			// Continue without config parameter rather than failing entirely
 		}
 	}
@@ -564,22 +571,26 @@ function shouldUseSSEFormat(
 	server: ServerDetailResponse,
 ): boolean {
 	try {
-		verbose(`Checking SSE support for client ${client} and server ${server.qualifiedName}`)
-		
+		verbose(
+			`Checking SSE support for client ${client} and server ${server.qualifiedName}`,
+		)
+
 		// First verify the client actually supports SSE
 		const clientConfig = getClientConfiguration(client)
 		if (!clientConfig.supportedTransports.includes(Transport.SSE)) {
 			verbose(`Client ${client} does not support SSE transport`)
 			return false
 		}
-		
+
 		// Check if server has HTTP connections available (SSE uses HTTP deployment)
 		const hasHTTPConnection = server.connections?.some(
 			(conn: ConnectionInfo) => conn.type === "http" && "deploymentUrl" in conn,
 		)
 
 		if (!hasHTTPConnection || !server.remote) {
-			verbose(`Server ${server.qualifiedName} doesn't support HTTP/SSE or isn't remote`)
+			verbose(
+				`Server ${server.qualifiedName} doesn't support HTTP/SSE or isn't remote`,
+			)
 			return false
 		}
 
@@ -590,19 +601,24 @@ function shouldUseSSEFormat(
 			(conn: ConnectionInfo) => {
 				// Check if connection explicitly supports SSE or has SSE in deployment URL
 				if (conn.type === "http" && "deploymentUrl" in conn) {
-					const deploymentUrl = (conn as any).deploymentUrl as string
+					const deploymentUrl = (conn as { deploymentUrl: string })
+						.deploymentUrl
 					// Look for SSE indicators in the deployment URL or server metadata
-					return deploymentUrl.includes("sse") || 
-						   server.qualifiedName.includes("sse") ||
-						   // Check server metadata for SSE support indication
-						   (server as any).supportsSSE === true
+					return (
+						deploymentUrl.includes("sse") ||
+						server.qualifiedName.includes("sse") ||
+						// Check server metadata for SSE support indication
+						(server as { supportsSSE?: boolean }).supportsSSE === true
+					)
 				}
 				return false
-			}
+			},
 		)
-		
+
 		if (!serverSupportsSSE) {
-			verbose(`Server ${server.qualifiedName} does not explicitly support SSE transport`)
+			verbose(
+				`Server ${server.qualifiedName} does not explicitly support SSE transport`,
+			)
 			// For now, require explicit SSE support rather than assuming it
 			return false
 		}
@@ -621,14 +637,16 @@ function shouldUseSSEFormat(
 			availableTransports.push(Transport.STDIO)
 		}
 
-		verbose(`Available transports for ${server.qualifiedName}: ${availableTransports.join(", ")}`)
-		
+		verbose(
+			`Available transports for ${server.qualifiedName}: ${availableTransports.join(", ")}`,
+		)
+
 		// Use the client's preferred transport
 		const preferredTransport = getPreferredTransport(
 			client,
 			availableTransports,
 		)
-		
+
 		const shouldUseSSE = preferredTransport === Transport.SSE
 		verbose(`Should use SSE format: ${shouldUseSSE}`)
 		return shouldUseSSE
@@ -655,22 +673,27 @@ function createSSEServerConfig(
 	client?: string,
 ): StreamableSSEConnection {
 	// Validate qualified name to prevent URL manipulation
-	if (!qualifiedName || typeof qualifiedName !== 'string') {
-		throw new Error('Invalid qualified name provided')
+	if (!qualifiedName || typeof qualifiedName !== "string") {
+		throw new Error("Invalid qualified name provided")
 	}
-	
+
 	// Validate qualified name format (should be @scope/name or name)
-	const validQualifiedName = /^[a-zA-Z0-9._-]+\/[a-zA-Z0-9._-]+$|^[a-zA-Z0-9._-]+$/
+	const validQualifiedName =
+		/^[a-zA-Z0-9._-]+\/[a-zA-Z0-9._-]+$|^[a-zA-Z0-9._-]+$/
 	if (!validQualifiedName.test(qualifiedName)) {
-		throw new Error(`Invalid qualified name format: ${qualifiedName}. Expected format: @scope/name or name`)
+		throw new Error(
+			`Invalid qualified name format: ${qualifiedName}. Expected format: @scope/name or name`,
+		)
 	}
-	
+
 	// Sanitize qualified name to prevent path traversal
-	const sanitizedQualifiedName = qualifiedName.replace(/[^a-zA-Z0-9._\/-]/g, '')
+	const sanitizedQualifiedName = qualifiedName.replace(/[^a-zA-Z0-9._/-]/g, "")
 	if (sanitizedQualifiedName !== qualifiedName) {
-		throw new Error(`Qualified name contains invalid characters: ${qualifiedName}`)
+		throw new Error(
+			`Qualified name contains invalid characters: ${qualifiedName}`,
+		)
 	}
-	
+
 	// Build the SSE URL for the server (same as HTTP URL)
 	const baseUrl = `https://server.smithery.ai/${sanitizedQualifiedName}/mcp`
 	const url = new URL(baseUrl)
@@ -694,10 +717,14 @@ function createSSEServerConfig(
 			// Validate config size before encoding (limit to 2KB of JSON data)
 			const configStr = JSON.stringify(userConfig)
 			if (configStr.length > 2048) {
-				verbose(`Warning: Config JSON size (${configStr.length} chars) exceeds 2KB limit, consider reducing config size`)
+				verbose(
+					`Warning: Config JSON size (${configStr.length} chars) exceeds 2KB limit, consider reducing config size`,
+				)
 				// Truncate large configs or skip encoding
 				if (configStr.length > 4096) {
-					verbose(`Config too large (${configStr.length} chars), skipping config parameter`)
+					verbose(
+						`Config too large (${configStr.length} chars), skipping config parameter`,
+					)
 					return {
 						type: "sse",
 						url: url.toString(),
@@ -705,26 +732,30 @@ function createSSEServerConfig(
 					}
 				}
 			}
-			
+
 			const base64Config = Buffer.from(configStr).toString("base64")
-			
+
 			// Validate final URL length (keep under 8KB for compatibility)
 			const testUrl = new URL(url.toString())
 			testUrl.searchParams.set("config", base64Config)
 			if (testUrl.toString().length > 8192) {
-				verbose(`Warning: Final SSE URL length (${testUrl.toString().length} chars) exceeds 8KB limit, skipping config parameter`)
+				verbose(
+					`Warning: Final SSE URL length (${testUrl.toString().length} chars) exceeds 8KB limit, skipping config parameter`,
+				)
 			} else {
 				url.searchParams.set("config", base64Config)
 			}
 		} catch (error) {
-			verbose(`Warning: Failed to encode user config as base64: ${error instanceof Error ? error.message : String(error)}`)
+			verbose(
+				`Warning: Failed to encode user config as base64: ${error instanceof Error ? error.message : String(error)}`,
+			)
 			// Continue without config parameter rather than failing entirely
 		}
 	}
 
 	const finalUrl = url.toString()
 	verbose(`Created SSE server config for ${qualifiedName}: ${finalUrl}`)
-	
+
 	return {
 		type: "sse",
 		url: finalUrl,

@@ -1,4 +1,5 @@
 import { type ChildProcess, spawn } from "node:child_process"
+import type { Server } from "node:http"
 import type {
 	JSONRPCError,
 	JSONRPCMessage,
@@ -30,11 +31,14 @@ export const createArbitraryCommandRunner = async (
 	let isShuttingDown = false
 	let isReady = false
 	let childProcess: ChildProcess | null = null
-	let httpServer: any = null
+	let httpServer: Server | null = null
 	let tunnelListener: { close: () => Promise<void> } | undefined
 	const pendingRequests = new Map<
 		string,
-		{ resolve: (value: JSONRPCMessage) => void; reject: (reason?: any) => void }
+		{
+			resolve: (value: JSONRPCMessage) => void
+			reject: (reason?: unknown) => void
+		}
 	>()
 
 	const localPort = options.port || 6969
@@ -307,7 +311,7 @@ export const createArbitraryCommandRunner = async (
 			try {
 				logWithTimestamp("[stdio listener] Closing HTTP server...")
 				await new Promise<void>((resolve) => {
-					httpServer.close(() => {
+					httpServer!.close(() => {
 						logWithTimestamp("[stdio listener] HTTP server closed")
 						resolve()
 					})

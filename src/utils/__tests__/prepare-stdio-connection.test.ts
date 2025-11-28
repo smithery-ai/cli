@@ -294,8 +294,7 @@ describe("prepareStdioConnection", () => {
 			args: [`\${__dirname}/index.js`],
 			env: {
 				API_KEY: `\${user_config.apiKey}`,
-				DATABASE_URL:
-					`\${user_config.database.host}:\${user_config.database.port}`,
+				DATABASE_URL: `\${user_config.database.host}:\${user_config.database.port}`,
 			},
 		})
 		vi.mocked(getUserConfig).mockResolvedValue({
@@ -317,9 +316,9 @@ describe("prepareStdioConnection", () => {
 
 		expect(resolveEnvTemplates).toHaveBeenCalledWith(
 			{
-				API_KEY: "\${user_config.apiKey}",
+				API_KEY: "${user_config.apiKey}",
 				DATABASE_URL:
-					"\${user_config.database.host}:\${user_config.database.port}",
+					"${user_config.database.host}:${user_config.database.port}",
 			},
 			{
 				apiKey: "secret-key-123",

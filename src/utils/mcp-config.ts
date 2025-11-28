@@ -59,10 +59,11 @@ export function readConfig(client: string): ClientMCPConfig {
 		verbose(`Config loaded successfully: ${JSON.stringify(rawConfig, null, 2)}`)
 
 		// Handle different naming conventions for MCP servers
-		let mcpServers: Record<string, unknown> = rawConfig.mcpServers || {}
+		let mcpServers: Record<string, ConfiguredServer> =
+			(rawConfig.mcpServers as Record<string, ConfiguredServer>) || {}
 		if (clientConfig.installType === "toml" && rawConfig.mcp_servers) {
 			// Codex uses mcp_servers (underscore) instead of mcpServers (camelCase)
-			mcpServers = rawConfig.mcp_servers
+			mcpServers = rawConfig.mcp_servers as Record<string, ConfiguredServer>
 		}
 
 		return {

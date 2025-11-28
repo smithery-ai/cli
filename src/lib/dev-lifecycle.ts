@@ -15,8 +15,13 @@ export async function setupTunnelAndPlayground(
 	port: string,
 	apiKey: string,
 	autoOpen = true,
-): Promise<{ listener: any; url: string }> {
-	const { listener, url } = await startTunnel(port, apiKey)
+): Promise<{
+	listener: { url: () => string | null; close: () => Promise<void> }
+	url: string
+}> {
+	const tunnelResult = await startTunnel(port, apiKey)
+	const listener = tunnelResult.listener
+	const url = tunnelResult.url
 
 	const playgroundUrl = `https://smithery.ai/playground?mcp=${encodeURIComponent(
 		`${url}/mcp`,

@@ -22,7 +22,7 @@ describe("Bundle Manager", () => {
 	describe("resolveTemplateString", () => {
 		it("should resolve __dirname template", () => {
 			const result = resolveTemplateString(
-				"${__dirname}/server.js",
+				`\${__dirname}/server.js`,
 				{},
 				"/bundle/path",
 			)
@@ -31,22 +31,22 @@ describe("Bundle Manager", () => {
 
 		it("should resolve user_config template", () => {
 			const userConfig = { apiKey: "secret123" }
-			const result = resolveTemplateString("${user_config.apiKey}", userConfig)
+			const result = resolveTemplateString(`\${user_config.apiKey}`, userConfig)
 			expect(result).toBe("secret123")
 		})
 
 		it("should resolve nested user_config template", () => {
 			const userConfig = { database: { host: "localhost", port: 5432 } }
 			const result = resolveTemplateString(
-				"${user_config.database.host}",
+				`\${user_config.database.host}`,
 				userConfig,
 			)
 			expect(result).toBe("localhost")
 		})
 
 		it("should handle missing user_config values", () => {
-			const result = resolveTemplateString("${user_config.missingKey}", {})
-			expect(result).toBe("${user_config.missingKey}") // Returns original if not found
+			const result = resolveTemplateString(`\${user_config.missingKey}`, {})
+			expect(result).toBe(`\${user_config.missingKey}`) // Returns original if not found
 		})
 
 		it("should handle non-template strings", () => {
@@ -57,7 +57,7 @@ describe("Bundle Manager", () => {
 		it("should handle multiple templates in one string", () => {
 			const userConfig = { host: "localhost", port: "8080" }
 			const result = resolveTemplateString(
-				"${user_config.host}:${user_config.port}",
+				`\${user_config.host}:\${user_config.port}`,
 				userConfig,
 			)
 			expect(result).toBe("localhost:8080")
@@ -67,9 +67,8 @@ describe("Bundle Manager", () => {
 	describe("resolveEnvTemplates", () => {
 		it("should resolve env vars with user_config templates", () => {
 			const env = {
-				API_KEY: "${user_config.apiKey}",
-				DATABASE_URL:
-					"${user_config.database.host}:${user_config.database.port}",
+				API_KEY: `\${user_config.apiKey}`,
+				DATABASE_URL: `\${user_config.database.host}:\${user_config.database.port}`,
 			}
 			const userConfig = {
 				apiKey: "secret123",
@@ -106,7 +105,7 @@ describe("Bundle Manager", () => {
 				server: {
 					mcp_config: {
 						command: "node",
-						args: ["${__dirname}/server.js"],
+						args: [`\${__dirname}/server.js`],
 					},
 				},
 			}
@@ -128,10 +127,10 @@ describe("Bundle Manager", () => {
 				server: {
 					mcp_config: {
 						command: "python",
-						args: ["${__dirname}/main.py"],
+						args: [`\${__dirname}/main.py`],
 						env: {
-							API_KEY: "${user_config.apiKey}",
-							DEBUG: "${user_config.debugMode}",
+							API_KEY: `\${user_config.apiKey}`,
+							DEBUG: `\${user_config.debugMode}`,
 						},
 					},
 				},
@@ -145,8 +144,8 @@ describe("Bundle Manager", () => {
 			expect(result.command).toBe("python")
 			expect(result.args).toEqual([`${tempDir}/main.py`])
 			expect(result.env).toEqual({
-				API_KEY: "${user_config.apiKey}",
-				DEBUG: "${user_config.debugMode}",
+				API_KEY: `\${user_config.apiKey}`,
+				DEBUG: `\${user_config.debugMode}`,
 			})
 		})
 
@@ -155,7 +154,7 @@ describe("Bundle Manager", () => {
 				server: {
 					mcp_config: {
 						command: "node",
-						args: ["${__dirname}/server.js"],
+						args: [`\${__dirname}/server.js`],
 					},
 				},
 			}
@@ -178,7 +177,7 @@ describe("Bundle Manager", () => {
 			const manifest = {
 				server: {
 					mcp_config: {
-						args: ["${__dirname}/server.js"],
+						args: [`\${__dirname}/server.js`],
 					},
 				},
 			}
@@ -197,9 +196,9 @@ describe("Bundle Manager", () => {
 					mcp_config: {
 						command: "node",
 						args: [
-							"--config=${__dirname}/config.json",
-							"--data=${__dirname}/data",
-							"--output=${__dirname}/output.log",
+							`--config=\${__dirname}/config.json`,
+							`--data=\${__dirname}/data`,
+							`--output=\${__dirname}/output.log`,
 						],
 					},
 				},
@@ -223,9 +222,9 @@ describe("Bundle Manager", () => {
 					mcp_config: {
 						command: "node",
 						args: [
-							"--api-key=${user_config.apiKey}",
-							"--port=${user_config.port}",
-							"--host=${__dirname}/server.js",
+							`--api-key=\${user_config.apiKey}`,
+							`--port=\${user_config.port}`,
+							`--host=\${__dirname}/server.js`,
 						],
 					},
 				},
@@ -239,8 +238,8 @@ describe("Bundle Manager", () => {
 			// Note: user_config templates in args are not resolved here
 			// They would be resolved when calling resolveEnvTemplates separately
 			expect(result.args).toEqual([
-				"--api-key=${user_config.apiKey}",
-				"--port=${user_config.port}",
+				`--api-key=\${user_config.apiKey}`,
+				`--port=\${user_config.port}`,
 				`--host=${tempDir}/server.js`,
 			])
 		})
@@ -271,14 +270,13 @@ describe("Bundle Manager", () => {
 					mcp_config: {
 						command: "node",
 						args: [
-							"${__dirname}/server.js",
-							"--config=${user_config.configPath}",
+							`\${__dirname}/server.js`,
+							`--config=\${user_config.configPath}`,
 						],
 						env: {
-							API_KEY: "${user_config.apiKey}",
-							DATABASE_URL:
-								"${user_config.database.host}:${user_config.database.port}",
-							LOG_FILE: "${__dirname}/logs/app.log",
+							API_KEY: `\${user_config.apiKey}`,
+							DATABASE_URL: `\${user_config.database.host}:\${user_config.database.port}`,
+							LOG_FILE: `\${__dirname}/logs/app.log`,
 						},
 					},
 				},

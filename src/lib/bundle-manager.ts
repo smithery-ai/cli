@@ -327,7 +327,7 @@ export function getBundleCommand(bundleDir: string): {
 
 	// Resolve __dirname in args (user_config templates remain as-is for later resolution)
 	const args = (mcpConfig.args || []).map((arg: string) =>
-		arg.replace(/\$\{__dirname\}/g, bundleDir || '\${__dirname}'),
+		arg.replace(/\$\{__dirname\}/g, bundleDir || "${__dirname}"),
 	)
 
 	// Include env vars if present (raw templates that need resolution later)
