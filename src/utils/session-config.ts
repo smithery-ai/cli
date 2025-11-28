@@ -649,8 +649,36 @@ function createSSEServerConfig(
 
 	// Add config as base64 encoded parameter if not empty
 	if (Object.keys(userConfig).length > 0) {
-		const configStr = JSON.stringify(userConfig)
-		url.searchParams.set("config", Buffer.from(configStr).toString("base64"))
+		try {
+			// Validate config size before encoding (limit to 2KB of JSON data)
+			const configStr = JSON.stringify(userConfig)
+			if (configStr.length > 2048) {
+				verbose(`Warning: Config JSON size (${configStr.length} chars) exceeds 2KB limit, consider reducing config size`)
+				// Truncate large configs or skip encoding
+				if (configStr.length > 4096) {
+					verbose(`Config too large (${configStr.length} chars), skipping config parameter`)
+					return {
+						type: "sse",
+						url: url.toString(),
+						headers: {},
+					}
+				}
+			}
+			
+			const base64Config = Buffer.from(configStr).toString("base64")
+			
+			// Validate final URL length (keep under 8KB for compatibility)
+			const testUrl = new URL(url.toString())
+			testUrl.searchParams.set("config", base64Config)
+			if (testUrl.toString().length > 8192) {
+				verbose(`Warning: Final SSE URL length (${testUrl.toString().length} chars) exceeds 8KB limit, skipping config parameter`)
+			} else {
+				url.searchParams.set("config", base64Config)
+			}
+		} catch (error) {
+			verbose(`Warning: Failed to encode user config as base64: ${error instanceof Error ? error.message : String(error)}`)
+			// Continue without config parameter rather than failing entirely
+		}
 	}
 
 	const finalUrl = url.toString()
