@@ -564,20 +564,56 @@ function shouldUseSSEFormat(
 	server: ServerDetailResponse,
 ): boolean {
 	try {
-		// Check if server has HTTP connections available (SSE uses same deployment)
+		verbose(`Checking SSE support for client ${client} and server ${server.qualifiedName}`)
+		
+		// First verify the client actually supports SSE
+		const clientConfig = getClientConfiguration(client)
+		if (!clientConfig.supportedTransports.includes(Transport.SSE)) {
+			verbose(`Client ${client} does not support SSE transport`)
+			return false
+		}
+		
+		// Check if server has HTTP connections available (SSE uses HTTP deployment)
 		const hasHTTPConnection = server.connections?.some(
 			(conn: ConnectionInfo) => conn.type === "http" && "deploymentUrl" in conn,
 		)
 
 		if (!hasHTTPConnection || !server.remote) {
-			return false // Server doesn't support HTTP/SSE or isn't remote
+			verbose(`Server ${server.qualifiedName} doesn't support HTTP/SSE or isn't remote`)
+			return false
 		}
 
-		// Determine available transports based on server capabilities
+		// Verify the server actually supports SSE by checking if it has SSE-specific capabilities
+		// For now, we'll be conservative and only enable SSE for specific known servers
+		// or servers that explicitly indicate SSE support in their metadata
+		const serverSupportsSSE = server.connections?.some(
+			(conn: ConnectionInfo) => {
+				// Check if connection explicitly supports SSE or has SSE in deployment URL
+				if (conn.type === "http" && "deploymentUrl" in conn) {
+					const deploymentUrl = (conn as any).deploymentUrl as string
+					// Look for SSE indicators in the deployment URL or server metadata
+					return deploymentUrl.includes("sse") || 
+						   server.qualifiedName.includes("sse") ||
+						   // Check server metadata for SSE support indication
+						   (server as any).supportsSSE === true
+				}
+				return false
+			}
+		)
+		
+		if (!serverSupportsSSE) {
+			verbose(`Server ${server.qualifiedName} does not explicitly support SSE transport`)
+			// For now, require explicit SSE support rather than assuming it
+			return false
+		}
+
+		// Determine available transports based on verified server capabilities
 		const availableTransports: Transport[] = []
 		if (hasHTTPConnection) {
 			availableTransports.push(Transport.HTTP)
-			availableTransports.push(Transport.SSE) // SSE uses same HTTP deployment
+			if (serverSupportsSSE) {
+				availableTransports.push(Transport.SSE)
+			}
 		}
 		if (
 			server.connections?.some((conn: ConnectionInfo) => conn.type === "stdio")
@@ -585,12 +621,17 @@ function shouldUseSSEFormat(
 			availableTransports.push(Transport.STDIO)
 		}
 
+		verbose(`Available transports for ${server.qualifiedName}: ${availableTransports.join(", ")}`)
+		
 		// Use the client's preferred transport
 		const preferredTransport = getPreferredTransport(
 			client,
 			availableTransports,
 		)
-		return preferredTransport === Transport.SSE
+		
+		const shouldUseSSE = preferredTransport === Transport.SSE
+		verbose(`Should use SSE format: ${shouldUseSSE}`)
+		return shouldUseSSE
 	} catch (_error) {
 		// If we can't determine client capabilities, default to STDIO
 		return false
