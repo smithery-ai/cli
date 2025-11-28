@@ -487,7 +487,9 @@ function shouldUseHTTPFormat(
 			availableTransports,
 		)
 		return preferredTransport === Transport.HTTP
-	} catch (_error) {
+	} catch (error) {
+		// Log the error for debugging purposes
+		verbose(`Error determining SSE format for client ${client}: ${error instanceof Error ? error.message : String(error)}`)
 		// If we can't determine client capabilities, default to STDIO
 		return false
 	}
@@ -528,8 +530,20 @@ function createHTTPServerConfig(
 
 	// Add config as base64 encoded parameter if not empty
 	if (Object.keys(userConfig).length > 0) {
-		const configStr = JSON.stringify(userConfig)
-		url.searchParams.set("config", Buffer.from(configStr).toString("base64"))
+		try {
+			const configStr = JSON.stringify(userConfig)
+			const base64Config = Buffer.from(configStr).toString("base64")
+			
+			// Validate base64 encoded config size (limit to 4KB to prevent URL bloat)
+			if (base64Config.length > 4096) {
+				verbose(`Warning: Config size (${base64Config.length} chars) exceeds recommended limit for SSE URLs`)
+			}
+			
+			url.searchParams.set("config", base64Config)
+		} catch (error) {
+			verbose(`Warning: Failed to encode user config as base64: ${error instanceof Error ? error.message : String(error)}`)
+			// Continue without config parameter rather than failing entirely
+		}
 	}
 
 	return {
@@ -639,9 +653,12 @@ function createSSEServerConfig(
 		url.searchParams.set("config", Buffer.from(configStr).toString("base64"))
 	}
 
+	const finalUrl = url.toString()
+	verbose(`Created SSE server config for ${qualifiedName}: ${finalUrl}`)
+	
 	return {
 		type: "sse",
-		url: url.toString(),
+		url: finalUrl,
 		headers: {},
 	}
 }
