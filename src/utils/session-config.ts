@@ -497,8 +497,10 @@ function createHTTPServerConfig(
 	profile: string | undefined,
 	client?: string,
 ): StreamableHTTPConnection {
+	const sanitizedQualifiedName = validateQualifiedName(qualifiedName)
+
 	// Build the HTTP URL for the server
-	const baseUrl = `https://server.smithery.ai/${qualifiedName}/mcp`
+	const baseUrl = `https://server.smithery.ai/${sanitizedQualifiedName}/mcp`
 	const url = new URL(baseUrl)
 
 	// Check if client supports OAuth (don't add API key to URL)
@@ -516,8 +518,35 @@ function createHTTPServerConfig(
 
 	// Add config as base64 encoded parameter if not empty
 	if (Object.keys(userConfig).length > 0) {
-		const configStr = JSON.stringify(userConfig)
-		url.searchParams.set("config", Buffer.from(configStr).toString("base64"))
+		try {
+			const configStr = JSON.stringify(userConfig)
+			if (configStr.length > 2048) {
+				verbose(
+					`Warning: Config JSON size (${configStr.length} chars) exceeds 2KB limit, consider reducing config size`,
+				)
+			}
+			if (configStr.length <= 4096) {
+				const base64Config = Buffer.from(configStr).toString("base64")
+				const testUrl = new URL(url.toString())
+				testUrl.searchParams.set("config", base64Config)
+				if (testUrl.toString().length > 8192) {
+					verbose(
+						`Warning: Final HTTP URL length (${testUrl.toString().length} chars) exceeds 8KB limit, skipping config parameter`,
+					)
+				} else {
+					url.searchParams.set("config", base64Config)
+				}
+			} else {
+				verbose(
+					`Config too large (${configStr.length} chars), skipping config parameter`,
+				)
+			}
+		} catch (error) {
+			verbose(
+				`Warning: Failed to encode user config as base64: ${error instanceof Error ? error.message : String(error)}`,
+			)
+			// Continue without config parameter rather than failing entirely
+		}
 	}
 
 	return {
@@ -525,4 +554,31 @@ function createHTTPServerConfig(
 		url: url.toString(),
 		headers: {},
 	}
+}
+
+/**
+ * Validates and sanitizes a qualified server name for use in URLs
+ * @param qualifiedName - The server package name (e.g., @scope/name or name)
+ * @returns Sanitized qualified name
+ */
+function validateQualifiedName(qualifiedName: string): string {
+	if (!qualifiedName || typeof qualifiedName !== "string") {
+		throw new Error("Invalid qualified name provided")
+	}
+
+	const validQualifiedName = /^@?[a-zA-Z0-9._-]+(?:\/[a-zA-Z0-9._-]+)?$/
+	if (!validQualifiedName.test(qualifiedName)) {
+		throw new Error(
+			`Invalid qualified name format: ${qualifiedName}. Expected format: @scope/name or name`,
+		)
+	}
+
+	const sanitizedQualifiedName = qualifiedName.replace(/[^a-zA-Z0-9._@/-]/g, "")
+	if (sanitizedQualifiedName !== qualifiedName) {
+		throw new Error(
+			`Qualified name contains invalid characters: ${qualifiedName}`,
+		)
+	}
+
+	return sanitizedQualifiedName
 }
