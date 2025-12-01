@@ -58,7 +58,7 @@ export async function startTunnel(
 	port: string,
 	apiKey: string,
 ): Promise<{
-	listener: any
+	listener: { url: () => string | null; close: () => Promise<void> }
 	url: string
 }> {
 	debug(chalk.blue(`🚀 Starting tunnel for localhost:${port}...`))

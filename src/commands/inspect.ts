@@ -36,9 +36,34 @@ async function createClient() {
 	return client
 }
 
+// Type definitions for MCP primitives based on SDK types
+type ResourceItem = {
+	uri: string
+	name?: string
+	description?: string
+	mimeType?: string
+}
+
+type ToolItem = {
+	name: string
+	description?: string
+	inputSchema?: Record<string, unknown>
+}
+
+type PromptItem = {
+	name: string
+	description?: string
+	arguments?: Array<{ name: string; description?: string; required?: boolean }>
+}
+
+type Primitive =
+	| { type: "resource"; value: ResourceItem }
+	| { type: "tool"; value: ToolItem }
+	| { type: "prompt"; value: PromptItem }
+
 async function listPrimitives(client: Client) {
 	const capabilities = client.getServerCapabilities() || {}
-	const primitives: any[] = []
+	const primitives: Primitive[] = []
 	const promises = []
 
 	if (capabilities.resources) {
@@ -75,7 +100,7 @@ async function listPrimitives(client: Client) {
 	return primitives
 }
 
-async function connectServer(transport: any) {
+async function connectServer(transport: StdioClientTransport) {
 	const spinner = ora("Connecting to server...").start()
 	let client: Client | null = null
 
@@ -131,7 +156,7 @@ async function connectServer(transport: any) {
 				return
 			}
 
-			let result: any
+			let result: unknown
 			let itemSpinner: ReturnType<typeof ora> | undefined
 
 			if (primitive.type === "resource") {
@@ -190,7 +215,9 @@ async function connectServer(transport: any) {
 	}
 }
 
-async function _readJSONSchemaInputs(schema: any) {
+async function _readJSONSchemaInputs(
+	schema: Record<string, unknown> | null | undefined,
+) {
 	if (!schema || isEmpty(schema)) {
 		return {}
 	}
@@ -199,12 +226,12 @@ async function _readJSONSchemaInputs(schema: any) {
 		key: string
 		required?: boolean
 		type: string
-		[key: string]: any
+		[key: string]: unknown
 	}> = []
 	// Traverse schema to build questions
 	// This would be implemented similar to your existing code
 
-	const results: Record<string, any> = {}
+	const results: Record<string, unknown> = {}
 	for (const q of questions) {
 		const { key, required, ...options } = q
 		const { value } = await inquirer.prompt([
@@ -222,7 +249,9 @@ async function _readJSONSchemaInputs(schema: any) {
 	return results
 }
 
-async function readPromptArgumentInputs(args: any[]) {
+async function readPromptArgumentInputs(
+	args: Array<{ name: string; description?: string; required?: boolean }>,
+) {
 	if (!args || args.length === 0) {
 		return {}
 	}

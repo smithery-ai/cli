@@ -1,4 +1,5 @@
 import type { ChildProcess } from "node:child_process"
+import chalk from "chalk"
 import { FORCE_KILL_TIMEOUT } from "../constants"
 
 export interface ChildProcessCleanupOptions {
@@ -20,7 +21,7 @@ export async function cleanupChildProcess(
 		return
 	}
 
-	// console.log(chalk.yellow(`Stopping ${processName}...`))
+	console.log(chalk.yellow(`Stopping ${processName}...`))
 
 	// Wait for process to exit after sending SIGTERM
 	const processExited = new Promise<void>((resolve) => {

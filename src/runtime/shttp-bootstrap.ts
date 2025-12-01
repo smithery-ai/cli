@@ -74,7 +74,10 @@ async function startMcpServer() {
 			if (entry.configSchema) {
 				try {
 					const { zodToJsonSchema } = await import("zod-to-json-schema")
-					const schema = zodToJsonSchema(entry.configSchema) as any
+					const schema = zodToJsonSchema(entry.configSchema) as {
+						properties?: Record<string, unknown>
+						required?: string[]
+					}
 					const total = Object.keys(schema.properties || {}).length
 					const required = (schema.required || []).length
 					if (total > 0)
@@ -114,8 +117,8 @@ async function startMcpServer() {
 		} else {
 			throw new Error(
 				"No valid server export found. Please export:\n" +
-				"- export default function({ sessionId, config }) { ... } (stateful)\n" +
-				"- export default function({ config }) { ... } (stateless)",
+					"- export default function({ sessionId, config }) { ... } (stateful)\n" +
+					"- export default function({ config }) { ... } (stateless)",
 			)
 		}
 

@@ -69,7 +69,9 @@ export type StreamableHTTPConnection = z.infer<
 	typeof StreamableHTTPConnectionSchema
 >
 
-export type ConfiguredServer = StdioConnection | StreamableHTTPConnection
+export type ConfiguredServer =
+	| StdioConnection
+	| StreamableHTTPConnection
 
 // Server Configuration key value pairs
 export interface ServerConfig {
