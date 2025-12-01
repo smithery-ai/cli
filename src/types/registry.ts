@@ -60,16 +60,6 @@ export const StreamableHTTPConnectionSchema = z.object({
 		.describe("Optional HTTP headers to include."),
 })
 
-// streamable sse connection (for client config files like opencode)
-export const StreamableSSEConnectionSchema = z.object({
-	type: z.literal("sse").describe("Connection type for SSE servers."),
-	url: z.string().describe("The direct URL of the SSE MCP server."),
-	headers: z
-		.record(z.string(), z.string())
-		.optional()
-		.describe("Optional HTTP headers to include."),
-})
-
 export type StdioConnection = z.infer<typeof StdioConnectionSchema>
 export type BundleConnection = z.infer<typeof BundleConnectionSchema>
 export type StreamableHTTPDeploymentConnection = z.infer<
@@ -78,14 +68,10 @@ export type StreamableHTTPDeploymentConnection = z.infer<
 export type StreamableHTTPConnection = z.infer<
 	typeof StreamableHTTPConnectionSchema
 >
-export type StreamableSSEConnection = z.infer<
-	typeof StreamableSSEConnectionSchema
->
 
 export type ConfiguredServer =
 	| StdioConnection
 	| StreamableHTTPConnection
-	| StreamableSSEConnection
 
 // Server Configuration key value pairs
 export interface ServerConfig {
@@ -114,10 +100,6 @@ export const ConnectionTypeSchema = z.union([
 		type: z.literal("http"),
 		...StreamableHTTPDeploymentConnectionSchema.shape,
 	}),
-	z.object({
-		type: z.literal("sse"),
-		...StreamableHTTPDeploymentConnectionSchema.shape,
-	}),
 ])
 
-export type ConnectionType = "stdio" | "http" | "sse"
+export type ConnectionType = "stdio" | "http"

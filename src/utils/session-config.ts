@@ -15,7 +15,6 @@ import type {
 	JSONSchema,
 	ServerConfig,
 	StreamableHTTPConnection,
-	StreamableSSEConnection,
 } from "../types/registry"
 
 /**
@@ -405,17 +404,6 @@ export function formatServerConfig(
 		)
 	}
 
-	// Check if we should use SSE format
-	if (client && server && shouldUseSSEFormat(client, server)) {
-		return createSSEServerConfig(
-			qualifiedName,
-			userConfig,
-			apiKey,
-			profile,
-			client,
-		)
-	}
-
 	// Default to STDIO format
 	// Base arguments for npx command
 	const npxArgs = ["-y", "@smithery/cli@latest", "run", qualifiedName]
@@ -491,7 +479,7 @@ function shouldUseHTTPFormat(
 	} catch (error) {
 		// Log the error for debugging purposes
 		verbose(
-			`Error determining SSE format for client ${client}: ${error instanceof Error ? error.message : String(error)}`,
+			`Error determining HTTP format for client ${client}: ${error instanceof Error ? error.message : String(error)}`,
 		)
 		// If we can't determine client capabilities, default to STDIO
 		return false
@@ -540,7 +528,7 @@ function createHTTPServerConfig(
 			// Validate base64 encoded config size (limit to 4KB to prevent URL bloat)
 			if (base64Config.length > 4096) {
 				verbose(
-					`Warning: Config size (${base64Config.length} chars) exceeds recommended limit for SSE URLs`,
+					`Warning: Config size (${base64Config.length} chars) exceeds recommended limit for HTTP URLs`,
 				)
 			}
 
@@ -556,209 +544,6 @@ function createHTTPServerConfig(
 	return {
 		type: "http",
 		url: url.toString(),
-		headers: {},
-	}
-}
-
-/**
- * Determines if SSE format should be used based on client and server capabilities
- * @param client - The client name
- * @param server - The server details
- * @returns True if SSE format should be used
- */
-function shouldUseSSEFormat(
-	client: string,
-	server: ServerDetailResponse,
-): boolean {
-	try {
-		verbose(
-			`Checking SSE support for client ${client} and server ${server.qualifiedName}`,
-		)
-
-		// First verify the client actually supports SSE
-		const clientConfig = getClientConfiguration(client)
-		if (!clientConfig.supportedTransports.includes(Transport.SSE)) {
-			verbose(`Client ${client} does not support SSE transport`)
-			return false
-		}
-
-		// Check if server has HTTP connections available (SSE uses HTTP deployment)
-		const hasHTTPConnection = server.connections?.some(
-			(conn: ConnectionInfo) => conn.type === "http" && "deploymentUrl" in conn,
-		)
-
-		if (!hasHTTPConnection || !server.remote) {
-			verbose(
-				`Server ${server.qualifiedName} doesn't support HTTP/SSE or isn't remote`,
-			)
-			return false
-		}
-
-		// Verify the server actually supports SSE by checking if it has SSE-specific capabilities
-		// For now, we'll be conservative and only enable SSE for specific known servers
-		// or servers that explicitly indicate SSE support in their metadata
-		const serverSupportsSSE = server.connections?.some(
-			(conn: ConnectionInfo) => {
-				// Check if connection explicitly supports SSE or has SSE in deployment URL
-				if (conn.type === "http" && "deploymentUrl" in conn) {
-					const deploymentUrl = (conn as { deploymentUrl: string })
-						.deploymentUrl
-					// Look for SSE indicators in the deployment URL or server metadata
-					return (
-						deploymentUrl.includes("sse") ||
-						server.qualifiedName.includes("sse") ||
-						// Check server metadata for SSE support indication
-						(server as { supportsSSE?: boolean }).supportsSSE === true
-					)
-				}
-				return false
-			},
-		)
-
-		if (!serverSupportsSSE) {
-			verbose(
-				`Server ${server.qualifiedName} does not explicitly support SSE transport`,
-			)
-			// For now, require explicit SSE support rather than assuming it
-			return false
-		}
-
-		// Determine available transports based on verified server capabilities
-		const availableTransports: Transport[] = []
-		if (hasHTTPConnection) {
-			availableTransports.push(Transport.HTTP)
-			if (serverSupportsSSE) {
-				availableTransports.push(Transport.SSE)
-			}
-		}
-		if (
-			server.connections?.some((conn: ConnectionInfo) => conn.type === "stdio")
-		) {
-			availableTransports.push(Transport.STDIO)
-		}
-
-		verbose(
-			`Available transports for ${server.qualifiedName}: ${availableTransports.join(", ")}`,
-		)
-
-		// Use the client's preferred transport
-		const preferredTransport = getPreferredTransport(
-			client,
-			availableTransports,
-		)
-
-		const shouldUseSSE = preferredTransport === Transport.SSE
-		verbose(`Should use SSE format: ${shouldUseSSE}`)
-		return shouldUseSSE
-	} catch (_error) {
-		// If we can't determine client capabilities, default to STDIO
-		return false
-	}
-}
-
-/**
- * Creates SSE server configuration for clients that support it (like OpenCode)
- * @param qualifiedName - The fully qualified name of the server package
- * @param userConfig - The user configuration for the server
- * @param apiKey - Optional API key
- * @param profile - Optional profile name to use
- * @param client - Optional client name
- * @returns SSE configuration
- */
-function createSSEServerConfig(
-	qualifiedName: string,
-	userConfig: ServerConfig,
-	apiKey: string | undefined,
-	profile: string | undefined,
-	client?: string,
-): StreamableSSEConnection {
-	// Validate qualified name to prevent URL manipulation
-	if (!qualifiedName || typeof qualifiedName !== "string") {
-		throw new Error("Invalid qualified name provided")
-	}
-
-	// Validate qualified name format (should be @scope/name or name)
-	const validQualifiedName =
-		/^[a-zA-Z0-9._-]+\/[a-zA-Z0-9._-]+$|^[a-zA-Z0-9._-]+$/
-	if (!validQualifiedName.test(qualifiedName)) {
-		throw new Error(
-			`Invalid qualified name format: ${qualifiedName}. Expected format: @scope/name or name`,
-		)
-	}
-
-	// Sanitize qualified name to prevent path traversal
-	const sanitizedQualifiedName = qualifiedName.replace(/[^a-zA-Z0-9._/-]/g, "")
-	if (sanitizedQualifiedName !== qualifiedName) {
-		throw new Error(
-			`Qualified name contains invalid characters: ${qualifiedName}`,
-		)
-	}
-
-	// Build the SSE URL for the server (same as HTTP URL)
-	const baseUrl = `https://server.smithery.ai/${sanitizedQualifiedName}/mcp`
-	const url = new URL(baseUrl)
-
-	// Check if client supports OAuth (don't add API key to URL)
-	const clientConfig = client ? getClientConfiguration(client) : null
-	const supportsOAuth = clientConfig?.supportsOAuth || false
-
-	// Add query parameters
-	if (apiKey && !supportsOAuth) {
-		url.searchParams.set("api_key", apiKey)
-	}
-
-	if (profile) {
-		url.searchParams.set("profile", profile)
-	}
-
-	// Add config as base64 encoded parameter if not empty
-	if (Object.keys(userConfig).length > 0) {
-		try {
-			// Validate config size before encoding (limit to 2KB of JSON data)
-			const configStr = JSON.stringify(userConfig)
-			if (configStr.length > 2048) {
-				verbose(
-					`Warning: Config JSON size (${configStr.length} chars) exceeds 2KB limit, consider reducing config size`,
-				)
-				// Truncate large configs or skip encoding
-				if (configStr.length > 4096) {
-					verbose(
-						`Config too large (${configStr.length} chars), skipping config parameter`,
-					)
-					return {
-						type: "sse",
-						url: url.toString(),
-						headers: {},
-					}
-				}
-			}
-
-			const base64Config = Buffer.from(configStr).toString("base64")
-
-			// Validate final URL length (keep under 8KB for compatibility)
-			const testUrl = new URL(url.toString())
-			testUrl.searchParams.set("config", base64Config)
-			if (testUrl.toString().length > 8192) {
-				verbose(
-					`Warning: Final SSE URL length (${testUrl.toString().length} chars) exceeds 8KB limit, skipping config parameter`,
-				)
-			} else {
-				url.searchParams.set("config", base64Config)
-			}
-		} catch (error) {
-			verbose(
-				`Warning: Failed to encode user config as base64: ${error instanceof Error ? error.message : String(error)}`,
-			)
-			// Continue without config parameter rather than failing entirely
-		}
-	}
-
-	const finalUrl = url.toString()
-	verbose(`Created SSE server config for ${qualifiedName}: ${finalUrl}`)
-
-	return {
-		type: "sse",
-		url: finalUrl,
 		headers: {},
 	}
 }

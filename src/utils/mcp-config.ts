@@ -120,17 +120,12 @@ export function runConfigCommand(
 
 		// Determine server type
 		const isHTTPServer = "type" in server && server.type === "http"
-		const isSSEServer = "type" in server && server.type === "sse"
 
 		if (isHTTPServer && "url" in server && commandConfig.http) {
 			// Use HTTP template function
 			args = commandConfig.http(name, server.url as string)
-		} else if (isSSEServer && "url" in server && commandConfig.sse) {
-			// Use SSE template function
-			args = commandConfig.sse(name, server.url as string)
 		} else if (
 			!isHTTPServer &&
-			!isSSEServer &&
 			"command" in server &&
 			commandConfig.stdio
 		) {
@@ -142,11 +137,7 @@ export function runConfigCommand(
 					: []
 			args = commandConfig.stdio(name, serverCommand, serverArgs)
 		} else {
-			const transportType = isHTTPServer
-				? "HTTP"
-				: isSSEServer
-					? "SSE"
-					: "STDIO"
+			const transportType = isHTTPServer ? "HTTP" : "STDIO"
 			throw new Error(
 				`No ${transportType} command configuration defined for client: ${clientConfig.label}`,
 			)
