@@ -232,6 +232,13 @@ export const CLIENT_CONFIGURATIONS: Record<string, ClientConfiguration> = {
 		installType: "toml",
 		path: path.join(homeDir, ".codex", "config.toml"),
 	},
+	opencode: {
+		label: "OpenCode",
+		supportedTransports: [Transport.STDIO],
+		installType: "json",
+		supportsOAuth: false,
+		path: path.join(homeDir, ".config", "opencode", "opencode.json"),
+	},
 }
 
 /**
