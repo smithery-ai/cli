@@ -8,10 +8,10 @@ import {
 	getClientConfiguration,
 } from "../config/clients.js"
 import { verbose } from "../lib/logger.js"
-import type { ConfiguredServer, MCPConfig } from "../types/registry.js"
+import type { MCPConfig } from "../types/registry.js"
 
 export interface ClientMCPConfig extends MCPConfig {
-	[key: string]: unknown
+	[key: string]: any
 }
 
 export function readConfig(client: string): ClientMCPConfig {
@@ -38,13 +38,13 @@ export function readConfig(client: string): ClientMCPConfig {
 
 		verbose(`Reading config file content`)
 		const fileContent = fs.readFileSync(configPath, "utf8")
-		let rawConfig: Record<string, unknown> = {}
+		let rawConfig: any = {}
 
 		if (clientConfig.installType === "yaml") {
-			rawConfig = (YAML.parse(fileContent) as Record<string, unknown>) || {}
+			rawConfig = (YAML.parse(fileContent) as any) || {}
 		} else if (clientConfig.installType === "toml") {
 			try {
-				rawConfig = parseToml(fileContent) as Record<string, unknown>
+				rawConfig = parseToml(fileContent) as any
 				verbose(`TOML config parsed successfully`)
 			} catch (tomlError) {
 				verbose(
@@ -59,7 +59,7 @@ export function readConfig(client: string): ClientMCPConfig {
 		verbose(`Config loaded successfully: ${JSON.stringify(rawConfig, null, 2)}`)
 
 		// Handle different naming conventions for MCP servers
-		let mcpServers: Record<string, unknown> = rawConfig.mcpServers || {}
+		let mcpServers = rawConfig.mcpServers || {}
 		if (clientConfig.installType === "toml" && rawConfig.mcp_servers) {
 			// Codex uses mcp_servers (underscore) instead of mcpServers (camelCase)
 			mcpServers = rawConfig.mcp_servers
@@ -117,22 +117,13 @@ export function runConfigCommand(
 	for (const [name, server] of Object.entries(config.mcpServers)) {
 		let args: string[]
 
-		// Determine server type
+		// Determine if this is an HTTP server configuration
 		const isHTTPServer = "type" in server && server.type === "http"
-		const isSSEServer = "type" in server && server.type === "sse"
 
 		if (isHTTPServer && "url" in server && commandConfig.http) {
 			// Use HTTP template function
 			args = commandConfig.http(name, server.url as string)
-		} else if (isSSEServer && "url" in server && commandConfig.sse) {
-			// Use SSE template function
-			args = commandConfig.sse(name, server.url as string)
-		} else if (
-			!isHTTPServer &&
-			!isSSEServer &&
-			"command" in server &&
-			commandConfig.stdio
-		) {
+		} else if (!isHTTPServer && "command" in server && commandConfig.stdio) {
 			// Use STDIO template function
 			const serverCommand = server.command as string
 			const serverArgs =
@@ -141,11 +132,7 @@ export function runConfigCommand(
 					: []
 			args = commandConfig.stdio(name, serverCommand, serverArgs)
 		} else {
-			const transportType = isHTTPServer
-				? "HTTP"
-				: isSSEServer
-					? "SSE"
-					: "STDIO"
+			const transportType = isHTTPServer ? "HTTP" : "STDIO"
 			throw new Error(
 				`No ${transportType} command configuration defined for client: ${clientConfig.label}`,
 			)
@@ -234,7 +221,7 @@ function writeConfigYaml(
 		fs.mkdirSync(configDir, { recursive: true })
 	}
 
-	let originalDoc: YAML.Document | null = null
+	let originalDoc: any = null
 
 	try {
 		if (fs.existsSync(configPath)) {
@@ -260,11 +247,11 @@ function writeConfigYaml(
 			mcpServersNode = originalDoc.get("mcpServers")
 		}
 
-		if (mcpServersNode && mcpServersNode instanceof YAML.YAMLMap) {
+		if (mcpServersNode && typeof mcpServersNode.set === "function") {
 			const existingServerNames = new Set<string>()
 			if (mcpServersNode.items) {
 				for (const item of mcpServersNode.items) {
-					if (item.key && "value" in item.key) {
+					if (item.key?.value) {
 						existingServerNames.add(item.key.value)
 					}
 				}
@@ -284,7 +271,7 @@ function writeConfigYaml(
 				verbose(`Adding/updating server: ${serverName}`)
 
 				const existingServer = mcpServersNode.get(serverName)
-				if (existingServer && existingServer instanceof YAML.YAMLMap) {
+				if (existingServer && typeof existingServer.set === "function") {
 					verbose(
 						`Updating existing server ${serverName} while preserving comments`,
 					)
@@ -336,7 +323,7 @@ function writeConfigToml(
 		fs.mkdirSync(configDir, { recursive: true })
 	}
 
-	let existingConfig: Record<string, unknown> = {}
+	let existingConfig: any = {}
 	try {
 		if (fs.existsSync(configPath)) {
 			verbose(`Reading existing TOML config file for merging`)
@@ -354,7 +341,7 @@ function writeConfigToml(
 	verbose(`Merging TOML configs`)
 
 	// Convert mcpServers to mcp_servers for Codex format
-	const mcpServersForToml: { [key: string]: unknown } = {}
+	const mcpServersForToml: { [key: string]: any } = {}
 	for (const [serverName, serverConfig] of Object.entries(config.mcpServers)) {
 		mcpServersForToml[serverName] = serverConfig
 	}

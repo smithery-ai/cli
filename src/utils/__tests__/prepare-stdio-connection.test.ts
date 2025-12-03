@@ -90,7 +90,7 @@ describe("prepareStdioConnection", () => {
 		vi.mocked(ensureBundleInstalled).mockResolvedValue(bundleDir)
 		vi.mocked(getBundleCommand).mockReturnValue({
 			command: "node",
-			args: [`\${__dirname}/index.js`, `apiKey=\${user_config.apiKey}`],
+			args: ["${__dirname}/index.js", "apiKey=${user_config.apiKey}"],
 		})
 		vi.mocked(getUserConfig).mockResolvedValue({
 			apiKey: "saved-key",
@@ -144,7 +144,7 @@ describe("prepareStdioConnection", () => {
 		vi.mocked(ensureBundleInstalled).mockResolvedValue(bundleDir)
 		vi.mocked(getBundleCommand).mockReturnValue({
 			command: "node",
-			args: [`\${__dirname}/index.js`],
+			args: ["${__dirname}/index.js"],
 		})
 		vi.mocked(getUserConfig).mockResolvedValue(null)
 		vi.mocked(resolveTemplateString).mockReturnValue(`${bundleDir}/index.js`)
@@ -219,7 +219,7 @@ describe("prepareStdioConnection", () => {
 		vi.mocked(ensureBundleInstalled).mockResolvedValue(bundleDir)
 		vi.mocked(getBundleCommand).mockReturnValue({
 			command: "node",
-			args: [`\${__dirname}/index.js`, `port=\${user_config.port}`],
+			args: ["${__dirname}/index.js", "port=${user_config.port}"],
 		})
 		vi.mocked(getUserConfig).mockResolvedValue({ port: 3000 })
 		vi.mocked(resolveTemplateString)
@@ -229,7 +229,7 @@ describe("prepareStdioConnection", () => {
 		const result = await prepareStdioConnection(
 			server,
 			server.connections[0],
-			{ port: 8080 } as Record<string, unknown>,
+			{ port: 8080 } as any,
 			"test-api-key",
 		)
 
@@ -256,7 +256,7 @@ describe("prepareStdioConnection", () => {
 		vi.mocked(ensureBundleInstalled).mockResolvedValue(bundleDir)
 		vi.mocked(getBundleCommand).mockReturnValue({
 			command: "node",
-			args: [`\${__dirname}/index.js`],
+			args: ["${__dirname}/index.js"],
 		})
 		vi.mocked(getUserConfig).mockResolvedValue(null)
 		vi.mocked(resolveTemplateString).mockReturnValue(`${bundleDir}/index.js`)
@@ -291,11 +291,11 @@ describe("prepareStdioConnection", () => {
 		vi.mocked(ensureBundleInstalled).mockResolvedValue(bundleDir)
 		vi.mocked(getBundleCommand).mockReturnValue({
 			command: "node",
-			args: [`\${__dirname}/index.js`],
+			args: ["${__dirname}/index.js"],
 			env: {
-				API_KEY: `\${user_config.apiKey}`,
+				API_KEY: "${user_config.apiKey}",
 				DATABASE_URL:
-					`\${user_config.database.host}:\${user_config.database.port}`,
+					"${user_config.database.host}:${user_config.database.port}",
 			},
 		})
 		vi.mocked(getUserConfig).mockResolvedValue({
@@ -317,9 +317,9 @@ describe("prepareStdioConnection", () => {
 
 		expect(resolveEnvTemplates).toHaveBeenCalledWith(
 			{
-				API_KEY: "\${user_config.apiKey}",
+				API_KEY: "${user_config.apiKey}",
 				DATABASE_URL:
-					"\${user_config.database.host}:\${user_config.database.port}",
+					"${user_config.database.host}:${user_config.database.port}",
 			},
 			{
 				apiKey: "secret-key-123",
