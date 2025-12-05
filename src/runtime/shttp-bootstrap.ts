@@ -114,8 +114,8 @@ async function startMcpServer() {
 		} else {
 			throw new Error(
 				"No valid server export found. Please export:\n" +
-				"- export default function({ sessionId, config }) { ... } (stateful)\n" +
-				"- export default function({ config }) { ... } (stateless)",
+					"- export default function({ sessionId, config }) { ... } (stateful)\n" +
+					"- export default function({ config }) { ... } (stateless)",
 			)
 		}
 

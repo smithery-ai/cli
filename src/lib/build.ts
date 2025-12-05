@@ -159,6 +159,20 @@ async function esbuildServer(
 		},
 	})
 
+	// Dependencies used by bootstrap code that should be external
+	// These are provided by @smithery/cli or @smithery/sdk and should not be bundled
+	const bootstrapExternals = [
+		"chalk",
+		"cors",
+		"express",
+		"lodash",
+		"uuidv7",
+		"zod-to-json-schema",
+		"@smithery/sdk",
+		"@modelcontextprotocol/sdk",
+		"zod",
+	]
+
 	// Common build options
 	const shouldMinify = options.minify ?? true // Default to minified
 	const commonOptions: esbuild.BuildOptions = {
@@ -169,6 +183,7 @@ async function esbuildServer(
 		minify: shouldMinify,
 		sourcemap: shouldMinify ? false : "inline",
 		format: "cjs",
+		external: bootstrapExternals,
 	}
 
 	let buildConfig: esbuild.BuildOptions
@@ -186,6 +201,14 @@ async function esbuildServer(
 
 	// Load custom config
 	const customConfig = await loadCustomConfig(options.configFile)
+	// Merge externals arrays if custom config provides one
+	if (customConfig.external && Array.isArray(customConfig.external)) {
+		buildConfig.external = [
+			...bootstrapExternals,
+			...(customConfig.external as string[]),
+		]
+		delete customConfig.external // Remove from customConfig to avoid overriding
+	}
 	buildConfig = { ...buildConfig, ...(customConfig as esbuild.BuildOptions) }
 
 	if (options.watch && options.onRebuild) {
