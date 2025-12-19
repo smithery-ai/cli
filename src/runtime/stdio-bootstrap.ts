@@ -1,9 +1,12 @@
 // These will be replaced by esbuild at build time.
 // @ts-expect-error
 import * as _entry from "virtual:user-module"
-import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js"
-import type { CreateServerFn as CreateStatefulServerFn, Logger } from "@smithery/sdk"
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js"
+import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js"
+import type {
+	CreateServerFn as CreateStatefulServerFn,
+	Logger,
+} from "@smithery/sdk"
 import chalk from "chalk"
 import _ from "lodash"
 import { uuidv7 } from "uuidv7"

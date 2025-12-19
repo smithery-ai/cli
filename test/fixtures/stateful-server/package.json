@@ -4,7 +4,7 @@
 	"type": "module",
 	"module": "./src/index.ts",
 	"dependencies": {
-		"zod": "^3.25.76",
-		"@modelcontextprotocol/sdk": "^1.18.2"
+		"zod": "^4",
+		"@modelcontextprotocol/sdk": "^1.25.1"
 	}
 }

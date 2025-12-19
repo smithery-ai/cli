@@ -4,12 +4,12 @@ import * as _entry from "virtual:user-module"
 import {
 	type CreateServerFn as CreateStatefulServerFn,
 	type CreateStatelessServerFn,
+	createStatefulServer,
+	createStatelessServer,
 	type IdentityHandler,
 	mountOAuth,
 	type OAuthProvider,
 	type TokenVerifier,
-	createStatefulServer,
-	createStatelessServer,
 } from "@smithery/sdk"
 import chalk from "chalk"
 import cors from "cors"
