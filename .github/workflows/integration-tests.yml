@@ -37,21 +37,25 @@ jobs:
     - name: Checkout repository
       uses: actions/checkout@v4
 
+    - name: Setup pnpm
+      uses: pnpm/action-setup@v4
+      with:
+        version: 9
     - name: Setup Node.js ${{ matrix.node-version }}
       uses: actions/setup-node@v4
       with:
         node-version: ${{ matrix.node-version }}
-        cache: 'npm'
+        cache: 'pnpm'
 
     - name: Install CLI dependencies
       run: |
-        npm install
-        npm run build
+        pnpm install
+        pnpm run build
 
     - name: Install fixture dependencies
       run: |
         cd test/fixtures/${{ matrix.fixture }}
-        npm install
+        pnpm install
 
     - name: Build test server
       run: |
