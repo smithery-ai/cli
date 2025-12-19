@@ -29,7 +29,7 @@ jobs:
             expected-required: 1
           - fixture: stateful-server  
             expected-schema-fields: 2
-            expected-required: 0
+            expected-required: 2
 
     name: Test ${{ matrix.fixture }} (Node ${{ matrix.node-version }})
     
