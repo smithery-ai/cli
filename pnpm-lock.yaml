@@ -20,9 +20,6 @@ importers:
       '@smithery/registry':
         specifier: ^0.4.2
         version: 0.4.4
-      '@smithery/sdk':
-        specifier: ^3.0.1
-        version: 3.0.1(hono@4.11.1)(zod@4.2.1)
       boxen:
         specifier: ^8.0.1
         version: 8.0.1
@@ -71,13 +68,13 @@ importers:
       yaml:
         specifier: ^2.3.4
         version: 2.8.2
-      zod:
-        specifier: ^4
-        version: 4.2.1
     devDependencies:
       '@biomejs/biome':
         specifier: ^2.2.4
         version: 2.3.10
+      '@smithery/sdk':
+        specifier: ^3.0.1
+        version: 3.0.1(hono@4.11.1)(zod@4.2.1)
       '@types/cors':
         specifier: ^2.8.18
         version: 2.8.19
@@ -126,6 +123,9 @@ importers:
       vitest:
         specifier: ^3.2.4
         version: 3.2.4(@types/node@20.19.27)(tsx@4.21.0)(yaml@2.8.2)
+      zod:
+        specifier: ^4
+        version: 4.2.1
 
 packages:
 
