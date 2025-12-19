@@ -20,7 +20,7 @@ import { DEFAULT_PORT } from "../constants.js"
 
 // Type declaration for the user module
 interface SmitheryModule {
-	configSchema?: z.ZodSchema
+	configSchema?: z.ZodSchema<Record<string, unknown>>
 	stateless?: boolean
 	// Default export (can be stateful or stateless server)
 	default?: CreateStatefulServerFn | CreateStatelessServerFn
@@ -96,25 +96,16 @@ async function startMcpServer() {
 				| "error"
 
 			if (entry.stateless) {
-				// Type assertion needed due to Zod version mismatch between dependencies
-				server = (createStatelessServer as any)(
+				server = createStatelessServer(
 					entry.default as CreateStatelessServerFn,
-					{
-						app,
-						schema: entry.configSchema,
-						logLevel,
-					},
+					{ app, schema: entry.configSchema, logLevel },
 				)
 			} else {
-				// Type assertion needed due to Zod version mismatch between dependencies
-				server = (createStatefulServer as any)(
-					entry.default as CreateStatefulServerFn,
-					{
-						app,
-						schema: entry.configSchema,
-						logLevel,
-					},
-				)
+				server = createStatefulServer(entry.default as CreateStatefulServerFn, {
+					app,
+					schema: entry.configSchema,
+					logLevel,
+				})
 			}
 		} else {
 			throw new Error(

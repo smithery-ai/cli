@@ -14,7 +14,7 @@ import * as z from "zod"
 
 // Type declaration for the user module
 interface SmitheryModule {
-	configSchema?: z.ZodSchema
+	configSchema?: z.ZodSchema<Record<string, unknown>>
 	// Default export (treated as stateful server)
 	default?: CreateStatefulServerFn
 }
