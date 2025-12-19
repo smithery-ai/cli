@@ -2,28 +2,25 @@
 // @ts-expect-error
 import * as _entry from "virtual:user-module"
 import {
+	type CreateServerFn as CreateStatefulServerFn,
+	type CreateStatelessServerFn,
+	createStatefulServer,
+	createStatelessServer,
 	type IdentityHandler,
 	mountOAuth,
 	type OAuthProvider,
 	type TokenVerifier,
 } from "@smithery/sdk"
-import {
-	type CreateServerFn as CreateStatefulServerFn,
-	createStatefulServer,
-} from "@smithery/sdk/server/stateful.js"
-import {
-	type CreateStatelessServerFn,
-	createStatelessServer,
-} from "@smithery/sdk/server/stateless.js"
 import chalk from "chalk"
 import cors from "cors"
 import express from "express"
 import type { z } from "zod"
+import * as zod from "zod"
 import { DEFAULT_PORT } from "../constants.js"
 
 // Type declaration for the user module
 interface SmitheryModule {
-	configSchema?: z.ZodSchema
+	configSchema?: z.ZodSchema<Record<string, unknown>>
 	stateless?: boolean
 	// Default export (can be stateful or stateless server)
 	default?: CreateStatefulServerFn | CreateStatelessServerFn
@@ -73,8 +70,7 @@ async function startMcpServer() {
 			// Show detected config schema
 			if (entry.configSchema) {
 				try {
-					const { zodToJsonSchema } = await import("zod-to-json-schema")
-					const schema = zodToJsonSchema(entry.configSchema) as any
+					const schema = zod.toJSONSchema(entry.configSchema)
 					const total = Object.keys(schema.properties || {}).length
 					const required = (schema.required || []).length
 					if (total > 0)

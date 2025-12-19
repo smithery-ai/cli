@@ -15,13 +15,14 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
       - uses: actions/setup-node@v4
         with:
           node-version: 20
+          cache: 'pnpm'
 
-      - run: rm -rf package-lock.json node_modules # workaround for bug with npm on optional deps
-      - run: npm install
-      - run: npm test
+      - run: pnpm install
+      - run: pnpm test
 
   build:
     runs-on: ubuntu-latest
@@ -29,17 +30,19 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
       - uses: actions/setup-node@v4
         with:
           node-version: 20
+          cache: 'pnpm'
 
-      - run: npm ci
-      - run: npm install -D @biomejs/cli-linux-x64  # biome platform binary for linux ci
-      - run: npm run build
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm add -D @biomejs/cli-linux-x64  # biome platform binary for linux ci
+      - run: pnpm run build
         env:
           ANALYTICS_ENDPOINT: ${{ secrets.ANALYTICS_ENDPOINT }}
           REGISTRY_ENDPOINT: ${{ secrets.REGISTRY_ENDPOINT }}
-      - run: npm run check
+      - run: pnpm run check
 
   integration-tests:
     uses: ./.github/workflows/integration-tests.yml
@@ -54,12 +57,14 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
       - uses: actions/setup-node@v4
         with:
           node-version: 20
           registry-url: 'https://registry.npmjs.org'
+          cache: 'pnpm'
 
-      - run: npm ci
+      - run: pnpm install --frozen-lockfile
       - run: npm publish --provenance --access public
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}

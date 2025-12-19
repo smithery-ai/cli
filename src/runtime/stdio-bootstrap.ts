@@ -1,19 +1,20 @@
 // These will be replaced by esbuild at build time.
 // @ts-expect-error
 import * as _entry from "virtual:user-module"
-import type { Server } from "@modelcontextprotocol/sdk/server/index.js"
+import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js"
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js"
-import type { Logger } from "@smithery/sdk/server/logger.js"
-import type { CreateServerFn as CreateStatefulServerFn } from "@smithery/sdk/server/stateful.js"
+import type {
+	CreateServerFn as CreateStatefulServerFn,
+	Logger,
+} from "@smithery/sdk"
 import chalk from "chalk"
 import _ from "lodash"
 import { uuidv7 } from "uuidv7"
-import type { z } from "zod"
-import { zodToJsonSchema } from "zod-to-json-schema"
+import * as z from "zod"
 
 // Type declaration for the user module
 interface SmitheryModule {
-	configSchema?: z.ZodSchema
+	configSchema?: z.ZodSchema<Record<string, unknown>>
 	// Default export (treated as stateful server)
 	default?: CreateStatefulServerFn
 }
@@ -84,7 +85,7 @@ function parseCliConfig<T = Record<string, unknown>>(
 	if (schema) {
 		const result = schema.safeParse(config)
 		if (!result.success) {
-			const jsonSchema = zodToJsonSchema(schema)
+			const jsonSchema = z.toJSONSchema(schema)
 			const errors = result.error.issues.map((issue) => {
 				const path = issue.path.join(".")
 				const message = issue.message
@@ -92,8 +93,9 @@ function parseCliConfig<T = Record<string, unknown>>(
 				// Get the value that was received
 				let received: unknown = config
 				for (const key of issue.path) {
-					if (received && typeof received === "object" && key in received) {
-						received = (received as Record<string, unknown>)[key]
+					const keyStr = String(key)
+					if (received && typeof received === "object" && keyStr in received) {
+						received = (received as Record<string, unknown>)[keyStr]
 					} else {
 						received = undefined
 						break
@@ -133,10 +135,15 @@ async function startMcpServer() {
 			process.exit(1)
 		}
 
-		let mcpServer: Server
+		let mcpServer: McpServer["server"]
 		if (entry.default && typeof entry.default === "function") {
 			logger.info("Creating server")
-			mcpServer = entry.default({ sessionId: uuidv7(), config, logger })
+			// Type assertion needed due to Zod version mismatch between dependencies
+			mcpServer = entry.default({
+				sessionId: uuidv7(),
+				config: config as Record<string, unknown>,
+				logger,
+			}) as unknown as McpServer["server"]
 		} else {
 			throw new Error(
 				"No valid server export found. Please export:\n" +
@@ -151,7 +158,11 @@ async function startMcpServer() {
 		logger.info("MCP server connected to stdio transport")
 
 		// If config was provided, show what was parsed
-		if (Object.keys(config).length > 0) {
+		if (
+			config &&
+			typeof config === "object" &&
+			Object.keys(config as Record<string, unknown>).length > 0
+		) {
 			logger.info({ config }, "Configuration loaded")
 		}
 	} catch (error) {
