@@ -2,23 +2,20 @@
 // @ts-expect-error
 import * as _entry from "virtual:user-module"
 import {
+	type CreateServerFn as CreateStatefulServerFn,
+	type CreateStatelessServerFn,
 	type IdentityHandler,
 	mountOAuth,
 	type OAuthProvider,
 	type TokenVerifier,
-} from "@smithery/sdk"
-import {
-	type CreateServerFn as CreateStatefulServerFn,
 	createStatefulServer,
-} from "@smithery/sdk/server/stateful.js"
-import {
-	type CreateStatelessServerFn,
 	createStatelessServer,
-} from "@smithery/sdk/server/stateless.js"
+} from "@smithery/sdk"
 import chalk from "chalk"
 import cors from "cors"
 import express from "express"
 import type { z } from "zod"
+import * as zod from "zod"
 import { DEFAULT_PORT } from "../constants.js"
 
 // Type declaration for the user module
@@ -73,8 +70,7 @@ async function startMcpServer() {
 			// Show detected config schema
 			if (entry.configSchema) {
 				try {
-					const { zodToJsonSchema } = await import("zod-to-json-schema")
-					const schema = zodToJsonSchema(entry.configSchema) as any
+					const schema = zod.toJSONSchema(entry.configSchema)
 					const total = Object.keys(schema.properties || {}).length
 					const required = (schema.required || []).length
 					if (total > 0)
@@ -100,16 +96,25 @@ async function startMcpServer() {
 				| "error"
 
 			if (entry.stateless) {
-				server = createStatelessServer(
+				// Type assertion needed due to Zod version mismatch between dependencies
+				server = (createStatelessServer as any)(
 					entry.default as CreateStatelessServerFn,
-					{ app, schema: entry.configSchema, logLevel },
+					{
+						app,
+						schema: entry.configSchema,
+						logLevel,
+					},
 				)
 			} else {
-				server = createStatefulServer(entry.default as CreateStatefulServerFn, {
-					app,
-					schema: entry.configSchema,
-					logLevel,
-				})
+				// Type assertion needed due to Zod version mismatch between dependencies
+				server = (createStatefulServer as any)(
+					entry.default as CreateStatefulServerFn,
+					{
+						app,
+						schema: entry.configSchema,
+						logLevel,
+					},
+				)
 			}
 		} else {
 			throw new Error(

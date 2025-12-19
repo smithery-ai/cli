@@ -3,18 +3,26 @@
  */
 import { z } from "zod"
 
-export const JSONSchemaSchema: z.ZodType = z.lazy(() =>
+// Define the type explicitly for proper TypeScript inference
+export interface JSONSchema {
+	type?: string
+	properties?: Record<string, JSONSchema>
+	items?: JSONSchema
+	required?: string[]
+	description?: string
+	default?: unknown
+}
+
+export const JSONSchemaSchema: z.ZodType<JSONSchema> = z.lazy(() =>
 	z.object({
 		type: z.string().optional(),
-		properties: z.record(JSONSchemaSchema).optional(),
+		properties: z.record(z.string(), JSONSchemaSchema).optional(),
 		items: JSONSchemaSchema.optional(),
 		required: z.array(z.string()).optional(),
 		description: z.string().optional(),
 		default: z.unknown().optional(),
 	}),
 )
-
-export type JSONSchema = z.infer<typeof JSONSchemaSchema>
 
 // list of configured MCP servers stored locally
 export interface MCPConfig {

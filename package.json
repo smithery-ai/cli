@@ -18,20 +18,21 @@
 		"test:installed": "tsx src/index.ts installed",
 		"extract": "tsx src/extractors/modelcontextprotocol-extractor.ts",
 		"test:uninstall": "tsx src/index.ts uninstall",
-		"prepare": "npm run build",
-		"check": "npx @biomejs/biome check --write --unsafe",
+		"prepare": "pnpm run build",
+		"check": "pnpm exec biome check --write --unsafe",
 		"test": "vitest run",
 		"test:watch": "vitest"
 	},
+	"packageManager": "pnpm@9.0.0",
 	"bin": {
 		"smithery": "dist/index.js"
 	},
 	"dependencies": {
 		"@anthropic-ai/mcpb": "^1.1.1",
-		"@modelcontextprotocol/sdk": "^1.20.0",
+		"@modelcontextprotocol/sdk": "^1.25.1",
 		"@ngrok/ngrok": "^1.5.1",
 		"@smithery/registry": "^0.4.2",
-		"@smithery/sdk": "^1.7.3",
+		"@smithery/sdk": "^3.0.1",
 		"boxen": "^8.0.1",
 		"chalk": "^4.1.2",
 		"commander": "^14.0.0",
@@ -66,7 +67,8 @@
 		"ts-node": "^10.9.1",
 		"tsx": "^4.19.2",
 		"typescript": "^5.0.0",
-		"vitest": "^3.2.4"
+		"vitest": "^3.2.4",
+		"zod": "^4"
 	},
 	"peerDependencies": {
 		"react": "^18.0.0 || ^19.0.0",
