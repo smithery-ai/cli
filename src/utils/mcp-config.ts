@@ -8,15 +8,61 @@ import {
 	getClientConfiguration,
 } from "../config/clients.js"
 import { verbose } from "../lib/logger.js"
-import type { MCPConfig } from "../types/registry.js"
+import type { ConfiguredServer, MCPConfig } from "../types/registry.js"
 
 export interface ClientMCPConfig extends MCPConfig {
 	[key: string]: any
 }
 
+function isPlainObject(value: unknown): value is Record<string, unknown> {
+	return typeof value === "object" && value !== null && !Array.isArray(value)
+}
+
+function toStringRecord(
+	value: unknown,
+): Record<string, string> | undefined {
+	if (!isPlainObject(value)) return undefined
+	const out: Record<string, string> = {}
+	for (const [k, v] of Object.entries(value)) {
+		if (typeof v === "string") out[k] = v
+	}
+	return Object.keys(out).length > 0 ? out : undefined
+}
+
+function coerceConfiguredServer(entry: unknown): ConfiguredServer | undefined {
+	if (!isPlainObject(entry)) return undefined
+
+	// Streamable HTTP connection
+	if (entry.type === "http" && typeof entry.url === "string") {
+		const headers = toStringRecord(entry.headers)
+		return {
+			type: "http",
+			url: entry.url,
+			...(headers ? { headers } : {}),
+		}
+	}
+
+	// STDIO connection
+	if (typeof entry.command === "string") {
+		const args =
+			Array.isArray(entry.args) && entry.args.every((a) => typeof a === "string")
+				? (entry.args as string[])
+				: undefined
+		const env = toStringRecord(entry.env)
+		return {
+			command: entry.command,
+			...(args && args.length > 0 ? { args } : {}),
+			...(env ? { env } : {}),
+		}
+	}
+
+	return undefined
+}
+
 export function readConfig(client: string): ClientMCPConfig {
 	verbose(`Reading config for client: ${client}`)
 	try {
+		const normalizedClientName = client.toLowerCase()
 		const clientConfig = getClientConfiguration(client)
 
 		// Command-based installers (i.e. VS Code) do not currently support listing servers
@@ -59,7 +105,55 @@ export function readConfig(client: string): ClientMCPConfig {
 		verbose(`Config loaded successfully: ${JSON.stringify(rawConfig, null, 2)}`)
 
 		// Handle different naming conventions for MCP servers
-		let mcpServers = rawConfig.mcpServers || {}
+		let mcpServers: Record<string, ConfiguredServer> = rawConfig.mcpServers || {}
+
+		// OpenCode stores MCP servers under "mcp" with a different schema.
+		if (normalizedClientName === "opencode") {
+			const converted: Record<string, ConfiguredServer> = {}
+
+			// Preferred source of truth: OpenCode's "mcp" field.
+			if (isPlainObject(rawConfig.mcp)) {
+				for (const [name, entry] of Object.entries(rawConfig.mcp)) {
+					if (!isPlainObject(entry) || typeof entry.type !== "string") continue
+
+					if (entry.type === "local" && Array.isArray(entry.command)) {
+						const cmdParts = entry.command.filter(
+							(p): p is string => typeof p === "string",
+						)
+						if (cmdParts.length === 0) continue
+
+						const [command, ...args] = cmdParts
+						const env = toStringRecord(entry.environment)
+						converted[name] = {
+							command,
+							...(args.length > 0 ? { args } : {}),
+							...(env ? { env } : {}),
+						}
+					}
+
+					if (entry.type === "remote" && typeof entry.url === "string") {
+						const headers = toStringRecord(entry.headers)
+						converted[name] = {
+							type: "http",
+							url: entry.url,
+							...(headers ? { headers } : {}),
+						}
+					}
+				}
+			}
+
+			// Migration path: if a buggy top-level "mcpServers" exists, include those too.
+			if (isPlainObject(rawConfig.mcpServers)) {
+				for (const [name, entry] of Object.entries(rawConfig.mcpServers)) {
+					if (name in converted) continue
+					const coerced = coerceConfiguredServer(entry)
+					if (coerced) converted[name] = coerced
+				}
+			}
+
+			mcpServers = converted
+		}
+
 		if (clientConfig.installType === "toml" && rawConfig.mcp_servers) {
 			// Codex uses mcp_servers (underscore) instead of mcpServers (camelCase)
 			mcpServers = rawConfig.mcp_servers
@@ -88,6 +182,10 @@ export function writeConfig(config: ClientMCPConfig, client: string): void {
 	}
 
 	const clientConfig = getClientConfiguration(client)
+	if (client.toLowerCase() === "opencode") {
+		writeConfigOpenCodeJson(config, clientConfig)
+		return
+	}
 	if (clientConfig.installType === "yaml") {
 		writeConfigYaml(config, clientConfig)
 	} else if (clientConfig.installType === "toml") {
@@ -202,6 +300,99 @@ function writeConfigJson(
 	verbose(`Writing config to file: ${configPath}`)
 	fs.writeFileSync(configPath, JSON.stringify(mergedConfig, null, 2))
 	verbose(`Config successfully written`)
+}
+
+function writeConfigOpenCodeJson(
+	config: ClientMCPConfig,
+	clientConfig: ClientConfiguration,
+): void {
+	const configPath = clientConfig.path
+	if (!configPath) {
+		throw new Error(`No path defined for client: ${clientConfig.label}`)
+	}
+
+	const configDir = path.dirname(configPath)
+
+	verbose(`Ensuring config directory exists: ${configDir}`)
+	if (!fs.existsSync(configDir)) {
+		verbose(`Creating directory: ${configDir}`)
+		fs.mkdirSync(configDir, { recursive: true })
+	}
+
+	let existingConfig: Record<string, unknown> = {}
+	try {
+		if (fs.existsSync(configPath)) {
+			verbose(`Reading existing OpenCode config file for merging`)
+			existingConfig = JSON.parse(fs.readFileSync(configPath, "utf8"))
+		}
+	} catch (error) {
+		verbose(
+			`Error reading existing OpenCode config for merge: ${error instanceof Error ? error.message : String(error)}`,
+		)
+	}
+
+	const existingMcp = isPlainObject(existingConfig.mcp)
+		? (existingConfig.mcp as Record<string, unknown>)
+		: {}
+
+	const nextMcp: Record<string, unknown> = { ...existingMcp }
+
+	// Remove servers we know how to manage, but that are no longer present.
+	for (const [name, entry] of Object.entries(existingMcp)) {
+		if (!isPlainObject(entry) || typeof entry.type !== "string") continue
+		if (entry.type !== "local" && entry.type !== "remote") continue
+		if (!(name in config.mcpServers)) delete nextMcp[name]
+	}
+
+	for (const [name, server] of Object.entries(config.mcpServers)) {
+		const previous = isPlainObject(existingMcp[name]) ? existingMcp[name] : {}
+		const enabled =
+			typeof previous.enabled === "boolean" ? previous.enabled : true
+		const timeout =
+			typeof previous.timeout === "number" ? previous.timeout : undefined
+
+		if ("type" in server && server.type === "http") {
+			const headers = server.headers ?? toStringRecord(previous.headers)
+			const oauth =
+				(previous as any).oauth === false || isPlainObject((previous as any).oauth)
+					? (previous as any).oauth
+					: undefined
+
+			nextMcp[name] = {
+				type: "remote",
+				url: server.url,
+				enabled,
+				...(headers ? { headers } : {}),
+				...(oauth !== undefined ? { oauth } : {}),
+				...(timeout !== undefined ? { timeout } : {}),
+			}
+		} else {
+			const args = Array.isArray((server as any).args) ? (server as any).args : []
+			const environment = (server as any).env ?? toStringRecord((previous as any).environment)
+
+			nextMcp[name] = {
+				type: "local",
+				command: [server.command, ...args],
+				enabled,
+				...(environment ? { environment } : {}),
+				...(timeout !== undefined ? { timeout } : {}),
+			}
+		}
+	}
+
+	const merged: Record<string, unknown> = {
+		...existingConfig,
+		...config,
+		mcp: nextMcp,
+	}
+
+	// OpenCode schema does not allow these top-level keys.
+	delete (merged as any).mcpServers
+	delete (merged as any).mcp_servers
+
+	verbose(`Writing config to file: ${configPath}`)
+	fs.writeFileSync(configPath, JSON.stringify(merged, null, 2))
+	verbose(`OpenCode config successfully written`)
 }
 
 function writeConfigYaml(
