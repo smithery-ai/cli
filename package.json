@@ -50,6 +50,7 @@
 		"yaml": "^2.3.4"
 	},
 	"devDependencies": {
+		"@smithery/sdk": "^3.0.1",
 		"@biomejs/biome": "^2.2.4",
 		"@types/cors": "^2.8.18",
 		"@types/express": "^5.0.2",
@@ -66,7 +67,8 @@
 		"ts-node": "^10.9.1",
 		"tsx": "^4.19.2",
 		"typescript": "^5.0.0",
-		"vitest": "^3.2.4"
+		"vitest": "^3.2.4",
+		"zod": "^4"
 	},
 	"peerDependencies": {
 		"@smithery/sdk": "^3.0.1",
