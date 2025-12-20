@@ -1,6 +1,6 @@
 import type { ConnectionInfo } from "@smithery/registry/models/components"
 import type ora from "ora"
-import type { ServerConfig } from "../types/registry"
+import type { JSONSchema, ServerConfig } from "../types/registry"
 import { promptForExistingConfig } from "../utils/command-prompts"
 import {
 	collectConfigValues,
@@ -147,6 +147,22 @@ async function handlePromptNewConfig(
 	return await collectConfigValues(connectionWithSchema, {})
 }
 
+function applySchemaDefaults(
+	config: ServerConfig,
+	configSchema: JSONSchema | undefined,
+): ServerConfig {
+	if (!configSchema?.properties) {
+		return config
+	}
+	const required = new Set<string>(configSchema.required || [])
+	const enriched = { ...config }
+	for (const [key, prop] of Object.entries(configSchema.properties)) {
+		if (key in enriched || required.has(key)) continue
+		if (prop.default !== undefined) enriched[key] = prop.default
+	}
+	return enriched
+}
+
 // Public API: Resolve user configuration based on connection, qualified name, and provided config values
 export async function resolveUserConfig(
 	connection: ConnectionInfo,
@@ -160,16 +176,24 @@ export async function resolveUserConfig(
 		configValues,
 	)
 
+	let config: ServerConfig
 	switch (strategy) {
 		case "skipConfig":
 			verbose("Server does not require configuration")
-			return {}
+			config = {}
+			break
 		case "useProvidedConfig":
 			verbose("Using configuration from --config flag")
-			return configValues
+			config = configValues
+			break
 		case "promptUseKeychain":
-			return await handlePromptUseKeychain(connection, qualifiedName, spinner)
+			config = await handlePromptUseKeychain(connection, qualifiedName, spinner)
+			break
 		case "promptNewConfig":
-			return await handlePromptNewConfig(connection, qualifiedName)
+			config = await handlePromptNewConfig(connection, qualifiedName)
+			break
 	}
+
+	const configSchema = await getConfigSchema(connection, qualifiedName)
+	return applySchemaDefaults(config, configSchema)
 }
