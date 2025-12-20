@@ -25,7 +25,6 @@ vi.mock("../utils/mcp-config", () => ({
 
 vi.mock("../lib/registry", () => ({
 	resolveServer: vi.fn(),
-	ResolveServerSource: { Install: "install" },
 	getUserConfig: vi.fn(),
 	saveUserConfig: vi.fn(),
 	validateUserConfig: vi.fn(),
@@ -171,7 +170,10 @@ describe("Installation Tests", () => {
 		vi.clearAllMocks()
 
 		// Default mock setup
-		mockResolveServer.mockResolvedValue(mockStdioServer)
+		mockResolveServer.mockResolvedValue({
+			server: mockStdioServer,
+			connection: mockStdioServer.connections[0],
+		})
 		mockCollectConfigValues.mockResolvedValue({})
 		mockGetServerName.mockReturnValue("test-server")
 		mockReadConfig.mockReturnValue({ mcpServers: {} })
@@ -195,22 +197,16 @@ describe("Installation Tests", () => {
 
 				mockGetClientConfiguration.mockReturnValue(clientConfig)
 				mockFormatServerConfig.mockReturnValue(expectedConfig)
-				mockResolveServer.mockResolvedValue(mockStdioServer)
+				mockResolveServer.mockResolvedValue({
+					server: mockStdioServer,
+					connection: mockStdioServer.connections[0],
+				})
 
-				await installServer(
-					"test-server",
-					"json-stdio",
-					{},
-					"test-api-key",
-					undefined,
-				)
+				await installServer("test-server", "json-stdio", {})
 
 				// Verify the complete flow
 				expect(mockFormatServerConfig).toHaveBeenCalledWith(
 					"test-server",
-					{}, // config
-					"test-api-key",
-					undefined, // profile
 					"json-stdio",
 					mockStdioServer,
 				)
@@ -235,21 +231,15 @@ describe("Installation Tests", () => {
 
 				mockGetClientConfiguration.mockReturnValue(clientConfig)
 				mockFormatServerConfig.mockReturnValue(expectedConfig)
-				mockResolveServer.mockResolvedValue(mockHttpServer)
+				mockResolveServer.mockResolvedValue({
+					server: mockHttpServer,
+					connection: mockHttpServer.connections[0],
+				})
 
-				await installServer(
-					"test-server",
-					"json-http",
-					{},
-					"test-api-key",
-					undefined,
-				)
+				await installServer("test-server", "json-http", {})
 
 				expect(mockFormatServerConfig).toHaveBeenCalledWith(
 					"test-server",
-					{},
-					"test-api-key",
-					undefined,
 					"json-http",
 					mockHttpServer,
 				)
@@ -281,13 +271,7 @@ describe("Installation Tests", () => {
 				mockGetClientConfiguration.mockReturnValue(clientConfig)
 				mockFormatServerConfig.mockReturnValue(expectedConfig)
 
-				await installServer(
-					"test-server",
-					"yaml-stdio",
-					{},
-					"test-api-key",
-					undefined,
-				)
+				await installServer("test-server", "yaml-stdio", {})
 
 				expect(mockWriteConfig).toHaveBeenCalledWith(
 					{ mcpServers: { "test-server": expectedConfig } },
@@ -316,13 +300,7 @@ describe("Installation Tests", () => {
 				mockGetClientConfiguration.mockReturnValue(clientConfig)
 				mockFormatServerConfig.mockReturnValue(expectedConfig)
 
-				await installServer(
-					"test-server",
-					"toml-stdio",
-					{},
-					"test-api-key",
-					undefined,
-				)
+				await installServer("test-server", "toml-stdio", {})
 
 				expect(mockWriteConfig).toHaveBeenCalledWith(
 					{ mcpServers: { "test-server": expectedConfig } },
@@ -351,13 +329,7 @@ describe("Installation Tests", () => {
 				mockGetClientConfiguration.mockReturnValue(clientConfig)
 				mockFormatServerConfig.mockReturnValue(expectedConfig)
 
-				await installServer(
-					"test-server",
-					"command-stdio",
-					{},
-					"test-api-key",
-					undefined,
-				)
+				await installServer("test-server", "command-stdio", {})
 
 				// Verify command was executed (not file written)
 				expect(mockRunConfigCommand).toHaveBeenCalledWith(
@@ -379,15 +351,12 @@ describe("Installation Tests", () => {
 
 				mockGetClientConfiguration.mockReturnValue(clientConfig)
 				mockFormatServerConfig.mockReturnValue(expectedConfig)
-				mockResolveServer.mockResolvedValue(mockHttpServer)
+				mockResolveServer.mockResolvedValue({
+					server: mockHttpServer,
+					connection: mockHttpServer.connections[0],
+				})
 
-				await installServer(
-					"test-server",
-					"command-http",
-					{},
-					"test-api-key",
-					undefined,
-				)
+				await installServer("test-server", "command-http", {})
 
 				expect(mockRunConfigCommand).toHaveBeenCalledWith(
 					{ mcpServers: { "test-server": expectedConfig } },

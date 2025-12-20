@@ -56,7 +56,6 @@ describe("prepareStdioConnection", () => {
 			server,
 			server.connections[0],
 			{},
-			"test-api-key",
 		)
 
 		expect(result).toEqual({
@@ -103,7 +102,6 @@ describe("prepareStdioConnection", () => {
 			server,
 			server.connections[0],
 			{},
-			"test-api-key",
 		)
 
 		expect(ensureBundleInstalled).toHaveBeenCalledWith(
@@ -153,14 +151,13 @@ describe("prepareStdioConnection", () => {
 			server,
 			server.connections[0],
 			{ DEBUG: "true" },
-			"test-api-key",
 		)
 
 		expect(result.args).toEqual([`${bundleDir}/index.js`])
 		expect(result.env).toEqual({})
 	})
 
-	test("fetches connection from registry when no command or bundleUrl", async () => {
+	test("throws error when no command or bundleUrl", async () => {
 		const server: ServerDetailResponse = {
 			qualifiedName: "author/registry-server",
 			remote: false,
@@ -172,33 +169,9 @@ describe("prepareStdioConnection", () => {
 			],
 		} as unknown as ServerDetailResponse
 
-		vi.mocked(fetchConnection).mockResolvedValue({
-			command: "python",
-			args: ["-m", "server"],
-			env: { PYTHONPATH: "/opt/python" },
-		})
-
-		const result = await prepareStdioConnection(
-			server,
-			server.connections[0],
-			{ DEBUG: "true" },
-			"test-api-key",
-		)
-
-		expect(fetchConnection).toHaveBeenCalledWith(
-			"author/registry-server",
-			{ DEBUG: "true" },
-			"test-api-key",
-		)
-
-		expect(getUserConfig).not.toHaveBeenCalled()
-
-		expect(result).toEqual({
-			command: "python",
-			args: ["-m", "server"],
-			env: { PYTHONPATH: "/opt/python" },
-			qualifiedName: "author/registry-server",
-		})
+		await expect(
+			prepareStdioConnection(server, server.connections[0], { DEBUG: "true" }),
+		).rejects.toThrow("Invalid connection configuration")
 	})
 
 	test("resolves args templates with runtime config overriding saved config", async () => {
@@ -230,7 +203,6 @@ describe("prepareStdioConnection", () => {
 			server,
 			server.connections[0],
 			{ port: 8080 } as any,
-			"test-api-key",
 		)
 
 		// Runtime config (8080) should override saved config (3000)
@@ -261,12 +233,7 @@ describe("prepareStdioConnection", () => {
 		vi.mocked(getUserConfig).mockResolvedValue(null)
 		vi.mocked(resolveTemplateString).mockReturnValue(`${bundleDir}/index.js`)
 
-		await prepareStdioConnection(
-			server,
-			server.connections[0],
-			{},
-			"test-api-key",
-		)
+		await prepareStdioConnection(server, server.connections[0], {})
 
 		expect(vi.mocked(ensureBundleInstalled)).toHaveBeenCalled()
 		expect(bundleDir).toContain("/current")
@@ -312,7 +279,6 @@ describe("prepareStdioConnection", () => {
 			server,
 			server.connections[0],
 			{},
-			"test-api-key",
 		)
 
 		expect(resolveEnvTemplates).toHaveBeenCalledWith(
@@ -392,7 +358,6 @@ describe("prepareStdioConnection - Integration Tests with Real Resolution", () =
 			server,
 			server.connections[0],
 			{},
-			"test-api-key",
 		)
 
 		expect(result.command).toBe("node")
@@ -457,7 +422,6 @@ describe("prepareStdioConnection - Integration Tests with Real Resolution", () =
 			server,
 			server.connections[0],
 			{},
-			"test-api-key",
 		)
 
 		expect(result.command).toBe("node")
@@ -523,7 +487,6 @@ describe("prepareStdioConnection - Integration Tests with Real Resolution", () =
 			server,
 			server.connections[0],
 			{},
-			"test-api-key",
 		)
 
 		expect(result.command).toBe("node")

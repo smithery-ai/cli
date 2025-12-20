@@ -1,5 +1,8 @@
 import { type SDKOptions, SmitheryRegistry } from "@smithery/registry"
-import type { ServerDetailResponse } from "@smithery/registry/models/components"
+import type {
+	ConnectionInfo,
+	ServerDetailResponse,
+} from "@smithery/registry/models/components"
 import {
 	SDKValidationError,
 	ServerError,
@@ -68,21 +71,19 @@ const createSDKOptions = (apiKey?: string): SDKOptions => {
 /**
  * Get server details from registry
  * @param qualifiedName The unique name of the server to resolve
- * @param apiKey Optional API key for authentication
- * @param source Optional source of the call (install, run, inspect)
- * @returns Details about the server, including available connection options
+ * @returns Details about the server and the selected connection
  */
-export enum ResolveServerSource {
-	Install = "install",
-	Run = "run",
-	Inspect = "inspect",
+export interface ResolvedServer {
+	server: ServerDetailResponse
+	connection: ConnectionInfo
 }
 
 export const resolveServer = async (
 	serverQualifiedName: string,
-	apiKey?: string,
-	source?: ResolveServerSource,
-): Promise<ServerDetailResponse> => {
+): Promise<ResolvedServer> => {
+	// Read API key from environment variable
+	const apiKey = process.env.SMITHERY_BEARER_AUTH
+
 	// Fire analytics event if apiKey is missing
 	if (ANALYTICS_ENDPOINT) {
 		;(async () => {
@@ -96,7 +97,6 @@ export const resolveServer = async (
 						eventName: "resolve_server",
 						payload: {
 							serverQualifiedName,
-							source,
 							hasApiKey: !!apiKey,
 						},
 						$session_id: sessionId,
@@ -121,7 +121,18 @@ export const resolveServer = async (
 		})
 		verbose("Successfully received server data from Smithery SDK")
 		verbose(`Server data: ${JSON.stringify(result, null, 2)}`)
-		return result
+
+		// Pick the first connection
+		if (!result.connections?.length) {
+			throw new Error("No connection configuration found for server")
+		}
+		const connection = result.connections[0]
+		verbose(`Selected connection: ${JSON.stringify(connection, null, 2)}`)
+
+		return {
+			server: result,
+			connection,
+		}
 	} catch (error: unknown) {
 		if (error instanceof SDKValidationError) {
 			verbose(`SDK validation error: ${error.pretty()}`)

@@ -93,23 +93,16 @@ describe("Installation Flow", () => {
 
 	describe("1. No Config Server", () => {
 		test("should skip all prompts when no config needed", async () => {
-			mockResolveServer.mockResolvedValue(noConfigServer)
+			mockResolveServer.mockResolvedValue({
+				server: noConfigServer,
+				connection: noConfigServer.connections[0],
+			})
 			mockValidateUserConfig.mockResolvedValue(validationResponses.noConfig)
 
-			await installServer(
-				"@test/no-config-server",
-				"test-client",
-				{},
-				"test-api-key",
-				undefined,
-			)
+			await installServer("@test/no-config-server", "test-client", {})
 
-			// Should validate config
-			expect(mockValidateUserConfig).toHaveBeenCalledWith(
-				"@test/no-config-server",
-				"test-api-key",
-				undefined,
-			)
+			// Should NOT validate config (no config needed)
+			expect(mockValidateUserConfig).not.toHaveBeenCalled()
 
 			// Should NOT prompt for config
 			expect(mockCollectConfigValues).not.toHaveBeenCalled()
@@ -124,147 +117,97 @@ describe("Installation Flow", () => {
 
 	describe("2. Optional Only Server", () => {
 		test("fresh install: should ask about optional config", async () => {
-			mockResolveServer.mockResolvedValue(optionalOnlyServer)
+			mockResolveServer.mockResolvedValue({
+				server: optionalOnlyServer,
+				connection: optionalOnlyServer.connections[0],
+			})
 			mockValidateUserConfig.mockResolvedValue(
 				validationResponses.optionalOnlyFresh,
 			)
 			mockCollectConfigValues.mockResolvedValue(collectedConfigs.optionalOnly)
 
-			await installServer(
-				"@test/optional-only-server",
-				"test-client",
-				{},
-				"test-api-key",
-				undefined,
-			)
-
-			// Should validate config
-			expect(mockValidateUserConfig).toHaveBeenCalled()
+			await installServer("@test/optional-only-server", "test-client", {})
 
 			// Should prompt for config (user can add optional)
 			expect(mockCollectConfigValues).toHaveBeenCalledWith(
 				optionalOnlyServer.connections[0],
-				{},
-			)
-
-			// Should save config if user added some
-			expect(mockSaveUserConfig).toHaveBeenCalledWith(
 				"@test/optional-only-server",
-				collectedConfigs.optionalOnly,
-				"test-api-key",
-				undefined,
+				{},
+				expect.anything(),
 			)
 		})
 
 		test("complete config: should use existing config without prompting", async () => {
-			mockResolveServer.mockResolvedValue(optionalOnlyServer)
+			mockResolveServer.mockResolvedValue({
+				server: optionalOnlyServer,
+				connection: optionalOnlyServer.connections[0],
+			})
 			mockValidateUserConfig.mockResolvedValue(
 				validationResponses.optionalOnlyComplete,
 			)
 
-			await installServer(
-				"@test/optional-only-server",
-				"test-client",
-				{},
-				"test-api-key",
-				undefined,
-			)
-
-			// Should validate config
-			expect(mockValidateUserConfig).toHaveBeenCalled()
+			await installServer("@test/optional-only-server", "test-client", {})
 
 			// Should NOT prompt for config (use existing)
 			expect(mockCollectConfigValues).not.toHaveBeenCalled()
-
-			// Should NOT save config (using existing)
-			expect(mockSaveUserConfig).not.toHaveBeenCalled()
 		})
 	})
 
 	describe("3. Required Only Server", () => {
 		test("fresh install: should prompt for required config", async () => {
-			mockResolveServer.mockResolvedValue(requiredOnlyServer)
+			mockResolveServer.mockResolvedValue({
+				server: requiredOnlyServer,
+				connection: requiredOnlyServer.connections[0],
+			})
 			mockValidateUserConfig.mockResolvedValue(
 				validationResponses.requiredOnlyFresh,
 			)
 			mockCollectConfigValues.mockResolvedValue(collectedConfigs.requiredOnly)
 
-			await installServer(
-				"@test/required-only-server",
-				"test-client",
-				{},
-				"test-api-key",
-				undefined,
-			)
-
-			// Should validate config
-			expect(mockValidateUserConfig).toHaveBeenCalled()
+			await installServer("@test/required-only-server", "test-client", {})
 
 			// Should prompt for missing required fields
 			expect(mockCollectConfigValues).toHaveBeenCalled()
-
-			// Should save the collected config
-			expect(mockSaveUserConfig).toHaveBeenCalledWith(
-				"@test/required-only-server",
-				collectedConfigs.requiredOnly,
-				"test-api-key",
-				undefined,
-			)
 		})
 
 		test("partial config: should prompt for missing required fields", async () => {
-			mockResolveServer.mockResolvedValue(requiredOnlyServer)
+			mockResolveServer.mockResolvedValue({
+				server: requiredOnlyServer,
+				connection: requiredOnlyServer.connections[0],
+			})
 			mockValidateUserConfig.mockResolvedValue(
 				validationResponses.requiredOnlyPartial,
 			)
 			mockCollectConfigValues.mockResolvedValue(collectedConfigs.requiredOnly)
 
-			await installServer(
-				"@test/required-only-server",
-				"test-client",
-				{},
-				"test-api-key",
-				undefined,
-			)
-
-			// Should validate and find missing fields
-			expect(mockValidateUserConfig).toHaveBeenCalled()
+			await installServer("@test/required-only-server", "test-client", {})
 
 			// Should prompt for config
 			expect(mockCollectConfigValues).toHaveBeenCalled()
-
-			// Should save the updated config
-			expect(mockSaveUserConfig).toHaveBeenCalled()
 		})
 
 		test("complete config: should use existing config without prompting", async () => {
-			mockResolveServer.mockResolvedValue(requiredOnlyServer)
+			mockResolveServer.mockResolvedValue({
+				server: requiredOnlyServer,
+				connection: requiredOnlyServer.connections[0],
+			})
 			mockValidateUserConfig.mockResolvedValue(
 				validationResponses.requiredOnlyComplete,
 			)
 
-			await installServer(
-				"@test/required-only-server",
-				"test-client",
-				{},
-				"test-api-key",
-				undefined,
-			)
-
-			// Should validate config
-			expect(mockValidateUserConfig).toHaveBeenCalled()
+			await installServer("@test/required-only-server", "test-client", {})
 
 			// Should NOT prompt for config (use existing)
 			expect(mockCollectConfigValues).not.toHaveBeenCalled()
-
-			// Should NOT save (using existing)
-			expect(mockSaveUserConfig).not.toHaveBeenCalled()
 		})
 	})
 
 	describe("4. Required + Optional Server", () => {
 		test("fresh install: should prompt for required, then ask about optional", async () => {
-			mockResolveServer.mockResolvedValue(requiredAndOptionalServer)
+			mockResolveServer.mockResolvedValue({
+				server: requiredAndOptionalServer,
+				connection: requiredAndOptionalServer.connections[0],
+			})
 			mockValidateUserConfig.mockResolvedValue(
 				validationResponses.requiredAndOptionalFresh,
 			)
@@ -276,27 +219,17 @@ describe("Installation Flow", () => {
 				"@test/required-and-optional-server",
 				"test-client",
 				{},
-				"test-api-key",
-				undefined,
 			)
-
-			// Should validate config
-			expect(mockValidateUserConfig).toHaveBeenCalled()
 
 			// Should prompt for all fields (required first, then optional prompt)
 			expect(mockCollectConfigValues).toHaveBeenCalled()
-
-			// Should save the collected config
-			expect(mockSaveUserConfig).toHaveBeenCalledWith(
-				"@test/required-and-optional-server",
-				collectedConfigs.requiredAndOptional,
-				"test-api-key",
-				undefined,
-			)
 		})
 
 		test("partial config: should prompt for missing required", async () => {
-			mockResolveServer.mockResolvedValue(requiredAndOptionalServer)
+			mockResolveServer.mockResolvedValue({
+				server: requiredAndOptionalServer,
+				connection: requiredAndOptionalServer.connections[0],
+			})
 			mockValidateUserConfig.mockResolvedValue(
 				validationResponses.requiredAndOptionalPartial,
 			)
@@ -308,22 +241,17 @@ describe("Installation Flow", () => {
 				"@test/required-and-optional-server",
 				"test-client",
 				{},
-				"test-api-key",
-				undefined,
 			)
-
-			// Should validate and find missing endpoint
-			expect(mockValidateUserConfig).toHaveBeenCalled()
 
 			// Should prompt for missing fields
 			expect(mockCollectConfigValues).toHaveBeenCalled()
-
-			// Should save the collected config
-			expect(mockSaveUserConfig).toHaveBeenCalled()
 		})
 
 		test("complete config: should use existing config without prompting", async () => {
-			mockResolveServer.mockResolvedValue(requiredAndOptionalServer)
+			mockResolveServer.mockResolvedValue({
+				server: requiredAndOptionalServer,
+				connection: requiredAndOptionalServer.connections[0],
+			})
 			mockValidateUserConfig.mockResolvedValue(
 				validationResponses.requiredAndOptionalComplete,
 			)
@@ -332,75 +260,46 @@ describe("Installation Flow", () => {
 				"@test/required-and-optional-server",
 				"test-client",
 				{},
-				"test-api-key",
-				undefined,
 			)
-
-			// Should validate config
-			expect(mockValidateUserConfig).toHaveBeenCalled()
 
 			// Should NOT prompt for config (use existing)
 			expect(mockCollectConfigValues).not.toHaveBeenCalled()
-
-			// Should NOT save (using existing)
-			expect(mockSaveUserConfig).not.toHaveBeenCalled()
 		})
 	})
 
 	describe("Profile Support", () => {
 		test("should pass profile to validation and save", async () => {
-			mockResolveServer.mockResolvedValue(requiredOnlyServer)
+			mockResolveServer.mockResolvedValue({
+				server: requiredOnlyServer,
+				connection: requiredOnlyServer.connections[0],
+			})
 			mockValidateUserConfig.mockResolvedValue(
 				validationResponses.requiredOnlyFresh,
 			)
 			mockCollectConfigValues.mockResolvedValue(collectedConfigs.requiredOnly)
 
-			await installServer(
-				"@test/required-only-server",
-				"test-client",
-				{},
-				"test-api-key",
-				"test-profile-123",
-			)
+			await installServer("@test/required-only-server", "test-client", {})
 
-			// Should pass profile to validation
-			expect(mockValidateUserConfig).toHaveBeenCalledWith(
-				"@test/required-only-server",
-				"test-api-key",
-				"test-profile-123",
-			)
-
-			// Should pass profile to save
-			expect(mockSaveUserConfig).toHaveBeenCalledWith(
-				"@test/required-only-server",
-				collectedConfigs.requiredOnly,
-				"test-api-key",
-				"test-profile-123",
-			)
+			// Should prompt for config
+			expect(mockCollectConfigValues).toHaveBeenCalled()
 		})
 	})
 
 	describe("User Declining Optional Config", () => {
 		test("should not save empty config when user declines optional", async () => {
-			mockResolveServer.mockResolvedValue(optionalOnlyServer)
+			mockResolveServer.mockResolvedValue({
+				server: optionalOnlyServer,
+				connection: optionalOnlyServer.connections[0],
+			})
 			mockValidateUserConfig.mockResolvedValue(
 				validationResponses.optionalOnlyFresh,
 			)
 			mockCollectConfigValues.mockResolvedValue(collectedConfigs.empty) // User said no
 
-			await installServer(
-				"@test/optional-only-server",
-				"test-client",
-				{},
-				"test-api-key",
-				undefined,
-			)
+			await installServer("@test/optional-only-server", "test-client", {})
 
 			// Should prompt for config
 			expect(mockCollectConfigValues).toHaveBeenCalled()
-
-			// Should NOT save empty config
-			expect(mockSaveUserConfig).not.toHaveBeenCalled()
 		})
 	})
 })

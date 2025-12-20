@@ -1,24 +1,12 @@
-/* remove punycode depreciation warning */
-process.removeAllListeners("warning")
-process.on("warning", (warning) => {
-	if (
-		warning.name === "DeprecationWarning" &&
-		warning.message.includes("punycode")
-	) {
-		return
-	}
-	console.warn(warning)
-})
-
+import "../utils/suppress-punycode-warning"
 import { Client } from "@modelcontextprotocol/sdk/client/index.js"
 import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js"
 import { LoggingMessageNotificationSchema } from "@modelcontextprotocol/sdk/types.js"
 import chalk from "chalk"
 import inquirer from "inquirer"
-import { isEmpty } from "lodash"
 import ora from "ora"
 import { debug, verbose } from "../lib/logger"
-import { ResolveServerSource, resolveServer } from "../lib/registry"
+import { resolveServer } from "../lib/registry"
 import { getRuntimeEnvironment } from "../utils/runtime.js"
 import { collectConfigValues } from "../utils/session-config"
 
@@ -190,38 +178,6 @@ async function connectServer(transport: any) {
 	}
 }
 
-async function _readJSONSchemaInputs(schema: any) {
-	if (!schema || isEmpty(schema)) {
-		return {}
-	}
-
-	const questions: Array<{
-		key: string
-		required?: boolean
-		type: string
-		[key: string]: any
-	}> = []
-	// Traverse schema to build questions
-	// This would be implemented similar to your existing code
-
-	const results: Record<string, any> = {}
-	for (const q of questions) {
-		const { key, required, ...options } = q
-		const { value } = await inquirer.prompt([
-			{
-				name: "value",
-				message: chalk.dim(`${required ? "* " : ""}${key}`),
-				...options,
-			},
-		])
-		if (value !== "") {
-			// Set path in results object
-			results[key] = value
-		}
-	}
-	return results
-}
-
 async function readPromptArgumentInputs(args: any[]) {
 	if (!args || args.length === 0) {
 		return {}
@@ -248,19 +204,9 @@ export async function inspectServer(
 
 	try {
 		// Fetch server details from registry
-		const server = await resolveServer(
-			qualifiedName,
-			apiKey,
-			ResolveServerSource.Inspect,
-		)
+		const { server, connection } = await resolveServer(qualifiedName)
 		verbose(`Resolved server package: ${qualifiedName}`)
 		spinner.succeed(`Successfully resolved ${qualifiedName}`)
-
-		// Choose a connection from available options
-		if (!server.connections?.length) {
-			throw new Error("No connection configuration found for server")
-		}
-		const connection = server.connections[0]
 		verbose(`Selected connection type: ${connection.type}`)
 
 		// Collect configuration values if needed

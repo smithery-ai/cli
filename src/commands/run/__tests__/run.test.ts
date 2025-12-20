@@ -34,7 +34,6 @@ vi.mock("../uplink-runner", () => ({
 // Mock registry
 vi.mock("../../../lib/registry", () => ({
 	resolveServer: vi.fn(),
-	ResolveServerSource: { Run: "run" },
 }))
 
 // Mock prepareStdioConnection
@@ -65,20 +64,26 @@ describe("run command", () => {
 	})
 
 	test("HTTP remote server calls createStreamableHTTPRunner", async () => {
-		vi.mocked(resolveServer).mockResolvedValue(httpRemoteServer)
+		vi.mocked(resolveServer).mockResolvedValue({
+			server: httpRemoteServer,
+			connection: httpRemoteServer.connections[0],
+		})
 
-		await run("author/remote-server", {}, "test-api-key", "default")
+		await run("author/remote-server", {})
 
 		expect(createStreamableHTTPRunner).toHaveBeenCalledWith(
 			"https://server.smithery.ai",
-			"test-api-key",
+			"",
 			{},
-			"default",
+			undefined,
 		)
 	})
 
 	test("STDIO regular server calls createStdioRunner with prepared connection", async () => {
-		vi.mocked(resolveServer).mockResolvedValue(stdioRegularServer)
+		vi.mocked(resolveServer).mockResolvedValue({
+			server: stdioRegularServer,
+			connection: stdioRegularServer.connections[0],
+		})
 		vi.mocked(prepareStdioConnection).mockResolvedValue({
 			command: "npx",
 			args: ["-y", "@author/mcp-server"],
@@ -86,14 +91,12 @@ describe("run command", () => {
 			qualifiedName: "author/stdio-server",
 		})
 
-		await run("author/stdio-server", {}, "test-api-key", "default")
+		await run("author/stdio-server", {})
 
 		expect(prepareStdioConnection).toHaveBeenCalledWith(
 			stdioRegularServer,
 			stdioRegularServer.connections[0],
 			{},
-			"test-api-key",
-			"default",
 		)
 
 		expect(createStdioRunner).toHaveBeenCalledWith(
@@ -101,13 +104,16 @@ describe("run command", () => {
 			["-y", "@author/mcp-server"],
 			{ PATH: "/usr/bin" },
 			"author/stdio-server",
-			"test-api-key",
+			undefined,
 			false,
 		)
 	})
 
 	test("STDIO bundle server calls createStdioRunner with unpacked bundle", async () => {
-		vi.mocked(resolveServer).mockResolvedValue(studioBundleServer)
+		vi.mocked(resolveServer).mockResolvedValue({
+			server: studioBundleServer,
+			connection: studioBundleServer.connections[0],
+		})
 		vi.mocked(prepareStdioConnection).mockResolvedValue({
 			command: "node",
 			args: [
@@ -117,19 +123,12 @@ describe("run command", () => {
 			qualifiedName: "author/bundle-server",
 		})
 
-		await run(
-			"author/bundle-server",
-			{ API_KEY: "test" },
-			"test-api-key",
-			"default",
-		)
+		await run("author/bundle-server", { API_KEY: "test" })
 
 		expect(prepareStdioConnection).toHaveBeenCalledWith(
 			studioBundleServer,
 			studioBundleServer.connections[0],
 			{ API_KEY: "test" },
-			"test-api-key",
-			"default",
 		)
 
 		expect(createStdioRunner).toHaveBeenCalledWith(
@@ -137,7 +136,7 @@ describe("run command", () => {
 			["/home/.smithery/cache/servers/author/bundle-server/current/index.js"],
 			{ API_KEY: "test" },
 			"author/bundle-server",
-			"test-api-key",
+			undefined,
 			false,
 		)
 	})

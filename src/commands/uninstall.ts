@@ -1,15 +1,4 @@
-/* remove punycode depreciation warning */
-process.removeAllListeners("warning")
-process.on("warning", (warning) => {
-	if (
-		warning.name === "DeprecationWarning" &&
-		warning.message.includes("punycode")
-	) {
-		return
-	}
-	console.warn(warning)
-})
-
+import "../utils/suppress-punycode-warning"
 import chalk from "chalk"
 import type { ValidClient } from "../config/clients"
 // import { getConfig } from "../utils/client-config"

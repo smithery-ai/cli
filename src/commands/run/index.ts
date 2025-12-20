@@ -4,7 +4,7 @@ import type {
 	ServerDetailResponse,
 } from "@smithery/registry/models/components"
 import { getConfig } from "../../lib/keychain.js"
-import { ResolveServerSource, resolveServer } from "../../lib/registry.js"
+import { resolveServer } from "../../lib/registry.js"
 import type { ServerConfig } from "../../types/registry.js"
 import { prepareStdioConnection } from "../../utils/prepare-stdio-connection.js"
 import {
@@ -52,26 +52,23 @@ export async function run(
 			`[Runner] Loaded config from keychain${Object.keys(configOverride).length > 0 ? " (with overrides)" : ""}`,
 		)
 
-		const resolvedServer = await resolveServer(
-			qualifiedName,
-			undefined, // No API key needed
-			ResolveServerSource.Run,
-		)
-		if (!resolvedServer) {
-			throw new Error(`Could not resolve server: ${qualifiedName}`)
-		}
+		const { server, connection } = await resolveServer(qualifiedName)
 
 		logWithTimestamp(
 			`[Runner] Connecting to server: ${JSON.stringify({
-				id: resolvedServer.qualifiedName,
-				connectionTypes: resolvedServer.connections.map(
-					(c: ConnectionInfo) => c.type,
-				),
+				id: server.qualifiedName,
+				connectionType: connection.type,
 			})}`,
 		)
 
 		const analyticsEnabled = await getAnalyticsConsent()
-		await pickServerAndRun(resolvedServer, config, analyticsEnabled, options)
+		await pickServerAndRun(
+			server,
+			connection,
+			config,
+			analyticsEnabled,
+			options,
+		)
 	} catch (error) {
 		logWithTimestamp(
 			`[Runner] Error: ${error instanceof Error ? error.message : error}`,
@@ -82,16 +79,11 @@ export async function run(
 
 async function pickServerAndRun(
 	serverDetails: ServerDetailResponse,
+	connection: ConnectionInfo,
 	config: ServerConfig,
 	analyticsEnabled: boolean,
 	options?: RunOptions,
 ): Promise<void> {
-	if (!serverDetails.connections?.length) {
-		throw new Error("No connection configuration found for server")
-	}
-
-	const connection = serverDetails.connections[0]
-
 	if (connection.type === "http") {
 		if (!connection.deploymentUrl) {
 			throw new Error("Missing deployment URL")
