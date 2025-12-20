@@ -7,17 +7,17 @@
 
 import type { ConnectionInfo } from "@smithery/registry/models/components"
 import { beforeEach, describe, expect, it, vi } from "vitest"
+import {
+	ensureBundleInstalled,
+	getBundleUserConfigSchema,
+} from "../../lib/bundle-manager"
+import { getConfig } from "../../lib/keychain"
 import type { ServerConfig } from "../../types/registry"
 import { promptForExistingConfig } from "../../utils/command-prompts"
 import {
 	collectConfigValues,
 	validateAndFormatConfig,
 } from "../../utils/session-config"
-import {
-	ensureBundleInstalled,
-	getBundleUserConfigSchema,
-} from "../../lib/bundle-manager"
-import { getConfig } from "../../lib/keychain"
 import {
 	applySchemaDefaults,
 	resolveUserConfig,

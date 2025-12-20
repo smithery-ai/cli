@@ -2,7 +2,7 @@ import type {
 	ConnectionInfo,
 	ServerDetailResponse,
 } from "@smithery/registry/models/components"
-import { getClientConfiguration, Transport } from "../config/clients"
+import { getClientConfiguration } from "../config/clients"
 import type {
 	ConfiguredServer,
 	StreamableHTTPConnection,
@@ -37,7 +37,7 @@ function createHTTPServerConfig(
  */
 function createMcpRemoteConfig(qualifiedName: string): ConfiguredServer {
 	const url = `https://server.smithery.ai/${qualifiedName}/mcp`
-	const args = ["mcp-remote", url]
+	const args = ["-y", "mcp-remote", url]
 
 	/* Use cmd /c for Windows platforms */
 	if (process.platform === "win32") {
@@ -95,29 +95,13 @@ function determineConfigType(
 		(conn: ConnectionInfo) => conn.type === "http",
 	)
 
-	// Check if server supports STDIO
-	const serverHasStdio = server.connections?.some(
-		(conn: ConnectionInfo) => conn.type === "stdio",
-	)
-
-	// If server is HTTP and client supports HTTP
-	if (
-		serverHasHTTP &&
-		clientConfig.supportedTransports.includes(Transport.HTTP)
-	) {
-		// Check OAuth support
+	// If server has HTTP, check OAuth support
+	if (serverHasHTTP) {
 		if (clientConfig.supportsOAuth) {
 			return "http-oauth"
 		}
+		// For non-OAuth HTTP servers, use mcp-remote as fallback
 		return "http-no-oauth"
-	}
-
-	// If server is STDIO and client supports STDIO
-	if (
-		serverHasStdio &&
-		clientConfig.supportedTransports.includes(Transport.STDIO)
-	) {
-		return "stdio"
 	}
 
 	// Default to STDIO

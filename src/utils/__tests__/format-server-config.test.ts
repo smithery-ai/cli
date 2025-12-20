@@ -70,7 +70,11 @@ describe("formatServerConfig", () => {
 		// ASSERT
 		expect(result).toEqual({
 			command: "npx",
-			args: ["mcp-remote", `https://server.smithery.ai/${qualifiedName}/mcp`],
+			args: [
+				"-y",
+				"mcp-remote",
+				`https://server.smithery.ai/${qualifiedName}/mcp`,
+			],
 		})
 	})
 

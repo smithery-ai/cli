@@ -4,14 +4,13 @@ import chalk from "chalk"
 import ora from "ora"
 import type { ValidClient } from "../config/clients"
 import { getClientConfiguration } from "../config/clients"
-import { formatServerConfig } from "../utils/format-server-config"
 import { saveConfig } from "../lib/keychain"
 import { verbose } from "../lib/logger"
 import { resolveServer } from "../lib/registry"
-import { resolveUserConfig } from "../utils/user-config"
 import type { ServerConfig } from "../types/registry"
 import { checkAnalyticsConsent } from "../utils/analytics"
 import { promptForRestart } from "../utils/client"
+import { formatServerConfig } from "../utils/format-server-config"
 import { readConfig, runConfigCommand, writeConfig } from "../utils/mcp-config"
 import {
 	checkAndNotifyRemoteServer,
@@ -20,6 +19,7 @@ import {
 	ensureUVInstalled,
 } from "../utils/runtime"
 import { getServerName } from "../utils/session-config"
+import { resolveUserConfig } from "../utils/user-config"
 
 /**
  * Installs and configures a Smithery server for a specified client.
@@ -61,15 +61,10 @@ export async function installServer(
 		// Notify user if remote server
 		checkAndNotifyRemoteServer(server)
 
-		// For HTTP connections, ensure API key is available and show deprecation warning
+		// For HTTP connections, ensure API key is available
 		// Skip for OAuth-capable clients (they handle auth automatically)
 		if (connection.type === "http" && !clientConfig.supportsOAuth) {
 			await ensureApiKey()
-			console.log(
-				chalk.yellow(
-					"Deprecation Notice: API key authentication for HTTP servers is deprecated and will be removed in a future version. OAuth token authentication will be required instead.",
-				),
-			)
 		}
 
 		/* resolve server configuration */
