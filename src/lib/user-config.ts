@@ -147,28 +147,6 @@ async function handlePromptNewConfig(
 	return await collectConfigValues(connectionWithSchema, {})
 }
 
-// Route to appropriate handler based on strategy
-async function handleConfigStrategy(
-	strategy: ConfigStrategy,
-	connection: ConnectionInfo,
-	qualifiedName: string,
-	configValues: ServerConfig,
-	spinner: OraSpinner,
-): Promise<ServerConfig> {
-	switch (strategy) {
-		case "skipConfig":
-			verbose("Server does not require configuration")
-			return {}
-		case "useProvidedConfig":
-			verbose("Using configuration from --config flag")
-			return configValues
-		case "promptUseKeychain":
-			return await handlePromptUseKeychain(connection, qualifiedName, spinner)
-		case "promptNewConfig":
-			return await handlePromptNewConfig(connection, qualifiedName)
-	}
-}
-
 // Public API: Resolve user configuration based on connection, qualified name, and provided config values
 export async function resolveUserConfig(
 	connection: ConnectionInfo,
@@ -181,11 +159,17 @@ export async function resolveUserConfig(
 		qualifiedName,
 		configValues,
 	)
-	return await handleConfigStrategy(
-		strategy,
-		connection,
-		qualifiedName,
-		configValues,
-		spinner,
-	)
+
+	switch (strategy) {
+		case "skipConfig":
+			verbose("Server does not require configuration")
+			return {}
+		case "useProvidedConfig":
+			verbose("Using configuration from --config flag")
+			return configValues
+		case "promptUseKeychain":
+			return await handlePromptUseKeychain(connection, qualifiedName, spinner)
+		case "promptNewConfig":
+			return await handlePromptNewConfig(connection, qualifiedName)
+	}
 }
