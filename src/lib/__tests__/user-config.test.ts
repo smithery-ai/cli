@@ -7,15 +7,6 @@
 
 import type { ConnectionInfo } from "@smithery/registry/models/components"
 import { beforeEach, describe, expect, it, vi } from "vitest"
-import {
-	collectedConfigs,
-	savedConfigs,
-} from "../../__tests__/fixtures/configurations"
-import {
-	noConfigServer,
-	requiredAndOptionalServer,
-	requiredOnlyServer,
-} from "../../__tests__/fixtures/servers"
 import type { ServerConfig } from "../../types/registry"
 import { promptForExistingConfig } from "../../utils/command-prompts"
 import {
@@ -32,6 +23,12 @@ import {
 	resolveUserConfig,
 	serverNeedsConfig,
 } from "../user-config"
+import { collectedConfigs, savedConfigs } from "./fixtures/configurations"
+import {
+	noConfigServer,
+	requiredAndOptionalServer,
+	requiredOnlyServer,
+} from "./fixtures/servers"
 
 // Mock all dependencies
 vi.mock("../keychain", () => ({
@@ -382,7 +379,7 @@ describe("resolveUserConfig", () => {
 				expect(mockCollectConfigValues).toHaveBeenCalled()
 			})
 
-			it("saves new config to keychain", async () => {
+			it("collects new config interactively when user provides new", async () => {
 				mockGetConfig.mockResolvedValue(savedConfigs.requiredAndOptional)
 				mockCollectConfigValues.mockResolvedValue(
 					collectedConfigs.requiredAndOptional,
@@ -458,7 +455,7 @@ describe("resolveUserConfig", () => {
 				expect(mockValidateAndFormatConfig).toHaveBeenCalled()
 			})
 
-			it("saves config to keychain", async () => {
+			it("validates and uses --config values", async () => {
 				const userConfig = collectedConfigs.requiredAndOptional
 				mockValidateAndFormatConfig.mockResolvedValue(userConfig)
 
@@ -492,21 +489,6 @@ describe("resolveUserConfig", () => {
 			})
 
 			it("prompts for optional fields after required collected", async () => {
-				mockCollectConfigValues.mockResolvedValue(
-					collectedConfigs.requiredAndOptional,
-				)
-
-				await resolveUserConfig(
-					connection,
-					qualifiedName,
-					{},
-					mockSpinner as any,
-				)
-
-				expect(mockCollectConfigValues).toHaveBeenCalled()
-			})
-
-			it("saves config to keychain", async () => {
 				mockCollectConfigValues.mockResolvedValue(
 					collectedConfigs.requiredAndOptional,
 				)
@@ -581,10 +563,9 @@ describe("resolveUserConfig", () => {
 		it("calls ensureBundleInstalled when connection has bundleUrl", async () => {
 			const bundleConnection: ConnectionInfo = {
 				type: "stdio",
-				command: "npx",
-				args: ["test"],
 				bundleUrl: "https://example.com/bundle.tar.gz",
-			}
+				configSchema: {},
+			} as ConnectionInfo
 			mockGetConfig.mockResolvedValue(null)
 			mockEnsureBundleInstalled.mockResolvedValue("/tmp/bundle")
 			mockGetBundleUserConfigSchema.mockReturnValue({
@@ -612,10 +593,9 @@ describe("resolveUserConfig", () => {
 		it("extracts config schema from bundle manifest", async () => {
 			const bundleConnection: ConnectionInfo = {
 				type: "stdio",
-				command: "npx",
-				args: ["test"],
 				bundleUrl: "https://example.com/bundle.tar.gz",
-			}
+				configSchema: {},
+			} as ConnectionInfo
 			mockGetConfig.mockResolvedValue(null)
 			mockEnsureBundleInstalled.mockResolvedValue("/tmp/bundle")
 			mockGetBundleUserConfigSchema.mockReturnValue({
@@ -640,10 +620,9 @@ describe("resolveUserConfig", () => {
 		it("uses bundle schema for validation and defaults", async () => {
 			const bundleConnection: ConnectionInfo = {
 				type: "stdio",
-				command: "npx",
-				args: ["test"],
 				bundleUrl: "https://example.com/bundle.tar.gz",
-			}
+				configSchema: {},
+			} as ConnectionInfo
 			const bundleSchema = {
 				type: "object",
 				properties: {
@@ -682,10 +661,9 @@ describe("resolveUserConfig", () => {
 		it("throws when bundle download fails", async () => {
 			const bundleConnection: ConnectionInfo = {
 				type: "stdio",
-				command: "npx",
-				args: ["test"],
 				bundleUrl: "https://example.com/bundle.tar.gz",
-			}
+				configSchema: {},
+			} as ConnectionInfo
 			mockGetConfig.mockResolvedValue(null)
 			mockEnsureBundleInstalled.mockRejectedValue(
 				new Error("Bundle download failed"),
@@ -742,8 +720,7 @@ describe("serverNeedsConfig", () => {
 	it("returns false when schema is undefined", async () => {
 		const connection: ConnectionInfo = {
 			type: "stdio",
-			command: "npx",
-			args: ["test"],
+			configSchema: {},
 		}
 
 		const result = await serverNeedsConfig(connection, qualifiedName)

@@ -9,12 +9,12 @@
 
 import { beforeEach, describe, expect, test, vi } from "vitest"
 import { Transport } from "../../config/clients"
+import { formatServerConfig } from "../../utils/session-config"
 import {
 	noConfigServer,
 	optionalOnlyServer,
 	requiredOnlyServer,
-} from "../../__tests__/fixtures/servers"
-import { formatServerConfig } from "../../utils/session-config"
+} from "./fixtures/servers"
 
 // Mock getPreferredTransport and getClientConfiguration
 vi.mock("../../config/clients", async () => {

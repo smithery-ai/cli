@@ -11,33 +11,33 @@ import {
 } from "./fixtures/mock-servers"
 
 // Mock the runners
-vi.mock("../stdio-runner", () => ({
+vi.mock("../run/stdio-runner", () => ({
 	createStdioRunner: vi.fn().mockResolvedValue(() => Promise.resolve()),
 }))
 
-vi.mock("../streamable-http-runner", () => ({
+vi.mock("../run/streamable-http-runner", () => ({
 	createStreamableHTTPRunner: vi
 		.fn()
 		.mockResolvedValue(() => Promise.resolve()),
 }))
 
-vi.mock("../local-playground-runner", () => ({
+vi.mock("../run/local-playground-runner", () => ({
 	createLocalPlaygroundRunner: vi
 		.fn()
 		.mockResolvedValue(() => Promise.resolve()),
 }))
 
-vi.mock("../uplink-runner", () => ({
+vi.mock("../run/uplink-runner", () => ({
 	createUplinkRunner: vi.fn().mockResolvedValue(() => Promise.resolve()),
 }))
 
 // Mock registry
-vi.mock("../../../lib/registry", () => ({
+vi.mock("../../lib/registry", () => ({
 	resolveServer: vi.fn(),
 }))
 
 // Mock prepareStdioConnection
-vi.mock("../../../utils/prepare-stdio-connection", () => ({
+vi.mock("../../utils/prepare-stdio-connection", () => ({
 	prepareStdioConnection: vi.fn().mockResolvedValue({
 		command: "node",
 		args: ["server.js"],
@@ -47,22 +47,22 @@ vi.mock("../../../utils/prepare-stdio-connection", () => ({
 }))
 
 // Mock settings
-vi.mock("../../../utils/smithery-config", () => ({
+vi.mock("../../utils/smithery-config", () => ({
 	initializeSettings: vi.fn().mockResolvedValue({ success: true }),
 	getAnalyticsConsent: vi.fn().mockResolvedValue(false),
 	getApiKey: vi.fn().mockResolvedValue("test-api-key"),
 }))
 
 // Mock keychain
-vi.mock("../../../lib/keychain", () => ({
+vi.mock("../../lib/keychain", () => ({
 	getConfig: vi.fn().mockResolvedValue(null),
 }))
 
-import { resolveServer } from "../../../lib/registry"
-import { prepareStdioConnection } from "../../../utils/prepare-stdio-connection"
-import { run } from "../index"
-import { createStdioRunner } from "../stdio-runner"
-import { createStreamableHTTPRunner } from "../streamable-http-runner"
+import { resolveServer } from "../../lib/registry"
+import { prepareStdioConnection } from "../../utils/prepare-stdio-connection"
+import { run } from "../run/index"
+import { createStdioRunner } from "../run/stdio-runner"
+import { createStreamableHTTPRunner } from "../run/streamable-http-runner"
 
 describe("run command", () => {
 	beforeEach(() => {

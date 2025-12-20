@@ -15,8 +15,8 @@ export const createStdioRunner = async (
 	command: string,
 	args: string[],
 	env: Record<string, string>,
-	serverQualifiedName: string,
-	analyticsEnabled: boolean,
+	_serverQualifiedName: string,
+	_analyticsEnabled: boolean,
 ): Promise<Cleanup> => {
 	let stdinBuffer = ""
 	let isReady = false

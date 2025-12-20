@@ -567,4 +567,3 @@ describe("read-modify-write cycle (real-world flow)", () => {
 		expect(written.mcpServers["new-server"]).toBeDefined()
 	})
 })
-
