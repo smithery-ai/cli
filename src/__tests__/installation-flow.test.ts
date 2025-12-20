@@ -31,7 +31,11 @@ import {
 // Mock all dependencies
 vi.mock("../utils/mcp-config")
 vi.mock("../lib/registry")
-vi.mock("../lib/keychain")
+vi.mock("../lib/keychain", () => ({
+	getConfig: vi.fn(),
+	saveConfig: vi.fn(),
+	deleteConfig: vi.fn(),
+}))
 vi.mock("../lib/user-config")
 vi.mock("../utils/session-config")
 vi.mock("../config/clients")

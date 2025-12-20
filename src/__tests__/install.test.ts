@@ -30,6 +30,16 @@ vi.mock("../lib/registry", () => ({
 	validateUserConfig: vi.fn(),
 }))
 
+vi.mock("../lib/keychain", () => ({
+	getConfig: vi.fn().mockResolvedValue(null),
+	saveConfig: vi.fn(),
+	deleteConfig: vi.fn(),
+}))
+
+vi.mock("../lib/user-config", () => ({
+	resolveUserConfig: vi.fn().mockResolvedValue({}),
+}))
+
 vi.mock("../utils/session-config", () => ({
 	collectConfigValues: vi.fn(),
 	formatServerConfig: vi.fn(),
