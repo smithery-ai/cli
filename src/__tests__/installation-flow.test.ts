@@ -72,6 +72,10 @@ const mockGetClientConfiguration = vi.mocked(getClientConfiguration)
 const mockReadConfig = vi.mocked(readConfig)
 const mockWriteConfig = vi.mocked(writeConfig)
 
+// Import ensureApiKey for mocking
+import { ensureApiKey } from "../utils/runtime"
+const mockEnsureApiKey = vi.mocked(ensureApiKey)
+
 // Test client config
 const testClientConfig = {
 	label: "Test Client",
@@ -303,6 +307,124 @@ describe("Installation Flow", () => {
 			expect(mockResolveUserConfig).toHaveBeenCalled()
 			// Should NOT save empty config
 			expect(mockSaveConfig).not.toHaveBeenCalled()
+		})
+	})
+
+	describe("OAuth Client HTTP Connections", () => {
+		test("OAuth client with HTTP connection should NOT require API key", async () => {
+			// ARRANGE: OAuth client with HTTP server
+			const oauthClientConfig = {
+				...testClientConfig,
+				supportsOAuth: true,
+			}
+			mockGetClientConfiguration.mockReturnValue(oauthClientConfig)
+			mockResolveServer.mockResolvedValue({
+				server: optionalOnlyServer,
+				connection: optionalOnlyServer.connections[0], // HTTP connection
+			})
+			mockResolveUserConfig.mockResolvedValue({})
+
+			// ACT
+			await installServer("@test/optional-only-server", "test-client", {})
+
+			// ASSERT: ensureApiKey should NOT be called for OAuth clients
+			expect(mockEnsureApiKey).not.toHaveBeenCalled()
+		})
+
+		test("OAuth client with HTTP connection should NOT show deprecation warning", async () => {
+			// ARRANGE: OAuth client with HTTP server
+			const oauthClientConfig = {
+				...testClientConfig,
+				supportsOAuth: true,
+			}
+			mockGetClientConfiguration.mockReturnValue(oauthClientConfig)
+			mockResolveServer.mockResolvedValue({
+				server: optionalOnlyServer,
+				connection: optionalOnlyServer.connections[0], // HTTP connection
+			})
+			mockResolveUserConfig.mockResolvedValue({})
+
+			// Spy on console.log to check for deprecation warning
+			const consoleLogSpy = vi.spyOn(console, "log").mockImplementation(() => {})
+
+			// ACT
+			await installServer("@test/optional-only-server", "test-client", {})
+
+			// ASSERT: Deprecation warning should NOT be shown
+			const deprecationWarningCalls = consoleLogSpy.mock.calls.filter((call) =>
+				call[0]?.toString().includes("Deprecation Notice"),
+			)
+			expect(deprecationWarningCalls).toHaveLength(0)
+
+			consoleLogSpy.mockRestore()
+		})
+
+		test("non-OAuth client with HTTP connection should require API key", async () => {
+			// ARRANGE: Non-OAuth client with HTTP server
+			const nonOAuthClientConfig = {
+				...testClientConfig,
+				supportsOAuth: false,
+			}
+			mockGetClientConfiguration.mockReturnValue(nonOAuthClientConfig)
+			mockResolveServer.mockResolvedValue({
+				server: optionalOnlyServer,
+				connection: optionalOnlyServer.connections[0], // HTTP connection
+			})
+			mockResolveUserConfig.mockResolvedValue({})
+
+			// ACT
+			await installServer("@test/optional-only-server", "test-client", {})
+
+			// ASSERT: ensureApiKey should be called for non-OAuth clients
+			expect(mockEnsureApiKey).toHaveBeenCalled()
+		})
+
+		test("non-OAuth client with HTTP connection should show deprecation warning", async () => {
+			// ARRANGE: Non-OAuth client with HTTP server
+			const nonOAuthClientConfig = {
+				...testClientConfig,
+				supportsOAuth: false,
+			}
+			mockGetClientConfiguration.mockReturnValue(nonOAuthClientConfig)
+			mockResolveServer.mockResolvedValue({
+				server: optionalOnlyServer,
+				connection: optionalOnlyServer.connections[0], // HTTP connection
+			})
+			mockResolveUserConfig.mockResolvedValue({})
+
+			// Spy on console.log to check for deprecation warning
+			const consoleLogSpy = vi.spyOn(console, "log").mockImplementation(() => {})
+
+			// ACT
+			await installServer("@test/optional-only-server", "test-client", {})
+
+			// ASSERT: Deprecation warning should be shown
+			const deprecationWarningCalls = consoleLogSpy.mock.calls.filter((call) =>
+				call[0]?.toString().includes("Deprecation Notice"),
+			)
+			expect(deprecationWarningCalls.length).toBeGreaterThan(0)
+
+			consoleLogSpy.mockRestore()
+		})
+
+		test("OAuth client with STDIO connection should not check API key", async () => {
+			// ARRANGE: OAuth client with STDIO server (no HTTP)
+			const oauthClientConfig = {
+				...testClientConfig,
+				supportsOAuth: true,
+			}
+			mockGetClientConfiguration.mockReturnValue(oauthClientConfig)
+			mockResolveServer.mockResolvedValue({
+				server: noConfigServer,
+				connection: noConfigServer.connections[0], // STDIO connection
+			})
+			mockResolveUserConfig.mockResolvedValue({})
+
+			// ACT
+			await installServer("@test/no-config-server", "test-client", {})
+
+			// ASSERT: ensureApiKey should NOT be called (STDIO connection)
+			expect(mockEnsureApiKey).not.toHaveBeenCalled()
 		})
 	})
 })

@@ -40,6 +40,9 @@ export async function installServer(
 	/* check analytics consent */
 	await checkAnalyticsConsent()
 
+	// get client configuration details early (needed for OAuth check)
+	const clientConfig = getClientConfiguration(client)
+
 	/* resolve server */
 	const spinner = ora(`Resolving ${qualifiedName}...`).start()
 	try {
@@ -58,7 +61,8 @@ export async function installServer(
 		checkAndNotifyRemoteServer(server)
 
 		// For HTTP connections, ensure API key is available and show deprecation warning
-		if (connection.type === "http") {
+		// Skip for OAuth-capable clients (they handle auth automatically)
+		if (connection.type === "http" && !clientConfig.supportsOAuth) {
 			await ensureApiKey()
 			console.log(
 				chalk.yellow(
@@ -91,9 +95,6 @@ export async function installServer(
 
 		verbose(`Formatted server config: ${JSON.stringify(serverConfig, null, 2)}`)
 		const serverName = getServerName(qualifiedName)
-
-		// get client configuration details
-		const clientConfig = getClientConfiguration(client)
 
 		switch (clientConfig.installType) {
 			case "command": {
