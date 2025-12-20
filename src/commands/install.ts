@@ -14,6 +14,7 @@ import { resolveUserConfig } from "../utils/install-helpers"
 import { readConfig, runConfigCommand, writeConfig } from "../utils/mcp-config"
 import {
 	checkAndNotifyRemoteServer,
+	ensureApiKey,
 	ensureBunInstalled,
 	ensureUVInstalled,
 } from "../utils/runtime"
@@ -25,7 +26,7 @@ import { formatServerConfig, getServerName } from "../utils/session-config"
  *
  * @param {string} qualifiedName - The qualified name of the server to install
  * @param {ValidClient} client - The client to install the server for
- * @param {Record<string, unknown>} [configValues] - Optional configuration values for the server (from --config flag)
+ * @param {ServerConfig} configValues - Configuration values for the server (from --config flag, can be empty object)
  * @returns {Promise<void>} A promise that resolves when installation is complete
  * @throws Will throw an error if installation fails
  */
@@ -55,6 +56,16 @@ export async function installServer(
 
 		// Notify user if remote server
 		checkAndNotifyRemoteServer(server)
+
+		// For HTTP connections, ensure API key is available and show deprecation warning
+		if (connection.type === "http") {
+			await ensureApiKey()
+			console.log(
+				chalk.yellow(
+					"Deprecation Notice: API key authentication for HTTP servers is deprecated and will be removed in a future version. OAuth token authentication will be required instead.",
+				),
+			)
+		}
 
 		/* resolve server configuration */
 		const finalConfig = await resolveUserConfig(

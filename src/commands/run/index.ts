@@ -10,6 +10,7 @@ import type { ServerConfig } from "../../types/registry.js"
 import { prepareStdioConnection } from "../../utils/prepare-stdio-connection.js"
 import {
 	getAnalyticsConsent,
+	getApiKey,
 	initializeSettings,
 } from "../../utils/smithery-config.js"
 import { createLocalPlaygroundRunner } from "./local-playground-runner.js"
@@ -95,12 +96,19 @@ async function pickServerAndRun(
 		if (!connection.deploymentUrl) {
 			throw new Error("Missing deployment URL")
 		}
-		// Note: HTTP server execution temporarily broken - will be fixed in future refactor
-		// For now, leave as-is per plan
+
+		// Get API key from global config for HTTP servers
+		const apiKey = await getApiKey()
+		if (!apiKey) {
+			throw new Error(
+				"API key required for HTTP servers. Please run 'smithery login' or install the server first.",
+			)
+		}
+
 		if (options?.playground) {
 			await createUplinkRunner(
 				connection.deploymentUrl,
-				"", // API key placeholder - will be fixed later
+				apiKey,
 				config,
 				undefined, // No profile
 				{
@@ -111,7 +119,7 @@ async function pickServerAndRun(
 		} else {
 			await createStreamableHTTPRunner(
 				connection.deploymentUrl,
-				"", // API key placeholder - will be fixed later
+				apiKey,
 				config,
 				undefined, // No profile
 			)
