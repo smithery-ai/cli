@@ -16,22 +16,22 @@ import {
 import {
 	ensureBundleInstalled,
 	getBundleUserConfigSchema,
-} from "../bundle-manager"
-import { getConfig } from "../keychain"
+} from "../../lib/bundle-manager"
+import { getConfig } from "../../lib/keychain"
 import {
 	applySchemaDefaults,
 	resolveUserConfig,
 	serverNeedsConfig,
-} from "../user-config"
+} from "../../utils/user-config"
 import { collectedConfigs, savedConfigs } from "./fixtures/configurations"
 import {
 	noConfigServer,
 	requiredAndOptionalServer,
 	requiredOnlyServer,
-} from "./fixtures/servers"
+} from "./fixtures/servers.js"
 
 // Mock all dependencies
-vi.mock("../keychain", () => ({
+vi.mock("../../lib/keychain", () => ({
 	getConfig: vi.fn(),
 	saveConfig: vi.fn(),
 	deleteConfig: vi.fn(),
@@ -46,7 +46,7 @@ vi.mock("../../utils/command-prompts", () => ({
 	promptForExistingConfig: vi.fn(),
 }))
 
-vi.mock("../bundle-manager", () => ({
+vi.mock("../../lib/bundle-manager", () => ({
 	ensureBundleInstalled: vi.fn(),
 	getBundleUserConfigSchema: vi.fn(),
 }))

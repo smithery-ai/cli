@@ -1,16 +1,7 @@
-import type {
-	ConnectionInfo,
-	ServerDetailResponse,
-} from "@smithery/registry/models/components"
+import type { ConnectionInfo } from "@smithery/registry/models/components"
 import chalk from "chalk"
 import inquirer from "inquirer"
-import { getPreferredTransport, Transport } from "../config/clients"
-import type {
-	ConfiguredServer,
-	JSONSchema,
-	ServerConfig,
-	StreamableHTTPConnection,
-} from "../types/registry"
+import type { JSONSchema, ServerConfig } from "../types/registry"
 
 /**
  * Formats and validates configuration values according to the connection's schema
@@ -321,109 +312,9 @@ async function promptForConfigValue(
  * @returns The server name portion of the ID
  */
 export function getServerName(serverId: string): string {
-	if (serverId.startsWith("@") && serverId.includes("/")) {
-		const slashIndex = serverId.indexOf("/")
-		return serverId.substring(slashIndex + 1)
+	const lastSlashIndex = serverId.lastIndexOf("/")
+	if (lastSlashIndex !== -1) {
+		return serverId.substring(lastSlashIndex + 1)
 	}
 	return serverId
-}
-
-/**
- * Formats server configuration into a standardized command structure
- * @param qualifiedName - The fully qualified name of the server package
- * @param userConfig - The user configuration for the server
- * @param apiKey - Optional API key
- * @param profile - Optional profile name to use
- * @param client - Optional client name to determine transport type
- * @param server - Optional server details to check for HTTP support
- * @returns Configured server with command and arguments
- */
-export function formatServerConfig(
-	qualifiedName: string,
-	client?: string,
-	server?: ServerDetailResponse,
-): ConfiguredServer {
-	// Check if we should use HTTP format
-	if (client && server && shouldUseHTTPFormat(client, server)) {
-		return createHTTPServerConfig(qualifiedName, client)
-	}
-
-	// Default to STDIO format
-	// Base arguments for npx command - no flags needed, keychain handles config
-	const npxArgs = ["-y", "@smithery/cli@latest", "run", qualifiedName]
-
-	/* Use cmd /c for Windows platforms */
-	if (process.platform === "win32") {
-		return {
-			command: "cmd",
-			args: ["/c", "npx", ...npxArgs],
-		}
-	}
-
-	// Default for non-Windows platforms
-	return {
-		command: "npx",
-		args: npxArgs,
-	}
-}
-
-/**
- * Determines if HTTP format should be used based on client and server capabilities
- * @param client - The client name
- * @param server - The server details
- * @returns True if HTTP format should be used
- */
-function shouldUseHTTPFormat(
-	client: string,
-	server: ServerDetailResponse,
-): boolean {
-	try {
-		// Check if server has HTTP connections available
-		const hasHTTPConnection = server.connections?.some(
-			(conn: ConnectionInfo) => conn.type === "http" && "deploymentUrl" in conn,
-		)
-
-		if (!hasHTTPConnection || !server.remote) {
-			return false // Server doesn't support HTTP or isn't remote
-		}
-
-		// Determine available transports based on server capabilities
-		const availableTransports: Transport[] = []
-		if (hasHTTPConnection) availableTransports.push(Transport.HTTP)
-		if (
-			server.connections?.some((conn: ConnectionInfo) => conn.type === "stdio")
-		) {
-			availableTransports.push(Transport.STDIO)
-		}
-
-		// Use the client's preferred transport
-		const preferredTransport = getPreferredTransport(
-			client,
-			availableTransports,
-		)
-		return preferredTransport === Transport.HTTP
-	} catch (_error) {
-		// If we can't determine client capabilities, default to STDIO
-		return false
-	}
-}
-
-/**
- * Creates HTTP server configuration for clients that support it
- * @param qualifiedName - The fully qualified name of the server package
- * @param client - Optional client name
- * @returns HTTP configuration
- */
-function createHTTPServerConfig(
-	qualifiedName: string,
-	_client?: string,
-): StreamableHTTPConnection {
-	// Build the HTTP URL for the server - OAuth handles auth, no query params needed
-	const url = `https://server.smithery.ai/${qualifiedName}/mcp`
-
-	return {
-		type: "http",
-		url,
-		headers: {},
-	}
 }

@@ -152,11 +152,13 @@ async function pickServerAndRun(
 				},
 			)
 		} else {
+			const apiKey = await getApiKey()
 			await startSTDIOrunner(
 				preparedConnection.command,
 				preparedConnection.args,
 				preparedConnection.env,
 				preparedConnection.qualifiedName,
+				apiKey,
 				analyticsEnabled,
 			)
 		}

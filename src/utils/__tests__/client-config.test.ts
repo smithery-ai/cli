@@ -3,6 +3,7 @@
  *
  * Tests with real-world examples:
  * - Real client configs (claude, cursor, windsurf, codex)
+ * - Note: Codex now uses command-based installation, but TOML parsing is still tested
  * - Real file formats (JSON, YAML, TOML)
  * - File I/O operations (reading, writing, merging)
  * - Assert expected outputs and file contents
@@ -171,8 +172,8 @@ describe("readConfig", () => {
 	})
 
 	test("should read TOML config with mcp_servers normalization", () => {
-		// ARRANGE: Codex TOML config (uses mcp_servers)
-		const configPath = path.join(tempDir, "codex.toml")
+		// ARRANGE: TOML config (uses mcp_servers format)
+		const configPath = path.join(tempDir, "test-toml.toml")
 		const tomlContent = `[mcp_servers.test-server]
 command = "npx"
 args = ["-y", "@smithery/cli@latest", "run", "test-server"]
@@ -180,14 +181,14 @@ args = ["-y", "@smithery/cli@latest", "run", "test-server"]
 		fs.writeFileSync(configPath, tomlContent)
 
 		mockGetClientConfiguration.mockReturnValue({
-			label: "Codex",
+			label: "Test TOML Client",
 			supportedTransports: [Transport.STDIO],
 			installType: "toml",
 			path: configPath,
 		})
 
 		// ACT
-		const result = readConfig("codex")
+		const result = readConfig("test-toml-client")
 
 		// ASSERT: Should normalize mcp_servers to mcpServers
 		expect(result.mcpServers).toBeDefined()
@@ -328,7 +329,7 @@ describe("writeConfig", () => {
 
 	test("should write TOML config with mcp_servers format", () => {
 		// ARRANGE: New TOML config
-		const configPath = path.join(tempDir, "codex.toml")
+		const configPath = path.join(tempDir, "test-toml.toml")
 		const config: ClientMCPConfig = {
 			mcpServers: {
 				"test-server": {
@@ -339,14 +340,14 @@ describe("writeConfig", () => {
 		}
 
 		mockGetClientConfiguration.mockReturnValue({
-			label: "Codex",
+			label: "Test TOML Client",
 			supportedTransports: [Transport.STDIO],
 			installType: "toml",
 			path: configPath,
 		})
 
 		// ACT
-		writeConfig(config, "codex")
+		writeConfig(config, "test-toml-client")
 
 		// ASSERT: File should use mcp_servers format
 		expect(fs.existsSync(configPath)).toBe(true)

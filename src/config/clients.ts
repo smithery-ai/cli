@@ -66,12 +66,6 @@ const defaultClaudePath = path.join(
 )
 
 export const CLIENT_CONFIGURATIONS: Record<string, ClientConfiguration> = {
-	claude: {
-		label: "Claude Desktop",
-		supportedTransports: [Transport.STDIO],
-		installType: "json",
-		path: defaultClaudePath,
-	},
 	"claude-code": {
 		label: "Claude Code",
 		supportedTransports: [Transport.HTTP, Transport.STDIO],
@@ -103,19 +97,21 @@ export const CLIENT_CONFIGURATIONS: Record<string, ClientConfiguration> = {
 		supportedTransports: [Transport.STDIO, Transport.HTTP],
 		installType: "json",
 		preferHTTP: true,
-		supportsOAuth: false,
+		supportsOAuth: true,
 		path: path.join(homeDir, ".cursor", "mcp.json"),
 	},
 	windsurf: {
 		label: "Windsurf",
-		supportedTransports: [Transport.STDIO],
+		supportedTransports: [Transport.STDIO, Transport.HTTP],
 		installType: "json",
+		supportsOAuth: true,
 		path: path.join(homeDir, ".codeium", "windsurf", "mcp_config.json"),
 	},
 	cline: {
 		label: "Cline",
-		supportedTransports: [Transport.STDIO],
+		supportedTransports: [Transport.STDIO, Transport.HTTP],
 		installType: "json",
+		supportsOAuth: true,
 		path: path.join(
 			baseDir,
 			vscodePath,
@@ -123,18 +119,6 @@ export const CLIENT_CONFIGURATIONS: Record<string, ClientConfiguration> = {
 			"settings",
 			"cline_mcp_settings.json",
 		),
-	},
-	witsy: {
-		label: "Witsy",
-		supportedTransports: [Transport.STDIO],
-		installType: "json",
-		path: path.join(baseDir, "Witsy", "settings.json"),
-	},
-	enconvo: {
-		label: "Enconvo",
-		supportedTransports: [Transport.STDIO],
-		installType: "json",
-		path: path.join(homeDir, ".config", "enconvo", "mcp_config.json"),
 	},
 	vscode: {
 		label: "VS Code",
@@ -173,6 +157,93 @@ export const CLIENT_CONFIGURATIONS: Record<string, ClientConfiguration> = {
 			],
 		},
 	},
+	librechat: {
+		label: "LibreChat",
+		supportedTransports: [Transport.STDIO, Transport.HTTP],
+		installType: "yaml",
+		supportsOAuth: true,
+		path: path.join(
+			process.env.LIBRECHAT_CONFIG_DIR || homeDir,
+			"LibreChat",
+			"librechat.yaml",
+		),
+	},
+	"gemini-cli": {
+		label: "Gemini CLI",
+		supportedTransports: [Transport.STDIO, Transport.HTTP],
+		installType: "command",
+		preferHTTP: true,
+		command: "gemini",
+		supportsOAuth: true,
+		commandConfig: {
+			stdio: (name: string, command: string, args: string[]) => [
+				"mcp",
+				"add",
+				name,
+				command,
+				...args,
+			], // gemini mcp add <server-name> <command> <args>
+			http: (name: string, url: string) => [
+				"mcp",
+				"add",
+				"--transport",
+				"http",
+				name,
+				url,
+			], // gemini mcp add --transport http <server-name> "<url>"
+		},
+	},
+	codex: {
+		label: "Codex",
+		supportedTransports: [Transport.STDIO, Transport.HTTP],
+		installType: "command",
+		preferHTTP: true,
+		command: "codex",
+		supportsOAuth: true,
+		commandConfig: {
+			stdio: (name: string, command: string, args: string[]) => [
+				"mcp",
+				"add",
+				name,
+				"--",
+				command,
+				...args,
+			], // codex mcp add <server-name> -- npx -y @smithery/cli@latest run <server>
+			http: (name: string, url: string) => [
+				"mcp",
+				"add",
+				"--transport",
+				"http",
+				name,
+				url,
+			], // codex mcp add --transport http <server-name> "<url>"
+		},
+	},
+	opencode: {
+		label: "OpenCode",
+		supportedTransports: [Transport.STDIO, Transport.HTTP],
+		installType: "json",
+		supportsOAuth: true,
+		path: path.join(homeDir, ".config", "opencode", "opencode.json"),
+	},
+	claude: {
+		label: "Claude Desktop",
+		supportedTransports: [Transport.STDIO],
+		installType: "json",
+		path: defaultClaudePath,
+	},
+	witsy: {
+		label: "Witsy",
+		supportedTransports: [Transport.STDIO],
+		installType: "json",
+		path: path.join(baseDir, "Witsy", "settings.json"),
+	},
+	enconvo: {
+		label: "Enconvo",
+		supportedTransports: [Transport.STDIO],
+		installType: "json",
+		path: path.join(homeDir, ".config", "enconvo", "mcp_config.json"),
+	},
 	roocode: {
 		label: "Roo Code",
 		supportedTransports: [Transport.STDIO],
@@ -209,35 +280,6 @@ export const CLIENT_CONFIGURATIONS: Record<string, ClientConfiguration> = {
 		installType: "json",
 		// Note: Tome might use deep links instead of file config
 		path: path.join(homeDir, ".tome", "mcp_config.json"),
-	},
-	librechat: {
-		label: "LibreChat",
-		supportedTransports: [Transport.STDIO],
-		installType: "yaml",
-		path: path.join(
-			process.env.LIBRECHAT_CONFIG_DIR || homeDir,
-			"LibreChat",
-			"librechat.yaml",
-		),
-	},
-	"gemini-cli": {
-		label: "Gemini CLI",
-		supportedTransports: [Transport.STDIO],
-		installType: "json",
-		path: path.join(homeDir, ".gemini", "settings.json"),
-	},
-	codex: {
-		label: "Codex",
-		supportedTransports: [Transport.STDIO],
-		installType: "toml",
-		path: path.join(homeDir, ".codex", "config.toml"),
-	},
-	opencode: {
-		label: "OpenCode",
-		supportedTransports: [Transport.STDIO],
-		installType: "json",
-		supportsOAuth: false,
-		path: path.join(homeDir, ".config", "opencode", "opencode.json"),
 	},
 }
 

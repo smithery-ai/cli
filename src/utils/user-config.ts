@@ -1,17 +1,17 @@
 import type { ConnectionInfo } from "@smithery/registry/models/components"
 import type ora from "ora"
 import type { JSONSchema, ServerConfig } from "../types/registry"
-import { promptForExistingConfig } from "../utils/command-prompts"
+import { promptForExistingConfig } from "./command-prompts"
 import {
 	collectConfigValues,
 	validateAndFormatConfig,
-} from "../utils/session-config"
+} from "./session-config"
 import {
 	ensureBundleInstalled,
 	getBundleUserConfigSchema,
-} from "./bundle-manager"
-import { getConfig } from "./keychain"
-import { verbose } from "./logger"
+} from "../lib/bundle-manager"
+import { getConfig } from "../lib/keychain"
+import { verbose } from "../lib/logger"
 
 // Type for ora spinner instance
 export type OraSpinner = ReturnType<ReturnType<typeof ora>["start"]>

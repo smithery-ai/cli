@@ -4,10 +4,11 @@ import chalk from "chalk"
 import ora from "ora"
 import type { ValidClient } from "../config/clients"
 import { getClientConfiguration } from "../config/clients"
+import { formatServerConfig } from "../utils/format-server-config"
 import { saveConfig } from "../lib/keychain"
 import { verbose } from "../lib/logger"
 import { resolveServer } from "../lib/registry"
-import { resolveUserConfig } from "../lib/user-config"
+import { resolveUserConfig } from "../utils/user-config"
 import type { ServerConfig } from "../types/registry"
 import { checkAnalyticsConsent } from "../utils/analytics"
 import { promptForRestart } from "../utils/client"
@@ -18,7 +19,7 @@ import {
 	ensureBunInstalled,
 	ensureUVInstalled,
 } from "../utils/runtime"
-import { formatServerConfig, getServerName } from "../utils/session-config"
+import { getServerName } from "../utils/session-config"
 
 /**
  * Installs and configures a Smithery server for a specified client.

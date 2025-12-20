@@ -61,7 +61,7 @@ export function readConfig(client: string): ClientMCPConfig {
 		// Handle different naming conventions for MCP servers
 		let mcpServers = rawConfig.mcpServers || {}
 		if (clientConfig.installType === "toml" && rawConfig.mcp_servers) {
-			// Codex uses mcp_servers (underscore) instead of mcpServers (camelCase)
+			// TOML format uses mcp_servers (underscore) instead of mcpServers (camelCase)
 			mcpServers = rawConfig.mcp_servers
 		}
 
