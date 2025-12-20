@@ -79,7 +79,7 @@ describe("run command", () => {
 
 		expect(createStreamableHTTPRunner).toHaveBeenCalledWith(
 			"https://server.smithery.ai",
-			"",
+			"test-api-key",
 			{},
 			undefined,
 		)
