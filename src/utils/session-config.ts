@@ -316,48 +316,6 @@ async function promptForConfigValue(
 }
 
 /**
- * Converts environment variables to command line arguments
- * @param envVars - Record of environment variables
- * @returns Array of command line arguments
- */
-export function envVarsToArgs(envVars: Record<string, string>): string[] {
-	return Object.entries(envVars).flatMap(([key, value]) => {
-		const argName = key.toLowerCase().replace(/_/g, "-")
-		return [`--${argName}`, value]
-	})
-}
-
-/**
- * Normalizes a server ID by replacing slashes with dashes
- * @param serverId - The server ID to normalize
- * @returns Normalized server ID
- */
-export function normalizeServerId(serverId: string): string {
-	if (serverId.startsWith("@")) {
-		const firstSlashIndex = serverId.indexOf("/")
-		if (firstSlashIndex !== -1) {
-			return `${serverId.substring(0, firstSlashIndex)}-${serverId.substring(firstSlashIndex + 1)}`
-		}
-	}
-	return serverId
-}
-
-/**
- * Converts a normalized server ID back to its original form
- * @param normalizedId - The normalized server ID
- * @returns Original server ID with slashes instead of dashes
- */
-export function denormalizeServerId(normalizedId: string): string {
-	if (normalizedId.startsWith("@")) {
-		const dashIndex = normalizedId.indexOf("-")
-		if (dashIndex !== -1) {
-			return `${normalizedId.substring(0, dashIndex)}/${normalizedId.substring(dashIndex + 1)}`
-		}
-	}
-	return normalizedId
-}
-
-/**
  * Extracts the server name from a server ID
  * @param serverId - The server ID to extract from
  * @returns The server name portion of the ID

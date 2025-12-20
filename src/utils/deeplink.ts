@@ -45,20 +45,6 @@ export function generateVSCodeDeeplink(config: DeeplinkConfig): {
 }
 
 /**
- * Generate a VS Code Insiders deeplink
- * Format: vscode-insiders:mcp/install?{encodedFullConfig}
- */
-export function generateVSCodeInsidersDeeplink(config: DeeplinkConfig): {
-	url: string
-	displayText: string
-} {
-	const url = `vscode-insiders:mcp/install?${encodeURIComponent(JSON.stringify(config))}`
-	const displayText = `vscode-insiders:mcp/install?{"name":"${config.name}","type":"${config.type}",...}`
-
-	return { url, displayText }
-}
-
-/**
  * Create a clickable terminal link using OSC 8 escape sequences
  * @param url - The URL to link to
  * @param displayText - The text to display (can be truncated version of URL)
