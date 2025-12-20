@@ -118,21 +118,24 @@ async function handlePromptUseKeychain(
 
 	spinner.stop()
 	const useExisting = await promptForExistingConfig()
-	spinner.start()
 
 	if (useExisting) {
 		verbose("Using existing configuration from keychain")
+		spinner.start()
 		return existingConfig
 	}
 
 	verbose("User chose to provide new configuration")
-	return await collectConfigValues(connectionWithSchema, {})
+	const config = await collectConfigValues(connectionWithSchema, {})
+	spinner.start()
+	return config
 }
 
 // Handler for promptNewConfig strategy
 async function handlePromptNewConfig(
 	connection: ConnectionInfo,
 	qualifiedName: string,
+	spinner: OraSpinner,
 ): Promise<ServerConfig> {
 	const existingConfig = await getConfig(qualifiedName)
 	if (existingConfig) {
@@ -144,7 +147,10 @@ async function handlePromptNewConfig(
 		connection,
 		qualifiedName,
 	)
-	return await collectConfigValues(connectionWithSchema, {})
+	spinner.stop()
+	const config = await collectConfigValues(connectionWithSchema, {})
+	spinner.start()
+	return config
 }
 
 function applySchemaDefaults(
@@ -190,7 +196,7 @@ export async function resolveUserConfig(
 			config = await handlePromptUseKeychain(connection, qualifiedName, spinner)
 			break
 		case "promptNewConfig":
-			config = await handlePromptNewConfig(connection, qualifiedName)
+			config = await handlePromptNewConfig(connection, qualifiedName, spinner)
 			break
 	}
 
