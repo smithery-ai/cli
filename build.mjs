@@ -68,7 +68,7 @@ await esbuild.build({
 	minify: true,
 	treeShaking: true,
 	outfile: "dist/index.js",
-	external: ["@ngrok/ngrok", "esbuild"],
+	external: ["@ngrok/ngrok", "esbuild", "keytar"],
 	banner: {
 		js: `import { createRequire } from 'module'; const require = createRequire(import.meta.url);`,
 	},

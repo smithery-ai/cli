@@ -165,6 +165,7 @@ async function esbuildServer(
 		minify: shouldMinify,
 		sourcemap: shouldMinify ? false : "inline",
 		format: "cjs",
+		external: ["keytar"], // Native module, cannot be bundled
 	}
 
 	let buildConfig: esbuild.BuildOptions
