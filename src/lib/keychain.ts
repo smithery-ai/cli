@@ -1,5 +1,6 @@
 import { createRequire } from "node:module"
 import type { ServerConfig } from "../types/registry.js"
+import { maskConfig } from "../utils/mask-config.js"
 import { verbose } from "./logger.js"
 
 const require = createRequire(import.meta.url)
@@ -61,7 +62,10 @@ export async function getConfig(
 		}
 
 		const config = JSON.parse(configJson) as ServerConfig
-		verbose(`Successfully read config from keychain for ${qualifiedName}`)
+		const maskedConfig = maskConfig(config)
+		verbose(
+			`Successfully read config from keychain for ${qualifiedName}: ${JSON.stringify(maskedConfig)}`,
+		)
 		return config
 	} catch (error) {
 		verbose(
