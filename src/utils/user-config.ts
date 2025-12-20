@@ -86,8 +86,7 @@ async function handleKeychainFound(
 			const mergedConfig = { ...existingConfig, ...configValues }
 			// Validate merged config
 			try {
-				await validateAndFormatConfig(connectionWithSchema, mergedConfig)
-				return mergedConfig
+				return await validateAndFormatConfig(connectionWithSchema, mergedConfig)
 			} catch (_error) {
 				// Validation failed - prompt for invalid/missing required fields
 				verbose("Merged config validation failed, prompting for invalid fields")
@@ -104,8 +103,7 @@ async function handleKeychainFound(
 
 		// No --config - validate existing config
 		try {
-			await validateAndFormatConfig(connectionWithSchema, existingConfig)
-			return existingConfig
+			return await validateAndFormatConfig(connectionWithSchema, existingConfig)
 		} catch (_error) {
 			// Validation failed - prompt for invalid/missing required fields
 			verbose("Existing config validation failed, prompting for invalid fields")
@@ -128,8 +126,7 @@ async function handleKeychainFound(
 	if (Object.keys(configValues).length > 0) {
 		// Validate --config
 		try {
-			await validateAndFormatConfig(connectionWithSchema, configValues)
-			return configValues
+			return await validateAndFormatConfig(connectionWithSchema, configValues)
 		} catch (_error) {
 			// Validation failed - prompt for invalid/missing required fields
 			verbose("--config validation failed, prompting for invalid fields")
@@ -166,8 +163,7 @@ async function handleNoKeychain(
 	if (Object.keys(configValues).length > 0) {
 		// Validate --config
 		try {
-			await validateAndFormatConfig(connectionWithSchema, configValues)
-			return configValues
+			return await validateAndFormatConfig(connectionWithSchema, configValues)
 		} catch (_error) {
 			// Validation failed - prompt for invalid/missing required fields
 			verbose("--config validation failed, prompting for invalid fields")
@@ -185,8 +181,7 @@ async function handleNoKeychain(
 	spinner.stop()
 	const config = await collectConfigValues(connectionWithSchema, {})
 	spinner.start()
-	await validateAndFormatConfig(connectionWithSchema, config)
-	return config
+	return await validateAndFormatConfig(connectionWithSchema, config)
 }
 
 export function applySchemaDefaults(

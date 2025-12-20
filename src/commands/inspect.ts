@@ -230,7 +230,11 @@ export async function inspectServer(
 			`Collected configuration keys: ${Object.keys(configValues).join(", ")}`,
 		)
 
-		const runtimeEnv = getRuntimeEnvironment({})
+		// Pass API key via environment variable instead of --key flag
+		// (the run command no longer accepts --key option)
+		const runtimeEnv = getRuntimeEnvironment(
+			apiKey ? { SMITHERY_BEARER_AUTH: apiKey } : {},
+		)
 		verbose(`Runtime environment: ${Object.keys(runtimeEnv).length} variables`)
 
 		// Create appropriate transport with environment variables
@@ -243,7 +247,6 @@ export async function inspectServer(
 				qualifiedName,
 				"--config",
 				JSON.stringify(JSON.stringify(configValues)),
-				...(apiKey ? ["--key", apiKey] : []),
 			],
 			env: runtimeEnv,
 		})
