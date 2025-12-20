@@ -10,7 +10,7 @@ import { resolveServer } from "../lib/registry"
 import type { ServerConfig } from "../types/registry"
 import { checkAnalyticsConsent } from "../utils/analytics"
 import { promptForRestart } from "../utils/client"
-import { resolveUserConfig } from "../utils/install-helpers"
+import { resolveUserConfig } from "../lib/install"
 import { readConfig, runConfigCommand, writeConfig } from "../utils/mcp-config"
 import {
 	checkAndNotifyRemoteServer,
