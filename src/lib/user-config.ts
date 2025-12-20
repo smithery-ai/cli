@@ -16,13 +16,6 @@ import { verbose } from "./logger"
 // Type for ora spinner instance
 export type OraSpinner = ReturnType<ReturnType<typeof ora>["start"]>
 
-// Discriminated union type for config strategies
-export type ConfigStrategy =
-	| "skipConfig"
-	| "useProvidedConfig"
-	| "promptUseKeychain"
-	| "promptNewConfig"
-
 // Helper function to get config schema (from connection or bundle)
 async function getConfigSchema(
 	connection: ConnectionInfo,
@@ -66,44 +59,12 @@ export async function serverNeedsConfig(
 	)
 }
 
-// Determine which config strategy to use
-export async function resolveConfigStrategy(
+// Handle keychain found scenario
+// Always prompt "use existing or provide new" when keychain exists
+async function handleKeychainFound(
 	connection: ConnectionInfo,
 	qualifiedName: string,
 	configValues: ServerConfig,
-): Promise<ConfigStrategy> {
-	const needsConfig = await serverNeedsConfig(connection, qualifiedName)
-
-	if (!needsConfig) {
-		return "skipConfig"
-	}
-
-	if (Object.keys(configValues).length > 0) {
-		return "useProvidedConfig"
-	}
-
-	const existingConfig = await getConfig(qualifiedName)
-	if (!existingConfig) {
-		return "promptNewConfig"
-	}
-
-	// Config exists - validate it
-	const connectionWithSchema = await createConnectionWithSchema(
-		connection,
-		qualifiedName,
-	)
-	try {
-		await validateAndFormatConfig(connectionWithSchema, existingConfig)
-		return "promptUseKeychain"
-	} catch {
-		return "promptNewConfig"
-	}
-}
-
-// Handler for promptUseKeychain strategy
-async function handlePromptUseKeychain(
-	connection: ConnectionInfo,
-	qualifiedName: string,
 	spinner: OraSpinner,
 ): Promise<ServerConfig> {
 	const existingConfig = await getConfig(qualifiedName)
@@ -122,38 +83,116 @@ async function handlePromptUseKeychain(
 	if (useExisting) {
 		verbose("Using existing configuration from keychain")
 		spinner.start()
-		return existingConfig
+
+		// If --config provided, merge --config over keychain (--config wins)
+		if (Object.keys(configValues).length > 0) {
+			const mergedConfig = { ...existingConfig, ...configValues }
+			// Validate merged config
+			try {
+				await validateAndFormatConfig(connectionWithSchema, mergedConfig)
+				return mergedConfig
+			} catch (_error) {
+				// Validation failed - prompt for invalid/missing required fields
+				verbose("Merged config validation failed, prompting for invalid fields")
+				spinner.stop()
+				const fixedConfig = await collectConfigValues(
+					connectionWithSchema,
+					mergedConfig,
+				)
+				spinner.start()
+				// collectConfigValues validates internally, so we can return the fixed config
+				return fixedConfig
+			}
+		}
+
+		// No --config - validate existing config
+		try {
+			await validateAndFormatConfig(connectionWithSchema, existingConfig)
+			return existingConfig
+		} catch (_error) {
+			// Validation failed - prompt for invalid/missing required fields
+			verbose("Existing config validation failed, prompting for invalid fields")
+			spinner.stop()
+			const fixedConfig = await collectConfigValues(
+				connectionWithSchema,
+				existingConfig,
+			)
+			spinner.start()
+			// collectConfigValues validates internally, so we can return the fixed config
+			return fixedConfig
+		}
 	}
 
+	// User chose to provide new configuration
 	verbose("User chose to provide new configuration")
-	const config = await collectConfigValues(connectionWithSchema, {})
 	spinner.start()
-	return config
-}
 
-// Handler for promptNewConfig strategy
-async function handlePromptNewConfig(
-	connection: ConnectionInfo,
-	qualifiedName: string,
-	spinner: OraSpinner,
-): Promise<ServerConfig> {
-	const existingConfig = await getConfig(qualifiedName)
-	if (existingConfig) {
-		verbose(
-			`Existing config validation failed, prompting for new configuration`,
-		)
+	// If --config provided, use it as base (ignore keychain)
+	if (Object.keys(configValues).length > 0) {
+		// Validate --config
+		try {
+			await validateAndFormatConfig(connectionWithSchema, configValues)
+			return configValues
+		} catch (_error) {
+			// Validation failed - prompt for invalid/missing required fields
+			verbose("--config validation failed, prompting for invalid fields")
+			spinner.stop()
+			const fixedConfig = await collectConfigValues(
+				connectionWithSchema,
+				configValues,
+			)
+			spinner.start()
+			return fixedConfig
+		}
 	}
-	const connectionWithSchema = await createConnectionWithSchema(
-		connection,
-		qualifiedName,
-	)
+
+	// No --config, collect fresh
 	spinner.stop()
 	const config = await collectConfigValues(connectionWithSchema, {})
 	spinner.start()
 	return config
 }
 
-function applySchemaDefaults(
+// Handle no keychain scenario
+async function handleNoKeychain(
+	connection: ConnectionInfo,
+	qualifiedName: string,
+	configValues: ServerConfig,
+	spinner: OraSpinner,
+): Promise<ServerConfig> {
+	const connectionWithSchema = await createConnectionWithSchema(
+		connection,
+		qualifiedName,
+	)
+
+	// If --config provided, use it as base
+	if (Object.keys(configValues).length > 0) {
+		// Validate --config
+		try {
+			await validateAndFormatConfig(connectionWithSchema, configValues)
+			return configValues
+		} catch (_error) {
+			// Validation failed - prompt for invalid/missing required fields
+			verbose("--config validation failed, prompting for invalid fields")
+			spinner.stop()
+			const fixedConfig = await collectConfigValues(
+				connectionWithSchema,
+				configValues,
+			)
+			spinner.start()
+			return fixedConfig
+		}
+	}
+
+	// No --config, collect fresh
+	spinner.stop()
+	const config = await collectConfigValues(connectionWithSchema, {})
+	spinner.start()
+	await validateAndFormatConfig(connectionWithSchema, config)
+	return config
+}
+
+export function applySchemaDefaults(
 	config: ServerConfig,
 	configSchema: JSONSchema | undefined,
 ): ServerConfig {
@@ -170,36 +209,43 @@ function applySchemaDefaults(
 }
 
 // Public API: Resolve user configuration based on connection, qualified name, and provided config values
+// Follows the principle: always prompt for keychain if found, regardless of --config
 export async function resolveUserConfig(
 	connection: ConnectionInfo,
 	qualifiedName: string,
 	configValues: ServerConfig,
 	spinner: OraSpinner,
 ): Promise<ServerConfig> {
-	const strategy = await resolveConfigStrategy(
-		connection,
-		qualifiedName,
-		configValues,
-	)
-
-	let config: ServerConfig
-	switch (strategy) {
-		case "skipConfig":
-			verbose("Server does not require configuration")
-			config = {}
-			break
-		case "useProvidedConfig":
-			verbose("Using configuration from --config flag")
-			config = configValues
-			break
-		case "promptUseKeychain":
-			config = await handlePromptUseKeychain(connection, qualifiedName, spinner)
-			break
-		case "promptNewConfig":
-			config = await handlePromptNewConfig(connection, qualifiedName, spinner)
-			break
+	// 1. Check if server needs config
+	const needsConfig = await serverNeedsConfig(connection, qualifiedName)
+	if (!needsConfig) {
+		verbose("Server does not require configuration")
+		return {}
 	}
 
+	// 2. Always check keychain first
+	const existingConfig = await getConfig(qualifiedName)
+	let config: ServerConfig
+
+	if (existingConfig) {
+		// Keychain exists - always prompt "use existing or provide new" (even if invalid)
+		config = await handleKeychainFound(
+			connection,
+			qualifiedName,
+			configValues,
+			spinner,
+		)
+	} else {
+		// No keychain - handle --config or collect fresh
+		config = await handleNoKeychain(
+			connection,
+			qualifiedName,
+			configValues,
+			spinner,
+		)
+	}
+
+	// 3. Apply schema defaults at the end
 	const configSchema = await getConfigSchema(connection, qualifiedName)
 	return applySchemaDefaults(config, configSchema)
 }

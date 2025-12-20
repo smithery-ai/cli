@@ -1,8 +1,27 @@
 /**
  * Configuration fixtures for testing validation and prompting flows
+ *
+ * IMPORTANT: MCP Config Standardization
+ *
+ * All client config files (JSON, YAML, TOML) use different formats and naming conventions,
+ * but internally the codebase uses MCP config as the standardized currency:
+ *
+ * - First mile (readConfig): Client file formats (JSON/YAML/TOML with mcp_servers or mcpServers)
+ *   → normalized ClientMCPConfig with mcpServers property
+ *
+ * - Internal processing: All operations use ClientMCPConfig with mcpServers structure
+ *   → installServer reads config, merges server, writes config (server-type agnostic)
+ *
+ * - Last mile (writeConfig): Normalized ClientMCPConfig with mcpServers
+ *   → client-specific file format (JSON/YAML/TOML with appropriate naming)
+ *
+ * Therefore, fixtures represent the normalized internal format (what readConfig returns),
+ * not the raw client file formats. Server-type specifics (HTTP vs STDIO, command vs bundle)
+ * are handled by sub-functions like formatServerConfig and should be tested separately.
  */
 
 import type { ServerConfig, ValidationResponse } from "../../types/registry"
+import type { ClientMCPConfig } from "../../utils/mcp-config"
 
 /**
  * VALIDATION RESPONSE FIXTURES
@@ -221,5 +240,69 @@ export const collectedConfigs: Record<string, ServerConfig> = {
 	// Just the missing required fields (for partial config scenarios)
 	missingEndpoint: {
 		endpoint: "https://api.example.com",
+	},
+}
+
+/**
+ * INITIAL CONFIG FIXTURES
+ * Mock responses from readConfig (what's in the client config file initially)
+ * These represent the state of the config file BEFORE installation.
+ * All fixtures use the normalized MCP config format (mcpServers structure).
+ */
+
+export const initialConfigs: Record<string, ClientMCPConfig> = {
+	// Empty config - no servers installed yet
+	empty: {
+		mcpServers: {},
+	},
+
+	// Config with one STDIO server
+	withOneStdioServer: {
+		mcpServers: {
+			"existing-stdio": {
+				command: "npx",
+				args: ["-y", "@smithery/cli@latest", "run", "existing-stdio"],
+			},
+		},
+	},
+
+	// Config with one HTTP server
+	withOneHttpServer: {
+		mcpServers: {
+			"existing-http": {
+				type: "http",
+				url: "https://server.smithery.ai/existing-http/mcp",
+				headers: {},
+			},
+		},
+	},
+
+	// Config with multiple servers (mixed types)
+	withMultipleServers: {
+		mcpServers: {
+			"server-one": {
+				command: "npx",
+				args: ["-y", "@smithery/cli@latest", "run", "server-one"],
+			},
+			"server-two": {
+				type: "http",
+				url: "https://server.smithery.ai/server-two/mcp",
+				headers: {},
+			},
+			"server-three": {
+				command: "python",
+				args: ["-m", "mcp_server"],
+			},
+		},
+	},
+
+	// Config with a server that will conflict (same name as what we're installing)
+	withConflictingServer: {
+		mcpServers: {
+			"test-server": {
+				command: "npx",
+				args: ["-y", "@smithery/cli@latest", "run", "old-test-server"],
+			},
+		},
 	},
 }
