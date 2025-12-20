@@ -44,25 +44,31 @@ async function listPrimitives(client: Client): Promise<Primitive[]> {
 
 	if (capabilities.resources) {
 		promises.push(
-			client.listResources().then(({ resources }) =>
-				resources.map((item) => ({ type: "resource" as const, value: item })),
-			),
+			client
+				.listResources()
+				.then(({ resources }) =>
+					resources.map((item) => ({ type: "resource" as const, value: item })),
+				),
 		)
 	}
 
 	if (capabilities.tools) {
 		promises.push(
-			client.listTools().then(({ tools }) =>
-				tools.map((item) => ({ type: "tool" as const, value: item })),
-			),
+			client
+				.listTools()
+				.then(({ tools }) =>
+					tools.map((item) => ({ type: "tool" as const, value: item })),
+				),
 		)
 	}
 
 	if (capabilities.prompts) {
 		promises.push(
-			client.listPrompts().then(({ prompts }) =>
-				prompts.map((item) => ({ type: "prompt" as const, value: item })),
-			),
+			client
+				.listPrompts()
+				.then(({ prompts }) =>
+					prompts.map((item) => ({ type: "prompt" as const, value: item })),
+				),
 		)
 	}
 

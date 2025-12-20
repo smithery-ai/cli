@@ -50,6 +50,12 @@ vi.mock("../../../utils/prepare-stdio-connection", () => ({
 vi.mock("../../../utils/smithery-config", () => ({
 	initializeSettings: vi.fn().mockResolvedValue({ success: true }),
 	getAnalyticsConsent: vi.fn().mockResolvedValue(false),
+	getApiKey: vi.fn().mockResolvedValue("test-api-key"),
+}))
+
+// Mock keychain
+vi.mock("../../../lib/keychain", () => ({
+	getConfig: vi.fn().mockResolvedValue(null),
 }))
 
 import { resolveServer } from "../../../lib/registry"

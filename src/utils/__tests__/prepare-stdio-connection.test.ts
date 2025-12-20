@@ -16,7 +16,6 @@ vi.mock("../../lib/bundle-manager", () => ({
 
 vi.mock("../../lib/registry", () => ({
 	fetchConnection: vi.fn(),
-	getUserConfig: vi.fn(),
 }))
 
 vi.mock("../../commands/run/runner-utils", () => ({
@@ -29,7 +28,7 @@ import {
 	resolveEnvTemplates,
 	resolveTemplateString,
 } from "../../lib/bundle-manager"
-import { fetchConnection, getUserConfig } from "../../lib/registry"
+import { fetchConnection } from "../../lib/registry"
 import { prepareStdioConnection } from "../prepare-stdio-connection"
 
 describe("prepareStdioConnection", () => {
@@ -67,7 +66,6 @@ describe("prepareStdioConnection", () => {
 
 		expect(ensureBundleInstalled).not.toHaveBeenCalled()
 		expect(fetchConnection).not.toHaveBeenCalled()
-		expect(getUserConfig).not.toHaveBeenCalled()
 	})
 
 	test("handles bundle connection with args template resolution", async () => {
@@ -85,14 +83,12 @@ describe("prepareStdioConnection", () => {
 
 		const bundleDir =
 			"/home/.smithery/cache/servers/author/bundle-server/current"
+		const userConfig = { apiKey: "saved-key" }
 
 		vi.mocked(ensureBundleInstalled).mockResolvedValue(bundleDir)
 		vi.mocked(getBundleCommand).mockReturnValue({
 			command: "node",
 			args: ["${__dirname}/index.js", "apiKey=${user_config.apiKey}"],
-		})
-		vi.mocked(getUserConfig).mockResolvedValue({
-			apiKey: "saved-key",
 		})
 		vi.mocked(resolveTemplateString)
 			.mockReturnValueOnce(`${bundleDir}/index.js`)
@@ -101,7 +97,7 @@ describe("prepareStdioConnection", () => {
 		const result = await prepareStdioConnection(
 			server,
 			server.connections[0],
-			{},
+			userConfig,
 		)
 
 		expect(ensureBundleInstalled).toHaveBeenCalledWith(
@@ -109,11 +105,6 @@ describe("prepareStdioConnection", () => {
 			"https://smithery.ai/bundles/author/bundle-server.mcpb",
 		)
 		expect(getBundleCommand).toHaveBeenCalledWith(bundleDir)
-		expect(getUserConfig).toHaveBeenCalledWith(
-			"author/bundle-server",
-			"test-api-key",
-			undefined,
-		)
 
 		expect(result).toEqual({
 			command: "node",
@@ -144,7 +135,6 @@ describe("prepareStdioConnection", () => {
 			command: "node",
 			args: ["${__dirname}/index.js"],
 		})
-		vi.mocked(getUserConfig).mockResolvedValue(null)
 		vi.mocked(resolveTemplateString).mockReturnValue(`${bundleDir}/index.js`)
 
 		const result = await prepareStdioConnection(server, server.connections[0], {
@@ -192,7 +182,6 @@ describe("prepareStdioConnection", () => {
 			command: "node",
 			args: ["${__dirname}/index.js", "port=${user_config.port}"],
 		})
-		vi.mocked(getUserConfig).mockResolvedValue({ port: 3000 })
 		vi.mocked(resolveTemplateString)
 			.mockReturnValueOnce(`${bundleDir}/index.js`)
 			.mockReturnValueOnce("port=8080")
@@ -201,7 +190,7 @@ describe("prepareStdioConnection", () => {
 			port: 8080,
 		} as any)
 
-		// Runtime config (8080) should override saved config (3000)
+		// Runtime config (8080) is used directly
 		expect(result.args).toEqual([`${bundleDir}/index.js`, "port=8080"])
 		expect(result.env).toEqual({})
 	})
@@ -226,7 +215,6 @@ describe("prepareStdioConnection", () => {
 			command: "node",
 			args: ["${__dirname}/index.js"],
 		})
-		vi.mocked(getUserConfig).mockResolvedValue(null)
 		vi.mocked(resolveTemplateString).mockReturnValue(`${bundleDir}/index.js`)
 
 		await prepareStdioConnection(server, server.connections[0], {})
@@ -250,6 +238,10 @@ describe("prepareStdioConnection", () => {
 
 		const bundleDir =
 			"/home/.smithery/cache/servers/author/bundle-server/current"
+		const userConfig = {
+			apiKey: "secret-key-123",
+			database: { host: "localhost", port: 5432 },
+		}
 
 		vi.mocked(ensureBundleInstalled).mockResolvedValue(bundleDir)
 		vi.mocked(getBundleCommand).mockReturnValue({
@@ -261,10 +253,6 @@ describe("prepareStdioConnection", () => {
 					"${user_config.database.host}:${user_config.database.port}",
 			},
 		})
-		vi.mocked(getUserConfig).mockResolvedValue({
-			apiKey: "secret-key-123",
-			database: { host: "localhost", port: 5432 },
-		})
 		vi.mocked(resolveTemplateString).mockReturnValue(`${bundleDir}/index.js`)
 		vi.mocked(resolveEnvTemplates).mockReturnValue({
 			API_KEY: "secret-key-123",
@@ -274,7 +262,7 @@ describe("prepareStdioConnection", () => {
 		const result = await prepareStdioConnection(
 			server,
 			server.connections[0],
-			{},
+			userConfig,
 		)
 
 		expect(resolveEnvTemplates).toHaveBeenCalledWith(
@@ -283,10 +271,7 @@ describe("prepareStdioConnection", () => {
 				DATABASE_URL:
 					"${user_config.database.host}:${user_config.database.port}",
 			},
-			{
-				apiKey: "secret-key-123",
-				database: { host: "localhost", port: 5432 },
-			},
+			userConfig,
 			bundleDir,
 		)
 
@@ -337,7 +322,6 @@ describe("prepareStdioConnection - Integration Tests with Real Resolution", () =
 			args: manifest.server.mcp_config.args,
 			env: manifest.server.mcp_config.env,
 		})
-		vi.mocked(getUserConfig).mockResolvedValue(userConfig)
 
 		const actualBundleManager = await vi.importActual<
 			typeof import("../../lib/bundle-manager")
@@ -353,7 +337,7 @@ describe("prepareStdioConnection - Integration Tests with Real Resolution", () =
 		const result = await prepareStdioConnection(
 			server,
 			server.connections[0],
-			{},
+			userConfig,
 		)
 
 		expect(result.command).toBe("node")
@@ -401,7 +385,6 @@ describe("prepareStdioConnection - Integration Tests with Real Resolution", () =
 			args: manifest.server.mcp_config.args,
 			env: manifest.server.mcp_config.env,
 		})
-		vi.mocked(getUserConfig).mockResolvedValue(userConfig)
 
 		const actualBundleManager = await vi.importActual<
 			typeof import("../../lib/bundle-manager")
@@ -417,7 +400,7 @@ describe("prepareStdioConnection - Integration Tests with Real Resolution", () =
 		const result = await prepareStdioConnection(
 			server,
 			server.connections[0],
-			{},
+			userConfig,
 		)
 
 		expect(result.command).toBe("node")
@@ -466,7 +449,6 @@ describe("prepareStdioConnection - Integration Tests with Real Resolution", () =
 			args: manifest.server.mcp_config.args,
 			env: manifest.server.mcp_config.env,
 		})
-		vi.mocked(getUserConfig).mockResolvedValue(userConfig)
 
 		const actualBundleManager = await vi.importActual<
 			typeof import("../../lib/bundle-manager")
@@ -482,7 +464,7 @@ describe("prepareStdioConnection - Integration Tests with Real Resolution", () =
 		const result = await prepareStdioConnection(
 			server,
 			server.connections[0],
-			{},
+			userConfig,
 		)
 
 		expect(result.command).toBe("node")
