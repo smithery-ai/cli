@@ -43,14 +43,15 @@ export async function installServer(
 	const spinner = ora(`Resolving ${qualifiedName}...`).start()
 	try {
 		const { server, connection } = await resolveServer(qualifiedName)
-		verbose(`Server resolved successfully: ${server.qualifiedName}`)
 		spinner.succeed(
 			chalk.dim(`Successfully resolved ${chalk.cyan(qualifiedName)}`),
 		)
 
-		// Check for required runtimes and install if needed
-		await ensureUVInstalled(connection)
-		await ensureBunInstalled(connection)
+		// Check for required runtimes and install if needed (only for stdio connections)
+		if (connection.type === "stdio") {
+			await ensureUVInstalled(connection)
+			await ensureBunInstalled(connection)
+		}
 
 		// Notify user if remote server
 		checkAndNotifyRemoteServer(server)
@@ -80,7 +81,7 @@ export async function installServer(
 		verbose(`Formatted server config: ${JSON.stringify(serverConfig, null, 2)}`)
 		const serverName = getServerName(qualifiedName)
 
-		// Check if this is a command-based client
+		// get client configuration details
 		const clientConfig = getClientConfiguration(client)
 
 		switch (clientConfig.installType) {
