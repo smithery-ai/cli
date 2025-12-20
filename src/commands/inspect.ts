@@ -2,6 +2,7 @@ import "../utils/suppress-punycode-warning"
 import { Client } from "@modelcontextprotocol/sdk/client/index.js"
 import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js"
 import { LoggingMessageNotificationSchema } from "@modelcontextprotocol/sdk/types.js"
+import { RequestTimeoutError } from "@smithery/registry/models/errors"
 import chalk from "chalk"
 import inquirer from "inquirer"
 import ora from "ora"
@@ -247,7 +248,13 @@ export async function inspectServer(
 		await connectServer(transport)
 	} catch (error) {
 		spinner.fail(`Failed to inspect ${qualifiedName}`)
-		if (error instanceof Error) {
+		if (error instanceof RequestTimeoutError) {
+			console.error(
+				chalk.red(
+					"Error: Request timed out. Please check your connection and try again.",
+				),
+			)
+		} else if (error instanceof Error) {
 			console.error(chalk.red(`Error: ${error.message}`))
 		} else {
 			console.error(chalk.red("An unexpected error occurred during inspection"))

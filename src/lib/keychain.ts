@@ -1,6 +1,9 @@
-import * as keytar from "keytar"
+import { createRequire } from "node:module"
 import type { ServerConfig } from "../types/registry.js"
 import { verbose } from "./logger.js"
+
+const require = createRequire(import.meta.url)
+const keytar = require("keytar")
 
 const SERVICE_NAME = "smithery"
 const ACCOUNT_PREFIX = "config:"

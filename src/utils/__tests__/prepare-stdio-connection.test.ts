@@ -147,11 +147,9 @@ describe("prepareStdioConnection", () => {
 		vi.mocked(getUserConfig).mockResolvedValue(null)
 		vi.mocked(resolveTemplateString).mockReturnValue(`${bundleDir}/index.js`)
 
-		const result = await prepareStdioConnection(
-			server,
-			server.connections[0],
-			{ DEBUG: "true" },
-		)
+		const result = await prepareStdioConnection(server, server.connections[0], {
+			DEBUG: "true",
+		})
 
 		expect(result.args).toEqual([`${bundleDir}/index.js`])
 		expect(result.env).toEqual({})
@@ -199,11 +197,9 @@ describe("prepareStdioConnection", () => {
 			.mockReturnValueOnce(`${bundleDir}/index.js`)
 			.mockReturnValueOnce("port=8080")
 
-		const result = await prepareStdioConnection(
-			server,
-			server.connections[0],
-			{ port: 8080 } as any,
-		)
+		const result = await prepareStdioConnection(server, server.connections[0], {
+			port: 8080,
+		} as any)
 
 		// Runtime config (8080) should override saved config (3000)
 		expect(result.args).toEqual([`${bundleDir}/index.js`, "port=8080"])

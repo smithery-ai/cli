@@ -3,6 +3,7 @@ import type {
 	ConnectionInfo,
 	ServerDetailResponse,
 } from "@smithery/registry/models/components"
+import { RequestTimeoutError } from "@smithery/registry/models/errors"
 import { getConfig } from "../../lib/keychain.js"
 import { resolveServer } from "../../lib/registry.js"
 import type { ServerConfig } from "../../types/registry.js"
@@ -70,9 +71,15 @@ export async function run(
 			options,
 		)
 	} catch (error) {
-		logWithTimestamp(
-			`[Runner] Error: ${error instanceof Error ? error.message : error}`,
-		)
+		if (error instanceof RequestTimeoutError) {
+			logWithTimestamp(
+				"[Runner] Error: Request timed out. Please check your connection and try again.",
+			)
+		} else {
+			logWithTimestamp(
+				`[Runner] Error: ${error instanceof Error ? error.message : error}`,
+			)
+		}
 		process.exit(1)
 	}
 }

@@ -4,6 +4,7 @@ import type {
 	ServerDetailResponse,
 } from "@smithery/registry/models/components"
 import {
+	RequestTimeoutError,
 	SDKValidationError,
 	ServerError,
 	UnauthorizedError,
@@ -134,7 +135,10 @@ export const resolveServer = async (
 			connection,
 		}
 	} catch (error: unknown) {
-		if (error instanceof SDKValidationError) {
+		if (error instanceof RequestTimeoutError) {
+			// Preserve RequestTimeoutError type
+			throw error
+		} else if (error instanceof SDKValidationError) {
 			verbose(`SDK validation error: ${error.pretty()}`)
 			verbose(JSON.stringify(error.rawValue))
 			throw error
@@ -222,6 +226,10 @@ export const fetchConnection = async (
 		verbose(
 			`Connection fetch error: ${error instanceof Error ? error.message : String(error)}`,
 		)
+		if (error instanceof RequestTimeoutError) {
+			// Preserve RequestTimeoutError type
+			throw error
+		}
 		if (error instanceof Error) {
 			throw new Error(`Failed to fetch server connection: ${error.message}`)
 		}
@@ -294,6 +302,10 @@ export const getUserConfig = async (
 		verbose(
 			`Config get error: ${error instanceof Error ? error.message : String(error)}`,
 		)
+		if (error instanceof RequestTimeoutError) {
+			// Preserve RequestTimeoutError type
+			throw error
+		}
 		if (error instanceof Error) {
 			throw new Error(`Failed to get user config: ${error.message}`)
 		}
@@ -368,6 +380,10 @@ export const saveUserConfig = async (
 		verbose(
 			`Config save error: ${error instanceof Error ? error.message : String(error)}`,
 		)
+		if (error instanceof RequestTimeoutError) {
+			// Preserve RequestTimeoutError type
+			throw error
+		}
 		if (error instanceof Error) {
 			throw new Error(`Failed to save user config: ${error.message}`)
 		}
@@ -420,6 +436,10 @@ export const searchServers = async (
 		verbose(
 			`Search error: ${error instanceof Error ? error.message : String(error)}`,
 		)
+		if (error instanceof RequestTimeoutError) {
+			// Preserve RequestTimeoutError type
+			throw error
+		}
 		if (error instanceof Error) {
 			throw new Error(`Failed to search servers: ${error.message}`)
 		}
@@ -472,6 +492,10 @@ export const validateUserConfig = async (
 		verbose(
 			`Config validation error: ${error instanceof Error ? error.message : String(error)}`,
 		)
+		if (error instanceof RequestTimeoutError) {
+			// Preserve RequestTimeoutError type
+			throw error
+		}
 		if (error instanceof Error) {
 			throw new Error(`Failed to validate config: ${error.message}`)
 		}

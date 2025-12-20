@@ -144,7 +144,6 @@ export async function dev(options: DevOptions = {}): Promise<void> {
 			},
 		})
 
-
 		// Handle cleanup on exit
 		const cleanup = async () => {
 			console.log(chalk.yellow("\no/ Shutting down server..."))
