@@ -110,7 +110,6 @@ describe("run command", () => {
 			["-y", "@author/mcp-server"],
 			{ PATH: "/usr/bin" },
 			"author/stdio-server",
-			undefined,
 			false,
 		)
 	})
@@ -142,7 +141,6 @@ describe("run command", () => {
 			["/home/.smithery/cache/servers/author/bundle-server/current/index.js"],
 			{ API_KEY: "test" },
 			"author/bundle-server",
-			undefined,
 			false,
 		)
 	})

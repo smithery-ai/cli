@@ -132,13 +132,20 @@ async function pickServerAndRun(
 		)
 
 		if (options?.playground) {
-			// Note: Playground may require API key - will be addressed in future refactor
+			// Get API key from global config for local playground
+			const apiKey = await getApiKey()
+			if (!apiKey) {
+				throw new Error(
+					"API key required for local playground. Please run 'smithery login' or install the server first.",
+				)
+			}
+
 			await createLocalPlaygroundRunner(
 				preparedConnection.command,
 				preparedConnection.args,
 				preparedConnection.env,
 				preparedConnection.qualifiedName,
-				"", // API key placeholder - will be fixed later
+				apiKey,
 				{
 					open: options.open !== false,
 					initialMessage: options.initialMessage || "Say hello to the world!",
@@ -150,7 +157,6 @@ async function pickServerAndRun(
 				preparedConnection.args,
 				preparedConnection.env,
 				preparedConnection.qualifiedName,
-				undefined, // No API key needed
 				analyticsEnabled,
 			)
 		}

@@ -1,17 +1,11 @@
 import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js"
 import {
-	type CallToolRequest,
-	CallToolRequestSchema,
 	ErrorCode,
 	type JSONRPCError,
 	type JSONRPCMessage,
 } from "@modelcontextprotocol/sdk/types.js"
-import fetch from "cross-fetch"
-import { pick } from "lodash"
-import { ANALYTICS_ENDPOINT } from "../../constants"
 import { TRANSPORT_CLOSE_TIMEOUT } from "../../constants.js"
 import { verbose } from "../../lib/logger"
-import { getSessionId } from "../../utils/analytics.js"
 import { getRuntimeEnvironment } from "../../utils/runtime"
 import { handleTransportError, logWithTimestamp } from "./runner-utils.js"
 
@@ -22,7 +16,6 @@ export const createStdioRunner = async (
 	args: string[],
 	env: Record<string, string>,
 	serverQualifiedName: string,
-	apiKey: string | undefined,
 	analyticsEnabled: boolean,
 ): Promise<Cleanup> => {
 	let stdinBuffer = ""
@@ -46,40 +39,6 @@ export const createStdioRunner = async (
 		for (const line of lines.filter(Boolean)) {
 			try {
 				const message = JSON.parse(line) as JSONRPCMessage
-
-				// Track tool usage if user consent is given
-				if (analyticsEnabled && apiKey && ANALYTICS_ENDPOINT) {
-					const { data: toolData, error } = CallToolRequestSchema.safeParse(
-						message,
-					) as {
-						data: CallToolRequest | undefined
-						error: Error | null
-					}
-
-					if (!error) {
-						const sessionId = getSessionId()
-						// Fire and forget analytics
-						fetch(ANALYTICS_ENDPOINT, {
-							method: "POST",
-							headers: {
-								"Content-Type": "application/json",
-								Authorization: `Bearer ${apiKey}`,
-							},
-							body: JSON.stringify({
-								eventName: "tool_call",
-								payload: {
-									connectionType: "stdio",
-									serverQualifiedName,
-									toolParams: toolData ? pick(toolData.params, "name") : {},
-								},
-								$session_id: sessionId,
-							}),
-						}).catch((err: Error) => {
-							console.error("[Runner] Analytics error:", err)
-						})
-					}
-				}
-
 				await transport?.send(message)
 			} catch (error) {
 				handleError(error as Error, "Failed to send message to child process")
