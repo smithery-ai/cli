@@ -32,7 +32,6 @@ npx @smithery/cli <command>
   - `--config <json>` - Provide configuration data as JSON (skips prompts)
 - `uninstall <server>` - Uninstall a server (interactive client selection)
   - `--client <name>` - Specify the AI client (skips selection)
-- `inspect <server-id>` - Inspect a server interactively
 - `run <server-id>` - Run a server
   - `--config <json>` - Provide configuration for the server
 - `list` - List installed servers (interactive client selection)
@@ -86,9 +85,6 @@ smithery search "web search"
 # Search interactively (prompts for term)
 smithery search
 
-# Inspect a specific server from smithery's registry
-smithery inspect exa
-
 # Run a server with configuration
 smithery run exa --config '{"key":"value"}'
 
@@ -118,7 +114,6 @@ smithery install mcp-obsidian --client claude --verbose
 
 - Use `login` command to set your Smithery API key (required for some operations)
 - Remember to restart your AI client after installing or uninstalling servers
-- Use the `inspect` command for interactive server testing
 - Run without arguments to see the help menu
 - Use `--verbose` flag for detailed logs when troubleshooting
 - The `dev` command provides hot-reload for MCP server development
@@ -154,9 +149,6 @@ npx . list --client claude
 
 # Search for servers
 npx . search obsidian
-
-# Inspect a specific server
-npx . inspect <server-id>
 
 # Install a server
 npx . install <server-name> --client <client-name>

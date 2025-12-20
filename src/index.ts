@@ -4,7 +4,6 @@ import chalk from "chalk"
 import { Command } from "commander"
 import { build } from "./commands/build"
 import { dev } from "./commands/dev"
-import { inspectServer } from "./commands/inspect"
 import { installServer } from "./commands/install"
 import { list } from "./commands/list"
 import { playground } from "./commands/playground"
@@ -112,15 +111,6 @@ program
 		)
 
 		await uninstallServer(selectedServer, selectedClient as ValidClient)
-	})
-
-// Inspect command
-program
-	.command("inspect <server>")
-	.description("Inspect server from registry")
-	.option("--key <apikey>", "Provide an API key")
-	.action(async (server, options) => {
-		await inspectServer(server, await ensureApiKey(options.key))
 	})
 
 // Run command
