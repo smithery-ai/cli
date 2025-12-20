@@ -3,6 +3,7 @@ import * as os from "node:os"
 import * as path from "node:path"
 import { unpackExtension } from "@anthropic-ai/mcpb"
 import fetch from "cross-fetch"
+import type { JSONSchema } from "../types/registry.js"
 import { verbose } from "./logger"
 
 const BUNDLE_FILENAME = "server.mcpb"
@@ -356,4 +357,144 @@ export function getBundleEntrypoint(
 	}
 
 	return path.join(bundleDir, manifest.server.entry_point)
+}
+
+/**
+ * MCPB user configuration option format (from manifest.user_config)
+ */
+interface McpbUserConfigurationOption {
+	type: "string" | "number" | "boolean" | "array"
+	title?: string
+	description?: string
+	required?: boolean
+	default?: string | number | boolean | string[]
+	sensitive?: boolean
+	min?: number
+	max?: number
+}
+
+/**
+ * Converts flat MCPB user_config format to nested JSONSchema format
+ * MCPB format: {"auth.apiKey": {type: "string", required: true}}
+ * JSONSchema format: {auth: {apiKey: {type: "string", required: true}}}
+ */
+export function convertMCPBUserConfigToJSONSchema(
+	mcpbUserConfig: Record<string, McpbUserConfigurationOption>,
+): JSONSchema {
+	const schema: JSONSchema = {
+		type: "object",
+		properties: {},
+		required: [],
+	}
+
+	// Track which top-level keys have required nested fields
+	const topLevelKeys = new Set<string>()
+	const requiredFields: string[] = []
+
+	for (const [dotKey, configOption] of Object.entries(mcpbUserConfig)) {
+		const parts = dotKey.split(".")
+		if (parts.length === 0) continue
+
+		// Get or create nested object structure
+		let current: JSONSchema = schema
+		for (let i = 0; i < parts.length - 1; i++) {
+			const part = parts[i]
+			topLevelKeys.add(part)
+
+			if (!current.properties) {
+				current.properties = {}
+			}
+			if (!current.properties[part]) {
+				current.properties[part] = {
+					type: "object",
+					properties: {},
+				}
+			}
+			current = current.properties[part] as JSONSchema
+		}
+
+		// Add the leaf property
+		const leafKey = parts[parts.length - 1]
+		if (!current.properties) {
+			current.properties = {}
+		}
+
+		const jsonSchemaProp: JSONSchema = {
+			type: configOption.type,
+			description: configOption.description,
+			default: configOption.default,
+		}
+
+		// Handle array items if type is array
+		if (configOption.type === "array") {
+			jsonSchemaProp.items = {
+				type: "string",
+			}
+		}
+
+		current.properties[leafKey] = jsonSchemaProp
+
+		// Track required fields
+		if (configOption.required) {
+			if (parts.length === 1) {
+				// Top-level required field
+				requiredFields.push(leafKey)
+			} else {
+				// Nested required field - need to ensure parent is required
+				const parentKey = parts[0]
+				if (!schema.required) {
+					schema.required = []
+				}
+				if (!schema.required.includes(parentKey)) {
+					schema.required.push(parentKey)
+				}
+
+				// Also mark nested field as required in its parent object
+				let parentSchema = schema.properties?.[parentKey] as JSONSchema
+				for (let i = 1; i < parts.length - 1; i++) {
+					parentSchema = parentSchema.properties?.[parts[i]] as JSONSchema
+				}
+				if (!parentSchema.required) {
+					parentSchema.required = []
+				}
+				if (!parentSchema.required.includes(leafKey)) {
+					parentSchema.required.push(leafKey)
+				}
+			}
+		}
+	}
+
+	if (requiredFields.length > 0) {
+		schema.required = requiredFields
+	}
+
+	return schema
+}
+
+/**
+ * Extracts user_config schema from bundle manifest and converts to JSONSchema format
+ * @param bundleDir - Directory containing the extracted bundle
+ * @returns JSONSchema object, or null if user_config not present
+ */
+export function getBundleUserConfigSchema(
+	bundleDir: string,
+): JSONSchema | null {
+	const manifestPath = path.join(bundleDir, "manifest.json")
+	if (!fs.existsSync(manifestPath)) {
+		throw new Error(`Bundle manifest not found: ${manifestPath}`)
+	}
+
+	const manifest = JSON.parse(fs.readFileSync(manifestPath, "utf-8"))
+	const userConfig = manifest.user_config
+
+	if (!userConfig || typeof userConfig !== "object") {
+		verbose(`No user_config found in bundle manifest for ${bundleDir}`)
+		return null
+	}
+
+	verbose(
+		`Found user_config in bundle manifest, converting to JSONSchema format`,
+	)
+	const jsonSchema = convertMCPBUserConfigToJSONSchema(userConfig)
+	return jsonSchema
 }

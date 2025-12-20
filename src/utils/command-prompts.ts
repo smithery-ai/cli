@@ -304,6 +304,29 @@ export async function selectInstalledServer(
 }
 
 /**
+ * Prompts user to choose whether to use existing configuration or create new
+ * @returns Promise<boolean> - true to use existing config, false to create new
+ */
+export async function promptForExistingConfig(): Promise<boolean> {
+	const inquirer = (await import("inquirer")).default
+	const { useExisting } = await inquirer.prompt([
+		{
+			type: "list",
+			name: "useExisting",
+			message: "Configuration already exists for this server.",
+			choices: [
+				{ name: "Use existing configuration", value: true },
+				{
+					name: "Create new configuration (will overwrite)",
+					value: false,
+				},
+			],
+		},
+	])
+	return useExisting
+}
+
+/**
  * Prompts for a search term if not provided
  * @param providedTerm - Search term provided via CLI argument
  * @returns Promise<string> - The search term

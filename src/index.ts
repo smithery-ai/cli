@@ -63,8 +63,6 @@ program
 		"--config <json>",
 		"Provide configuration data as JSON (skips prompts)",
 	)
-	.option("--key <apikey>", "Provide an API key")
-	.option("--profile <name>", "Use a specific profile")
 	.action(async (server, options) => {
 		// Step 1: Select client if not provided
 		const selectedClient = await selectClient(options.client, "Install")
@@ -73,7 +71,7 @@ program
 		const selectedServer = await selectServer(
 			server,
 			selectedClient,
-			options.key,
+			undefined, // No API key needed
 		)
 
 		// Validate client
@@ -84,13 +82,7 @@ program
 			? parseConfigOption(options.config)
 			: {}
 
-		await installServer(
-			selectedServer,
-			selectedClient as ValidClient,
-			config,
-			options.key,
-			options.profile,
-		)
+		await installServer(selectedServer, selectedClient as ValidClient, config)
 	})
 
 // Uninstall command
@@ -136,8 +128,6 @@ program
 	.command("run <server>")
 	.description("run a server")
 	.option("--config <json>", "Provide configuration as JSON")
-	.option("--key <apikey>", "Provide an API key")
-	.option("--profile <name>", "Use a specific profile")
 	.option("--playground", "Create playground tunnel and open playground")
 	.option(
 		"--no-open",
@@ -153,17 +143,11 @@ program
 			? parseConfigOption(options.config)
 			: {}
 
-		await run(
-			server,
-			config,
-			await ensureApiKey(options.key),
-			options.profile,
-			{
-				playground: options.playground,
-				open: options.open,
-				initialMessage: options.prompt,
-			},
-		)
+		await run(server, config, {
+			playground: options.playground,
+			open: options.open,
+			initialMessage: options.prompt,
+		})
 	})
 
 // Dev command

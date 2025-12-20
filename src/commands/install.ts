@@ -14,23 +14,22 @@ import chalk from "chalk"
 import ora from "ora"
 import type { ValidClient } from "../config/clients"
 import { getClientConfiguration } from "../config/clients"
-import { verbose } from "../lib/logger"
 import {
-	ResolveServerSource,
-	resolveServer,
-	saveUserConfig,
-	validateUserConfig,
-} from "../lib/registry"
+	ensureBundleInstalled,
+	getBundleUserConfigSchema,
+} from "../lib/bundle-manager"
+import { getConfig, saveConfig } from "../lib/keychain"
+import { verbose } from "../lib/logger"
+import { ResolveServerSource, resolveServer } from "../lib/registry"
 import type { ServerConfig } from "../types/registry"
 import { checkAnalyticsConsent } from "../utils/analytics"
 import { promptForRestart } from "../utils/client"
+import { promptForExistingConfig } from "../utils/command-prompts"
 import { readConfig, runConfigCommand, writeConfig } from "../utils/mcp-config"
 import {
 	checkAndNotifyRemoteServer,
-	ensureApiKey,
 	ensureBunInstalled,
 	ensureUVInstalled,
-	isRemote,
 } from "../utils/runtime"
 import {
 	collectConfigValues,
@@ -40,13 +39,11 @@ import {
 
 /**
  * Installs and configures a Smithery server for a specified client.
- * Prompts for config values if config not given OR saved config not valid
+ * Prompts for config values if config not given OR saved config not found in keychain
  *
  * @param {string} qualifiedName - The qualified name of the server to install
  * @param {ValidClient} client - The client to install the server for
- * @param {Record<string, unknown>} [configValues] - Optional configuration values for the server
- * @param {string} [apiKey] - Optional API key (during installation, local servers don't need key; remote servers prompt for key)
- * @param {string} [profile] - Optional profile name to use
+ * @param {Record<string, unknown>} [configValues] - Optional configuration values for the server (from --config flag)
  * @returns {Promise<void>} A promise that resolves when installation is complete
  * @throws Will throw an error if installation fails
  */
@@ -54,8 +51,6 @@ export async function installServer(
 	qualifiedName: string,
 	client: ValidClient,
 	configValues: ServerConfig,
-	apiKey: string | undefined,
-	profile: string | undefined,
 ): Promise<void> {
 	verbose(`Starting installation of ${qualifiedName} for client ${client}`)
 
@@ -80,7 +75,7 @@ export async function installServer(
 		verbose("Awaiting server resolution...")
 		const server = await resolveServer(
 			qualifiedName,
-			apiKey,
+			undefined, // @TODO: how do we handle no api key here
 			ResolveServerSource.Install,
 		)
 		verbose(`Server resolved successfully: ${server.qualifiedName}`)
@@ -100,149 +95,86 @@ export async function installServer(
 		await ensureUVInstalled(connection)
 		await ensureBunInstalled(connection)
 
-		/* inform users of remote server installation and prompt for API key if needed */
-		let finalApiKey = apiKey
-		if (isRemote(server) && !apiKey) {
-			spinner.stop()
-			finalApiKey = await ensureApiKey()
-		}
 		checkAndNotifyRemoteServer(server)
 
-		let collectedConfigValues: ServerConfig = configValues || {}
+		// Check for existing config in keychain
+		const existingConfig = await getConfig(qualifiedName)
+		let finalConfig: ServerConfig
 
-		// Check existing config first
-		if (finalApiKey && Object.keys(configValues).length === 0) {
-			let configSpinner: ReturnType<typeof ora> | undefined
-			try {
-				verbose("Checking existing configuration...")
-				configSpinner = ora("Validating configuration...").start()
-				const validation = await validateUserConfig(
-					qualifiedName,
-					finalApiKey,
-					profile,
-				)
-				configSpinner.succeed(chalk.dim("Configuration valid"))
-				configSpinner = undefined
+		if (existingConfig && Object.keys(configValues).length === 0) {
+			// Config exists and no --config flag provided
+			spinner.stop()
+			const useExisting = await promptForExistingConfig()
+			spinner.start()
 
-				if (validation.isComplete) {
-					// Check if there are any config fields at all (required or optional)
-					const hasConfigFields =
-						Object.keys(validation.fieldSchemas).length > 0
-
-					if (hasConfigFields) {
-						// Show different message based on whether config actually exists
-						if (validation.hasExistingConfig) {
-							const profileMsg = profile
-								? `Found existing configuration from profile: ${chalk.cyan(profile)}`
-								: "Found existing configuration from default profile"
-							console.log(`${chalk.green("●")} ${chalk.dim(profileMsg)}`)
-
-							// Don't prompt to update - they can use the web UI link
-							collectedConfigValues = {} // Use existing saved config
-						} else {
-							console.log(
-								`${chalk.cyan("○")} ${chalk.dim("No configuration saved yet")}`,
-							)
-
-							// No existing config, offer to add optional fields
-							collectedConfigValues = await collectConfigValues(
-								connection,
-								configValues || {},
-							)
-						}
-					} else {
-						console.log()
-						console.log(`${chalk.cyan("○")} No configuration required`)
-						collectedConfigValues = {} // No config needed at all
+			if (useExisting) {
+				finalConfig = existingConfig
+				verbose("Using existing configuration from keychain")
+			} else {
+				// Proceed with normal config collection
+				// Get schema based on server connection type
+				let configSchema = connection.configSchema || undefined
+				if (connection.bundleUrl) {
+					// Bundle-based server: get schema from bundle manifest
+					verbose("Downloading bundle to extract user_config schema...")
+					const bundleDir = await ensureBundleInstalled(
+						qualifiedName,
+						connection.bundleUrl,
+					)
+					const bundleSchema = getBundleUserConfigSchema(bundleDir)
+					if (bundleSchema) {
+						configSchema = bundleSchema
 					}
-				} else {
-					console.log(
-						chalk.yellow("!"),
-						`Missing required config: ${validation.missingFields.join(", ")}`,
-					)
-					// Prompt for all fields
-					collectedConfigValues = await collectConfigValues(
-						connection,
-						configValues || {},
-					)
-					// Link will be shown after saving
 				}
-			} catch (error) {
-				configSpinner?.stop()
-				verbose(
-					`Config validation failed: ${error instanceof Error ? error.message : String(error)}`,
-				)
-				// Fall back to normal prompting
-				collectedConfigValues = await collectConfigValues(
-					connection,
-					configValues || {},
-				)
+
+				// Create connection with schema for prompting
+				const connectionWithSchema = {
+					...connection,
+					configSchema,
+				}
+				finalConfig = await collectConfigValues(connectionWithSchema, {})
 			}
-		} else if (Object.keys(configValues).length === 0) {
-			// No API key or no existing config, prompt normally
-			collectedConfigValues = await collectConfigValues(
-				connection,
-				configValues || {},
-			)
+		} else if (Object.keys(configValues).length > 0) {
+			// --config flag provided, use it (overwrites existing)
+			finalConfig = configValues
+			verbose("Using configuration from --config flag")
+		} else {
+			// No existing config, collect normally
+			// Get schema based on server connection type
+			let configSchema = connection.configSchema || undefined
+			if (connection.bundleUrl) {
+				// Bundle-based server: get schema from bundle manifest
+				verbose("Downloading bundle to extract user_config schema...")
+				const bundleDir = await ensureBundleInstalled(
+					qualifiedName,
+					connection.bundleUrl,
+				)
+				const bundleSchema = getBundleUserConfigSchema(bundleDir)
+				if (bundleSchema) {
+					configSchema = bundleSchema
+				}
+			}
+
+			// Create connection with schema for prompting
+			const connectionWithSchema = {
+				...connection,
+				configSchema,
+			}
+			finalConfig = await collectConfigValues(connectionWithSchema, {})
 		}
 
-		verbose(`Config values: ${JSON.stringify(collectedConfigValues, null, 2)}`)
+		verbose(`Config values: ${JSON.stringify(finalConfig, null, 2)}`)
 
-		/* Save user config to smithery if API key is available */
-		let configSavedToSmithery = false
-		if (finalApiKey && Object.keys(collectedConfigValues).length > 0) {
-			verbose("Saving configuration to smithery...")
-			const saveSpinner = ora("Saving configuration...").start()
-			try {
-				await saveUserConfig(
-					qualifiedName,
-					collectedConfigValues,
-					finalApiKey,
-					profile,
-				)
-				verbose("Configuration successfully saved to smithery")
-				saveSpinner.succeed(chalk.dim("Configuration saved"))
-				configSavedToSmithery = true
-
-				// Show manage config link after successful save
-				const configUrl = profile
-					? `https://smithery.ai/account/profiles/${profile}/${qualifiedName}`
-					: `https://smithery.ai/account/profiles?server=${qualifiedName}`
-				console.log()
-				console.log(`${chalk.cyan("→ Manage configuration:")} ${configUrl}`)
-			} catch (error) {
-				verbose(
-					`Failed to save config to smithery: ${error instanceof Error ? error.message : String(error)}`,
-				)
-				saveSpinner.fail(chalk.dim("Failed to save configuration"))
-				// Don't fail the installation if config save fails
-				console.warn(
-					chalk.yellow(
-						"Warning: Could not save configuration. Config will be saved locally.",
-					),
-				)
-			}
-		} else if (finalApiKey) {
-			// Show manage config link if there's existing config (even if nothing new to save)
-			const hasConfigToManage =
-				connection.configSchema?.properties &&
-				Object.keys(connection.configSchema.properties).length > 0
-
-			if (hasConfigToManage) {
-				const configUrl = profile
-					? `https://smithery.ai/account/profiles/${profile}/${qualifiedName}`
-					: `https://smithery.ai/account/profiles?server=${qualifiedName}`
-				console.log()
-				console.log(`${chalk.cyan("→ Manage configuration:")} ${configUrl}`)
-			}
+		// Save config to keychain
+		if (Object.keys(finalConfig).length > 0) {
+			verbose("Saving configuration to keychain...")
+			await saveConfig(qualifiedName, finalConfig)
+			verbose("Configuration successfully saved to keychain")
 		}
 
 		verbose("Formatting server configuration...")
 		const serverConfig = formatServerConfig(
 			qualifiedName,
-			configSavedToSmithery ? {} : collectedConfigValues, // Use empty config if saved to smithery
-			finalApiKey,
-			profile,
 			client, // Pass client name to determine transport type
 			server, // Pass server details to check HTTP support
 		)

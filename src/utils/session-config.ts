@@ -4,11 +4,7 @@ import type {
 } from "@smithery/registry/models/components"
 import chalk from "chalk"
 import inquirer from "inquirer"
-import {
-	getClientConfiguration,
-	getPreferredTransport,
-	Transport,
-} from "../config/clients"
+import { getPreferredTransport, Transport } from "../config/clients"
 import type {
 	ConfiguredServer,
 	JSONSchema,
@@ -386,44 +382,17 @@ export function getServerName(serverId: string): string {
  */
 export function formatServerConfig(
 	qualifiedName: string,
-	userConfig: ServerConfig,
-	apiKey: string | undefined,
-	profile: string | undefined,
 	client?: string,
 	server?: ServerDetailResponse,
 ): ConfiguredServer {
 	// Check if we should use HTTP format
 	if (client && server && shouldUseHTTPFormat(client, server)) {
-		return createHTTPServerConfig(
-			qualifiedName,
-			userConfig,
-			apiKey,
-			profile,
-			client,
-		)
+		return createHTTPServerConfig(qualifiedName, client)
 	}
 
 	// Default to STDIO format
-	// Base arguments for npx command
+	// Base arguments for npx command - no flags needed, keychain handles config
 	const npxArgs = ["-y", "@smithery/cli@latest", "run", qualifiedName]
-
-	// Add API key if provided
-	if (apiKey) {
-		npxArgs.push("--key", apiKey)
-	}
-
-	// Add profile if provided
-	if (profile) {
-		npxArgs.push("--profile", profile)
-	}
-
-	const isEmptyConfig = Object.keys(userConfig).length === 0
-	/* Add config flag if provided and not empty */
-	if (!isEmptyConfig) {
-		/* double stringify config to make it shell-safe */
-		const encodedConfig = JSON.stringify(JSON.stringify(userConfig))
-		npxArgs.push("--config", encodedConfig)
-	}
 
 	/* Use cmd /c for Windows platforms */
 	if (process.platform === "win32") {
@@ -484,45 +453,19 @@ function shouldUseHTTPFormat(
 /**
  * Creates HTTP server configuration for clients that support it
  * @param qualifiedName - The fully qualified name of the server package
- * @param userConfig - The user configuration for the server
- * @param apiKey - Optional API key
- * @param profile - Optional profile name to use
  * @param client - Optional client name
  * @returns HTTP configuration
  */
 function createHTTPServerConfig(
 	qualifiedName: string,
-	userConfig: ServerConfig,
-	apiKey: string | undefined,
-	profile: string | undefined,
-	client?: string,
+	_client?: string,
 ): StreamableHTTPConnection {
-	// Build the HTTP URL for the server
-	const baseUrl = `https://server.smithery.ai/${qualifiedName}/mcp`
-	const url = new URL(baseUrl)
-
-	// Check if client supports OAuth (don't add API key to URL)
-	const clientConfig = client ? getClientConfiguration(client) : null
-	const supportsOAuth = clientConfig?.supportsOAuth || false
-
-	// Add query parameters
-	if (apiKey && !supportsOAuth) {
-		url.searchParams.set("api_key", apiKey)
-	}
-
-	if (profile) {
-		url.searchParams.set("profile", profile)
-	}
-
-	// Add config as base64 encoded parameter if not empty
-	if (Object.keys(userConfig).length > 0) {
-		const configStr = JSON.stringify(userConfig)
-		url.searchParams.set("config", Buffer.from(configStr).toString("base64"))
-	}
+	// Build the HTTP URL for the server - OAuth handles auth, no query params needed
+	const url = `https://server.smithery.ai/${qualifiedName}/mcp`
 
 	return {
 		type: "http",
-		url: url.toString(),
+		url,
 		headers: {},
 	}
 }

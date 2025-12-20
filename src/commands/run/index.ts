@@ -3,6 +3,7 @@ import type {
 	ConnectionInfo,
 	ServerDetailResponse,
 } from "@smithery/registry/models/components"
+import { getConfig } from "../../lib/keychain.js"
 import { ResolveServerSource, resolveServer } from "../../lib/registry.js"
 import type { ServerConfig } from "../../types/registry.js"
 import { prepareStdioConnection } from "../../utils/prepare-stdio-connection.js"
@@ -26,18 +27,14 @@ interface RunOptions {
  * Runs a server with the specified configuration
  *
  * @param {string} qualifiedName - The qualified name of the server to run
- * @param {ServerConfig} config - Configuration values for the server
- * @param {string} apiKey - API key required for authentication
- * @param {string} [profile] - Optional profile name to use
+ * @param {ServerConfig} configOverride - Optional configuration override (from --config flag)
  * @param {RunOptions} [options] - Additional options for playground functionality
  * @returns {Promise<void>} A promise that resolves when the server is running or fails
  * @throws {Error} If the server cannot be resolved or connection fails
  */
 export async function run(
 	qualifiedName: string,
-	config: ServerConfig,
-	apiKey: string | undefined,
-	profile?: string,
+	configOverride: ServerConfig,
 	options?: RunOptions,
 ) {
 	try {
@@ -48,9 +45,16 @@ export async function run(
 			)
 		}
 
+		// Read config from keychain, merge with override if provided
+		const keychainConfig = (await getConfig(qualifiedName)) || {}
+		const config = { ...keychainConfig, ...configOverride }
+		logWithTimestamp(
+			`[Runner] Loaded config from keychain${Object.keys(configOverride).length > 0 ? " (with overrides)" : ""}`,
+		)
+
 		const resolvedServer = await resolveServer(
 			qualifiedName,
-			apiKey,
+			undefined, // No API key needed
 			ResolveServerSource.Run,
 		)
 		if (!resolvedServer) {
@@ -67,14 +71,7 @@ export async function run(
 		)
 
 		const analyticsEnabled = await getAnalyticsConsent()
-		await pickServerAndRun(
-			resolvedServer,
-			config,
-			analyticsEnabled,
-			apiKey,
-			profile,
-			options,
-		)
+		await pickServerAndRun(resolvedServer, config, analyticsEnabled, options)
 	} catch (error) {
 		logWithTimestamp(
 			`[Runner] Error: ${error instanceof Error ? error.message : error}`,
@@ -87,8 +84,6 @@ async function pickServerAndRun(
 	serverDetails: ServerDetailResponse,
 	config: ServerConfig,
 	analyticsEnabled: boolean,
-	apiKey: string | undefined, // can be undefined because of optionality for local servers
-	profile: string | undefined,
 	options?: RunOptions,
 ): Promise<void> {
 	if (!serverDetails.connections?.length) {
@@ -101,16 +96,14 @@ async function pickServerAndRun(
 		if (!connection.deploymentUrl) {
 			throw new Error("Missing deployment URL")
 		}
-		if (!apiKey) {
-			throw new Error("API key is required for remote connections")
-		}
-
+		// Note: HTTP server execution temporarily broken - will be fixed in future refactor
+		// For now, leave as-is per plan
 		if (options?.playground) {
 			await createUplinkRunner(
 				connection.deploymentUrl,
-				apiKey,
+				"", // API key placeholder - will be fixed later
 				config,
-				profile,
+				undefined, // No profile
 				{
 					open: options.open !== false,
 					initialMessage: options.initialMessage || "Say hello to the world!",
@@ -119,9 +112,9 @@ async function pickServerAndRun(
 		} else {
 			await createStreamableHTTPRunner(
 				connection.deploymentUrl,
-				apiKey,
+				"", // API key placeholder - will be fixed later
 				config,
-				profile,
+				undefined, // No profile
 			)
 		}
 	} else if (connection.type === "stdio") {
@@ -129,20 +122,16 @@ async function pickServerAndRun(
 			serverDetails,
 			connection,
 			config,
-			apiKey,
-			profile,
 		)
 
 		if (options?.playground) {
-			if (!apiKey) {
-				throw new Error("API key is required for playground connections")
-			}
+			// Note: Playground may require API key - will be addressed in future refactor
 			await createLocalPlaygroundRunner(
 				preparedConnection.command,
 				preparedConnection.args,
 				preparedConnection.env,
 				preparedConnection.qualifiedName,
-				apiKey,
+				"", // API key placeholder - will be fixed later
 				{
 					open: options.open !== false,
 					initialMessage: options.initialMessage || "Say hello to the world!",
@@ -154,7 +143,7 @@ async function pickServerAndRun(
 				preparedConnection.args,
 				preparedConnection.env,
 				preparedConnection.qualifiedName,
-				apiKey,
+				undefined, // No API key needed
 				analyticsEnabled,
 			)
 		}

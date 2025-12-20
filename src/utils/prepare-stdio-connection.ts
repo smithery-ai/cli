@@ -6,7 +6,6 @@ import {
 	resolveEnvTemplates,
 	resolveTemplateString,
 } from "../lib/bundle-manager.js"
-import { fetchConnection, getUserConfig } from "../lib/registry.js"
 import type { ServerConfig } from "../types/registry.js"
 
 export interface PreparedStdioConnection {
@@ -20,8 +19,6 @@ export async function prepareStdioConnection(
 	serverDetails: ServerDetailResponse,
 	connection: (typeof serverDetails.connections)[number],
 	config: ServerConfig,
-	apiKey: string | undefined,
-	profile?: string,
 ): Promise<PreparedStdioConnection> {
 	const bundleConnection = connection as typeof connection & {
 		bundleUrl?: string
@@ -30,6 +27,7 @@ export async function prepareStdioConnection(
 		env?: Record<string, string>
 	}
 
+	// Command-based servers: use command/args directly from connection
 	if (bundleConnection.command && bundleConnection.args) {
 		return {
 			command: bundleConnection.command,
@@ -39,6 +37,7 @@ export async function prepareStdioConnection(
 		}
 	}
 
+	// Bundle-based servers: download bundle and resolve templates
 	if (bundleConnection.bundleUrl) {
 		logWithTimestamp("[Runner] Bundle connection detected, downloading...")
 		const bundleDir = await ensureBundleInstalled(
@@ -47,29 +46,14 @@ export async function prepareStdioConnection(
 		)
 		const { command, args, env } = getBundleCommand(bundleDir)
 
-		let mergedConfig = { ...config }
-		if (apiKey) {
-			logWithTimestamp("[Runner] Fetching saved config for bundle...")
-			const savedConfig = await getUserConfig(
-				serverDetails.qualifiedName,
-				apiKey,
-				profile,
-			)
-			if (savedConfig) {
-				mergedConfig = { ...savedConfig, ...config }
-				logWithTimestamp("[Runner] Merged saved config with runtime config")
-			}
-		}
-
+		// Config is already resolved from keychain before calling this function
 		// Resolve templates in args (both ${__dirname} and ${user_config.*})
 		const resolvedArgs = args.map((arg) =>
-			resolveTemplateString(arg, mergedConfig, bundleDir),
+			resolveTemplateString(arg, config, bundleDir),
 		)
 
 		// Resolve environment variable templates
-		const resolvedEnv = env
-			? resolveEnvTemplates(env, mergedConfig, bundleDir)
-			: {}
+		const resolvedEnv = env ? resolveEnvTemplates(env, config, bundleDir) : {}
 
 		return {
 			command,
@@ -79,23 +63,8 @@ export async function prepareStdioConnection(
 		}
 	}
 
-	logWithTimestamp(
-		"[Runner] Fetching stdio connection details from registry...",
+	// Fallback: should not reach here if connection is properly formed
+	throw new Error(
+		"Invalid connection configuration: missing command/args or bundleUrl",
 	)
-	const serverConfig = await fetchConnection(
-		serverDetails.qualifiedName,
-		config,
-		apiKey,
-	)
-
-	if (!serverConfig || "type" in serverConfig) {
-		throw new Error("Failed to get valid stdio server configuration")
-	}
-
-	return {
-		command: serverConfig.command,
-		args: serverConfig.args || [],
-		env: serverConfig.env || {},
-		qualifiedName: serverDetails.qualifiedName,
-	}
 }
