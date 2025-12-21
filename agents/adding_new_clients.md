@@ -71,8 +71,8 @@ export const CLIENT_CONFIGURATIONS: Record<string, ClientConfiguration> = {
     // For command-based clients:
     // command: "new-client-cli",
     // commandConfig: {
-    //   stdio: (name, command, args) => ["add", name, command, ...args],
-    //   http: (name, url) => ["add", "--http", name, url],
+    //   stdio: (name, command, args) => ["add", "--transport", "stdio", name, command, ...args],
+    //   http: (name, url) => ["add", "--transport", "http", name, url],
     // },
     
     // Optional:
@@ -127,7 +127,7 @@ describe("target: json", () => {
   command: "claude",
   supportsOAuth: true,
   commandConfig: {
-    stdio: (name, command, args) => ["mcp", "add", name, "--", command, ...args],
+    stdio: (name, command, args) => ["mcp", "add", "--transport", "stdio", name, command, ...args],
     http: (name, url) => ["mcp", "add", "--transport", "http", name, url],
   },
 }

@@ -5,6 +5,16 @@
 
 import os from "node:os"
 import path from "node:path"
+import {
+	claudeCodeHttpCommand,
+	claudeCodeStdioCommand,
+	codexHttpCommand,
+	codexStdioCommand,
+	geminiCliHttpCommand,
+	geminiCliStdioCommand,
+	vscodeHttpCommand,
+	vscodeStdioCommand,
+} from "./command-templates.js"
 
 export enum Transport {
 	STDIO = "stdio",
@@ -37,6 +47,18 @@ export interface ClientConfiguration {
 
 	// Whether this client supports OAuth authentication (no API key needed in URL)
 	supportsOAuth?: boolean
+
+	// Optional override for HTTP URL key name (defaults to "url")
+	// Some clients require different key names like "serverUrl"
+	httpUrlKey?: string
+
+	// Optional override for HTTP type value (defaults to "http")
+	// Some clients require different type values like "streamableHttp"
+	httpType?: string
+
+	// Optional override for YAML top-level key (defaults to "mcpServers")
+	// Some clients use different keys like "extensions"
+	yamlKey?: string
 }
 
 // Initialize platform-specific paths
@@ -66,12 +88,6 @@ const defaultClaudePath = path.join(
 )
 
 export const CLIENT_CONFIGURATIONS: Record<string, ClientConfiguration> = {
-	claude: {
-		label: "Claude Desktop",
-		supportedTransports: [Transport.STDIO],
-		installType: "json",
-		path: defaultClaudePath,
-	},
 	"claude-code": {
 		label: "Claude Code",
 		supportedTransports: [Transport.HTTP, Transport.STDIO],
@@ -80,22 +96,8 @@ export const CLIENT_CONFIGURATIONS: Record<string, ClientConfiguration> = {
 		command: "claude",
 		supportsOAuth: true,
 		commandConfig: {
-			stdio: (name: string, command: string, args: string[]) => [
-				"mcp",
-				"add",
-				name,
-				"--",
-				command,
-				...args,
-			], // claude mcp add wonderwhy-er-desktop-commander -- npx -y @smithery/cli@latest run @wonderwhy-er/desktop-commander --key xxx
-			http: (name: string, url: string) => [
-				"mcp",
-				"add",
-				"--transport",
-				"http",
-				name,
-				url,
-			], // claude mcp add --transport http upstash-context-7-mcp "https://server.smithery.ai/@upstash/context7-mcp/mcp"
+			stdio: claudeCodeStdioCommand,
+			http: claudeCodeHttpCommand,
 		},
 	},
 	cursor: {
@@ -103,19 +105,23 @@ export const CLIENT_CONFIGURATIONS: Record<string, ClientConfiguration> = {
 		supportedTransports: [Transport.STDIO, Transport.HTTP],
 		installType: "json",
 		preferHTTP: true,
-		supportsOAuth: false,
+		supportsOAuth: true,
 		path: path.join(homeDir, ".cursor", "mcp.json"),
 	},
 	windsurf: {
 		label: "Windsurf",
-		supportedTransports: [Transport.STDIO],
+		supportedTransports: [Transport.STDIO, Transport.HTTP],
 		installType: "json",
+		supportsOAuth: true,
+		httpUrlKey: "serverUrl",
 		path: path.join(homeDir, ".codeium", "windsurf", "mcp_config.json"),
 	},
 	cline: {
 		label: "Cline",
-		supportedTransports: [Transport.STDIO],
+		supportedTransports: [Transport.STDIO, Transport.HTTP],
 		installType: "json",
+		supportsOAuth: true,
+		httpType: "streamableHttp",
 		path: path.join(
 			baseDir,
 			vscodePath,
@@ -123,6 +129,79 @@ export const CLIENT_CONFIGURATIONS: Record<string, ClientConfiguration> = {
 			"settings",
 			"cline_mcp_settings.json",
 		),
+	},
+	vscode: {
+		label: "VS Code",
+		supportedTransports: [Transport.STDIO, Transport.HTTP],
+		installType: "command",
+		preferHTTP: true,
+		supportsOAuth: true,
+		command: process.platform === "win32" ? "code.cmd" : "code",
+		commandConfig: {
+			stdio: vscodeStdioCommand,
+			http: vscodeHttpCommand,
+		},
+	},
+	"vscode-insiders": {
+		label: "VS Code Insiders",
+		supportedTransports: [Transport.STDIO, Transport.HTTP],
+		installType: "command",
+		preferHTTP: true,
+		supportsOAuth: true,
+		command:
+			process.platform === "win32" ? "code-insiders.cmd" : "code-insiders",
+		commandConfig: {
+			stdio: vscodeStdioCommand,
+			http: vscodeHttpCommand,
+		},
+	},
+	librechat: {
+		label: "LibreChat",
+		supportedTransports: [Transport.STDIO, Transport.HTTP],
+		installType: "yaml",
+		supportsOAuth: true,
+		path: path.join(
+			process.env.LIBRECHAT_CONFIG_DIR || homeDir,
+			"LibreChat",
+			"librechat.yaml",
+		),
+	},
+	"gemini-cli": {
+		label: "Gemini CLI",
+		supportedTransports: [Transport.STDIO, Transport.HTTP],
+		installType: "command",
+		preferHTTP: true,
+		command: "gemini",
+		supportsOAuth: true,
+		commandConfig: {
+			stdio: geminiCliStdioCommand,
+			http: geminiCliHttpCommand,
+		},
+	},
+	codex: {
+		label: "Codex",
+		supportedTransports: [Transport.STDIO, Transport.HTTP],
+		installType: "command",
+		preferHTTP: true,
+		command: "codex",
+		supportsOAuth: true,
+		commandConfig: {
+			stdio: codexStdioCommand,
+			http: codexHttpCommand,
+		},
+	},
+	opencode: {
+		label: "OpenCode",
+		supportedTransports: [Transport.STDIO, Transport.HTTP],
+		installType: "json",
+		supportsOAuth: true,
+		path: path.join(homeDir, ".config", "opencode", "opencode.json"),
+	},
+	claude: {
+		label: "Claude Desktop",
+		supportedTransports: [Transport.STDIO],
+		installType: "json",
+		path: defaultClaudePath,
 	},
 	witsy: {
 		label: "Witsy",
@@ -135,43 +214,6 @@ export const CLIENT_CONFIGURATIONS: Record<string, ClientConfiguration> = {
 		supportedTransports: [Transport.STDIO],
 		installType: "json",
 		path: path.join(homeDir, ".config", "enconvo", "mcp_config.json"),
-	},
-	vscode: {
-		label: "VS Code",
-		supportedTransports: [Transport.STDIO, Transport.HTTP],
-		installType: "command",
-		preferHTTP: true,
-		supportsOAuth: true,
-		command: process.platform === "win32" ? "code.cmd" : "code",
-		commandConfig: {
-			stdio: (name: string, command: string, args: string[]) => [
-				"--add-mcp",
-				JSON.stringify({ name, command, args }),
-			], // code --add-mcp '{"name":"server","command":"npx","args":["@my/server"]}'
-			http: (name: string, url: string) => [
-				"--add-mcp",
-				JSON.stringify({ name, type: "http", url }),
-			], // code --add-mcp '{"name":"server","type":"http","url":"https://..."}'
-		},
-	},
-	"vscode-insiders": {
-		label: "VS Code Insiders",
-		supportedTransports: [Transport.STDIO, Transport.HTTP],
-		installType: "command",
-		preferHTTP: true,
-		supportsOAuth: true,
-		command:
-			process.platform === "win32" ? "code-insiders.cmd" : "code-insiders",
-		commandConfig: {
-			stdio: (name: string, command: string, args: string[]) => [
-				"--add-mcp",
-				JSON.stringify({ name, command, args }),
-			],
-			http: (name: string, url: string) => [
-				"--add-mcp",
-				JSON.stringify({ name, type: "http", url }),
-			],
-		},
 	},
 	roocode: {
 		label: "Roo Code",
@@ -210,34 +252,12 @@ export const CLIENT_CONFIGURATIONS: Record<string, ClientConfiguration> = {
 		// Note: Tome might use deep links instead of file config
 		path: path.join(homeDir, ".tome", "mcp_config.json"),
 	},
-	librechat: {
-		label: "LibreChat",
-		supportedTransports: [Transport.STDIO],
+	goose: {
+		label: "Goose",
+		supportedTransports: [Transport.STDIO, Transport.HTTP],
 		installType: "yaml",
-		path: path.join(
-			process.env.LIBRECHAT_CONFIG_DIR || homeDir,
-			"LibreChat",
-			"librechat.yaml",
-		),
-	},
-	"gemini-cli": {
-		label: "Gemini CLI",
-		supportedTransports: [Transport.STDIO],
-		installType: "json",
-		path: path.join(homeDir, ".gemini", "settings.json"),
-	},
-	codex: {
-		label: "Codex",
-		supportedTransports: [Transport.STDIO],
-		installType: "toml",
-		path: path.join(homeDir, ".codex", "config.toml"),
-	},
-	opencode: {
-		label: "OpenCode",
-		supportedTransports: [Transport.STDIO],
-		installType: "json",
-		supportsOAuth: false,
-		path: path.join(homeDir, ".config", "opencode", "opencode.json"),
+		yamlKey: "extensions",
+		path: path.join(homeDir, ".config", "goose", "config.yaml"),
 	},
 }
 

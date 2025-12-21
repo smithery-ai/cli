@@ -1,0 +1,913 @@
+/**
+ * Unit tests for readConfig and writeConfig functions
+ *
+ * Tests with real-world examples:
+ * - Real client configs (claude, cursor, windsurf, codex)
+ * - Note: Codex now uses command-based installation, but TOML parsing is still tested
+ * - Real file formats (JSON, YAML, TOML)
+ * - File I/O operations (reading, writing, merging)
+ * - Assert expected outputs and file contents
+ */
+
+import fs from "node:fs"
+import os from "node:os"
+import path from "node:path"
+import { beforeEach, describe, expect, test, vi } from "vitest"
+import { Transport } from "../../../config/clients"
+import type { ClientMCPConfig } from "../../client-config"
+import { readConfig, writeConfig } from "../../client-config"
+
+// Mock getClientConfiguration to return test configs
+vi.mock("../../../config/clients", async () => {
+	const actual = await vi.importActual("../../../config/clients")
+	return {
+		...actual,
+		getClientConfiguration: vi.fn(),
+	}
+})
+
+// Mock verbose logger
+vi.mock("../../lib/logger", () => ({
+	verbose: vi.fn(),
+}))
+
+// Import after mocking
+import { getClientConfiguration } from "../../../config/clients"
+
+const mockGetClientConfiguration = vi.mocked(getClientConfiguration)
+
+describe("readConfig", () => {
+	let tempDir: string
+
+	beforeEach(() => {
+		vi.clearAllMocks()
+		tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "mcp-config-test-"))
+	})
+
+	test("should return empty config for command-based client", () => {
+		// ARRANGE: Command-based client (claude-code)
+		mockGetClientConfiguration.mockReturnValue({
+			label: "Claude Code",
+			supportedTransports: [Transport.HTTP, Transport.STDIO],
+			installType: "command",
+			command: "claude",
+		})
+
+		// ACT
+		const result = readConfig("claude-code")
+
+		// ASSERT: Should return empty config
+		expect(result).toEqual({ mcpServers: {} })
+	})
+
+	test("should return empty config when file does not exist", () => {
+		// ARRANGE: JSON client with non-existent file
+		const configPath = path.join(tempDir, "claude.json")
+		mockGetClientConfiguration.mockReturnValue({
+			label: "Claude Desktop",
+			supportedTransports: [Transport.STDIO],
+			installType: "json",
+			path: configPath,
+		})
+
+		// ACT
+		const result = readConfig("claude")
+
+		// ASSERT: Should return empty config
+		expect(result).toEqual({ mcpServers: {} })
+	})
+
+	test("should read JSON config with mcpServers", () => {
+		// ARRANGE: Real Claude Desktop JSON config
+		const configPath = path.join(tempDir, "claude.json")
+		const configContent = {
+			mcpServers: {
+				"test-server": {
+					command: "npx",
+					args: ["-y", "@smithery/cli@latest", "run", "test-server"],
+				},
+			},
+		}
+		fs.writeFileSync(configPath, JSON.stringify(configContent, null, 2))
+
+		mockGetClientConfiguration.mockReturnValue({
+			label: "Claude Desktop",
+			supportedTransports: [Transport.STDIO],
+			installType: "json",
+			path: configPath,
+		})
+
+		// ACT
+		const result = readConfig("claude")
+
+		// ASSERT: Should read and normalize config
+		expect(result.mcpServers).toEqual(configContent.mcpServers)
+		expect(result.mcpServers["test-server"]).toEqual({
+			command: "npx",
+			args: ["-y", "@smithery/cli@latest", "run", "test-server"],
+		})
+	})
+
+	test("should read JSON config with HTTP server", () => {
+		// ARRANGE: Cursor config with HTTP server
+		const configPath = path.join(tempDir, "cursor.json")
+		const configContent = {
+			mcpServers: {
+				"upstash-context": {
+					type: "http",
+					url: "https://server.smithery.ai/@upstash/context7-mcp/mcp",
+					headers: {},
+				},
+			},
+		}
+		fs.writeFileSync(configPath, JSON.stringify(configContent, null, 2))
+
+		mockGetClientConfiguration.mockReturnValue({
+			label: "Cursor",
+			supportedTransports: [Transport.STDIO, Transport.HTTP],
+			installType: "json",
+			path: configPath,
+		})
+
+		// ACT
+		const result = readConfig("cursor")
+
+		// ASSERT: Should read HTTP server config
+		expect(result.mcpServers["upstash-context"]).toEqual({
+			type: "http",
+			url: "https://server.smithery.ai/@upstash/context7-mcp/mcp",
+			headers: {},
+		})
+	})
+
+	test("should read YAML config", () => {
+		// ARRANGE: Windsurf YAML config
+		const configPath = path.join(tempDir, "windsurf.yaml")
+		const yamlContent = `mcpServers:
+  test-server:
+    command: npx
+    args:
+      - -y
+      - "@smithery/cli@latest"
+      - run
+      - test-server
+`
+		fs.writeFileSync(configPath, yamlContent)
+
+		mockGetClientConfiguration.mockReturnValue({
+			label: "Windsurf",
+			supportedTransports: [Transport.STDIO],
+			installType: "yaml",
+			path: configPath,
+		})
+
+		// ACT
+		const result = readConfig("windsurf")
+
+		// ASSERT: Should read YAML config
+		expect(result.mcpServers["test-server"]).toEqual({
+			command: "npx",
+			args: ["-y", "@smithery/cli@latest", "run", "test-server"],
+		})
+	})
+
+	test("should read TOML config with mcp_servers normalization", () => {
+		// ARRANGE: TOML config (uses mcp_servers format)
+		const configPath = path.join(tempDir, "test-toml.toml")
+		const tomlContent = `[mcp_servers.test-server]
+command = "npx"
+args = ["-y", "@smithery/cli@latest", "run", "test-server"]
+`
+		fs.writeFileSync(configPath, tomlContent)
+
+		mockGetClientConfiguration.mockReturnValue({
+			label: "Test TOML Client",
+			supportedTransports: [Transport.STDIO],
+			installType: "toml",
+			path: configPath,
+		})
+
+		// ACT
+		const result = readConfig("test-toml-client")
+
+		// ASSERT: Should normalize mcp_servers to mcpServers
+		expect(result.mcpServers).toBeDefined()
+		expect(result.mcpServers["test-server"]).toEqual({
+			command: "npx",
+			args: ["-y", "@smithery/cli@latest", "run", "test-server"],
+		})
+	})
+
+	test("should return empty config on parse error", () => {
+		// ARRANGE: Invalid JSON file
+		const configPath = path.join(tempDir, "invalid.json")
+		fs.writeFileSync(configPath, "{ invalid json }")
+
+		mockGetClientConfiguration.mockReturnValue({
+			label: "Claude Desktop",
+			supportedTransports: [Transport.STDIO],
+			installType: "json",
+			path: configPath,
+		})
+
+		// ACT
+		const result = readConfig("claude")
+
+		// ASSERT: Should return empty config on error
+		expect(result).toEqual({ mcpServers: {} })
+	})
+})
+
+describe("writeConfig", () => {
+	let tempDir: string
+
+	beforeEach(() => {
+		vi.clearAllMocks()
+		tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "mcp-config-test-"))
+	})
+
+	test("should write JSON config to new file", () => {
+		// ARRANGE: New JSON config
+		const configPath = path.join(tempDir, "claude.json")
+		const config: ClientMCPConfig = {
+			mcpServers: {
+				"test-server": {
+					command: "npx",
+					args: ["-y", "@smithery/cli@latest", "run", "test-server"],
+				},
+			},
+		}
+
+		mockGetClientConfiguration.mockReturnValue({
+			label: "Claude Desktop",
+			supportedTransports: [Transport.STDIO],
+			installType: "json",
+			path: configPath,
+		})
+
+		// ACT
+		writeConfig(config, "claude")
+
+		// ASSERT: File should be created with correct content
+		expect(fs.existsSync(configPath)).toBe(true)
+		const written = JSON.parse(fs.readFileSync(configPath, "utf8"))
+		expect(written.mcpServers).toEqual(config.mcpServers)
+	})
+
+	test("should merge JSON config with existing file", () => {
+		// ARRANGE: Existing config with one server
+		const configPath = path.join(tempDir, "claude.json")
+		const existingConfig = {
+			mcpServers: {
+				"existing-server": {
+					command: "npx",
+					args: ["existing"],
+				},
+			},
+			someOtherField: "preserved",
+		}
+		fs.writeFileSync(configPath, JSON.stringify(existingConfig, null, 2))
+
+		const newConfig: ClientMCPConfig = {
+			mcpServers: {
+				"new-server": {
+					command: "npx",
+					args: ["-y", "@smithery/cli@latest", "run", "new-server"],
+				},
+			},
+		}
+
+		mockGetClientConfiguration.mockReturnValue({
+			label: "Claude Desktop",
+			supportedTransports: [Transport.STDIO],
+			installType: "json",
+			path: configPath,
+		})
+
+		// ACT
+		writeConfig(newConfig, "claude")
+
+		// ASSERT: Should merge top-level fields, but replace mcpServers entirely
+		// (because install/uninstall read entire config, modify, then write back)
+		const written = JSON.parse(fs.readFileSync(configPath, "utf8"))
+		expect(written.mcpServers["new-server"]).toBeDefined()
+		expect(written.someOtherField).toBe("preserved")
+		// Note: mcpServers is replaced, not merged (existing-server is overwritten)
+		// This is correct because callers read entire config, modify, then write back
+		expect(written.mcpServers["existing-server"]).toBeUndefined()
+	})
+
+	test("should write YAML config to new file", () => {
+		// ARRANGE: New YAML config
+		const configPath = path.join(tempDir, "windsurf.yaml")
+		const config: ClientMCPConfig = {
+			mcpServers: {
+				"test-server": {
+					command: "npx",
+					args: ["-y", "@smithery/cli@latest", "run", "test-server"],
+				},
+			},
+		}
+
+		mockGetClientConfiguration.mockReturnValue({
+			label: "Windsurf",
+			supportedTransports: [Transport.STDIO],
+			installType: "yaml",
+			path: configPath,
+		})
+
+		// ACT
+		writeConfig(config, "windsurf")
+
+		// ASSERT: File should be created with YAML content
+		expect(fs.existsSync(configPath)).toBe(true)
+		const content = fs.readFileSync(configPath, "utf8")
+		expect(content).toContain("mcpServers:")
+		expect(content).toContain("test-server:")
+		expect(content).toContain("command: npx")
+	})
+
+	test("should write TOML config with mcp_servers format", () => {
+		// ARRANGE: New TOML config
+		const configPath = path.join(tempDir, "test-toml.toml")
+		const config: ClientMCPConfig = {
+			mcpServers: {
+				"test-server": {
+					command: "npx",
+					args: ["-y", "@smithery/cli@latest", "run", "test-server"],
+				},
+			},
+		}
+
+		mockGetClientConfiguration.mockReturnValue({
+			label: "Test TOML Client",
+			supportedTransports: [Transport.STDIO],
+			installType: "toml",
+			path: configPath,
+		})
+
+		// ACT
+		writeConfig(config, "test-toml-client")
+
+		// ASSERT: File should use mcp_servers format
+		expect(fs.existsSync(configPath)).toBe(true)
+		const content = fs.readFileSync(configPath, "utf8")
+		expect(content).toContain("[mcp_servers.test-server]")
+		expect(content).toContain('command = "npx"')
+	})
+
+	test("should create directory if it does not exist", () => {
+		// ARRANGE: Config path with non-existent directory
+		const configDir = path.join(tempDir, "nested", "dir")
+		const configPath = path.join(configDir, "claude.json")
+		const config: ClientMCPConfig = {
+			mcpServers: {
+				"test-server": {
+					command: "npx",
+					args: ["test"],
+				},
+			},
+		}
+
+		mockGetClientConfiguration.mockReturnValue({
+			label: "Claude Desktop",
+			supportedTransports: [Transport.STDIO],
+			installType: "json",
+			path: configPath,
+		})
+
+		// ACT
+		writeConfig(config, "claude")
+
+		// ASSERT: Directory should be created
+		expect(fs.existsSync(configDir)).toBe(true)
+		expect(fs.existsSync(configPath)).toBe(true)
+	})
+
+	test("should throw error for invalid mcpServers structure", () => {
+		// ARRANGE: Invalid config
+		const configPath = path.join(tempDir, "claude.json")
+		const invalidConfig = {
+			mcpServers: "not an object",
+		} as unknown as ClientMCPConfig
+
+		mockGetClientConfiguration.mockReturnValue({
+			label: "Claude Desktop",
+			supportedTransports: [Transport.STDIO],
+			installType: "json",
+			path: configPath,
+		})
+
+		// ACT & ASSERT: Should throw error
+		expect(() => writeConfig(invalidConfig, "claude")).toThrow(
+			"Invalid mcpServers structure",
+		)
+	})
+
+	test("should write HTTP server config correctly", () => {
+		// ARRANGE: Config with HTTP server
+		const configPath = path.join(tempDir, "cursor.json")
+		const config: ClientMCPConfig = {
+			mcpServers: {
+				"upstash-context": {
+					type: "http",
+					url: "https://server.smithery.ai/@upstash/context7-mcp/mcp",
+					headers: {},
+				},
+			},
+		}
+
+		mockGetClientConfiguration.mockReturnValue({
+			label: "Cursor",
+			supportedTransports: [Transport.STDIO, Transport.HTTP],
+			installType: "json",
+			path: configPath,
+		})
+
+		// ACT
+		writeConfig(config, "cursor")
+
+		// ASSERT: HTTP config should be written correctly
+		const written = JSON.parse(fs.readFileSync(configPath, "utf8"))
+		expect(written.mcpServers["upstash-context"]).toEqual({
+			type: "http",
+			url: "https://server.smithery.ai/@upstash/context7-mcp/mcp",
+			headers: {},
+		})
+	})
+
+	test("should write Windsurf HTTP server config with serverUrl key override", () => {
+		// ARRANGE: Windsurf config with HTTP server (should use serverUrl instead of url)
+		const configPath = path.join(tempDir, "windsurf.json")
+		const config: ClientMCPConfig = {
+			mcpServers: {
+				"test-server": {
+					type: "http",
+					url: "https://server.smithery.ai/@test/server/mcp",
+					headers: {},
+				},
+			},
+		}
+
+		mockGetClientConfiguration.mockReturnValue({
+			label: "Windsurf",
+			supportedTransports: [Transport.STDIO, Transport.HTTP],
+			installType: "json",
+			httpUrlKey: "serverUrl",
+			path: configPath,
+		})
+
+		// ACT
+		writeConfig(config, "windsurf")
+
+		// ASSERT: HTTP config should be written with serverUrl key (not url)
+		const written = JSON.parse(fs.readFileSync(configPath, "utf8"))
+		expect(written.mcpServers["test-server"]).toEqual({
+			type: "http",
+			serverUrl: "https://server.smithery.ai/@test/server/mcp",
+			headers: {},
+		})
+		expect(written.mcpServers["test-server"].url).toBeUndefined()
+	})
+
+	test("should write Cline HTTP server config with streamableHttp type override", () => {
+		// ARRANGE: Cline config with HTTP server (should use streamableHttp instead of http)
+		const configPath = path.join(tempDir, "cline.json")
+		const config: ClientMCPConfig = {
+			mcpServers: {
+				"test-server": {
+					type: "http",
+					url: "https://server.smithery.ai/@test/server/mcp",
+					headers: {},
+				},
+			},
+		}
+
+		mockGetClientConfiguration.mockReturnValue({
+			label: "Cline",
+			supportedTransports: [Transport.STDIO, Transport.HTTP],
+			installType: "json",
+			httpType: "streamableHttp",
+			path: configPath,
+		})
+
+		// ACT
+		writeConfig(config, "cline")
+
+		// ASSERT: HTTP config should be written with streamableHttp type (not http)
+		const written = JSON.parse(fs.readFileSync(configPath, "utf8"))
+		expect(written.mcpServers["test-server"]).toEqual({
+			type: "streamableHttp",
+			url: "https://server.smithery.ai/@test/server/mcp",
+			headers: {},
+		})
+		expect(written.mcpServers["test-server"].type).toBe("streamableHttp")
+	})
+})
+
+describe("read-modify-write cycle (real-world flow)", () => {
+	let tempDir: string
+
+	beforeEach(() => {
+		vi.clearAllMocks()
+		tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "mcp-config-test-"))
+	})
+
+	test("should preserve existing servers and top-level fields when reading, modifying, and writing", () => {
+		// ARRANGE: Start state - file on disk with existing servers and other fields
+		const configPath = path.join(tempDir, "claude.json")
+		const startState = {
+			mcpServers: {
+				"existing-server-1": {
+					command: "npx",
+					args: ["-y", "@smithery/cli@latest", "run", "existing-server-1"],
+				},
+				"existing-server-2": {
+					type: "http",
+					url: "https://server.smithery.ai/@test/server2/mcp",
+					headers: {},
+				},
+			},
+			someOtherField: "preserved-value",
+			anotherField: { nested: "data" },
+		}
+		fs.writeFileSync(configPath, JSON.stringify(startState, null, 2))
+
+		mockGetClientConfiguration.mockReturnValue({
+			label: "Claude Desktop",
+			supportedTransports: [Transport.STDIO],
+			installType: "json",
+			path: configPath,
+		})
+
+		// ACT: Simulate install flow - read, modify, write
+		const config = readConfig("claude")
+		config.mcpServers["new-server"] = {
+			command: "npx",
+			args: ["-y", "@smithery/cli@latest", "run", "new-server"],
+		}
+		writeConfig(config, "claude")
+
+		// ASSERT: End state - all servers preserved, top-level fields preserved
+		const endState = JSON.parse(fs.readFileSync(configPath, "utf8"))
+		expect(endState.mcpServers["existing-server-1"]).toEqual(
+			startState.mcpServers["existing-server-1"],
+		)
+		expect(endState.mcpServers["existing-server-2"]).toEqual(
+			startState.mcpServers["existing-server-2"],
+		)
+		expect(endState.mcpServers["new-server"]).toEqual({
+			command: "npx",
+			args: ["-y", "@smithery/cli@latest", "run", "new-server"],
+		})
+		expect(endState.someOtherField).toBe("preserved-value")
+		expect(endState.anotherField).toEqual({ nested: "data" })
+	})
+
+	test("should update existing server when modifying and writing", () => {
+		// ARRANGE: Start state - file with one server
+		const configPath = path.join(tempDir, "claude.json")
+		const startState = {
+			mcpServers: {
+				"test-server": {
+					command: "npx",
+					args: ["old", "args"],
+				},
+			},
+		}
+		fs.writeFileSync(configPath, JSON.stringify(startState, null, 2))
+
+		mockGetClientConfiguration.mockReturnValue({
+			label: "Claude Desktop",
+			supportedTransports: [Transport.STDIO],
+			installType: "json",
+			path: configPath,
+		})
+
+		// ACT: Read, update server, write
+		const config = readConfig("claude")
+		config.mcpServers["test-server"] = {
+			command: "npx",
+			args: ["-y", "@smithery/cli@latest", "run", "test-server"],
+		}
+		writeConfig(config, "claude")
+
+		// ASSERT: Server updated, not duplicated
+		const endState = JSON.parse(fs.readFileSync(configPath, "utf8"))
+		expect(Object.keys(endState.mcpServers)).toHaveLength(1)
+		expect(endState.mcpServers["test-server"]).toEqual({
+			command: "npx",
+			args: ["-y", "@smithery/cli@latest", "run", "test-server"],
+		})
+	})
+
+	test("should preserve YAML structure and comments when reading and writing", () => {
+		// ARRANGE: Start state - YAML file with servers
+		const configPath = path.join(tempDir, "windsurf.yaml")
+		const yamlContent = `mcpServers:
+  existing-server:
+    command: npx
+    args:
+      - -y
+      - "@smithery/cli@latest"
+      - run
+      - existing-server
+`
+		fs.writeFileSync(configPath, yamlContent)
+
+		mockGetClientConfiguration.mockReturnValue({
+			label: "Windsurf",
+			supportedTransports: [Transport.STDIO],
+			installType: "yaml",
+			path: configPath,
+		})
+
+		// ACT: Read, add server, write
+		const config = readConfig("windsurf")
+		config.mcpServers["new-server"] = {
+			command: "npx",
+			args: ["-y", "@smithery/cli@latest", "run", "new-server"],
+		}
+		writeConfig(config, "windsurf")
+
+		// ASSERT: Both servers present in written file
+		const written = readConfig("windsurf")
+		expect(written.mcpServers["existing-server"]).toBeDefined()
+		expect(written.mcpServers["new-server"]).toBeDefined()
+	})
+})
+
+describe("goose client (extensions key format)", () => {
+	let tempDir: string
+
+	beforeEach(() => {
+		vi.clearAllMocks()
+		tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "mcp-config-test-"))
+	})
+
+	test("should read goose config with extensions key", () => {
+		// ARRANGE: Goose config with extensions key
+		const configPath = path.join(tempDir, "goose.yaml")
+		const yamlContent = `extensions:
+  github:
+    name: GitHub
+    cmd: npx
+    args:
+      - -y
+      - "@modelcontextprotocol/server-github"
+    enabled: true
+    envs:
+      GITHUB_PERSONAL_ACCESS_TOKEN: "<YOUR_TOKEN>"
+    type: stdio
+    timeout: 300
+`
+		fs.writeFileSync(configPath, yamlContent)
+
+		mockGetClientConfiguration.mockReturnValue({
+			label: "Goose",
+			supportedTransports: [Transport.STDIO, Transport.HTTP],
+			installType: "yaml",
+			yamlKey: "extensions",
+			path: configPath,
+		})
+
+		// ACT
+		const result = readConfig("goose")
+
+		// ASSERT: Should read and transform goose format to standard format
+		expect(result.mcpServers.github).toEqual({
+			command: "npx",
+			args: ["-y", "@modelcontextprotocol/server-github"],
+			env: {
+				GITHUB_PERSONAL_ACCESS_TOKEN: "<YOUR_TOKEN>",
+			},
+		})
+		// STDIO configs in standard format don't have a type field
+		expect(result.mcpServers.github).not.toHaveProperty("type")
+		// Should not include goose-specific fields (name, enabled, timeout)
+		expect(result.mcpServers.github).not.toHaveProperty("name")
+		expect(result.mcpServers.github).not.toHaveProperty("enabled")
+		expect(result.mcpServers.github).not.toHaveProperty("timeout")
+	})
+
+	test("should read goose config with HTTP server", () => {
+		// ARRANGE: Goose config with HTTP server
+		const configPath = path.join(tempDir, "goose.yaml")
+		const yamlContent = `extensions:
+  test-server:
+    name: Test Server
+    cmd: npx
+    args: []
+    enabled: true
+    envs: {}
+    type: http
+    url: "https://server.smithery.ai/@test/server/mcp"
+    timeout: 300
+`
+		fs.writeFileSync(configPath, yamlContent)
+
+		mockGetClientConfiguration.mockReturnValue({
+			label: "Goose",
+			supportedTransports: [Transport.STDIO, Transport.HTTP],
+			installType: "yaml",
+			yamlKey: "extensions",
+			path: configPath,
+		})
+
+		// ACT
+		const result = readConfig("goose")
+
+		// ASSERT: Should read HTTP server config
+		// Note: HTTP configs may include empty cmd/args/envs from goose format, but we filter those out
+		expect(result.mcpServers["test-server"]).toMatchObject({
+			type: "http",
+			url: "https://server.smithery.ai/@test/server/mcp",
+		})
+		// Should not include STDIO-specific fields for HTTP configs
+		expect(result.mcpServers["test-server"]).not.toHaveProperty("command")
+		expect(result.mcpServers["test-server"]).not.toHaveProperty("args")
+		expect(result.mcpServers["test-server"]).not.toHaveProperty("env")
+	})
+
+	test("should write goose config with proper format transformation", () => {
+		// ARRANGE: Standard format config
+		const configPath = path.join(tempDir, "goose.yaml")
+		const config: ClientMCPConfig = {
+			mcpServers: {
+				github: {
+					command: "npx",
+					args: ["-y", "@modelcontextprotocol/server-github"],
+					env: {
+						GITHUB_PERSONAL_ACCESS_TOKEN: "<YOUR_TOKEN>",
+					},
+				},
+			},
+		}
+
+		mockGetClientConfiguration.mockReturnValue({
+			label: "Goose",
+			supportedTransports: [Transport.STDIO, Transport.HTTP],
+			installType: "yaml",
+			yamlKey: "extensions",
+			path: configPath,
+		})
+
+		// ACT
+		writeConfig(config, "goose")
+
+		// ASSERT: File should be created with goose format
+		expect(fs.existsSync(configPath)).toBe(true)
+		const content = fs.readFileSync(configPath, "utf8")
+		expect(content).toContain("extensions:")
+		expect(content).toContain("github:")
+		expect(content).toContain("cmd: npx")
+		expect(content).toContain("name: Github")
+		expect(content).toContain("enabled: true")
+		expect(content).toContain("type: stdio")
+		expect(content).toContain("timeout: 300")
+		expect(content).toContain("envs:")
+		expect(content).toContain("GITHUB_PERSONAL_ACCESS_TOKEN")
+
+		// Verify by reading back
+		const written = readConfig("goose")
+		expect(written.mcpServers.github).toEqual({
+			command: "npx",
+			args: ["-y", "@modelcontextprotocol/server-github"],
+			env: {
+				GITHUB_PERSONAL_ACCESS_TOKEN: "<YOUR_TOKEN>",
+			},
+		})
+	})
+
+	test("should write goose config with HTTP server", () => {
+		// ARRANGE: Standard format HTTP config
+		const configPath = path.join(tempDir, "goose.yaml")
+		const config: ClientMCPConfig = {
+			mcpServers: {
+				"test-server": {
+					type: "http",
+					url: "https://server.smithery.ai/@test/server/mcp",
+					headers: {},
+				},
+			},
+		}
+
+		mockGetClientConfiguration.mockReturnValue({
+			label: "Goose",
+			supportedTransports: [Transport.STDIO, Transport.HTTP],
+			installType: "yaml",
+			yamlKey: "extensions",
+			path: configPath,
+		})
+
+		// ACT
+		writeConfig(config, "goose")
+
+		// ASSERT: File should contain HTTP server in goose format
+		expect(fs.existsSync(configPath)).toBe(true)
+		const content = fs.readFileSync(configPath, "utf8")
+		expect(content).toContain("extensions:")
+		expect(content).toContain("test-server:")
+		expect(content).toContain("type: http")
+		expect(content).toContain("url:")
+		expect(content).toContain("name: Test Server")
+		expect(content).toContain("enabled: true")
+		expect(content).toContain("timeout: 300")
+
+		// Verify by reading back
+		const written = readConfig("goose")
+		expect(written.mcpServers["test-server"]).toEqual({
+			type: "http",
+			url: "https://server.smithery.ai/@test/server/mcp",
+			headers: {},
+		})
+	})
+
+	test("should merge existing goose configs", () => {
+		// ARRANGE: Existing goose config
+		const configPath = path.join(tempDir, "goose.yaml")
+		const yamlContent = `extensions:
+  existing-server:
+    name: Existing Server
+    cmd: npx
+    args:
+      - -y
+      - "@smithery/cli@latest"
+      - run
+      - existing-server
+    enabled: true
+    envs: {}
+    type: stdio
+    timeout: 300
+`
+		fs.writeFileSync(configPath, yamlContent)
+
+		mockGetClientConfiguration.mockReturnValue({
+			label: "Goose",
+			supportedTransports: [Transport.STDIO, Transport.HTTP],
+			installType: "yaml",
+			yamlKey: "extensions",
+			path: configPath,
+		})
+
+		// ACT: Read, add server, write
+		const config = readConfig("goose")
+		config.mcpServers["new-server"] = {
+			command: "npx",
+			args: ["-y", "@smithery/cli@latest", "run", "new-server"],
+		}
+		writeConfig(config, "goose")
+
+		// ASSERT: Both servers should be present
+		const written = readConfig("goose")
+		expect(written.mcpServers["existing-server"]).toBeDefined()
+		expect(written.mcpServers["new-server"]).toBeDefined()
+		expect(written.mcpServers["existing-server"]).toEqual({
+			command: "npx",
+			args: ["-y", "@smithery/cli@latest", "run", "existing-server"],
+		})
+		// STDIO configs in standard format don't have a type field
+		expect(written.mcpServers["existing-server"]).not.toHaveProperty("type")
+		expect(written.mcpServers["new-server"]).toEqual({
+			command: "npx",
+			args: ["-y", "@smithery/cli@latest", "run", "new-server"],
+		})
+	})
+
+	test("should preserve other top-level keys in goose config", () => {
+		// ARRANGE: Goose config with other top-level keys
+		const configPath = path.join(tempDir, "goose.yaml")
+		const yamlContent = `someOtherField: preserved-value
+extensions:
+  test-server:
+    name: Test Server
+    cmd: npx
+    args: []
+    enabled: true
+    envs: {}
+    type: stdio
+    timeout: 300
+`
+		fs.writeFileSync(configPath, yamlContent)
+
+		mockGetClientConfiguration.mockReturnValue({
+			label: "Goose",
+			supportedTransports: [Transport.STDIO, Transport.HTTP],
+			installType: "yaml",
+			yamlKey: "extensions",
+			path: configPath,
+		})
+
+		// ACT: Read, modify, write
+		const config = readConfig("goose")
+		config.mcpServers["new-server"] = {
+			command: "npx",
+			args: ["test"],
+		}
+		writeConfig(config, "goose")
+
+		// ASSERT: Other top-level keys should be preserved
+		const content = fs.readFileSync(configPath, "utf8")
+		expect(content).toContain("someOtherField: preserved-value")
+	})
+})

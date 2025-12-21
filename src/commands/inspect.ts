@@ -1,26 +1,15 @@
-/* remove punycode depreciation warning */
-process.removeAllListeners("warning")
-process.on("warning", (warning) => {
-	if (
-		warning.name === "DeprecationWarning" &&
-		warning.message.includes("punycode")
-	) {
-		return
-	}
-	console.warn(warning)
-})
-
+import "../utils/suppress-punycode-warning"
 import { Client } from "@modelcontextprotocol/sdk/client/index.js"
 import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js"
 import { LoggingMessageNotificationSchema } from "@modelcontextprotocol/sdk/types.js"
+import { RequestTimeoutError } from "@smithery/registry/models/errors"
 import chalk from "chalk"
 import inquirer from "inquirer"
-import { isEmpty } from "lodash"
 import ora from "ora"
 import { debug, verbose } from "../lib/logger"
-import { ResolveServerSource, resolveServer } from "../lib/registry"
+import { resolveServer } from "../lib/registry"
+import { collectConfigValues } from "../utils/install/prompt-user-config"
 import { getRuntimeEnvironment } from "../utils/runtime.js"
-import { collectConfigValues } from "../utils/session-config"
 
 async function createClient() {
 	const client = new Client(
@@ -36,46 +25,58 @@ async function createClient() {
 	return client
 }
 
-async function listPrimitives(client: Client) {
+type Resource = Awaited<
+	ReturnType<Client["listResources"]>
+>["resources"][number]
+type Tool = Awaited<ReturnType<Client["listTools"]>>["tools"][number]
+type Prompt = Awaited<ReturnType<Client["listPrompts"]>>["prompts"][number]
+
+type Primitive =
+	| { type: "resource"; value: Resource }
+	| { type: "tool"; value: Tool }
+	| { type: "prompt"; value: Prompt }
+
+type PrimitiveWithExit = Primitive | { type: "exit" }
+
+async function listPrimitives(client: Client): Promise<Primitive[]> {
 	const capabilities = client.getServerCapabilities() || {}
-	const primitives: any[] = []
-	const promises = []
+	const promises: Promise<Primitive[]>[] = []
 
 	if (capabilities.resources) {
 		promises.push(
-			client.listResources().then(({ resources }) => {
-				resources.forEach((item) => {
-					primitives.push({ type: "resource", value: item })
-				})
-			}),
+			client
+				.listResources()
+				.then(({ resources }) =>
+					resources.map((item) => ({ type: "resource" as const, value: item })),
+				),
 		)
 	}
 
 	if (capabilities.tools) {
 		promises.push(
-			client.listTools().then(({ tools }) => {
-				tools.forEach((item) => {
-					primitives.push({ type: "tool", value: item })
-				})
-			}),
+			client
+				.listTools()
+				.then(({ tools }) =>
+					tools.map((item) => ({ type: "tool" as const, value: item })),
+				),
 		)
 	}
 
 	if (capabilities.prompts) {
 		promises.push(
-			client.listPrompts().then(({ prompts }) => {
-				prompts.forEach((item) => {
-					primitives.push({ type: "prompt", value: item })
-				})
-			}),
+			client
+				.listPrompts()
+				.then(({ prompts }) =>
+					prompts.map((item) => ({ type: "prompt" as const, value: item })),
+				),
 		)
 	}
 
-	await Promise.all(promises)
-	return primitives
+	const results = await Promise.all(promises)
+	return results.flat()
 }
 
-async function connectServer(transport: any) {
+async function connectServer(transport: StdioClientTransport) {
 	const spinner = ora("Connecting to server...").start()
 	let client: Client | null = null
 
@@ -95,7 +96,6 @@ async function connectServer(transport: any) {
 			console.error("Closing connection...")
 			if (client) {
 				await client.close()
-				client = null
 			}
 			process.exit(0)
 		}
@@ -106,7 +106,9 @@ async function connectServer(transport: any) {
 		process.on("beforeExit", cleanup)
 
 		while (true) {
-			const { primitive } = await inquirer.prompt([
+			const { primitive } = await inquirer.prompt<{
+				primitive: PrimitiveWithExit
+			}>([
 				{
 					name: "primitive",
 					type: "list",
@@ -119,7 +121,7 @@ async function connectServer(transport: any) {
 						})),
 						{
 							name: chalk.red("Exit"),
-							value: { type: "exit" },
+							value: { type: "exit" } as const,
 						},
 					],
 				},
@@ -131,7 +133,7 @@ async function connectServer(transport: any) {
 				return
 			}
 
-			let result: any
+			let result: unknown
 			let itemSpinner: ReturnType<typeof ora> | undefined
 
 			if (primitive.type === "resource") {
@@ -140,10 +142,9 @@ async function connectServer(transport: any) {
 					.readResource({ uri: primitive.value.uri })
 					.catch((err) => {
 						itemSpinner?.fail(err.message)
-						itemSpinner = undefined
+						return undefined
 					})
 			} else if (primitive.type === "tool") {
-				// Instead of executing the tool, just display its input schema
 				console.log(chalk.cyan(`\nTool: ${primitive.value.name}`))
 				console.log(
 					chalk.dim(
@@ -161,7 +162,7 @@ async function connectServer(transport: any) {
 					.getPrompt({ name: primitive.value.name, arguments: args })
 					.catch((err) => {
 						itemSpinner?.fail(err.message)
-						itemSpinner = undefined
+						return undefined
 					})
 			}
 
@@ -190,39 +191,9 @@ async function connectServer(transport: any) {
 	}
 }
 
-async function _readJSONSchemaInputs(schema: any) {
-	if (!schema || isEmpty(schema)) {
-		return {}
-	}
-
-	const questions: Array<{
-		key: string
-		required?: boolean
-		type: string
-		[key: string]: any
-	}> = []
-	// Traverse schema to build questions
-	// This would be implemented similar to your existing code
-
-	const results: Record<string, any> = {}
-	for (const q of questions) {
-		const { key, required, ...options } = q
-		const { value } = await inquirer.prompt([
-			{
-				name: "value",
-				message: chalk.dim(`${required ? "* " : ""}${key}`),
-				...options,
-			},
-		])
-		if (value !== "") {
-			// Set path in results object
-			results[key] = value
-		}
-	}
-	return results
-}
-
-async function readPromptArgumentInputs(args: any[]) {
+async function readPromptArgumentInputs(
+	args: Prompt["arguments"],
+): Promise<Record<string, string>> {
 	if (!args || args.length === 0) {
 		return {}
 	}
@@ -232,10 +203,10 @@ async function readPromptArgumentInputs(args: any[]) {
 			type: "text",
 			name: arg.name,
 			message: chalk.dim(
-				`${arg.required ? "* " : ""}${arg.name}: ${arg.description}`,
+				`${arg.required ? "* " : ""}${arg.name}: ${arg.description || ""}`,
 			),
 		})),
-	)
+	) as Promise<Record<string, string>>
 }
 
 /* Main function to inspect a server */
@@ -248,38 +219,23 @@ export async function inspectServer(
 
 	try {
 		// Fetch server details from registry
-		const server = await resolveServer(
-			qualifiedName,
-			apiKey,
-			ResolveServerSource.Inspect,
-		)
+		const { connection } = await resolveServer(qualifiedName)
 		verbose(`Resolved server package: ${qualifiedName}`)
 		spinner.succeed(`Successfully resolved ${qualifiedName}`)
-
-		// Choose a connection from available options
-		if (!server.connections?.length) {
-			throw new Error("No connection configuration found for server")
-		}
-		const connection = server.connections[0]
 		verbose(`Selected connection type: ${connection.type}`)
 
 		// Collect configuration values if needed
 		const configValues = await collectConfigValues(connection)
 		verbose(
-			`Collected Configuration Structure: ${JSON.stringify(
-				Object.keys(configValues),
-				null,
-				2,
-			)}`,
+			`Collected configuration keys: ${Object.keys(configValues).join(", ")}`,
 		)
 
-		// Get runtime environment
-		const runtimeEnv = getRuntimeEnvironment({})
-		verbose(
-			`Runtime environment initialized with ${
-				Object.keys(runtimeEnv).length
-			} variables`,
+		// Pass API key via environment variable instead of --key flag
+		// (the run command no longer accepts --key option)
+		const runtimeEnv = getRuntimeEnvironment(
+			apiKey ? { SMITHERY_BEARER_AUTH: apiKey } : {},
 		)
+		verbose(`Runtime environment: ${Object.keys(runtimeEnv).length} variables`)
 
 		// Create appropriate transport with environment variables
 		transport = new StdioClientTransport({
@@ -291,7 +247,6 @@ export async function inspectServer(
 				qualifiedName,
 				"--config",
 				JSON.stringify(JSON.stringify(configValues)),
-				...(apiKey ? ["--key", apiKey] : []),
 			],
 			env: runtimeEnv,
 		})
@@ -301,7 +256,13 @@ export async function inspectServer(
 		await connectServer(transport)
 	} catch (error) {
 		spinner.fail(`Failed to inspect ${qualifiedName}`)
-		if (error instanceof Error) {
+		if (error instanceof RequestTimeoutError) {
+			console.error(
+				chalk.red(
+					"Error: Request timed out. Please check your connection and try again.",
+				),
+			)
+		} else if (error instanceof Error) {
 			console.error(chalk.red(`Error: ${error.message}`))
 		} else {
 			console.error(chalk.red("An unexpected error occurred during inspection"))

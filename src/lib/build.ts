@@ -3,10 +3,6 @@ import { dirname, join, resolve } from "node:path"
 import chalk from "chalk"
 import * as esbuild from "esbuild"
 import { formatFileSize } from "../utils/build"
-import { isWidgetProject } from "./config"
-import { buildWidgets } from "./widget/widget-bundler"
-import { discoverWidgets } from "./widget/widget-discovery"
-import { validateWidgetProject } from "./widget/widget-validation"
 
 // TypeScript declarations for global constants injected at build time
 declare const __SMITHERY_SHTTP_BOOTSTRAP__: string
@@ -169,6 +165,7 @@ async function esbuildServer(
 		minify: shouldMinify,
 		sourcemap: shouldMinify ? false : "inline",
 		format: "cjs",
+		external: ["keytar"], // Native module, cannot be bundled
 	}
 
 	let buildConfig: esbuild.BuildOptions
@@ -257,21 +254,5 @@ export async function buildServer(
 	options: BuildOptions = {},
 ): Promise<esbuild.BuildContext | esbuild.BuildResult> {
 	const entryFile = resolveEntryPoint(options.entryFile)
-
-	// Validate widget project structure if applicable
-	if (isWidgetProject()) {
-		validateWidgetProject()
-	}
-
-	const serverResult = await esbuildServer(options, entryFile)
-
-	// Build widgets if this is a widget project
-	if (!options.watch && isWidgetProject()) {
-		const widgets = discoverWidgets()
-		if (widgets.length > 0) {
-			await buildWidgets(widgets, { production: options.production })
-		}
-	}
-
-	return serverResult
+	return await esbuildServer(options, entryFile)
 }

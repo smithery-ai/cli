@@ -1,21 +1,11 @@
-/* remove punycode depreciation warning */
-process.removeAllListeners("warning")
-process.on("warning", (warning) => {
-	if (
-		warning.name === "DeprecationWarning" &&
-		warning.message.includes("punycode")
-	) {
-		return
-	}
-	console.warn(warning)
-})
-
+import "../utils/suppress-punycode-warning"
 import chalk from "chalk"
 import type { ValidClient } from "../config/clients"
 // import { getConfig } from "../utils/client-config"
 import { getClientConfiguration } from "../config/clients.js"
+import { deleteConfig } from "../lib/keychain.js"
 import { promptForRestart } from "../utils/client"
-import { readConfig, writeConfig } from "../utils/mcp-config"
+import { readConfig, writeConfig } from "../utils/client-config"
 
 /* uninstalls server for given client */
 export async function uninstallServer(
@@ -44,6 +34,9 @@ export async function uninstallServer(
 		/* remove server from config */
 		delete config.mcpServers[qualifiedName]
 		writeConfig(config, client)
+
+		/* remove server config from keychain */
+		await deleteConfig(qualifiedName)
 
 		console.log(
 			chalk.green(`✓ ${qualifiedName} successfully uninstalled from ${client}`),

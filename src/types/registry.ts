@@ -42,17 +42,6 @@ export const StdioConnectionSchema = z.object({
 		.describe("The environment to use when spawning the process."),
 })
 
-// bundle connection (stdio with bundleUrl where the bundle/binary is stored)
-export const BundleConnectionSchema = z.object({
-	bundleUrl: z
-		.string()
-		.describe("The URL where the downloadable bundle is stored."),
-	runtime: z
-		.enum(["node"])
-		.optional()
-		.describe("Runtime required to execute the bundle (default: node)."),
-})
-
 // streamable http deployment connection (for CLI internal use)
 export const StreamableHTTPDeploymentConnectionSchema = z.object({
 	deploymentUrl: z.string().describe("The URL of the Streamable HTTP server."),
@@ -69,7 +58,6 @@ export const StreamableHTTPConnectionSchema = z.object({
 })
 
 export type StdioConnection = z.infer<typeof StdioConnectionSchema>
-export type BundleConnection = z.infer<typeof BundleConnectionSchema>
 export type StreamableHTTPDeploymentConnection = z.infer<
 	typeof StreamableHTTPDeploymentConnectionSchema
 >
@@ -91,21 +79,3 @@ export interface ValidationResponse {
 	missingFields: string[]
 	fieldSchemas: Record<string, unknown>
 }
-
-// Connection type schema (for registry API)
-export const ConnectionTypeSchema = z.union([
-	z.object({
-		type: z.literal("stdio"),
-		...StdioConnectionSchema.shape,
-	}),
-	z.object({
-		type: z.literal("stdio"),
-		...BundleConnectionSchema.shape,
-	}),
-	z.object({
-		type: z.literal("http"),
-		...StreamableHTTPDeploymentConnectionSchema.shape,
-	}),
-])
-
-export type ConnectionType = "stdio" | "http"

@@ -1,3 +1,4 @@
+import { RequestTimeoutError } from "@smithery/registry/models/errors"
 import fetch from "cross-fetch"
 
 /**
@@ -83,9 +84,9 @@ export const fetchWithTimeout = async (
 				}
 
 				if (error.name === "AbortError") {
-					lastError = new Error(
-						`Request timed out after ${timeout}ms when calling ${url}`,
-					)
+					lastError = new RequestTimeoutError("Request timed out", {
+						cause: error,
+					})
 				} else {
 					lastError = error
 				}
@@ -97,6 +98,10 @@ export const fetchWithTimeout = async (
 
 			// Check if we've exceeded max elapsed time
 			if (elapsedTime >= backoff.maxElapsedTime) {
+				// Preserve RequestTimeoutError type if that's what caused the failure
+				if (lastError instanceof RequestTimeoutError) {
+					throw lastError
+				}
 				throw new Error(`Failed after ${elapsedTime}ms: ${lastError?.message}`)
 			}
 
@@ -108,6 +113,10 @@ export const fetchWithTimeout = async (
 
 			// Check if next attempt would exceed max elapsed time
 			if (elapsedTime + delay >= backoff.maxElapsedTime) {
+				// Preserve RequestTimeoutError type if that's what caused the failure
+				if (lastError instanceof RequestTimeoutError) {
+					throw lastError
+				}
 				throw new Error(`Failed after ${elapsedTime}ms: ${lastError?.message}`)
 			}
 

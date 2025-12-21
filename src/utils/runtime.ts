@@ -6,7 +6,7 @@ import chalk from "chalk"
 import inquirer from "inquirer"
 import ora from "ora"
 import { verbose } from "../lib/logger"
-import { getApiKey, setApiKey } from "./smithery-config"
+import { getApiKey, setApiKey } from "./smithery-settings"
 
 const execAsync = promisify(exec)
 

@@ -7,19 +7,18 @@ import type { ServerDetailResponse } from "@smithery/registry/models/components"
 import { beforeEach, describe, expect, test, vi } from "vitest"
 
 // Mock dependencies
-vi.mock("../../lib/bundle-manager", () => ({
+vi.mock("../../../lib/bundle-manager", () => ({
 	ensureBundleInstalled: vi.fn(),
 	getBundleCommand: vi.fn(),
 	resolveEnvTemplates: vi.fn(),
 	resolveTemplateString: vi.fn(),
 }))
 
-vi.mock("../../lib/registry", () => ({
+vi.mock("../../../lib/registry", () => ({
 	fetchConnection: vi.fn(),
-	getUserConfig: vi.fn(),
 }))
 
-vi.mock("../../commands/run/runner-utils", () => ({
+vi.mock("../../../commands/run/runner-utils", () => ({
 	logWithTimestamp: vi.fn(),
 }))
 
@@ -28,8 +27,8 @@ import {
 	getBundleCommand,
 	resolveEnvTemplates,
 	resolveTemplateString,
-} from "../../lib/bundle-manager"
-import { fetchConnection, getUserConfig } from "../../lib/registry"
+} from "../../../lib/bundle-manager"
+import { fetchConnection } from "../../../lib/registry"
 import { prepareStdioConnection } from "../prepare-stdio-connection"
 
 describe("prepareStdioConnection", () => {
@@ -56,7 +55,6 @@ describe("prepareStdioConnection", () => {
 			server,
 			server.connections[0],
 			{},
-			"test-api-key",
 		)
 
 		expect(result).toEqual({
@@ -68,7 +66,6 @@ describe("prepareStdioConnection", () => {
 
 		expect(ensureBundleInstalled).not.toHaveBeenCalled()
 		expect(fetchConnection).not.toHaveBeenCalled()
-		expect(getUserConfig).not.toHaveBeenCalled()
 	})
 
 	test("handles bundle connection with args template resolution", async () => {
@@ -86,14 +83,12 @@ describe("prepareStdioConnection", () => {
 
 		const bundleDir =
 			"/home/.smithery/cache/servers/author/bundle-server/current"
+		const userConfig = { apiKey: "saved-key" }
 
 		vi.mocked(ensureBundleInstalled).mockResolvedValue(bundleDir)
 		vi.mocked(getBundleCommand).mockReturnValue({
 			command: "node",
 			args: ["${__dirname}/index.js", "apiKey=${user_config.apiKey}"],
-		})
-		vi.mocked(getUserConfig).mockResolvedValue({
-			apiKey: "saved-key",
 		})
 		vi.mocked(resolveTemplateString)
 			.mockReturnValueOnce(`${bundleDir}/index.js`)
@@ -102,8 +97,7 @@ describe("prepareStdioConnection", () => {
 		const result = await prepareStdioConnection(
 			server,
 			server.connections[0],
-			{},
-			"test-api-key",
+			userConfig,
 		)
 
 		expect(ensureBundleInstalled).toHaveBeenCalledWith(
@@ -111,11 +105,6 @@ describe("prepareStdioConnection", () => {
 			"https://smithery.ai/bundles/author/bundle-server.mcpb",
 		)
 		expect(getBundleCommand).toHaveBeenCalledWith(bundleDir)
-		expect(getUserConfig).toHaveBeenCalledWith(
-			"author/bundle-server",
-			"test-api-key",
-			undefined,
-		)
 
 		expect(result).toEqual({
 			command: "node",
@@ -146,21 +135,17 @@ describe("prepareStdioConnection", () => {
 			command: "node",
 			args: ["${__dirname}/index.js"],
 		})
-		vi.mocked(getUserConfig).mockResolvedValue(null)
 		vi.mocked(resolveTemplateString).mockReturnValue(`${bundleDir}/index.js`)
 
-		const result = await prepareStdioConnection(
-			server,
-			server.connections[0],
-			{ DEBUG: "true" },
-			"test-api-key",
-		)
+		const result = await prepareStdioConnection(server, server.connections[0], {
+			DEBUG: "true",
+		})
 
 		expect(result.args).toEqual([`${bundleDir}/index.js`])
 		expect(result.env).toEqual({})
 	})
 
-	test("fetches connection from registry when no command or bundleUrl", async () => {
+	test("throws error when no command or bundleUrl", async () => {
 		const server: ServerDetailResponse = {
 			qualifiedName: "author/registry-server",
 			remote: false,
@@ -172,33 +157,9 @@ describe("prepareStdioConnection", () => {
 			],
 		} as unknown as ServerDetailResponse
 
-		vi.mocked(fetchConnection).mockResolvedValue({
-			command: "python",
-			args: ["-m", "server"],
-			env: { PYTHONPATH: "/opt/python" },
-		})
-
-		const result = await prepareStdioConnection(
-			server,
-			server.connections[0],
-			{ DEBUG: "true" },
-			"test-api-key",
-		)
-
-		expect(fetchConnection).toHaveBeenCalledWith(
-			"author/registry-server",
-			{ DEBUG: "true" },
-			"test-api-key",
-		)
-
-		expect(getUserConfig).not.toHaveBeenCalled()
-
-		expect(result).toEqual({
-			command: "python",
-			args: ["-m", "server"],
-			env: { PYTHONPATH: "/opt/python" },
-			qualifiedName: "author/registry-server",
-		})
+		await expect(
+			prepareStdioConnection(server, server.connections[0], { DEBUG: "true" }),
+		).rejects.toThrow("Invalid connection configuration")
 	})
 
 	test("resolves args templates with runtime config overriding saved config", async () => {
@@ -221,19 +182,15 @@ describe("prepareStdioConnection", () => {
 			command: "node",
 			args: ["${__dirname}/index.js", "port=${user_config.port}"],
 		})
-		vi.mocked(getUserConfig).mockResolvedValue({ port: 3000 })
 		vi.mocked(resolveTemplateString)
 			.mockReturnValueOnce(`${bundleDir}/index.js`)
 			.mockReturnValueOnce("port=8080")
 
-		const result = await prepareStdioConnection(
-			server,
-			server.connections[0],
-			{ port: 8080 } as any,
-			"test-api-key",
-		)
+		const result = await prepareStdioConnection(server, server.connections[0], {
+			port: 8080,
+		} as any)
 
-		// Runtime config (8080) should override saved config (3000)
+		// Runtime config (8080) is used directly
 		expect(result.args).toEqual([`${bundleDir}/index.js`, "port=8080"])
 		expect(result.env).toEqual({})
 	})
@@ -258,15 +215,9 @@ describe("prepareStdioConnection", () => {
 			command: "node",
 			args: ["${__dirname}/index.js"],
 		})
-		vi.mocked(getUserConfig).mockResolvedValue(null)
 		vi.mocked(resolveTemplateString).mockReturnValue(`${bundleDir}/index.js`)
 
-		await prepareStdioConnection(
-			server,
-			server.connections[0],
-			{},
-			"test-api-key",
-		)
+		await prepareStdioConnection(server, server.connections[0], {})
 
 		expect(vi.mocked(ensureBundleInstalled)).toHaveBeenCalled()
 		expect(bundleDir).toContain("/current")
@@ -287,6 +238,10 @@ describe("prepareStdioConnection", () => {
 
 		const bundleDir =
 			"/home/.smithery/cache/servers/author/bundle-server/current"
+		const userConfig = {
+			apiKey: "secret-key-123",
+			database: { host: "localhost", port: 5432 },
+		}
 
 		vi.mocked(ensureBundleInstalled).mockResolvedValue(bundleDir)
 		vi.mocked(getBundleCommand).mockReturnValue({
@@ -298,10 +253,6 @@ describe("prepareStdioConnection", () => {
 					"${user_config.database.host}:${user_config.database.port}",
 			},
 		})
-		vi.mocked(getUserConfig).mockResolvedValue({
-			apiKey: "secret-key-123",
-			database: { host: "localhost", port: 5432 },
-		})
 		vi.mocked(resolveTemplateString).mockReturnValue(`${bundleDir}/index.js`)
 		vi.mocked(resolveEnvTemplates).mockReturnValue({
 			API_KEY: "secret-key-123",
@@ -311,8 +262,7 @@ describe("prepareStdioConnection", () => {
 		const result = await prepareStdioConnection(
 			server,
 			server.connections[0],
-			{},
-			"test-api-key",
+			userConfig,
 		)
 
 		expect(resolveEnvTemplates).toHaveBeenCalledWith(
@@ -321,10 +271,7 @@ describe("prepareStdioConnection", () => {
 				DATABASE_URL:
 					"${user_config.database.host}:${user_config.database.port}",
 			},
-			{
-				apiKey: "secret-key-123",
-				database: { host: "localhost", port: 5432 },
-			},
+			userConfig,
 			bundleDir,
 		)
 
@@ -344,7 +291,7 @@ describe("prepareStdioConnection - Integration Tests with Real Resolution", () =
 		const { readFileSync } = await import("node:fs")
 		const { join } = await import("node:path")
 
-		const fixturesDir = join(__dirname, "fixtures")
+		const fixturesDir = join(__dirname, "../../install/__tests__/fixtures")
 		const manifest = JSON.parse(
 			readFileSync(
 				join(fixturesDir, "env-nested-config-manifest.json"),
@@ -375,11 +322,10 @@ describe("prepareStdioConnection - Integration Tests with Real Resolution", () =
 			args: manifest.server.mcp_config.args,
 			env: manifest.server.mcp_config.env,
 		})
-		vi.mocked(getUserConfig).mockResolvedValue(userConfig)
 
 		const actualBundleManager = await vi.importActual<
-			typeof import("../../lib/bundle-manager")
-		>("../../lib/bundle-manager")
+			typeof import("../../../lib/bundle-manager")
+		>("../../../lib/bundle-manager")
 
 		vi.mocked(resolveTemplateString).mockImplementation(
 			actualBundleManager.resolveTemplateString,
@@ -391,8 +337,7 @@ describe("prepareStdioConnection - Integration Tests with Real Resolution", () =
 		const result = await prepareStdioConnection(
 			server,
 			server.connections[0],
-			{},
-			"test-api-key",
+			userConfig,
 		)
 
 		expect(result.command).toBe("node")
@@ -409,7 +354,7 @@ describe("prepareStdioConnection - Integration Tests with Real Resolution", () =
 		const { readFileSync } = await import("node:fs")
 		const { join } = await import("node:path")
 
-		const fixturesDir = join(__dirname, "fixtures")
+		const fixturesDir = join(__dirname, "../../install/__tests__/fixtures")
 		const manifest = JSON.parse(
 			readFileSync(
 				join(fixturesDir, "args-nested-config-manifest.json"),
@@ -440,11 +385,10 @@ describe("prepareStdioConnection - Integration Tests with Real Resolution", () =
 			args: manifest.server.mcp_config.args,
 			env: manifest.server.mcp_config.env,
 		})
-		vi.mocked(getUserConfig).mockResolvedValue(userConfig)
 
 		const actualBundleManager = await vi.importActual<
-			typeof import("../../lib/bundle-manager")
-		>("../../lib/bundle-manager")
+			typeof import("../../../lib/bundle-manager")
+		>("../../../lib/bundle-manager")
 
 		vi.mocked(resolveTemplateString).mockImplementation(
 			actualBundleManager.resolveTemplateString,
@@ -456,8 +400,7 @@ describe("prepareStdioConnection - Integration Tests with Real Resolution", () =
 		const result = await prepareStdioConnection(
 			server,
 			server.connections[0],
-			{},
-			"test-api-key",
+			userConfig,
 		)
 
 		expect(result.command).toBe("node")
@@ -475,7 +418,7 @@ describe("prepareStdioConnection - Integration Tests with Real Resolution", () =
 		const { readFileSync } = await import("node:fs")
 		const { join } = await import("node:path")
 
-		const fixturesDir = join(__dirname, "fixtures")
+		const fixturesDir = join(__dirname, "../../install/__tests__/fixtures")
 		const manifest = JSON.parse(
 			readFileSync(
 				join(fixturesDir, "mixed-nested-config-manifest.json"),
@@ -506,11 +449,10 @@ describe("prepareStdioConnection - Integration Tests with Real Resolution", () =
 			args: manifest.server.mcp_config.args,
 			env: manifest.server.mcp_config.env,
 		})
-		vi.mocked(getUserConfig).mockResolvedValue(userConfig)
 
 		const actualBundleManager = await vi.importActual<
-			typeof import("../../lib/bundle-manager")
-		>("../../lib/bundle-manager")
+			typeof import("../../../lib/bundle-manager")
+		>("../../../lib/bundle-manager")
 
 		vi.mocked(resolveTemplateString).mockImplementation(
 			actualBundleManager.resolveTemplateString,
@@ -522,8 +464,7 @@ describe("prepareStdioConnection - Integration Tests with Real Resolution", () =
 		const result = await prepareStdioConnection(
 			server,
 			server.connections[0],
-			{},
-			"test-api-key",
+			userConfig,
 		)
 
 		expect(result.command).toBe("node")

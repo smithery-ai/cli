@@ -3,13 +3,16 @@ import type {
 	ConnectionInfo,
 	ServerDetailResponse,
 } from "@smithery/registry/models/components"
-import { ResolveServerSource, resolveServer } from "../../lib/registry.js"
-import type { ServerConfig } from "../../types/registry.js"
-import { prepareStdioConnection } from "../../utils/prepare-stdio-connection.js"
+import { RequestTimeoutError } from "@smithery/registry/models/errors"
+import { getConfig } from "../../lib/keychain"
+import { resolveServer } from "../../lib/registry"
+import type { ServerConfig } from "../../types/registry"
+import { prepareStdioConnection } from "../../utils/run/prepare-stdio-connection"
 import {
 	getAnalyticsConsent,
+	getApiKey,
 	initializeSettings,
-} from "../../utils/smithery-config.js"
+} from "../../utils/smithery-settings.js"
 import { createLocalPlaygroundRunner } from "./local-playground-runner.js"
 import { logWithTimestamp } from "./runner-utils.js"
 import { createStdioRunner as startSTDIOrunner } from "./stdio-runner.js"
@@ -26,18 +29,14 @@ interface RunOptions {
  * Runs a server with the specified configuration
  *
  * @param {string} qualifiedName - The qualified name of the server to run
- * @param {ServerConfig} config - Configuration values for the server
- * @param {string} apiKey - API key required for authentication
- * @param {string} [profile] - Optional profile name to use
+ * @param {ServerConfig} configOverride - Optional configuration override (from --config flag)
  * @param {RunOptions} [options] - Additional options for playground functionality
  * @returns {Promise<void>} A promise that resolves when the server is running or fails
  * @throws {Error} If the server cannot be resolved or connection fails
  */
 export async function run(
 	qualifiedName: string,
-	config: ServerConfig,
-	apiKey: string | undefined,
-	profile?: string,
+	configOverride: ServerConfig,
 	options?: RunOptions,
 ) {
 	try {
@@ -48,61 +47,62 @@ export async function run(
 			)
 		}
 
-		const resolvedServer = await resolveServer(
-			qualifiedName,
-			apiKey,
-			ResolveServerSource.Run,
+		// Read config from keychain, merge with override if provided
+		const keychainConfig = (await getConfig(qualifiedName)) || {}
+		const config = { ...keychainConfig, ...configOverride }
+		logWithTimestamp(
+			`[Runner] Loaded config from keychain${Object.keys(configOverride).length > 0 ? " (with overrides)" : ""}`,
 		)
-		if (!resolvedServer) {
-			throw new Error(`Could not resolve server: ${qualifiedName}`)
-		}
+
+		const { server, connection } = await resolveServer(qualifiedName)
 
 		logWithTimestamp(
 			`[Runner] Connecting to server: ${JSON.stringify({
-				id: resolvedServer.qualifiedName,
-				connectionTypes: resolvedServer.connections.map(
-					(c: ConnectionInfo) => c.type,
-				),
+				id: server.qualifiedName,
+				connectionType: connection.type,
 			})}`,
 		)
 
 		const analyticsEnabled = await getAnalyticsConsent()
 		await pickServerAndRun(
-			resolvedServer,
+			server,
+			connection,
 			config,
 			analyticsEnabled,
-			apiKey,
-			profile,
 			options,
 		)
 	} catch (error) {
-		logWithTimestamp(
-			`[Runner] Error: ${error instanceof Error ? error.message : error}`,
-		)
+		if (error instanceof RequestTimeoutError) {
+			logWithTimestamp(
+				"[Runner] Error: Request timed out. Please check your connection and try again.",
+			)
+		} else {
+			logWithTimestamp(
+				`[Runner] Error: ${error instanceof Error ? error.message : error}`,
+			)
+		}
 		process.exit(1)
 	}
 }
 
 async function pickServerAndRun(
 	serverDetails: ServerDetailResponse,
+	connection: ConnectionInfo,
 	config: ServerConfig,
 	analyticsEnabled: boolean,
-	apiKey: string | undefined, // can be undefined because of optionality for local servers
-	profile: string | undefined,
 	options?: RunOptions,
 ): Promise<void> {
-	if (!serverDetails.connections?.length) {
-		throw new Error("No connection configuration found for server")
-	}
-
-	const connection = serverDetails.connections[0]
-
 	if (connection.type === "http") {
 		if (!connection.deploymentUrl) {
 			throw new Error("Missing deployment URL")
 		}
+
+		// Get API key from global config for HTTP servers
+		const apiKey = await getApiKey()
 		if (!apiKey) {
-			throw new Error("API key is required for remote connections")
+			throw new Error(
+				"API key required for HTTP servers. Please run 'smithery login' or install the server first.",
+			)
 		}
 
 		if (options?.playground) {
@@ -110,7 +110,7 @@ async function pickServerAndRun(
 				connection.deploymentUrl,
 				apiKey,
 				config,
-				profile,
+				undefined, // No profile
 				{
 					open: options.open !== false,
 					initialMessage: options.initialMessage || "Say hello to the world!",
@@ -121,7 +121,7 @@ async function pickServerAndRun(
 				connection.deploymentUrl,
 				apiKey,
 				config,
-				profile,
+				undefined, // No profile
 			)
 		}
 	} else if (connection.type === "stdio") {
@@ -129,14 +129,17 @@ async function pickServerAndRun(
 			serverDetails,
 			connection,
 			config,
-			apiKey,
-			profile,
 		)
 
 		if (options?.playground) {
+			// Get API key from global config for local playground
+			const apiKey = await getApiKey()
 			if (!apiKey) {
-				throw new Error("API key is required for playground connections")
+				throw new Error(
+					"API key required for local playground. Please run 'smithery login' or install the server first.",
+				)
 			}
+
 			await createLocalPlaygroundRunner(
 				preparedConnection.command,
 				preparedConnection.args,
@@ -149,6 +152,7 @@ async function pickServerAndRun(
 				},
 			)
 		} else {
+			const apiKey = await getApiKey()
 			await startSTDIOrunner(
 				preparedConnection.command,
 				preparedConnection.args,

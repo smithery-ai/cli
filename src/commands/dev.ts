@@ -1,15 +1,11 @@
 import { type ChildProcess, spawn } from "node:child_process"
-import { existsSync, watch as fsWatch } from "node:fs"
+import { existsSync } from "node:fs"
 import { join } from "node:path"
 import chalk from "chalk"
 import { DEFAULT_PORT } from "../constants"
 import { buildServer } from "../lib/build"
-import { isWidgetProject } from "../lib/config"
 import { setupTunnelAndPlayground } from "../lib/dev-lifecycle"
 import { debug } from "../lib/logger"
-import { buildWidgets } from "../lib/widget/widget-bundler"
-import { discoverWidgets } from "../lib/widget/widget-discovery"
-import { validateWidgetProject } from "../lib/widget/widget-validation"
 import { cleanupChildProcess } from "../utils/child-process-cleanup"
 import { setupProcessLifecycle } from "../utils/process-lifecycle"
 import { ensureApiKey } from "../utils/runtime"
@@ -27,11 +23,6 @@ interface DevOptions {
 
 export async function dev(options: DevOptions = {}): Promise<void> {
 	try {
-		// Validate widget project structure if applicable
-		if (isWidgetProject()) {
-			validateWidgetProject()
-		}
-
 		// Ensure API key is available
 		const apiKey = await ensureApiKey(options.key)
 
@@ -44,7 +35,6 @@ export async function dev(options: DevOptions = {}): Promise<void> {
 		let tunnelListener: { close: () => Promise<void> } | undefined
 		let isFirstBuild = true
 		let isRebuilding = false
-		let widgetWatcher: ReturnType<typeof fsWatch> | undefined
 
 		// Function to start the server process
 		const startServer = async () => {
@@ -154,52 +144,6 @@ export async function dev(options: DevOptions = {}): Promise<void> {
 			},
 		})
 
-		// Set up widget watching if this is a widget project
-		if (isWidgetProject()) {
-			const widgets = discoverWidgets()
-
-			if (widgets.length > 0) {
-				// Build widgets initially
-				await buildWidgets(widgets, {
-					production: false,
-					minify: options.minify,
-				})
-
-				// Watch for changes in app/web/src
-				const webSrcDir = join(process.cwd(), "app/web/src")
-				if (existsSync(webSrcDir)) {
-					let rebuildTimeout: NodeJS.Timeout | undefined
-
-					widgetWatcher = fsWatch(
-						webSrcDir,
-						{ recursive: true },
-						async (_eventType, filename) => {
-							if (!filename || !filename.endsWith(".tsx")) {
-								return
-							}
-
-							// Debounce rebuilds
-							if (rebuildTimeout) {
-								clearTimeout(rebuildTimeout)
-							}
-
-							rebuildTimeout = setTimeout(async () => {
-								console.log(chalk.dim(`\n📦 Widget file changed: ${filename}`))
-								const currentWidgets = discoverWidgets()
-								await buildWidgets(currentWidgets, {
-									production: false,
-									minify: options.minify,
-								})
-								console.log(chalk.green("✓ Widgets rebuilt"))
-							}, 100)
-						},
-					)
-
-					console.log(chalk.dim("👀 Watching for widget changes..."))
-				}
-			}
-		}
-
 		// Handle cleanup on exit
 		const cleanup = async () => {
 			console.log(chalk.yellow("\no/ Shutting down server..."))
@@ -207,11 +151,6 @@ export async function dev(options: DevOptions = {}): Promise<void> {
 			// Stop watching
 			if (buildContext && "dispose" in buildContext) {
 				await buildContext.dispose()
-			}
-
-			// Stop widget watcher
-			if (widgetWatcher) {
-				widgetWatcher.close()
 			}
 
 			// Kill child process
