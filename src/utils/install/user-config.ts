@@ -3,15 +3,148 @@ import type ora from "ora"
 import {
 	ensureBundleInstalled,
 	getBundleUserConfigSchema,
-} from "../lib/bundle-manager"
-import { getConfig } from "../lib/keychain"
-import { verbose } from "../lib/logger"
-import type { JSONSchema, ServerConfig } from "../types/registry"
-import { promptForExistingConfig } from "./command-prompts"
-import { collectConfigValues, validateAndFormatConfig } from "./session-config"
+} from "../../lib/bundle-manager"
+import { getConfig } from "../../lib/keychain"
+import { verbose } from "../../lib/logger"
+import type { JSONSchema, ServerConfig } from "../../types/registry"
+import { promptForExistingConfig } from "../command-prompts"
+import { collectConfigValues } from "./prompt-user-config.js"
 
 // Type for ora spinner instance
 export type OraSpinner = ReturnType<ReturnType<typeof ora>["start"]>
+
+/**
+ * Converts a value to the specified type
+ * @param value - The value to convert
+ * @param type - The target type (boolean, number, integer, array, etc.)
+ * @returns The converted value
+ */
+function convertValueToType(value: unknown, type: string | undefined): unknown {
+	if (!type) return value
+
+	// Helper for throwing standardized errors
+	const invalid = (expected: string) => {
+		throw new Error(`Invalid ${expected} value: ${JSON.stringify(value)}`)
+	}
+
+	switch (type) {
+		case "boolean": {
+			const str = String(value).toLowerCase()
+			if (str === "true") return true
+			if (str === "false") return false
+			invalid("boolean")
+			break
+		}
+		case "number": {
+			const num = Number(value)
+			if (!Number.isNaN(num)) return num
+			invalid("number")
+			break
+		}
+		case "integer": {
+			const num = Number.parseInt(String(value), 10)
+			if (!Number.isNaN(num)) return num
+			invalid("integer")
+			break
+		}
+		case "string":
+			return String(value)
+		case "array":
+			return Array.isArray(value)
+				? value
+				: String(value)
+						.split(",")
+						.map((v) => v.trim())
+		default:
+			return value
+	}
+}
+
+/**
+ * Formats and validates configuration values according to the connection's schema
+ *
+ * This function:
+ * 1. Ensures all required fields are present (throws error if not)
+ * 2. Fills empty fields with defaults if available (applies to both required and optional fields)
+ * 3. Omits empty optional fields without defaults
+ *
+ * @param connection - Server connection details containing the config schema
+ * @param configValues - Optional existing configuration values to format
+ * @returns Formatted configuration values with proper types according to schema
+ * @throws Error if any required config values are missing
+ */
+export async function validateAndFormatConfig(
+	connection: ConnectionInfo,
+	configValues?: ServerConfig,
+): Promise<ServerConfig> {
+	if (!connection.configSchema?.properties) {
+		return configValues || {}
+	}
+
+	const required = new Set<string>(connection.configSchema.required || [])
+	const formattedValues: ServerConfig = {}
+	const missingRequired: string[] = []
+	const validationErrors: Array<{ field: string; error: string }> = []
+
+	for (const [key, prop] of Object.entries(
+		connection.configSchema.properties,
+	)) {
+		const schemaProp = prop as JSONSchema
+		const value = configValues?.[key]
+
+		try {
+			const processedValue = value === "" ? undefined : value
+			const finalValue =
+				processedValue !== undefined ? processedValue : schemaProp.default
+
+			// Handle required fields
+			if (required.has(key)) {
+				if (finalValue === undefined) {
+					missingRequired.push(key)
+					continue
+				}
+			}
+
+			// Skip optional fields with no value (even if they have defaults)
+			// Defaults should be applied at runtime, not stored in the registry
+			if (processedValue === undefined) {
+				continue
+			}
+
+			// Convert and include the value (only user-provided values)
+			formattedValues[key] = convertValueToType(finalValue, schemaProp.type)
+		} catch (error) {
+			const errorMessage =
+				error instanceof Error ? error.message : "Unknown validation error"
+			validationErrors.push({ field: key, error: errorMessage })
+			if (required.has(key)) {
+				missingRequired.push(key)
+			}
+		}
+	}
+
+	// Combine all validation errors into a single error message
+	if (validationErrors.length > 0 || missingRequired.length > 0) {
+		const errorMessages: string[] = []
+
+		if (missingRequired.length > 0) {
+			errorMessages.push(
+				`Missing required config values: ${missingRequired.join(", ")}`,
+			)
+		}
+
+		if (validationErrors.length > 0) {
+			errorMessages.push(
+				"Validation errors:",
+				...validationErrors.map(({ field, error }) => `  ${field}: ${error}`),
+			)
+		}
+
+		throw new Error(errorMessages.join("\n"))
+	}
+
+	return formattedValues
+}
 
 // Helper function to get config schema (from connection or bundle)
 async function getConfigSchema(

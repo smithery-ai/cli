@@ -4,7 +4,7 @@
 
 import { beforeEach, describe, expect, test, vi } from "vitest"
 import { Transport } from "../../../config/clients"
-import { formatServerConfig } from "../format-server-config"
+import { formatServerConfig } from "../server-config"
 import { optionalOnlyServer } from "./fixtures/servers"
 
 // Mock getClientConfiguration

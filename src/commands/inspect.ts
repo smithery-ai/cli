@@ -8,7 +8,7 @@ import inquirer from "inquirer"
 import ora from "ora"
 import { debug, verbose } from "../lib/logger"
 import { resolveServer } from "../lib/registry"
-import { collectConfigValues } from "../utils/install/session-config"
+import { collectConfigValues } from "../utils/install/prompt-user-config"
 import { getRuntimeEnvironment } from "../utils/runtime.js"
 
 async function createClient() {

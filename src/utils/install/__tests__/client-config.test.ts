@@ -14,8 +14,8 @@ import os from "node:os"
 import path from "node:path"
 import { beforeEach, describe, expect, test, vi } from "vitest"
 import { Transport } from "../../../config/clients"
-import type { ClientMCPConfig } from "../mcp-config"
-import { readConfig, writeConfig } from "../mcp-config"
+import type { ClientMCPConfig } from "../../client-config"
+import { readConfig, writeConfig } from "../../client-config"
 
 // Mock getClientConfiguration to return test configs
 vi.mock("../../../config/clients", async () => {

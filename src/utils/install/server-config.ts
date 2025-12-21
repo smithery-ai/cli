@@ -2,11 +2,11 @@ import type {
 	ConnectionInfo,
 	ServerDetailResponse,
 } from "@smithery/registry/models/components"
-import { getClientConfiguration } from "../config/clients"
+import { getClientConfiguration } from "../../config/clients.js"
 import type {
 	ConfiguredServer,
 	StreamableHTTPConnection,
-} from "../types/registry"
+} from "../../types/registry.js"
 
 type ConfigType = "http-oauth" | "http-no-oauth" | "stdio"
 

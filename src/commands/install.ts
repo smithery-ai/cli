@@ -10,13 +10,13 @@ import { resolveServer } from "../lib/registry"
 import type { ServerConfig } from "../types/registry"
 import { checkAnalyticsConsent } from "../utils/analytics"
 import { promptForRestart } from "../utils/client"
-import { formatServerConfig } from "../utils/install/format-server-config"
 import {
 	readConfig,
 	runConfigCommand,
 	writeConfig,
-} from "../utils/install/mcp-config"
-import { getServerName } from "../utils/install/session-config"
+} from "../utils/client-config"
+import { getServerName } from "../utils/install/helpers"
+import { formatServerConfig } from "../utils/install/server-config"
 import { resolveUserConfig } from "../utils/install/user-config"
 import {
 	checkAndNotifyRemoteServer,

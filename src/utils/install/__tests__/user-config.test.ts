@@ -14,11 +14,12 @@ import {
 import { getConfig } from "../../../lib/keychain"
 import type { ServerConfig } from "../../../types/registry"
 import { promptForExistingConfig } from "../../command-prompts"
-import { collectConfigValues, validateAndFormatConfig } from "../session-config"
+import { collectConfigValues } from "../prompt-user-config"
 import {
 	applySchemaDefaults,
 	resolveUserConfig,
 	serverNeedsConfig,
+	validateAndFormatConfig,
 } from "../user-config"
 import { collectedConfigs, savedConfigs } from "./fixtures/configurations"
 import {
@@ -34,8 +35,7 @@ vi.mock("../../../lib/keychain", () => ({
 	deleteConfig: vi.fn(),
 }))
 
-vi.mock("../session-config", () => ({
-	validateAndFormatConfig: vi.fn(),
+vi.mock("../prompt-user-config", () => ({
 	collectConfigValues: vi.fn(),
 }))
 
@@ -54,7 +54,6 @@ vi.mock("../../../lib/logger", () => ({
 
 // Get mocked functions
 const mockGetConfig = vi.mocked(getConfig)
-const mockValidateAndFormatConfig = vi.mocked(validateAndFormatConfig)
 const mockCollectConfigValues = vi.mocked(collectConfigValues)
 const mockPromptForExistingConfig = vi.mocked(promptForExistingConfig)
 const mockEnsureBundleInstalled = vi.mocked(ensureBundleInstalled)
@@ -100,9 +99,6 @@ describe("resolveUserConfig", () => {
 
 		it("prompts user to use existing or provide new", async () => {
 			mockGetConfig.mockResolvedValue(savedConfigs.requiredAndOptional)
-			mockValidateAndFormatConfig.mockResolvedValue(
-				savedConfigs.requiredAndOptional!,
-			)
 			mockPromptForExistingConfig.mockResolvedValue(true)
 
 			await resolveUserConfig(connection, qualifiedName, {}, mockSpinner as any)
@@ -120,7 +116,6 @@ describe("resolveUserConfig", () => {
 				it("returns existing keychain config when valid", async () => {
 					const existingConfig = savedConfigs.requiredAndOptional!
 					mockGetConfig.mockResolvedValue(existingConfig)
-					mockValidateAndFormatConfig.mockResolvedValue(existingConfig)
 
 					const result = await resolveUserConfig(
 						connection,
@@ -138,9 +133,6 @@ describe("resolveUserConfig", () => {
 				it("prompts for invalid/missing required fields when validation fails", async () => {
 					const existingConfig = savedConfigs.requiredAndOptionalPartial!
 					mockGetConfig.mockResolvedValue(existingConfig)
-					mockValidateAndFormatConfig.mockRejectedValue(
-						new Error("Validation failed"),
-					)
 					mockCollectConfigValues.mockResolvedValue(
 						collectedConfigs.missingEndpoint,
 					)
@@ -157,14 +149,7 @@ describe("resolveUserConfig", () => {
 
 				it("saves config after fixing invalid fields", async () => {
 					const existingConfig = savedConfigs.requiredAndOptionalPartial!
-					const fixedConfig = {
-						...existingConfig,
-						...collectedConfigs.missingEndpoint,
-					}
 					mockGetConfig.mockResolvedValue(existingConfig)
-					mockValidateAndFormatConfig
-						.mockRejectedValueOnce(new Error("Validation failed"))
-						.mockResolvedValueOnce(fixedConfig)
 					mockCollectConfigValues.mockResolvedValue(
 						collectedConfigs.missingEndpoint,
 					)
@@ -185,10 +170,6 @@ describe("resolveUserConfig", () => {
 					const keychainConfig = savedConfigs.requiredAndOptional!
 					const userConfig = { apiKey: "user-api-key" }
 					mockGetConfig.mockResolvedValue(keychainConfig)
-					mockValidateAndFormatConfig.mockResolvedValue({
-						...keychainConfig,
-						...userConfig,
-					})
 
 					const result = await resolveUserConfig(
 						connection,
@@ -202,14 +183,14 @@ describe("resolveUserConfig", () => {
 
 				it("validates merged config and prompts for invalid required fields", async () => {
 					const keychainConfig = savedConfigs.requiredAndOptional!
-					const userConfig = { apiKey: "user-api-key" }
+					// userConfig sets endpoint to empty string, which causes validation to fail
+					const userConfig = { apiKey: "user-api-key", endpoint: "" }
 					mockGetConfig.mockResolvedValue(keychainConfig)
-					mockValidateAndFormatConfig.mockRejectedValue(
-						new Error("Missing endpoint"),
-					)
-					mockCollectConfigValues.mockResolvedValue(
-						collectedConfigs.missingEndpoint,
-					)
+					mockCollectConfigValues.mockResolvedValue({
+						...keychainConfig,
+						...userConfig,
+						endpoint: "https://test.example.com", // Fixed value
+					})
 
 					await resolveUserConfig(
 						connection,
@@ -223,31 +204,27 @@ describe("resolveUserConfig", () => {
 
 				it("saves merged config", async () => {
 					const keychainConfig = savedConfigs.requiredAndOptional!
-					const userConfig = { apiKey: "user-api-key" }
+					// userConfig with all required fields
+					const userConfig = {
+						apiKey: "user-api-key",
+						endpoint: keychainConfig.endpoint,
+					}
 					mockGetConfig.mockResolvedValue(keychainConfig)
-					mockValidateAndFormatConfig.mockResolvedValue({
-						...keychainConfig,
-						...userConfig,
-					})
 
-					await resolveUserConfig(
+					const result = await resolveUserConfig(
 						connection,
 						qualifiedName,
 						userConfig,
 						mockSpinner as any,
 					)
 
-					expect(mockValidateAndFormatConfig).toHaveBeenCalled()
+					expect(result.apiKey).toBe("user-api-key")
 				})
 			})
 
 			it("prompts for optional fields after required are valid", async () => {
 				const existingConfig = savedConfigs.requiredAndOptional!
 				mockGetConfig.mockResolvedValue(existingConfig)
-				mockValidateAndFormatConfig.mockResolvedValue(existingConfig)
-				mockCollectConfigValues.mockResolvedValue({
-					debugMode: true,
-				})
 
 				await resolveUserConfig(
 					connection,
@@ -262,7 +239,6 @@ describe("resolveUserConfig", () => {
 			it("does not save if using existing as-is with no optional added", async () => {
 				const existingConfig = savedConfigs.requiredAndOptional!
 				mockGetConfig.mockResolvedValue(existingConfig)
-				mockValidateAndFormatConfig.mockResolvedValue(existingConfig)
 
 				const result = await resolveUserConfig(
 					connection,
@@ -278,10 +254,6 @@ describe("resolveUserConfig", () => {
 			it("saves if optional fields were added", async () => {
 				const existingConfig = savedConfigs.requiredAndOptional!
 				mockGetConfig.mockResolvedValue(existingConfig)
-				mockValidateAndFormatConfig.mockResolvedValue(existingConfig)
-				mockCollectConfigValues.mockResolvedValue({
-					debugMode: true,
-				})
 
 				await resolveUserConfig(
 					connection,
@@ -304,8 +276,6 @@ describe("resolveUserConfig", () => {
 					const keychainConfig = savedConfigs.requiredAndOptional!
 					const userConfig = { apiKey: "new-api-key", endpoint: "new-endpoint" }
 					mockGetConfig.mockResolvedValue(keychainConfig)
-					mockValidateAndFormatConfig.mockResolvedValue(userConfig)
-					mockCollectConfigValues.mockResolvedValue({})
 
 					const result = await resolveUserConfig(
 						connection,
@@ -320,14 +290,13 @@ describe("resolveUserConfig", () => {
 
 				it("validates --config and prompts for invalid required fields", async () => {
 					const keychainConfig = savedConfigs.requiredAndOptional!
+					// userConfig missing endpoint
 					const userConfig = { apiKey: "new-api-key" }
 					mockGetConfig.mockResolvedValue(keychainConfig)
-					mockValidateAndFormatConfig.mockRejectedValue(
-						new Error("Missing endpoint"),
-					)
-					mockCollectConfigValues.mockResolvedValue(
-						collectedConfigs.missingEndpoint,
-					)
+					mockCollectConfigValues.mockResolvedValue({
+						...userConfig,
+						endpoint: "https://test.example.com",
+					})
 
 					await resolveUserConfig(
 						connection,
@@ -404,7 +373,6 @@ describe("resolveUserConfig", () => {
 		describe("with --config provided", () => {
 			it("uses --config values as base", async () => {
 				const userConfig = collectedConfigs.requiredAndOptional
-				mockValidateAndFormatConfig.mockResolvedValue(userConfig)
 
 				const result = await resolveUserConfig(
 					connection,
@@ -417,13 +385,12 @@ describe("resolveUserConfig", () => {
 			})
 
 			it("validates --config and prompts for invalid required fields", async () => {
+				// userConfig missing endpoint
 				const userConfig = { apiKey: "test-key" }
-				mockValidateAndFormatConfig.mockRejectedValue(
-					new Error("Missing endpoint"),
-				)
-				mockCollectConfigValues.mockResolvedValue(
-					collectedConfigs.missingEndpoint,
-				)
+				mockCollectConfigValues.mockResolvedValue({
+					...userConfig,
+					endpoint: "https://test.example.com",
+				})
 
 				await resolveUserConfig(
 					connection,
@@ -437,33 +404,30 @@ describe("resolveUserConfig", () => {
 
 			it("prompts for optional fields after required are valid", async () => {
 				const userConfig = collectedConfigs.requiredAndOptionalNoOptional
-				mockValidateAndFormatConfig.mockResolvedValue(userConfig)
-				mockCollectConfigValues.mockResolvedValue({
-					debugMode: true,
-				})
 
-				await resolveUserConfig(
+				const result = await resolveUserConfig(
 					connection,
 					qualifiedName,
 					userConfig,
 					mockSpinner as any,
 				)
 
-				expect(mockValidateAndFormatConfig).toHaveBeenCalled()
+				// Should have defaults applied
+				expect(result.apiKey).toBe(userConfig.apiKey)
+				expect(result.endpoint).toBe(userConfig.endpoint)
 			})
 
 			it("validates and uses --config values", async () => {
 				const userConfig = collectedConfigs.requiredAndOptional
-				mockValidateAndFormatConfig.mockResolvedValue(userConfig)
 
-				await resolveUserConfig(
+				const result = await resolveUserConfig(
 					connection,
 					qualifiedName,
 					userConfig,
 					mockSpinner as any,
 				)
 
-				expect(mockValidateAndFormatConfig).toHaveBeenCalled()
+				expect(result).toEqual(userConfig)
 			})
 		})
 
@@ -541,18 +505,18 @@ describe("resolveUserConfig", () => {
 
 		it("does not apply defaults to required fields that are missing", async () => {
 			mockGetConfig.mockResolvedValue(null)
+			// collectConfigValues returns incomplete config (missing endpoint)
+			// This will cause validateAndFormatConfig to throw, which triggers
+			// collectConfigValues to be called again, but for this test we want
+			// to verify the error path, so we'll make it return incomplete config
 			mockCollectConfigValues.mockResolvedValue({
 				apiKey: "test-key",
 			})
 
-			const result = await resolveUserConfig(
-				connection,
-				qualifiedName,
-				{},
-				mockSpinner as any,
-			)
-
-			expect(result.endpoint).toBeUndefined()
+			// This should throw because endpoint is required
+			await expect(
+				resolveUserConfig(connection, qualifiedName, {}, mockSpinner as any),
+			).rejects.toThrow()
 		})
 	})
 
@@ -689,16 +653,15 @@ describe("resolveUserConfig", () => {
 
 		it("throws when validation fails after max retries", async () => {
 			mockGetConfig.mockResolvedValue(null)
-			mockCollectConfigValues.mockResolvedValue(
-				collectedConfigs.requiredAndOptional,
-			)
-			mockValidateAndFormatConfig.mockRejectedValue(
-				new Error("Validation failed"),
-			)
+			// collectConfigValues returns incomplete config repeatedly
+			mockCollectConfigValues.mockResolvedValue({
+				apiKey: "test-key",
+				// Missing required endpoint
+			})
 
 			await expect(
 				resolveUserConfig(connection, qualifiedName, {}, mockSpinner as any),
-			).rejects.toThrow()
+			).rejects.toThrow("Missing required config values")
 		})
 	})
 })

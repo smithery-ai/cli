@@ -1,4 +1,4 @@
-import type { ServerConfig } from "../../../types/registry"
+import type { ServerConfig } from "../../../../types/registry"
 
 export const collectedConfigs = {
 	requiredAndOptional: {

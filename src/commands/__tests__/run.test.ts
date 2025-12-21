@@ -37,7 +37,7 @@ vi.mock("../../lib/registry", () => ({
 }))
 
 // Mock prepareStdioConnection
-vi.mock("../../utils/prepare-stdio-connection", () => ({
+vi.mock("../../utils/run/prepare-stdio-connection", () => ({
 	prepareStdioConnection: vi.fn().mockResolvedValue({
 		command: "node",
 		args: ["server.js"],
@@ -47,7 +47,7 @@ vi.mock("../../utils/prepare-stdio-connection", () => ({
 }))
 
 // Mock settings
-vi.mock("../../utils/smithery-config", () => ({
+vi.mock("../../utils/smithery-settings", () => ({
 	initializeSettings: vi.fn().mockResolvedValue({ success: true }),
 	getAnalyticsConsent: vi.fn().mockResolvedValue(false),
 	getApiKey: vi.fn().mockResolvedValue("test-api-key"),
@@ -59,7 +59,7 @@ vi.mock("../../lib/keychain", () => ({
 }))
 
 import { resolveServer } from "../../lib/registry"
-import { prepareStdioConnection } from "../../utils/prepare-stdio-connection"
+import { prepareStdioConnection } from "../../utils/run/prepare-stdio-connection"
 import { run } from "../run/index"
 import { createStdioRunner } from "../run/stdio-runner"
 import { createStreamableHTTPRunner } from "../run/streamable-http-runner"

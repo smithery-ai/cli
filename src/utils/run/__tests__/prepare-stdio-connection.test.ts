@@ -7,18 +7,18 @@ import type { ServerDetailResponse } from "@smithery/registry/models/components"
 import { beforeEach, describe, expect, test, vi } from "vitest"
 
 // Mock dependencies
-vi.mock("../../lib/bundle-manager", () => ({
+vi.mock("../../../lib/bundle-manager", () => ({
 	ensureBundleInstalled: vi.fn(),
 	getBundleCommand: vi.fn(),
 	resolveEnvTemplates: vi.fn(),
 	resolveTemplateString: vi.fn(),
 }))
 
-vi.mock("../../lib/registry", () => ({
+vi.mock("../../../lib/registry", () => ({
 	fetchConnection: vi.fn(),
 }))
 
-vi.mock("../../commands/run/runner-utils", () => ({
+vi.mock("../../../commands/run/runner-utils", () => ({
 	logWithTimestamp: vi.fn(),
 }))
 
@@ -291,7 +291,7 @@ describe("prepareStdioConnection - Integration Tests with Real Resolution", () =
 		const { readFileSync } = await import("node:fs")
 		const { join } = await import("node:path")
 
-		const fixturesDir = join(__dirname, "fixtures")
+		const fixturesDir = join(__dirname, "../../install/__tests__/fixtures")
 		const manifest = JSON.parse(
 			readFileSync(
 				join(fixturesDir, "env-nested-config-manifest.json"),
@@ -325,7 +325,7 @@ describe("prepareStdioConnection - Integration Tests with Real Resolution", () =
 
 		const actualBundleManager = await vi.importActual<
 			typeof import("../../../lib/bundle-manager")
-		>("../../lib/bundle-manager")
+		>("../../../lib/bundle-manager")
 
 		vi.mocked(resolveTemplateString).mockImplementation(
 			actualBundleManager.resolveTemplateString,
@@ -354,7 +354,7 @@ describe("prepareStdioConnection - Integration Tests with Real Resolution", () =
 		const { readFileSync } = await import("node:fs")
 		const { join } = await import("node:path")
 
-		const fixturesDir = join(__dirname, "fixtures")
+		const fixturesDir = join(__dirname, "../../install/__tests__/fixtures")
 		const manifest = JSON.parse(
 			readFileSync(
 				join(fixturesDir, "args-nested-config-manifest.json"),
@@ -388,7 +388,7 @@ describe("prepareStdioConnection - Integration Tests with Real Resolution", () =
 
 		const actualBundleManager = await vi.importActual<
 			typeof import("../../../lib/bundle-manager")
-		>("../../lib/bundle-manager")
+		>("../../../lib/bundle-manager")
 
 		vi.mocked(resolveTemplateString).mockImplementation(
 			actualBundleManager.resolveTemplateString,
@@ -418,7 +418,7 @@ describe("prepareStdioConnection - Integration Tests with Real Resolution", () =
 		const { readFileSync } = await import("node:fs")
 		const { join } = await import("node:path")
 
-		const fixturesDir = join(__dirname, "fixtures")
+		const fixturesDir = join(__dirname, "../../install/__tests__/fixtures")
 		const manifest = JSON.parse(
 			readFileSync(
 				join(fixturesDir, "mixed-nested-config-manifest.json"),
@@ -452,7 +452,7 @@ describe("prepareStdioConnection - Integration Tests with Real Resolution", () =
 
 		const actualBundleManager = await vi.importActual<
 			typeof import("../../../lib/bundle-manager")
-		>("../../lib/bundle-manager")
+		>("../../../lib/bundle-manager")
 
 		vi.mocked(resolveTemplateString).mockImplementation(
 			actualBundleManager.resolveTemplateString,

@@ -4,7 +4,7 @@ import {
 	VALID_CLIENTS,
 	type ValidClient,
 } from "../config/clients"
-import { readConfig } from "../utils/install/mcp-config"
+import { readConfig } from "../utils/client-config"
 
 export async function list(
 	subcommand: string | undefined,

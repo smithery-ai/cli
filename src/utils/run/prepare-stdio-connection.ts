@@ -1,12 +1,12 @@
 import type { ServerDetailResponse } from "@smithery/registry/models/components"
-import { logWithTimestamp } from "../commands/run/runner-utils.js"
+import { logWithTimestamp } from "../../commands/run/runner-utils.js"
 import {
 	ensureBundleInstalled,
 	getBundleCommand,
 	resolveEnvTemplates,
 	resolveTemplateString,
-} from "../lib/bundle-manager.js"
-import type { ServerConfig } from "../types/registry.js"
+} from "../../lib/bundle-manager.js"
+import type { ServerConfig } from "../../types/registry.js"
 
 export interface PreparedStdioConnection {
 	command: string
