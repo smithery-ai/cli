@@ -45,6 +45,11 @@ jobs:
         node-version: ${{ matrix.node-version }}
         cache: 'pnpm'
 
+    - name: Install system dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y libsecret-1-dev
+
     - name: Install CLI dependencies
       run: |
         pnpm install
