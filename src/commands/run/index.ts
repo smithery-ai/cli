@@ -4,15 +4,15 @@ import type {
 	ServerDetailResponse,
 } from "@smithery/registry/models/components"
 import { RequestTimeoutError } from "@smithery/registry/models/errors"
-import { getConfig } from "../../lib/keychain.js"
-import { resolveServer } from "../../lib/registry.js"
-import type { ServerConfig } from "../../types/registry.js"
-import { prepareStdioConnection } from "../../utils/prepare-stdio-connection.js"
+import { getConfig } from "../../lib/keychain"
+import { resolveServer } from "../../lib/registry"
+import type { ServerConfig } from "../../types/registry"
+import { prepareStdioConnection } from "../../utils/run/prepare-stdio-connection"
 import {
 	getAnalyticsConsent,
 	getApiKey,
 	initializeSettings,
-} from "../../utils/smithery-config.js"
+} from "../../utils/smithery-settings.js"
 import { createLocalPlaygroundRunner } from "./local-playground-runner.js"
 import { logWithTimestamp } from "./runner-utils.js"
 import { createStdioRunner as startSTDIOrunner } from "./stdio-runner.js"

@@ -27,8 +27,8 @@ import {
 	getBundleCommand,
 	resolveEnvTemplates,
 	resolveTemplateString,
-} from "../../lib/bundle-manager"
-import { fetchConnection } from "../../lib/registry"
+} from "../../../lib/bundle-manager"
+import { fetchConnection } from "../../../lib/registry"
 import { prepareStdioConnection } from "../prepare-stdio-connection"
 
 describe("prepareStdioConnection", () => {
@@ -324,7 +324,7 @@ describe("prepareStdioConnection - Integration Tests with Real Resolution", () =
 		})
 
 		const actualBundleManager = await vi.importActual<
-			typeof import("../../lib/bundle-manager")
+			typeof import("../../../lib/bundle-manager")
 		>("../../lib/bundle-manager")
 
 		vi.mocked(resolveTemplateString).mockImplementation(
@@ -387,7 +387,7 @@ describe("prepareStdioConnection - Integration Tests with Real Resolution", () =
 		})
 
 		const actualBundleManager = await vi.importActual<
-			typeof import("../../lib/bundle-manager")
+			typeof import("../../../lib/bundle-manager")
 		>("../../lib/bundle-manager")
 
 		vi.mocked(resolveTemplateString).mockImplementation(
@@ -451,7 +451,7 @@ describe("prepareStdioConnection - Integration Tests with Real Resolution", () =
 		})
 
 		const actualBundleManager = await vi.importActual<
-			typeof import("../../lib/bundle-manager")
+			typeof import("../../../lib/bundle-manager")
 		>("../../lib/bundle-manager")
 
 		vi.mocked(resolveTemplateString).mockImplementation(

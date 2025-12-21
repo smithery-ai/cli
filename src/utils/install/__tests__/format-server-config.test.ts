@@ -3,20 +3,20 @@
  */
 
 import { beforeEach, describe, expect, test, vi } from "vitest"
-import { Transport } from "../../config/clients"
+import { Transport } from "../../../config/clients"
 import { formatServerConfig } from "../format-server-config"
 import { optionalOnlyServer } from "./fixtures/servers"
 
 // Mock getClientConfiguration
-vi.mock("../../config/clients", async () => {
-	const actual = await vi.importActual("../../config/clients")
+vi.mock("../../../config/clients", async () => {
+	const actual = await vi.importActual("../../../config/clients")
 	return {
 		...actual,
 		getClientConfiguration: vi.fn(),
 	}
 })
 
-import { getClientConfiguration } from "../../config/clients"
+import { getClientConfiguration } from "../../../config/clients"
 
 const mockGetClientConfiguration = vi.mocked(getClientConfiguration)
 

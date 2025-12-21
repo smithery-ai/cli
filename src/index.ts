@@ -24,7 +24,7 @@ import {
 	validateClient,
 } from "./utils/command-prompts"
 import { ensureApiKey, promptForApiKey } from "./utils/runtime"
-import { setApiKey } from "./utils/smithery-config"
+import { setApiKey } from "./utils/smithery-settings"
 
 // TypeScript declaration for global constant injected at build time
 declare const __SMITHERY_VERSION__: string
@@ -94,7 +94,7 @@ program
 		`Specify the AI client (${VALID_CLIENTS.join(", ")})`,
 	)
 	.action(async (server, options) => {
-		const { readConfig } = await import("./utils/mcp-config")
+		const { readConfig } = await import("./utils/install/mcp-config")
 
 		// Step 1: Select client if not provided
 		const selectedClient = await selectClient(options.client, "Uninstall")

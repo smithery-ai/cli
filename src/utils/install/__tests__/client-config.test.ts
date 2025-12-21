@@ -13,13 +13,13 @@ import fs from "node:fs"
 import os from "node:os"
 import path from "node:path"
 import { beforeEach, describe, expect, test, vi } from "vitest"
-import { Transport } from "../../config/clients"
+import { Transport } from "../../../config/clients"
 import type { ClientMCPConfig } from "../mcp-config"
 import { readConfig, writeConfig } from "../mcp-config"
 
 // Mock getClientConfiguration to return test configs
-vi.mock("../../config/clients", async () => {
-	const actual = await vi.importActual("../../config/clients")
+vi.mock("../../../config/clients", async () => {
+	const actual = await vi.importActual("../../../config/clients")
 	return {
 		...actual,
 		getClientConfiguration: vi.fn(),
@@ -32,7 +32,7 @@ vi.mock("../../lib/logger", () => ({
 }))
 
 // Import after mocking
-import { getClientConfiguration } from "../../config/clients"
+import { getClientConfiguration } from "../../../config/clients"
 
 const mockGetClientConfiguration = vi.mocked(getClientConfiguration)
 

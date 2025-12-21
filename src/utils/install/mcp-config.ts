@@ -6,9 +6,9 @@ import * as YAML from "yaml"
 import {
 	type ClientConfiguration,
 	getClientConfiguration,
-} from "../config/clients.js"
-import { verbose } from "../lib/logger.js"
-import type { MCPConfig } from "../types/registry.js"
+} from "../../config/clients.js"
+import { verbose } from "../../lib/logger.js"
+import type { MCPConfig } from "../../types/registry.js"
 
 export interface ClientMCPConfig extends MCPConfig {
 	[key: string]: any

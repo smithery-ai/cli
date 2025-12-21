@@ -20,7 +20,7 @@ import {
 } from "../types/registry"
 import { getSessionId } from "../utils/analytics"
 import { fetchWithTimeout } from "../utils/fetch"
-import { getUserId } from "../utils/smithery-config"
+import { getUserId } from "../utils/smithery-settings"
 import { verbose } from "./logger"
 
 dotenvConfig({ quiet: true })

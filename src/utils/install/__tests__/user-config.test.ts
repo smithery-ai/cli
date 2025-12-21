@@ -10,19 +10,16 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 import {
 	ensureBundleInstalled,
 	getBundleUserConfigSchema,
-} from "../../lib/bundle-manager"
-import { getConfig } from "../../lib/keychain"
-import type { ServerConfig } from "../../types/registry"
-import { promptForExistingConfig } from "../../utils/command-prompts"
-import {
-	collectConfigValues,
-	validateAndFormatConfig,
-} from "../../utils/session-config"
+} from "../../../lib/bundle-manager"
+import { getConfig } from "../../../lib/keychain"
+import type { ServerConfig } from "../../../types/registry"
+import { promptForExistingConfig } from "../../command-prompts"
+import { collectConfigValues, validateAndFormatConfig } from "../session-config"
 import {
 	applySchemaDefaults,
 	resolveUserConfig,
 	serverNeedsConfig,
-} from "../../utils/user-config"
+} from "../user-config"
 import { collectedConfigs, savedConfigs } from "./fixtures/configurations"
 import {
 	noConfigServer,
@@ -31,27 +28,27 @@ import {
 } from "./fixtures/servers.js"
 
 // Mock all dependencies
-vi.mock("../../lib/keychain", () => ({
+vi.mock("../../../lib/keychain", () => ({
 	getConfig: vi.fn(),
 	saveConfig: vi.fn(),
 	deleteConfig: vi.fn(),
 }))
 
-vi.mock("../../utils/session-config", () => ({
+vi.mock("../session-config", () => ({
 	validateAndFormatConfig: vi.fn(),
 	collectConfigValues: vi.fn(),
 }))
 
-vi.mock("../../utils/command-prompts", () => ({
+vi.mock("../../command-prompts", () => ({
 	promptForExistingConfig: vi.fn(),
 }))
 
-vi.mock("../../lib/bundle-manager", () => ({
+vi.mock("../../../lib/bundle-manager", () => ({
 	ensureBundleInstalled: vi.fn(),
 	getBundleUserConfigSchema: vi.fn(),
 }))
 
-vi.mock("../logger", () => ({
+vi.mock("../../../lib/logger", () => ({
 	verbose: vi.fn(),
 }))
 

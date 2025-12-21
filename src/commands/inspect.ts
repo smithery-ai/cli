@@ -8,8 +8,8 @@ import inquirer from "inquirer"
 import ora from "ora"
 import { debug, verbose } from "../lib/logger"
 import { resolveServer } from "../lib/registry"
+import { collectConfigValues } from "../utils/install/session-config"
 import { getRuntimeEnvironment } from "../utils/runtime.js"
-import { collectConfigValues } from "../utils/session-config"
 
 async function createClient() {
 	const client = new Client(

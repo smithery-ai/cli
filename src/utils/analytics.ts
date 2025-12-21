@@ -7,7 +7,7 @@ import {
 	hasAskedConsent,
 	initializeSettings,
 	setAnalyticsConsent,
-} from "./smithery-config"
+} from "./smithery-settings"
 
 // Session management
 type Session = {

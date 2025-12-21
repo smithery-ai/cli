@@ -10,16 +10,20 @@ import { resolveServer } from "../lib/registry"
 import type { ServerConfig } from "../types/registry"
 import { checkAnalyticsConsent } from "../utils/analytics"
 import { promptForRestart } from "../utils/client"
-import { formatServerConfig } from "../utils/format-server-config"
-import { readConfig, runConfigCommand, writeConfig } from "../utils/mcp-config"
+import { formatServerConfig } from "../utils/install/format-server-config"
+import {
+	readConfig,
+	runConfigCommand,
+	writeConfig,
+} from "../utils/install/mcp-config"
+import { getServerName } from "../utils/install/session-config"
+import { resolveUserConfig } from "../utils/install/user-config"
 import {
 	checkAndNotifyRemoteServer,
 	ensureApiKey,
 	ensureBunInstalled,
 	ensureUVInstalled,
 } from "../utils/runtime"
-import { getServerName } from "../utils/session-config"
-import { resolveUserConfig } from "../utils/user-config"
 
 /**
  * Installs and configures a Smithery server for a specified client.

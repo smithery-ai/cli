@@ -1,7 +1,7 @@
 import type { ConnectionInfo } from "@smithery/registry/models/components"
 import chalk from "chalk"
 import inquirer from "inquirer"
-import type { JSONSchema, ServerConfig } from "../types/registry"
+import type { JSONSchema, ServerConfig } from "../../types/registry"
 
 /**
  * Formats and validates configuration values according to the connection's schema
