@@ -636,3 +636,278 @@ describe("read-modify-write cycle (real-world flow)", () => {
 		expect(written.mcpServers["new-server"]).toBeDefined()
 	})
 })
+
+describe("goose client (extensions key format)", () => {
+	let tempDir: string
+
+	beforeEach(() => {
+		vi.clearAllMocks()
+		tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "mcp-config-test-"))
+	})
+
+	test("should read goose config with extensions key", () => {
+		// ARRANGE: Goose config with extensions key
+		const configPath = path.join(tempDir, "goose.yaml")
+		const yamlContent = `extensions:
+  github:
+    name: GitHub
+    cmd: npx
+    args:
+      - -y
+      - "@modelcontextprotocol/server-github"
+    enabled: true
+    envs:
+      GITHUB_PERSONAL_ACCESS_TOKEN: "<YOUR_TOKEN>"
+    type: stdio
+    timeout: 300
+`
+		fs.writeFileSync(configPath, yamlContent)
+
+		mockGetClientConfiguration.mockReturnValue({
+			label: "Goose",
+			supportedTransports: [Transport.STDIO, Transport.HTTP],
+			installType: "yaml",
+			yamlKey: "extensions",
+			path: configPath,
+		})
+
+		// ACT
+		const result = readConfig("goose")
+
+		// ASSERT: Should read and transform goose format to standard format
+		expect(result.mcpServers.github).toEqual({
+			command: "npx",
+			args: ["-y", "@modelcontextprotocol/server-github"],
+			env: {
+				GITHUB_PERSONAL_ACCESS_TOKEN: "<YOUR_TOKEN>",
+			},
+		})
+		// STDIO configs in standard format don't have a type field
+		expect(result.mcpServers.github).not.toHaveProperty("type")
+		// Should not include goose-specific fields (name, enabled, timeout)
+		expect(result.mcpServers.github).not.toHaveProperty("name")
+		expect(result.mcpServers.github).not.toHaveProperty("enabled")
+		expect(result.mcpServers.github).not.toHaveProperty("timeout")
+	})
+
+	test("should read goose config with HTTP server", () => {
+		// ARRANGE: Goose config with HTTP server
+		const configPath = path.join(tempDir, "goose.yaml")
+		const yamlContent = `extensions:
+  test-server:
+    name: Test Server
+    cmd: npx
+    args: []
+    enabled: true
+    envs: {}
+    type: http
+    url: "https://server.smithery.ai/@test/server/mcp"
+    timeout: 300
+`
+		fs.writeFileSync(configPath, yamlContent)
+
+		mockGetClientConfiguration.mockReturnValue({
+			label: "Goose",
+			supportedTransports: [Transport.STDIO, Transport.HTTP],
+			installType: "yaml",
+			yamlKey: "extensions",
+			path: configPath,
+		})
+
+		// ACT
+		const result = readConfig("goose")
+
+		// ASSERT: Should read HTTP server config
+		// Note: HTTP configs may include empty cmd/args/envs from goose format, but we filter those out
+		expect(result.mcpServers["test-server"]).toMatchObject({
+			type: "http",
+			url: "https://server.smithery.ai/@test/server/mcp",
+		})
+		// Should not include STDIO-specific fields for HTTP configs
+		expect(result.mcpServers["test-server"]).not.toHaveProperty("command")
+		expect(result.mcpServers["test-server"]).not.toHaveProperty("args")
+		expect(result.mcpServers["test-server"]).not.toHaveProperty("env")
+	})
+
+	test("should write goose config with proper format transformation", () => {
+		// ARRANGE: Standard format config
+		const configPath = path.join(tempDir, "goose.yaml")
+		const config: ClientMCPConfig = {
+			mcpServers: {
+				github: {
+					command: "npx",
+					args: ["-y", "@modelcontextprotocol/server-github"],
+					env: {
+						GITHUB_PERSONAL_ACCESS_TOKEN: "<YOUR_TOKEN>",
+					},
+				},
+			},
+		}
+
+		mockGetClientConfiguration.mockReturnValue({
+			label: "Goose",
+			supportedTransports: [Transport.STDIO, Transport.HTTP],
+			installType: "yaml",
+			yamlKey: "extensions",
+			path: configPath,
+		})
+
+		// ACT
+		writeConfig(config, "goose")
+
+		// ASSERT: File should be created with goose format
+		expect(fs.existsSync(configPath)).toBe(true)
+		const content = fs.readFileSync(configPath, "utf8")
+		expect(content).toContain("extensions:")
+		expect(content).toContain("github:")
+		expect(content).toContain("cmd: npx")
+		expect(content).toContain("name: Github")
+		expect(content).toContain("enabled: true")
+		expect(content).toContain("type: stdio")
+		expect(content).toContain("timeout: 300")
+		expect(content).toContain("envs:")
+		expect(content).toContain("GITHUB_PERSONAL_ACCESS_TOKEN")
+
+		// Verify by reading back
+		const written = readConfig("goose")
+		expect(written.mcpServers.github).toEqual({
+			command: "npx",
+			args: ["-y", "@modelcontextprotocol/server-github"],
+			env: {
+				GITHUB_PERSONAL_ACCESS_TOKEN: "<YOUR_TOKEN>",
+			},
+		})
+	})
+
+	test("should write goose config with HTTP server", () => {
+		// ARRANGE: Standard format HTTP config
+		const configPath = path.join(tempDir, "goose.yaml")
+		const config: ClientMCPConfig = {
+			mcpServers: {
+				"test-server": {
+					type: "http",
+					url: "https://server.smithery.ai/@test/server/mcp",
+					headers: {},
+				},
+			},
+		}
+
+		mockGetClientConfiguration.mockReturnValue({
+			label: "Goose",
+			supportedTransports: [Transport.STDIO, Transport.HTTP],
+			installType: "yaml",
+			yamlKey: "extensions",
+			path: configPath,
+		})
+
+		// ACT
+		writeConfig(config, "goose")
+
+		// ASSERT: File should contain HTTP server in goose format
+		expect(fs.existsSync(configPath)).toBe(true)
+		const content = fs.readFileSync(configPath, "utf8")
+		expect(content).toContain("extensions:")
+		expect(content).toContain("test-server:")
+		expect(content).toContain("type: http")
+		expect(content).toContain("url:")
+		expect(content).toContain("name: Test Server")
+		expect(content).toContain("enabled: true")
+		expect(content).toContain("timeout: 300")
+
+		// Verify by reading back
+		const written = readConfig("goose")
+		expect(written.mcpServers["test-server"]).toEqual({
+			type: "http",
+			url: "https://server.smithery.ai/@test/server/mcp",
+			headers: {},
+		})
+	})
+
+	test("should merge existing goose configs", () => {
+		// ARRANGE: Existing goose config
+		const configPath = path.join(tempDir, "goose.yaml")
+		const yamlContent = `extensions:
+  existing-server:
+    name: Existing Server
+    cmd: npx
+    args:
+      - -y
+      - "@smithery/cli@latest"
+      - run
+      - existing-server
+    enabled: true
+    envs: {}
+    type: stdio
+    timeout: 300
+`
+		fs.writeFileSync(configPath, yamlContent)
+
+		mockGetClientConfiguration.mockReturnValue({
+			label: "Goose",
+			supportedTransports: [Transport.STDIO, Transport.HTTP],
+			installType: "yaml",
+			yamlKey: "extensions",
+			path: configPath,
+		})
+
+		// ACT: Read, add server, write
+		const config = readConfig("goose")
+		config.mcpServers["new-server"] = {
+			command: "npx",
+			args: ["-y", "@smithery/cli@latest", "run", "new-server"],
+		}
+		writeConfig(config, "goose")
+
+		// ASSERT: Both servers should be present
+		const written = readConfig("goose")
+		expect(written.mcpServers["existing-server"]).toBeDefined()
+		expect(written.mcpServers["new-server"]).toBeDefined()
+		expect(written.mcpServers["existing-server"]).toEqual({
+			command: "npx",
+			args: ["-y", "@smithery/cli@latest", "run", "existing-server"],
+		})
+		// STDIO configs in standard format don't have a type field
+		expect(written.mcpServers["existing-server"]).not.toHaveProperty("type")
+		expect(written.mcpServers["new-server"]).toEqual({
+			command: "npx",
+			args: ["-y", "@smithery/cli@latest", "run", "new-server"],
+		})
+	})
+
+	test("should preserve other top-level keys in goose config", () => {
+		// ARRANGE: Goose config with other top-level keys
+		const configPath = path.join(tempDir, "goose.yaml")
+		const yamlContent = `someOtherField: preserved-value
+extensions:
+  test-server:
+    name: Test Server
+    cmd: npx
+    args: []
+    enabled: true
+    envs: {}
+    type: stdio
+    timeout: 300
+`
+		fs.writeFileSync(configPath, yamlContent)
+
+		mockGetClientConfiguration.mockReturnValue({
+			label: "Goose",
+			supportedTransports: [Transport.STDIO, Transport.HTTP],
+			installType: "yaml",
+			yamlKey: "extensions",
+			path: configPath,
+		})
+
+		// ACT: Read, modify, write
+		const config = readConfig("goose")
+		config.mcpServers["new-server"] = {
+			command: "npx",
+			args: ["test"],
+		}
+		writeConfig(config, "goose")
+
+		// ASSERT: Other top-level keys should be preserved
+		const content = fs.readFileSync(configPath, "utf8")
+		expect(content).toContain("someOtherField: preserved-value")
+	})
+})

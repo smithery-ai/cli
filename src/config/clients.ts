@@ -55,6 +55,10 @@ export interface ClientConfiguration {
 	// Optional override for HTTP type value (defaults to "http")
 	// Some clients require different type values like "streamableHttp"
 	httpType?: string
+
+	// Optional override for YAML top-level key (defaults to "mcpServers")
+	// Some clients use different keys like "extensions"
+	yamlKey?: string
 }
 
 // Initialize platform-specific paths
@@ -247,6 +251,13 @@ export const CLIENT_CONFIGURATIONS: Record<string, ClientConfiguration> = {
 		installType: "json",
 		// Note: Tome might use deep links instead of file config
 		path: path.join(homeDir, ".tome", "mcp_config.json"),
+	},
+	goose: {
+		label: "Goose",
+		supportedTransports: [Transport.STDIO, Transport.HTTP],
+		installType: "yaml",
+		yamlKey: "extensions",
+		path: path.join(homeDir, ".config", "goose", "config.yaml"),
 	},
 }
 

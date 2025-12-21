@@ -50,6 +50,126 @@ function transformHTTPServerConfig(
 	return transformed
 }
 
+/**
+ * Transforms goose format server config to standard format
+ * @param gooseConfig - The goose format server configuration
+ * @returns Standard format server configuration
+ */
+function transformGooseToStandard(gooseConfig: any): any {
+	if (!gooseConfig || typeof gooseConfig !== "object") {
+		return gooseConfig
+	}
+
+	const standard: any = {}
+
+	// Check if this is an HTTP config
+	const isHTTP =
+		gooseConfig.type === "http" || gooseConfig.type === "streamableHttp"
+
+	if (isHTTP) {
+		// HTTP config: preserve type, url, headers
+		standard.type = gooseConfig.type
+		if ("url" in gooseConfig) {
+			standard.url = gooseConfig.url
+		}
+		if ("headers" in gooseConfig) {
+			standard.headers = gooseConfig.headers
+		}
+	} else {
+		// STDIO config: transform cmd -> command, preserve args and env
+		// Note: STDIO configs in standard format don't have a type field
+		if ("cmd" in gooseConfig) {
+			standard.command = gooseConfig.cmd
+		}
+		if (
+			"args" in gooseConfig &&
+			Array.isArray(gooseConfig.args) &&
+			gooseConfig.args.length > 0
+		) {
+			standard.args = gooseConfig.args
+		}
+		// Transform envs -> env (only if present and not empty)
+		if (
+			"envs" in gooseConfig &&
+			gooseConfig.envs &&
+			Object.keys(gooseConfig.envs).length > 0
+		) {
+			standard.env = gooseConfig.envs
+		}
+		// Don't include type for STDIO configs in standard format
+	}
+
+	// Ignore name, enabled, timeout (write-only metadata)
+
+	return standard
+}
+
+/**
+ * Transforms standard format server config to goose format
+ * @param standardConfig - The standard format server configuration
+ * @param serverName - The server name (used for generating display name)
+ * @returns Goose format server configuration
+ */
+function transformStandardToGoose(
+	standardConfig: any,
+	serverName: string,
+): any {
+	if (!standardConfig || typeof standardConfig !== "object") {
+		return standardConfig
+	}
+
+	const goose: any = {}
+
+	// Check if this is an HTTP config
+	const isHTTP =
+		"type" in standardConfig &&
+		(standardConfig.type === "http" || standardConfig.type === "streamableHttp")
+
+	if (isHTTP) {
+		// HTTP config: preserve type, url, headers
+		goose.type = standardConfig.type
+		if ("url" in standardConfig) {
+			goose.url = standardConfig.url
+		}
+		if ("headers" in standardConfig) {
+			goose.headers = standardConfig.headers
+		}
+	} else {
+		// STDIO config: transform command -> cmd, preserve args and env
+		if ("command" in standardConfig) {
+			goose.cmd = standardConfig.command
+		}
+		if (
+			"args" in standardConfig &&
+			Array.isArray(standardConfig.args) &&
+			standardConfig.args.length > 0
+		) {
+			goose.args = standardConfig.args
+		}
+		// Transform env -> envs (only if present)
+		if (
+			"env" in standardConfig &&
+			standardConfig.env &&
+			Object.keys(standardConfig.env).length > 0
+		) {
+			goose.envs = standardConfig.env
+		}
+		// Add type for STDIO configs
+		goose.type = "stdio"
+	}
+
+	// Add goose-specific fields
+	// Capitalize first letter of each word
+	const nameParts = serverName
+		.split("-")
+		.map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+	goose.name = nameParts.join(" ")
+	goose.enabled = true
+	goose.timeout = 300
+
+	return goose
+}
+
 export function readConfig(client: string): ClientMCPConfig {
 	verbose(`Reading config for client: ${client}`)
 	try {
@@ -99,6 +219,19 @@ export function readConfig(client: string): ClientMCPConfig {
 		if (clientConfig.installType === "toml" && rawConfig.mcp_servers) {
 			// TOML format uses mcp_servers (underscore) instead of mcpServers (camelCase)
 			mcpServers = rawConfig.mcp_servers
+		} else if (
+			clientConfig.installType === "yaml" &&
+			clientConfig.yamlKey &&
+			clientConfig.yamlKey !== "mcpServers" &&
+			rawConfig[clientConfig.yamlKey]
+		) {
+			// YAML format may use custom key (e.g., "extensions" for goose)
+			const rawServers = rawConfig[clientConfig.yamlKey]
+			// Transform goose format to standard format
+			mcpServers = {}
+			for (const [serverName, serverConfig] of Object.entries(rawServers)) {
+				mcpServers[serverName] = transformGooseToStandard(serverConfig)
+			}
 		}
 
 		// Normalize HTTP server configs: convert custom URL keys and types back to standard format for internal consistency
@@ -351,12 +484,16 @@ function writeConfigYaml(
 
 	verbose(`Merging YAML configs`)
 
+	// Determine the YAML key to use (defaults to "mcpServers")
+	const yamlKey = clientConfig.yamlKey || "mcpServers"
+	const isGooseFormat = yamlKey === "extensions"
+
 	if (originalDoc) {
-		let mcpServersNode = originalDoc.get("mcpServers")
+		let mcpServersNode = originalDoc.get(yamlKey)
 		if (!mcpServersNode) {
-			verbose(`mcpServers section not found, creating new section`)
-			originalDoc.set("mcpServers", new YAML.YAMLMap())
-			mcpServersNode = originalDoc.get("mcpServers")
+			verbose(`${yamlKey} section not found, creating new section`)
+			originalDoc.set(yamlKey, new YAML.YAMLMap())
+			mcpServersNode = originalDoc.get(yamlKey)
 		}
 
 		if (mcpServersNode && typeof mcpServersNode.set === "function") {
@@ -383,10 +520,18 @@ function writeConfigYaml(
 				verbose(`Adding/updating server: ${serverName}`)
 
 				// Transform HTTP server config if client has httpUrlKey override
-				const transformedConfig = transformHTTPServerConfig(
+				let transformedConfig = transformHTTPServerConfig(
 					serverConfig,
 					clientConfig,
 				)
+
+				// Transform to goose format if needed
+				if (isGooseFormat) {
+					transformedConfig = transformStandardToGoose(
+						transformedConfig,
+						serverName,
+					)
+				}
 
 				const existingServer = mcpServersNode.get(serverName)
 				if (existingServer && typeof existingServer.set === "function") {
@@ -404,7 +549,7 @@ function writeConfigYaml(
 		} else {
 			const nodeType = mcpServersNode ? typeof mcpServersNode : "undefined"
 			throw new Error(
-				`mcpServers section is not a proper YAML Map (found: ${nodeType}). Please ensure the YAML file has a valid mcpServers section or create a new file.`,
+				`${yamlKey} section is not a proper YAML Map (found: ${nodeType}). Please ensure the YAML file has a valid ${yamlKey} section or create a new file.`,
 			)
 		}
 
@@ -412,24 +557,27 @@ function writeConfigYaml(
 		verbose(`YAML config updated`)
 	} else {
 		// Create new file from scratch
+		// Determine the YAML key to use (defaults to "mcpServers")
+		const yamlKey = clientConfig.yamlKey || "mcpServers"
+		const isGooseFormat = yamlKey === "extensions"
+
 		// Transform HTTP server configs if client has httpUrlKey or httpType override
 		const transformedServers: Record<string, any> = {}
-		if (
-			config.mcpServers &&
-			(clientConfig.httpUrlKey || clientConfig.httpType)
-		) {
+		if (config.mcpServers) {
 			for (const [serverName, serverConfig] of Object.entries(
 				config.mcpServers,
 			)) {
-				transformedServers[serverName] = transformHTTPServerConfig(
-					serverConfig,
-					clientConfig,
-				)
+				let transformed = serverConfig
+				if (clientConfig.httpUrlKey || clientConfig.httpType) {
+					transformed = transformHTTPServerConfig(serverConfig, clientConfig)
+				}
+				if (isGooseFormat) {
+					transformed = transformStandardToGoose(transformed, serverName)
+				}
+				transformedServers[serverName] = transformed
 			}
-		} else {
-			Object.assign(transformedServers, config.mcpServers)
 		}
-		const newConfig = { mcpServers: transformedServers }
+		const newConfig = { [yamlKey]: transformedServers }
 		const yamlContent = YAML.stringify(newConfig, {
 			indent: 2,
 			lineWidth: -1,
