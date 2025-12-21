@@ -19,7 +19,6 @@ import {
 	applySchemaDefaults,
 	resolveUserConfig,
 	serverNeedsConfig,
-	validateAndFormatConfig,
 } from "../user-config"
 import { collectedConfigs, savedConfigs } from "./fixtures/configurations"
 import {

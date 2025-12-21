@@ -435,6 +435,74 @@ describe("writeConfig", () => {
 			headers: {},
 		})
 	})
+
+	test("should write Windsurf HTTP server config with serverUrl key override", () => {
+		// ARRANGE: Windsurf config with HTTP server (should use serverUrl instead of url)
+		const configPath = path.join(tempDir, "windsurf.json")
+		const config: ClientMCPConfig = {
+			mcpServers: {
+				"test-server": {
+					type: "http",
+					url: "https://server.smithery.ai/@test/server/mcp",
+					headers: {},
+				},
+			},
+		}
+
+		mockGetClientConfiguration.mockReturnValue({
+			label: "Windsurf",
+			supportedTransports: [Transport.STDIO, Transport.HTTP],
+			installType: "json",
+			httpUrlKey: "serverUrl",
+			path: configPath,
+		})
+
+		// ACT
+		writeConfig(config, "windsurf")
+
+		// ASSERT: HTTP config should be written with serverUrl key (not url)
+		const written = JSON.parse(fs.readFileSync(configPath, "utf8"))
+		expect(written.mcpServers["test-server"]).toEqual({
+			type: "http",
+			serverUrl: "https://server.smithery.ai/@test/server/mcp",
+			headers: {},
+		})
+		expect(written.mcpServers["test-server"].url).toBeUndefined()
+	})
+
+	test("should write Cline HTTP server config with streamableHttp type override", () => {
+		// ARRANGE: Cline config with HTTP server (should use streamableHttp instead of http)
+		const configPath = path.join(tempDir, "cline.json")
+		const config: ClientMCPConfig = {
+			mcpServers: {
+				"test-server": {
+					type: "http",
+					url: "https://server.smithery.ai/@test/server/mcp",
+					headers: {},
+				},
+			},
+		}
+
+		mockGetClientConfiguration.mockReturnValue({
+			label: "Cline",
+			supportedTransports: [Transport.STDIO, Transport.HTTP],
+			installType: "json",
+			httpType: "streamableHttp",
+			path: configPath,
+		})
+
+		// ACT
+		writeConfig(config, "cline")
+
+		// ASSERT: HTTP config should be written with streamableHttp type (not http)
+		const written = JSON.parse(fs.readFileSync(configPath, "utf8"))
+		expect(written.mcpServers["test-server"]).toEqual({
+			type: "streamableHttp",
+			url: "https://server.smithery.ai/@test/server/mcp",
+			headers: {},
+		})
+		expect(written.mcpServers["test-server"].type).toBe("streamableHttp")
+	})
 })
 
 describe("read-modify-write cycle (real-world flow)", () => {

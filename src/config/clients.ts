@@ -5,6 +5,16 @@
 
 import os from "node:os"
 import path from "node:path"
+import {
+	claudeCodeHttpCommand,
+	claudeCodeStdioCommand,
+	codexHttpCommand,
+	codexStdioCommand,
+	geminiCliHttpCommand,
+	geminiCliStdioCommand,
+	vscodeHttpCommand,
+	vscodeStdioCommand,
+} from "./command-templates.js"
 
 export enum Transport {
 	STDIO = "stdio",
@@ -37,6 +47,14 @@ export interface ClientConfiguration {
 
 	// Whether this client supports OAuth authentication (no API key needed in URL)
 	supportsOAuth?: boolean
+
+	// Optional override for HTTP URL key name (defaults to "url")
+	// Some clients require different key names like "serverUrl"
+	httpUrlKey?: string
+
+	// Optional override for HTTP type value (defaults to "http")
+	// Some clients require different type values like "streamableHttp"
+	httpType?: string
 }
 
 // Initialize platform-specific paths
@@ -74,22 +92,8 @@ export const CLIENT_CONFIGURATIONS: Record<string, ClientConfiguration> = {
 		command: "claude",
 		supportsOAuth: true,
 		commandConfig: {
-			stdio: (name: string, command: string, args: string[]) => [
-				"mcp",
-				"add",
-				name,
-				"--",
-				command,
-				...args,
-			], // claude mcp add wonderwhy-er-desktop-commander -- npx -y @smithery/cli@latest run @wonderwhy-er/desktop-commander --key xxx
-			http: (name: string, url: string) => [
-				"mcp",
-				"add",
-				"--transport",
-				"http",
-				name,
-				url,
-			], // claude mcp add --transport http upstash-context-7-mcp "https://server.smithery.ai/@upstash/context7-mcp/mcp"
+			stdio: claudeCodeStdioCommand,
+			http: claudeCodeHttpCommand,
 		},
 	},
 	cursor: {
@@ -105,6 +109,7 @@ export const CLIENT_CONFIGURATIONS: Record<string, ClientConfiguration> = {
 		supportedTransports: [Transport.STDIO, Transport.HTTP],
 		installType: "json",
 		supportsOAuth: true,
+		httpUrlKey: "serverUrl",
 		path: path.join(homeDir, ".codeium", "windsurf", "mcp_config.json"),
 	},
 	cline: {
@@ -112,6 +117,7 @@ export const CLIENT_CONFIGURATIONS: Record<string, ClientConfiguration> = {
 		supportedTransports: [Transport.STDIO, Transport.HTTP],
 		installType: "json",
 		supportsOAuth: true,
+		httpType: "streamableHttp",
 		path: path.join(
 			baseDir,
 			vscodePath,
@@ -128,14 +134,8 @@ export const CLIENT_CONFIGURATIONS: Record<string, ClientConfiguration> = {
 		supportsOAuth: true,
 		command: process.platform === "win32" ? "code.cmd" : "code",
 		commandConfig: {
-			stdio: (name: string, command: string, args: string[]) => [
-				"--add-mcp",
-				JSON.stringify({ name, command, args }),
-			], // code --add-mcp '{"name":"server","command":"npx","args":["@my/server"]}'
-			http: (name: string, url: string) => [
-				"--add-mcp",
-				JSON.stringify({ name, type: "http", url }),
-			], // code --add-mcp '{"name":"server","type":"http","url":"https://..."}'
+			stdio: vscodeStdioCommand,
+			http: vscodeHttpCommand,
 		},
 	},
 	"vscode-insiders": {
@@ -147,14 +147,8 @@ export const CLIENT_CONFIGURATIONS: Record<string, ClientConfiguration> = {
 		command:
 			process.platform === "win32" ? "code-insiders.cmd" : "code-insiders",
 		commandConfig: {
-			stdio: (name: string, command: string, args: string[]) => [
-				"--add-mcp",
-				JSON.stringify({ name, command, args }),
-			],
-			http: (name: string, url: string) => [
-				"--add-mcp",
-				JSON.stringify({ name, type: "http", url }),
-			],
+			stdio: vscodeStdioCommand,
+			http: vscodeHttpCommand,
 		},
 	},
 	librechat: {
@@ -176,21 +170,8 @@ export const CLIENT_CONFIGURATIONS: Record<string, ClientConfiguration> = {
 		command: "gemini",
 		supportsOAuth: true,
 		commandConfig: {
-			stdio: (name: string, command: string, args: string[]) => [
-				"mcp",
-				"add",
-				name,
-				command,
-				...args,
-			], // gemini mcp add <server-name> <command> <args>
-			http: (name: string, url: string) => [
-				"mcp",
-				"add",
-				"--transport",
-				"http",
-				name,
-				url,
-			], // gemini mcp add --transport http <server-name> "<url>"
+			stdio: geminiCliStdioCommand,
+			http: geminiCliHttpCommand,
 		},
 	},
 	codex: {
@@ -201,22 +182,8 @@ export const CLIENT_CONFIGURATIONS: Record<string, ClientConfiguration> = {
 		command: "codex",
 		supportsOAuth: true,
 		commandConfig: {
-			stdio: (name: string, command: string, args: string[]) => [
-				"mcp",
-				"add",
-				name,
-				"--",
-				command,
-				...args,
-			], // codex mcp add <server-name> -- npx -y @smithery/cli@latest run <server>
-			http: (name: string, url: string) => [
-				"mcp",
-				"add",
-				"--transport",
-				"http",
-				name,
-				url,
-			], // codex mcp add --transport http <server-name> "<url>"
+			stdio: codexStdioCommand,
+			http: codexHttpCommand,
 		},
 	},
 	opencode: {
