@@ -223,9 +223,16 @@ program
 // Playground command
 program
 	.command("playground")
-	.description("open MCP playground in browser")
-	.option("--port <port>", `Port to expose (default: ${DEFAULT_PORT})`)
+	.description(
+		"open MCP playground in browser (supports HTTP servers or STDIO MCP servers)",
+	)
+	.option(
+		"--port <port>",
+		`Port to expose (default: ${DEFAULT_PORT} for HTTP, 6969 for STDIO)`,
+	)
 	.option("--key <apikey>", "Provide an API key")
+	.option("--no-open", "Don't automatically open the playground")
+	.option("--prompt <prompt>", "Initial message to start the playground with")
 	.allowUnknownOption() // Allow pass-through for command after --
 	.allowExcessArguments() // Allow extra args after -- without error
 	.action(async (options) => {
@@ -241,58 +248,9 @@ program
 			port: options.port,
 			command,
 			apiKey: await ensureApiKey(options.key),
+			open: options.open !== false,
+			initialMessage: options.prompt,
 		})
-	})
-
-// Playground STDIO command
-program
-	.command("playground-stdio")
-	.description("Run arbitrary command as stdio MCP server in playground")
-	.option("--port <port>", "Port for HTTP server (default: 6969)")
-	.option("--key <apikey>", "Provide an API key")
-	.option("--no-open", "Don't automatically open the playground")
-	.option("--prompt <prompt>", "Initial message to start the playground with")
-	.allowUnknownOption() // Allow pass-through for command after --
-	.allowExcessArguments() // Allow extra args after -- without error
-	.action(async (options) => {
-		// Extract command after -- separator
-		let command: string | undefined
-		const rawArgs = process.argv
-		const separatorIndex = rawArgs.indexOf("--")
-		if (separatorIndex !== -1 && separatorIndex + 1 < rawArgs.length) {
-			command = rawArgs.slice(separatorIndex + 1).join(" ")
-		}
-
-		if (!command) {
-			console.error(chalk.red("❌ Command is required."))
-			console.error(
-				chalk.yellow("Usage: smithery playground-stdio -- <command>"),
-			)
-			console.error(
-				chalk.gray(
-					"Example: smithery playground-stdio -- python my_mcp_server.py",
-				),
-			)
-			process.exit(1)
-		}
-
-		const { createArbitraryCommandRunner } = await import(
-			"./commands/run/arbitrary-command-runner.js"
-		)
-
-		const _cleanup = await createArbitraryCommandRunner(
-			command,
-			await ensureApiKey(options.key),
-			{
-				port: options.port ? Number.parseInt(options.port, 10) : 6969,
-				open: options.open !== false,
-				initialMessage: options.prompt,
-			},
-		)
-
-		// Keep the process alive
-		process.stdin.resume()
-		await new Promise<void>(() => {})
 	})
 
 // List command

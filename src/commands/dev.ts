@@ -38,7 +38,7 @@ export async function dev(options: DevOptions = {}): Promise<void> {
 
 		// Function to start the server process
 		const startServer = async () => {
-			const startTime = Date.now()
+			const _startTime = Date.now()
 
 			// Kill existing process
 			if (childProcess && !childProcess.killed) {
@@ -93,7 +93,7 @@ export async function dev(options: DevOptions = {}): Promise<void> {
 			})
 
 			childProcess.on("error", (error) => {
-				console.error(chalk.red("❌ Process error:"), error)
+				console.error(chalk.red("× Process error:"), error)
 				cleanup()
 			})
 
@@ -105,7 +105,7 @@ export async function dev(options: DevOptions = {}): Promise<void> {
 				}
 
 				if (code !== 0 && code !== null) {
-					console.log(chalk.yellow(`⚠️  Process exited with code ${code}`))
+					console.log(chalk.yellow(`! Process exited with code ${code}`))
 					cleanup()
 				}
 			})
@@ -118,13 +118,11 @@ export async function dev(options: DevOptions = {}): Promise<void> {
 				if (shouldSetupTunnel) {
 					setupTunnelAndPlayground(finalPort, apiKey, options.open !== false)
 						.then(({ listener }) => {
-							const _startupTime = Date.now() - startTime
-							// console.log(chalk.dim(`⚡ Server startup completed in ${startupTime}ms`))
 							tunnelListener = listener
 							isFirstBuild = false
 						})
 						.catch((error) => {
-							console.error(chalk.red("❌ Failed to start tunnel:"), error)
+							console.error(chalk.red("× Failed to start tunnel:"), error)
 						})
 				} else {
 					isFirstBuild = false
@@ -178,7 +176,7 @@ export async function dev(options: DevOptions = {}): Promise<void> {
 			processName: "server",
 		})
 	} catch (error) {
-		console.error(chalk.red("❌ Dev server failed:"), error)
+		console.error(chalk.red("× Dev server failed:"), error)
 		process.exit(1)
 	}
 }
