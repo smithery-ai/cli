@@ -1,6 +1,6 @@
 /**
  * PrepareStdioConnection Tests
- * Tests the 3 connection preparation paths: direct, bundle, and registry fetch
+ * Tests the 2 connection preparation paths: direct and bundle
  */
 
 import type { ServerDetailResponse } from "@smithery/registry/models/components"
@@ -14,9 +14,6 @@ vi.mock("../../../lib/bundle-manager", () => ({
 	resolveTemplateString: vi.fn(),
 }))
 
-vi.mock("../../../lib/registry", () => ({
-	fetchConnection: vi.fn(),
-}))
 
 vi.mock("../../../commands/run/runner-utils", () => ({
 	logWithTimestamp: vi.fn(),
@@ -28,7 +25,6 @@ import {
 	resolveEnvTemplates,
 	resolveTemplateString,
 } from "../../../lib/bundle-manager"
-import { fetchConnection } from "../../../lib/registry"
 import { prepareStdioConnection } from "../prepare-stdio-connection"
 
 describe("prepareStdioConnection", () => {
@@ -65,7 +61,6 @@ describe("prepareStdioConnection", () => {
 		})
 
 		expect(ensureBundleInstalled).not.toHaveBeenCalled()
-		expect(fetchConnection).not.toHaveBeenCalled()
 	})
 
 	test("handles bundle connection with args template resolution", async () => {
