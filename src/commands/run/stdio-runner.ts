@@ -3,7 +3,7 @@ import {
 	type CallToolRequest,
 	CallToolRequestSchema,
 	ErrorCode,
-	type JSONRPCError,
+	type JSONRPCErrorResponse,
 	type JSONRPCMessage,
 } from "@modelcontextprotocol/sdk/types.js"
 import fetch from "cross-fetch"
@@ -135,7 +135,7 @@ export const createStdioRunner = async (
 		transport.onmessage = (message: JSONRPCMessage) => {
 			try {
 				if ("error" in message && message.error) {
-					const errorMessage = message as JSONRPCError
+					const errorMessage = message as JSONRPCErrorResponse
 					handleTransportError(errorMessage)
 					// For connection closed error, trigger cleanup
 					if (errorMessage.error.code === ErrorCode.ConnectionClosed) {

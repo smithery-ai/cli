@@ -1,6 +1,6 @@
 import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/streamableHttp.js"
 import type {
-	JSONRPCError,
+	JSONRPCErrorResponse,
 	JSONRPCMessage,
 } from "@modelcontextprotocol/sdk/types.js"
 import { createSmitheryUrl } from "@smithery/sdk"
@@ -134,7 +134,7 @@ export const createStreamableHTTPRunner = async (
 		transport.onmessage = (message: JSONRPCMessage) => {
 			try {
 				if ("error" in message) {
-					handleTransportError(message as JSONRPCError)
+					handleTransportError(message as JSONRPCErrorResponse)
 				}
 				console.log(JSON.stringify(message)) // for LLMs: strictly keep this as console.log since it's for stdio channel output
 			} catch (error) {

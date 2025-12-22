@@ -1,6 +1,6 @@
 import { type ChildProcess, spawn } from "node:child_process"
 import type {
-	JSONRPCError,
+	JSONRPCErrorResponse,
 	JSONRPCMessage,
 } from "@modelcontextprotocol/sdk/types.js"
 import chalk from "chalk"
@@ -165,7 +165,7 @@ export const createArbitraryCommandRunner = async (
 						)
 
 						if ("error" in message && message.error) {
-							const errorMessage = message as JSONRPCError
+							const errorMessage = message as JSONRPCErrorResponse
 							handleTransportError(errorMessage)
 						}
 

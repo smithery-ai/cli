@@ -1,4 +1,4 @@
-import type { JSONRPCError } from "@modelcontextprotocol/sdk/types.js"
+import type { JSONRPCErrorResponse } from "@modelcontextprotocol/sdk/types.js"
 import { ErrorCode } from "@modelcontextprotocol/sdk/types.js"
 
 export const MAX_RETRIES = 3
@@ -10,7 +10,7 @@ export const logWithTimestamp = (message: string) => {
 	console.error(`${timestamp} ${message}`)
 }
 
-export const handleTransportError = (errorMessage: JSONRPCError) => {
+export const handleTransportError = (errorMessage: JSONRPCErrorResponse) => {
 	switch (errorMessage.error.code) {
 		case ErrorCode.ConnectionClosed: // Server-specific: Connection closed
 			logWithTimestamp(

@@ -1,6 +1,6 @@
 import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js"
 import type {
-	JSONRPCError,
+	JSONRPCErrorResponse,
 	JSONRPCMessage,
 } from "@modelcontextprotocol/sdk/types.js"
 import chalk from "chalk"
@@ -174,7 +174,7 @@ export const createLocalPlaygroundRunner = async (
 				)
 
 				if ("error" in message && message.error) {
-					const errorMessage = message as JSONRPCError
+					const errorMessage = message as JSONRPCErrorResponse
 					handleTransportError(errorMessage)
 				}
 
