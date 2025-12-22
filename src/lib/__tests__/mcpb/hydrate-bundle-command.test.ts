@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import { hydrateBundleCommand } from "../mcpb.js"
+import { hydrateBundleCommand } from "../../mcpb.js"
 import {
 	bundleCommandWithBothTemplates,
 	bundleCommandWithDirname,
@@ -12,7 +12,7 @@ import {
 	userConfigEmpty,
 	userConfigNested,
 	userConfigSimple,
-} from "./fixtures/bundle-commands.js"
+} from "../fixtures/bundle-commands.js"
 
 describe("hydrateBundleCommand", () => {
 	it("resolves __dirname in args", () => {

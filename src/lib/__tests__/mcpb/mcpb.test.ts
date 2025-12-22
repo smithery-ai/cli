@@ -5,7 +5,7 @@ import {
 	getBundleCommand,
 	getHydratedBundleCommand,
 	hydrateBundleCommand,
-} from "../mcpb.js"
+} from "../../mcpb.js"
 
 describe("Bundle Manager End-to-End", () => {
 	let tempDir: string

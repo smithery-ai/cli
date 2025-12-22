@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import { convertMCPBUserConfigToJSONSchema } from "../mcpb.js"
+import { convertMCPBUserConfigToJSONSchema } from "../../mcpb.js"
 
 describe("converts flat MCPB user config format to nested JSONSchema format", () => {
 	it("handles empty input", () => {
@@ -103,7 +103,12 @@ describe("converts flat MCPB user config format to nested JSONSchema format", ()
 	})
 
 	it("converts array types with items schema", () => {
-		const input = { tags: { type: "array" as const } }
+		const input = {
+			tags: {
+				type: "string" as const,
+				multiple: true,
+			},
+		}
 		const result = convertMCPBUserConfigToJSONSchema(input)
 		expect(result).toEqual({
 			type: "object",
@@ -213,7 +218,12 @@ describe("converts flat MCPB user config format to nested JSONSchema format", ()
 	})
 
 	it("handles nested array types", () => {
-		const input = { "config.tags": { type: "array" as const } }
+		const input = {
+			"config.tags": {
+				type: "string" as const,
+				multiple: true,
+			},
+		}
 		const result = convertMCPBUserConfigToJSONSchema(input)
 		expect(result).toEqual({
 			type: "object",

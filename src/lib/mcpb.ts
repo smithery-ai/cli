@@ -1,7 +1,10 @@
 import * as fs from "node:fs"
 import * as os from "node:os"
 import * as path from "node:path"
-import { unpackExtension } from "@anthropic-ai/mcpb"
+import {
+	type McpbUserConfigurationOption,
+	unpackExtension,
+} from "@anthropic-ai/mcpb"
 import fetch from "cross-fetch"
 import type { JSONSchema } from "../types/registry.js"
 import { verbose } from "./logger.js"
@@ -384,26 +387,12 @@ export function getBundleEntrypoint(
 }
 
 /**
- * MCPB user configuration option format (from manifest.user_config)
- */
-interface McpbUserConfigurationOption {
-	type: "string" | "number" | "boolean" | "array"
-	title?: string
-	description?: string
-	required?: boolean
-	default?: string | number | boolean | string[]
-	sensitive?: boolean
-	min?: number
-	max?: number
-}
-
-/**
  * Converts flat MCPB user_config format to nested JSONSchema format
  * MCPB format: {"auth.apiKey": {type: "string", required: true}}
  * JSONSchema format: {auth: {apiKey: {type: "string", required: true}}}
  */
 export function convertMCPBUserConfigToJSONSchema(
-	mcpbUserConfig: Record<string, McpbUserConfigurationOption>,
+	mcpbUserConfig: Record<string, Partial<McpbUserConfigurationOption>>,
 ): JSONSchema {
 	const schema: JSONSchema = {
 		type: "object",
@@ -443,18 +432,21 @@ export function convertMCPBUserConfigToJSONSchema(
 			current.properties = {}
 		}
 
-		const jsonSchemaProp: JSONSchema = {
-			type: configOption.type,
-			description: configOption.description,
-			default: configOption.default,
-		}
-
-		// Handle array items if type is array
-		if (configOption.type === "array") {
-			jsonSchemaProp.items = {
-				type: "string",
-			}
-		}
+		// Handle multiple values (arrays) - when multiple is true, convert to array type
+		const jsonSchemaProp: JSONSchema = configOption.multiple
+			? {
+					type: "array",
+					items: {
+						type: configOption.type,
+					},
+					description: configOption.description,
+					default: configOption.default,
+				}
+			: {
+					type: configOption.type,
+					description: configOption.description,
+					default: configOption.default,
+				}
 
 		current.properties[leafKey] = jsonSchemaProp
 
