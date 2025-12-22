@@ -14,7 +14,6 @@ vi.mock("../../../lib/bundle-manager", () => ({
 	resolveTemplateString: vi.fn(),
 }))
 
-
 vi.mock("../../../commands/run/runner-utils", () => ({
 	logWithTimestamp: vi.fn(),
 }))

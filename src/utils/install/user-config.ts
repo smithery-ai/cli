@@ -1,11 +1,11 @@
 import type { ConnectionInfo } from "@smithery/registry/models/components"
 import type ora from "ora"
+import { getConfig } from "../../lib/keychain"
+import { verbose } from "../../lib/logger"
 import {
 	ensureBundleInstalled,
 	getBundleUserConfigSchema,
 } from "../../lib/mcpb"
-import { getConfig } from "../../lib/keychain"
-import { verbose } from "../../lib/logger"
 import type { JSONSchema, ServerConfig } from "../../types/registry"
 import { promptForExistingConfig } from "../command-prompts"
 import { collectConfigValues } from "./prompt-user-config.js"

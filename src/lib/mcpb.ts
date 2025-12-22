@@ -235,35 +235,91 @@ export async function ensureBundleInstalled(
 }
 
 /**
- * Gets the entrypoint path within a bundle based on runtime
- * @param bundleDir - Directory containing the extracted bundle
- * @param runtime - Runtime type (node)
- * @returns Path to the executable file
- */
-/**
- * Gets command and args from bundle manifest
- * @param bundleDir - Directory containing the extracted bundle
- * @returns Command and args from manifest
- */
-/**
  * Resolves template strings in environment variables
  * @param env - Environment variables with template strings
  * @param userConfig - User configuration values
  * @param bundleDir - Bundle directory for __dirname resolution
  * @returns Resolved environment variables
  */
-export function resolveEnvTemplates(
-	env: Record<string, string>,
-	userConfig: Record<string, any> = {},
+/**
+ * Resolves a single template string
+ * @param template - Template string like "${user_config.apiKey}" or "${__dirname}"
+ * @param userConfig - User configuration values
+ * @param bundleDir - Bundle directory for __dirname resolution
+ * @returns Resolved string
+ */
+function resolveTemplate(
+	template: string,
+	userConfig: Record<string, any>,
 	bundleDir?: string,
-): Record<string, string> {
-	const resolved: Record<string, string> = {}
+): string {
+	return template.replace(/\$\{([^}]+)\}/g, (match, path) => {
+		// Handle __dirname replacement
+		if (path === "__dirname" && bundleDir) {
+			return bundleDir
+		}
 
-	for (const [key, value] of Object.entries(env)) {
-		resolved[key] = resolveTemplateString(value, userConfig, bundleDir)
+		// Handle user_config paths like "user_config.apiKey"
+		if (path.startsWith("user_config.")) {
+			const configPath = path.replace("user_config.", "")
+			const parts = configPath.split(".")
+			let value: any = userConfig
+
+			for (const part of parts) {
+				if (value && typeof value === "object") {
+					value = value[part]
+				} else {
+					// If path doesn't exist in userConfig, return the original template
+					return match
+				}
+			}
+
+			// If value exists and is not null/undefined, return it as string
+			// Otherwise return the original template
+			return value != null ? String(value) : match
+		}
+
+		// For other template patterns, return as-is (could be extended for more patterns)
+		return match
+	})
+}
+
+/**
+ * Hydrates a bundle command by resolving all template strings in args and env
+ * @param bundleCommand - Bundle command from getBundleCommand (may contain templates)
+ * @param userConfig - User configuration values for ${user_config.*} templates
+ * @param bundleDir - Bundle directory for ${__dirname} resolution
+ * @returns Fully hydrated bundle command with all templates resolved
+ */
+export function hydrateBundleCommand(
+	bundleCommand: {
+		command: string
+		args: string[]
+		env?: Record<string, string>
+	},
+	userConfig: Record<string, any>,
+	bundleDir: string,
+): {
+	command: string
+	args: string[]
+	env: Record<string, string>
+} {
+	const resolvedArgs = bundleCommand.args.map((arg) =>
+		resolveTemplate(arg, userConfig, bundleDir),
+	)
+
+	const resolvedEnv: Record<string, string> = {}
+	if (bundleCommand.env) {
+		for (const [key, value] of Object.entries(bundleCommand.env)) {
+			resolvedEnv[key] = resolveTemplate(value, userConfig, bundleDir)
+		}
 	}
 
-	return resolved
+	return {
+		command: bundleCommand.command,
+		args: resolvedArgs,
+		env: resolvedEnv,
+	}
 }
 
 /**
@@ -309,6 +365,11 @@ export function resolveTemplateString(
 	})
 }
 
+/**
+ * Gets command and args from bundle manifest
+ * @param bundleDir - Directory containing the extracted bundle
+ * @returns Command and args from manifest
+ */
 export function getBundleCommand(bundleDir: string): {
 	command: string
 	args: string[]
@@ -341,6 +402,12 @@ export function getBundleCommand(bundleDir: string): {
 	}
 }
 
+/**
+ * Gets the entrypoint path within a bundle based on runtime
+ * @param bundleDir - Directory containing the extracted bundle
+ * @param runtime - Runtime type (node)
+ * @returns Path to the executable file
+ */
 export function getBundleEntrypoint(
 	bundleDir: string,
 	_runtime = "node",

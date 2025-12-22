@@ -7,11 +7,11 @@
 
 import type { ConnectionInfo } from "@smithery/registry/models/components"
 import { beforeEach, describe, expect, it, vi } from "vitest"
+import { getConfig } from "../../../lib/keychain"
 import {
 	ensureBundleInstalled,
 	getBundleUserConfigSchema,
 } from "../../../lib/mcpb"
-import { getConfig } from "../../../lib/keychain"
 import type { ServerConfig } from "../../../types/registry"
 import { promptForExistingConfig } from "../../command-prompts"
 import { collectConfigValues } from "../prompt-user-config"
