@@ -3,19 +3,14 @@ import type { ServerConfig } from "../types/registry"
 /**
  * @deprecated
  * To be replaced with createSmitheryURL from sdk
- * Configuration type for runners
  * Creates a URL for the Streamable HTTP transport
  * @param baseUrl The base URL to start with
  * @param config Configuration object
- * @param apiKey API key (required)
- * @param profile Optional profile name
- * @returns A URL object with properly encoded parameters and MCP path prefix
+ * @returns A URL object with properly encoded parameters
  */
 export function createStreamableHTTPTransportUrl(
 	baseUrl: string,
-	apiKey: string, // api key is required
 	config: ServerConfig | Record<string, never>,
-	profile: string | undefined,
 ): URL {
 	const url = new URL(baseUrl)
 
@@ -33,14 +28,6 @@ export function createStreamableHTTPTransportUrl(
 		const configStr = JSON.stringify(config)
 		url.searchParams.set("config", Buffer.from(configStr).toString("base64"))
 	}
-
-	// Add profile if provided
-	if (profile) {
-		url.searchParams.set("profile", profile)
-	}
-
-	// Add API key
-	url.searchParams.set("api_key", apiKey)
 
 	return url
 }

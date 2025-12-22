@@ -7,23 +7,19 @@ import { TRANSPORT_CLOSE_TIMEOUT } from "../../constants.js"
 import type { ServerConfig } from "../../types/registry"
 import { createStreamableHTTPTransportUrl } from "../../utils/url-utils.js"
 import {
-	createHeartbeatManager,
-	createIdleTimeoutManager,
 	handleTransportError,
 	logWithTimestamp,
 	MAX_RETRIES,
 	RETRY_DELAY,
-} from "./runner-utils.js"
+} from "./utils.js"
 
 type Cleanup = () => Promise<void>
 
 const createTransport = (
 	baseUrl: string,
-	apiKey: string,
-	config: ServerConfig,
-	profile: string | undefined,
+	config: ServerConfig | Record<string, never> = {},
 ): StreamableHTTPClientTransport => {
-	const url = createStreamableHTTPTransportUrl(baseUrl, apiKey, config, profile)
+	const url = createStreamableHTTPTransportUrl(baseUrl, config)
 	logWithTimestamp(
 		`[Runner] Connecting to Streamable HTTP endpoint: ${baseUrl}`,
 	)
@@ -32,17 +28,22 @@ const createTransport = (
 
 export const createStreamableHTTPRunner = async (
 	baseUrl: string,
-	apiKey: string,
-	config: ServerConfig,
-	profile: string | undefined,
+	/** @deprecated Config parameter is deprecated and will be removed in a future version */
+	config?: ServerConfig,
 ): Promise<Cleanup> => {
+	if (config !== undefined) {
+		const timestamp = new Date().toISOString()
+		console.error(
+			`${timestamp} [DEPRECATED] Passing config to createStreamableHTTPRunner is deprecated and will be removed in a future version`,
+		)
+	}
 	let retryCount = 0
 	let stdinBuffer = ""
 	let isReady = false
 	let isShuttingDown = false
 	let isClientInitiatedClose = false
 
-	let transport = createTransport(baseUrl, apiKey, config, profile)
+	let transport = createTransport(baseUrl, config ?? {})
 
 	const handleError = (error: Error, context: string) => {
 		logWithTimestamp(`${context}: ${error.message}`)
@@ -56,24 +57,7 @@ export const createStreamableHTTPRunner = async (
 		process.exit(0)
 	}
 
-	const heartbeatManager = createHeartbeatManager(
-		(message) => transport.send(message),
-		() => isReady,
-	)
-
-	const idleManager = createIdleTimeoutManager(handleExit, {
-		onIdleDetected: () => {
-			logWithTimestamp("[Runner] Stopping heartbeat due to idle timeout")
-			heartbeatManager.stop()
-		},
-		onActivityResumed: () => {
-			logWithTimestamp("[Runner] Restarting heartbeat after activity")
-			heartbeatManager.start()
-		},
-	})
-
 	const processMessage = async (data: Buffer) => {
-		idleManager.updateActivity() // Update activity state on outgoing message
 		stdinBuffer += data.toString("utf8")
 
 		if (!isReady) return // Wait for connection to be established
@@ -98,7 +82,6 @@ export const createStreamableHTTPRunner = async (
 		transport.onclose = async () => {
 			logWithTimestamp("[Runner] Streamable HTTP connection closed")
 			isReady = false
-			heartbeatManager.stop()
 			if (!isClientInitiatedClose && retryCount++ < MAX_RETRIES) {
 				const jitter = Math.random() * 1000
 				const delay = RETRY_DELAY * Math.pow(2, retryCount) + jitter
@@ -108,7 +91,7 @@ export const createStreamableHTTPRunner = async (
 				await new Promise((resolve) => setTimeout(resolve, delay))
 
 				// Create new transport
-				transport = createTransport(baseUrl, apiKey, config, profile)
+				transport = createTransport(baseUrl, config ?? {})
 				logWithTimestamp(
 					"[Runner] Created new transport instance after disconnect",
 				)
@@ -136,13 +119,6 @@ export const createStreamableHTTPRunner = async (
 		}
 
 		transport.onmessage = (message: JSONRPCMessage) => {
-			// Only update activity for non-heartbeat messages
-			if (
-				"method" in message &&
-				!(message.method === "ping" || message.method === "pong")
-			) {
-				idleManager.updateActivity() // Update on incoming message
-			}
 			try {
 				if ("error" in message) {
 					handleTransportError(message as JSONRPCError)
@@ -162,8 +138,6 @@ export const createStreamableHTTPRunner = async (
 		// Release buffered messages
 		await processMessage(Buffer.from(""))
 		logWithTimestamp("[Runner] Streamable HTTP connection established")
-		heartbeatManager.start() // Start heartbeat after connection is fully established
-		idleManager.start() // Start idle check
 	}
 
 	const cleanup = async () => {
@@ -175,8 +149,6 @@ export const createStreamableHTTPRunner = async (
 		logWithTimestamp("[Runner] Starting cleanup process...")
 		isShuttingDown = true
 		isClientInitiatedClose = true // Mark this as a clean shutdown
-		heartbeatManager.stop() // Stop heartbeat
-		idleManager.stop() // Stop idle check
 
 		try {
 			// First try to terminate the session if we have one

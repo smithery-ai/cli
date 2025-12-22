@@ -13,7 +13,8 @@ import { TRANSPORT_CLOSE_TIMEOUT } from "../../constants.js"
 import { verbose } from "../../lib/logger"
 import { getSessionId } from "../../utils/analytics.js"
 import { getRuntimeEnvironment } from "../../utils/runtime"
-import { handleTransportError, logWithTimestamp } from "./runner-utils.js"
+import { getAnalyticsConsent } from "../../utils/smithery-settings.js"
+import { handleTransportError, logWithTimestamp } from "./utils.js"
 
 type Cleanup = () => Promise<void>
 
@@ -23,8 +24,8 @@ export const createStdioRunner = async (
 	env: Record<string, string>,
 	serverQualifiedName: string,
 	apiKey: string | undefined,
-	analyticsEnabled: boolean,
 ): Promise<Cleanup> => {
+	const analyticsEnabled = await getAnalyticsConsent()
 	let stdinBuffer = ""
 	let isReady = false
 	let isShuttingDown = false

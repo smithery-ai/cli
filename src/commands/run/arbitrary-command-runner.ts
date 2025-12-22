@@ -7,12 +7,7 @@ import chalk from "chalk"
 import cors from "cors"
 import express from "express"
 import { setupTunnelAndPlayground } from "../../lib/dev-lifecycle.js"
-import {
-	createHeartbeatManager,
-	createIdleTimeoutManager,
-	handleTransportError,
-	logWithTimestamp,
-} from "./runner-utils.js"
+import { handleTransportError, logWithTimestamp } from "./utils.js"
 
 interface ArbitraryCommandOptions {
 	open?: boolean
@@ -57,22 +52,9 @@ export const createArbitraryCommandRunner = async (
 		process.exit(0)
 	}
 
-	const idleManager = createIdleTimeoutManager(handleExit)
-	const heartbeatManager = createHeartbeatManager(
-		async (message) => {
-			if (childProcess && !childProcess.killed) {
-				const messageStr = `${JSON.stringify(message)}\n`
-				childProcess.stdin?.write(messageStr)
-			}
-		},
-		() => isReady,
-	)
-
 	// HTTP endpoint to receive RPC messages
 	app.post("/mcp", async (req: express.Request, res: express.Response) => {
 		try {
-			idleManager.updateActivity()
-
 			if (!isReady || !childProcess || childProcess.killed) {
 				res.status(503).json({
 					error: "Server not ready",
@@ -178,14 +160,6 @@ export const createArbitraryCommandRunner = async (
 					try {
 						const message = JSON.parse(line) as JSONRPCMessage
 
-						// Only update activity for non-heartbeat messages
-						if (
-							"method" in message &&
-							!(message.method === "ping" || message.method === "pong")
-						) {
-							idleManager.updateActivity()
-						}
-
 						logWithTimestamp(
 							`[stdio listener] Received stdout message: ${JSON.stringify(message)}`,
 						)
@@ -252,9 +226,6 @@ export const createArbitraryCommandRunner = async (
 
 		isReady = true
 		logWithTimestamp("[stdio listener] Command process established")
-
-		heartbeatManager.start()
-		idleManager.start()
 	}
 
 	const startHttpServer = async () => {
@@ -282,8 +253,6 @@ export const createArbitraryCommandRunner = async (
 
 		logWithTimestamp("[stdio listener] Starting cleanup process...")
 		isShuttingDown = true
-		heartbeatManager.stop()
-		idleManager.stop()
 
 		// Reject all pending requests
 		for (const [_id, { reject }] of pendingRequests) {

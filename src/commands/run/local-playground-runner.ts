@@ -9,12 +9,7 @@ import express from "express"
 import { TRANSPORT_CLOSE_TIMEOUT } from "../../constants.js"
 import { setupTunnelAndPlayground } from "../../lib/dev-lifecycle.js"
 import { getRuntimeEnvironment } from "../../utils/runtime.js"
-import {
-	createHeartbeatManager,
-	createIdleTimeoutManager,
-	handleTransportError,
-	logWithTimestamp,
-} from "./runner-utils.js"
+import { handleTransportError, logWithTimestamp } from "./utils.js"
 
 interface LocalPlaygroundOptions {
 	open?: boolean
@@ -65,21 +60,9 @@ export const createLocalPlaygroundRunner = async (
 		process.exit(0)
 	}
 
-	const idleManager = createIdleTimeoutManager(handleExit)
-	const heartbeatManager = createHeartbeatManager(
-		async (message) => {
-			if (transport) {
-				await transport.send(message)
-			}
-		},
-		() => isReady,
-	)
-
 	// HTTP endpoint to receive RPC messages
 	app.post("/mcp", async (req: express.Request, res: express.Response) => {
 		try {
-			idleManager.updateActivity()
-
 			if (!isReady || !transport) {
 				res.status(503).json({
 					error: "Server not ready",
@@ -186,14 +169,6 @@ export const createLocalPlaygroundRunner = async (
 
 		transport.onmessage = (message: JSONRPCMessage) => {
 			try {
-				// Only update activity for non-heartbeat messages
-				if (
-					"method" in message &&
-					!(message.method === "ping" || message.method === "pong")
-				) {
-					idleManager.updateActivity()
-				}
-
 				logWithTimestamp(
 					`[Local Playground] Received STDIO message: ${JSON.stringify(message)}`,
 				)
@@ -247,9 +222,6 @@ export const createLocalPlaygroundRunner = async (
 		await transport.start()
 		isReady = true
 		logWithTimestamp("[Local Playground] STDIO transport established")
-
-		heartbeatManager.start()
-		idleManager.start()
 	}
 
 	const startHttpServer = async () => {
@@ -277,8 +249,6 @@ export const createLocalPlaygroundRunner = async (
 
 		logWithTimestamp("[Local Playground] Starting cleanup process...")
 		isShuttingDown = true
-		heartbeatManager.stop()
-		idleManager.stop()
 
 		// Reject all pending requests
 		for (const [_id, { reject }] of pendingRequests) {

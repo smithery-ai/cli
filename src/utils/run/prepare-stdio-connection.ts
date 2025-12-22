@@ -1,5 +1,5 @@
 import type { ServerDetailResponse } from "@smithery/registry/models/components"
-import { logWithTimestamp } from "../../commands/run/runner-utils.js"
+import { logWithTimestamp } from "../../commands/run/utils.js"
 import {
 	ensureBundleInstalled,
 	getHydratedBundleCommand,
