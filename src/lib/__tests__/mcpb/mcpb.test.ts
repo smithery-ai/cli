@@ -48,11 +48,7 @@ describe("Bundle Manager End-to-End", () => {
 			database: { host: "localhost", port: 5432 },
 		}
 
-		const hydrated = hydrateBundleCommand(
-			bundleCommand,
-			userConfig,
-			tempDir,
-		)
+		const hydrated = hydrateBundleCommand(bundleCommand, userConfig, tempDir)
 
 		expect(hydrated.command).toBe("node")
 		expect(hydrated.args).toEqual([

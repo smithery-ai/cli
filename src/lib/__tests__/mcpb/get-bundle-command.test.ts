@@ -83,9 +83,7 @@ describe("getBundleCommand", () => {
 	})
 
 	it("should throw error for missing manifest", () => {
-		expect(() => getBundleCommand(tempDir)).toThrow(
-			"Bundle manifest not found",
-		)
+		expect(() => getBundleCommand(tempDir)).toThrow("Bundle manifest not found")
 	})
 
 	it("should throw error for missing command", async () => {
@@ -177,4 +175,3 @@ describe("getBundleCommand", () => {
 		expect(result.args).toEqual([])
 	})
 })
-

@@ -5,9 +5,9 @@ import {
 	bundleCommandWithDirname,
 	bundleCommandWithMissingConfig,
 	bundleCommandWithNestedConfig,
+	bundleCommandWithoutEnv,
 	bundleCommandWithPlainStrings,
 	bundleCommandWithUserConfig,
-	bundleCommandWithoutEnv,
 	bundleDir,
 	userConfigEmpty,
 	userConfigNested,
@@ -63,10 +63,7 @@ describe("hydrateBundleCommand", () => {
 		const result = hydrateBundleCommand(bundleCommand, userConfig, dir)
 
 		// Assert: both args and env have resolved values
-		expect(result.args).toEqual([
-			`${dir}/server.js`,
-			"--api-key=sk-123",
-		])
+		expect(result.args).toEqual([`${dir}/server.js`, "--api-key=sk-123"])
 		expect(result.env).toEqual({
 			API_KEY: "sk-123",
 			DATABASE_URL: "localhost:5432",
@@ -160,4 +157,3 @@ describe("hydrateBundleCommand", () => {
 		expect(result.env).toEqual({})
 	})
 })
-

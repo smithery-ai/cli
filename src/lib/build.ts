@@ -2,7 +2,6 @@ import { existsSync, mkdirSync, readFileSync, statSync } from "node:fs"
 import { dirname, join, resolve } from "node:path"
 import chalk from "chalk"
 import * as esbuild from "esbuild"
-import { formatFileSize } from "../utils/build"
 
 // TypeScript declarations for global constants injected at build time
 declare const __SMITHERY_SHTTP_BOOTSTRAP__: string
@@ -235,7 +234,13 @@ async function esbuildServer(
 			const stats = statSync(outFile)
 			// const fileName = basename(outFile)
 			const relativePath = outFile.replace(`${process.cwd()}/`, "")
-			const fileSize = formatFileSize(stats.size)
+			const bytes = stats.size
+			const fileSize =
+				bytes < 1024
+					? `${bytes} B`
+					: bytes < 1024 * 1024
+						? `${(bytes / 1024).toFixed(2)} KB`
+						: `${(bytes / (1024 * 1024)).toFixed(2)} MB`
 			const buildMode = shouldMinify ? "" : " (not minified)"
 			console.log(
 				`\n  ${relativePath}  ${chalk.yellow(fileSize)}  ${chalk.gray("(entry point)")}${buildMode}\n`,

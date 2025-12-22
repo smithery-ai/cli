@@ -9,29 +9,14 @@ import {
 	ServerError,
 	UnauthorizedError,
 } from "@smithery/registry/models/errors"
+import fetch from "cross-fetch"
 import { config as dotenvConfig } from "dotenv"
 import { ANALYTICS_ENDPOINT } from "../constants"
 import { getSessionId } from "../utils/analytics"
-import { fetchWithTimeout } from "../utils/fetch"
 import { getUserId } from "../utils/smithery-settings"
 import { verbose } from "./logger"
 
 dotenvConfig({ quiet: true })
-
-const getEndpoint = (): string => {
-	if (
-		process.env.NODE_ENV === "development" &&
-		process.env.LOCAL_REGISTRY_ENDPOINT
-	) {
-		return process.env.LOCAL_REGISTRY_ENDPOINT
-	}
-	const endpoint =
-		process.env.REGISTRY_ENDPOINT || "https://registry.smithery.ai"
-	if (!endpoint) {
-		throw new Error("REGISTRY_ENDPOINT environment variable is not set")
-	}
-	return endpoint
-}
 
 /**
  * Creates SDK options with common configuration
@@ -84,7 +69,9 @@ export const resolveServer = async (
 			try {
 				const sessionId = getSessionId()
 				const userId = await getUserId()
-				await fetchWithTimeout(ANALYTICS_ENDPOINT, {
+				const controller = new AbortController()
+				const timeoutId = setTimeout(() => controller.abort(), 5000)
+				await fetch(ANALYTICS_ENDPOINT, {
 					method: "POST",
 					headers: { "Content-Type": "application/json" },
 					body: JSON.stringify({
@@ -96,7 +83,9 @@ export const resolveServer = async (
 						$session_id: sessionId,
 						userId,
 					}),
+					signal: controller.signal,
 				})
+				clearTimeout(timeoutId)
 			} catch (_err) {
 				// Ignore analytics errors
 			}
@@ -169,37 +158,69 @@ export const searchServers = async (
 		// verified?: boolean
 	}>
 > => {
-	const endpoint = getEndpoint()
+	const options = createSDKOptions(apiKey)
+	const smitheryRegistry = new SmitheryRegistry(options)
 	verbose(`Searching servers for term: ${searchTerm}`)
 
 	try {
-		const response = await fetchWithTimeout(
-			`${endpoint}/servers?q=${encodeURIComponent(searchTerm)}&pageSize=10`,
-			{
-				headers: {
-					Authorization: `Bearer ${apiKey}`,
-					"Content-Type": "application/json",
-				},
-			},
-		)
+		const iterator = await smitheryRegistry.servers.list({
+			q: searchTerm,
+			pageSize: 10,
+		})
 
-		if (!response.ok) {
-			throw new Error(`Search failed: ${response.statusText}`)
+		// Get the first page from the iterator
+		const servers: Array<{
+			qualifiedName: string
+			displayName?: string
+			description?: string
+			useCount: number
+		}> = []
+
+		for await (const page of iterator) {
+			// The page is ListServersResponse, check its structure
+			const pageData = page as {
+				servers?: Array<{
+					qualifiedName: string
+					displayName?: string
+					description?: string
+					useCount?: number
+				}>
+			}
+
+			if (pageData.servers) {
+				servers.push(
+					...pageData.servers.map((server) => ({
+						qualifiedName: server.qualifiedName,
+						displayName: server.displayName,
+						description: server.description,
+						useCount: server.useCount ?? 0,
+					})),
+				)
+			}
+			// Only get the first page (pageSize: 10)
+			break
 		}
 
-		const searchData = await response.json()
-		verbose(`Search returned ${searchData.servers?.length || 0} servers`)
-
-		return searchData.servers || []
-	} catch (error) {
+		verbose(`Search returned ${servers.length} servers`)
+		return servers
+	} catch (error: unknown) {
 		verbose(
 			`Search error: ${error instanceof Error ? error.message : String(error)}`,
 		)
 		if (error instanceof RequestTimeoutError) {
 			// Preserve RequestTimeoutError type
 			throw error
-		}
-		if (error instanceof Error) {
+		} else if (error instanceof SDKValidationError) {
+			verbose(`SDK validation error: ${error.pretty()}`)
+			verbose(JSON.stringify(error.rawValue))
+			throw error
+		} else if (error instanceof UnauthorizedError) {
+			verbose(`Unauthorized: ${error.message}`)
+			throw error
+		} else if (error instanceof ServerError) {
+			verbose(`Server error: ${error.message}`)
+			throw error
+		} else if (error instanceof Error) {
 			throw new Error(`Failed to search servers: ${error.message}`)
 		}
 		throw error

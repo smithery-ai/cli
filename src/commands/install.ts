@@ -14,7 +14,7 @@ import {
 	readConfig,
 	runConfigCommand,
 	writeConfig,
-} from "../utils/client-config"
+} from "../utils/client-config-io"
 import { getServerName } from "../utils/install/helpers"
 import { formatServerConfig } from "../utils/install/server-config"
 import { resolveUserConfig } from "../utils/install/user-config"

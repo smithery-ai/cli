@@ -69,4 +69,3 @@ export const userConfigNested = {
 }
 
 export const userConfigEmpty = {}
-

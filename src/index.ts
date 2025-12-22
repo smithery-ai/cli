@@ -94,7 +94,7 @@ program
 		`Specify the AI client (${VALID_CLIENTS.join(", ")})`,
 	)
 	.action(async (server, options) => {
-		const { readConfig } = await import("./utils/client-config")
+		const { readConfig } = await import("./utils/client-config-io")
 
 		// Step 1: Select client if not provided
 		const selectedClient = await selectClient(options.client, "Uninstall")

@@ -4,7 +4,7 @@ import { parse as parseYaml } from "yaml"
 
 export interface SmitheryConfig {
 	runtime: string
-	type?: "server" | "widget"
+	type?: "server"
 	target?: "local" | "remote"
 	build?: Record<string, unknown>
 	startCommand?: Record<string, unknown>
@@ -36,14 +36,5 @@ export function readSmitheryConfig(
 		target: config.target,
 		build: config.build,
 		startCommand: config.startCommand,
-	}
-}
-
-export function isWidgetProject(cwd: string = process.cwd()): boolean {
-	try {
-		const config = readSmitheryConfig(cwd)
-		return config.type === "widget"
-	} catch {
-		return false
 	}
 }
