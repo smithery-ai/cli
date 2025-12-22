@@ -3,7 +3,7 @@ import type ora from "ora"
 import {
 	ensureBundleInstalled,
 	getBundleUserConfigSchema,
-} from "../../lib/bundle-manager"
+} from "../../lib/mcpb"
 import { getConfig } from "../../lib/keychain"
 import { verbose } from "../../lib/logger"
 import type { JSONSchema, ServerConfig } from "../../types/registry"

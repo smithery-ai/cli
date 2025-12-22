@@ -4,7 +4,7 @@ import * as path from "node:path"
 import { unpackExtension } from "@anthropic-ai/mcpb"
 import fetch from "cross-fetch"
 import type { JSONSchema } from "../types/registry.js"
-import { verbose } from "./logger"
+import { verbose } from "./logger.js"
 
 const BUNDLE_FILENAME = "server.mcpb"
 const CACHE_META_FILENAME = ".metadata.json"

@@ -5,7 +5,7 @@ import {
 	getBundleCommand,
 	resolveEnvTemplates,
 	resolveTemplateString,
-} from "../bundle-manager.js"
+} from "../mcpb.js"
 
 describe("Bundle Manager", () => {
 	let tempDir: string

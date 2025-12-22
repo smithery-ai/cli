@@ -10,7 +10,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 import {
 	ensureBundleInstalled,
 	getBundleUserConfigSchema,
-} from "../../../lib/bundle-manager"
+} from "../../../lib/mcpb"
 import { getConfig } from "../../../lib/keychain"
 import type { ServerConfig } from "../../../types/registry"
 import { promptForExistingConfig } from "../../command-prompts"

@@ -5,7 +5,7 @@ import {
 	getBundleCommand,
 	resolveEnvTemplates,
 	resolveTemplateString,
-} from "../../lib/bundle-manager.js"
+} from "../../lib/mcpb.js"
 import type { ServerConfig } from "../../types/registry.js"
 
 export interface PreparedStdioConnection {
