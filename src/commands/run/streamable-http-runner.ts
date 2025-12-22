@@ -3,9 +3,9 @@ import type {
 	JSONRPCError,
 	JSONRPCMessage,
 } from "@modelcontextprotocol/sdk/types.js"
+import { createSmitheryUrl } from "@smithery/sdk"
 import { TRANSPORT_CLOSE_TIMEOUT } from "../../constants.js"
 import type { ServerConfig } from "../../types/registry"
-import { createStreamableHTTPTransportUrl } from "../../utils/url-utils.js"
 import {
 	handleTransportError,
 	logWithTimestamp,
@@ -19,7 +19,20 @@ const createTransport = (
 	baseUrl: string,
 	config: ServerConfig | Record<string, never> = {},
 ): StreamableHTTPClientTransport => {
-	const url = createStreamableHTTPTransportUrl(baseUrl, config)
+	// Handle development mode URL override
+	let urlToUse = baseUrl
+	if (process.env.NODE_ENV === "development") {
+		const local = new URL(
+			process.env.LOCAL_SERVER_URL || "http://localhost:8080",
+		)
+		const baseUrlObj = new URL(baseUrl)
+		baseUrlObj.protocol = local.protocol
+		baseUrlObj.hostname = local.hostname
+		baseUrlObj.port = local.port
+		urlToUse = baseUrlObj.toString()
+	}
+
+	const url = createSmitheryUrl(urlToUse, { config })
 	logWithTimestamp(
 		`[Runner] Connecting to Streamable HTTP endpoint: ${baseUrl}`,
 	)
