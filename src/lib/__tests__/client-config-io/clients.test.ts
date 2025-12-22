@@ -13,7 +13,6 @@ import os from "node:os"
 import path from "node:path"
 import { beforeEach, describe, expect, test, vi } from "vitest"
 import { Transport } from "../../../config/clients"
-import type { ClientMCPConfig } from "../../../lib/client-config-io"
 import { readConfig, writeConfig } from "../../../lib/client-config-io"
 import {
 	clineHttpConfig,
@@ -276,7 +275,10 @@ describe("opencode client", () => {
 	test("should read OpenCode config with mcp key", () => {
 		// ARRANGE: OpenCode config with mcp key
 		const configPath = path.join(tempDir, "opencode.json")
-		fs.writeFileSync(configPath, JSON.stringify(opencodeJsonWithStdioServer, null, 2))
+		fs.writeFileSync(
+			configPath,
+			JSON.stringify(opencodeJsonWithStdioServer, null, 2),
+		)
 
 		mockGetClientConfiguration.mockReturnValue({
 			label: "OpenCode",
@@ -304,7 +306,10 @@ describe("opencode client", () => {
 	test("should read OpenCode config with HTTP server", () => {
 		// ARRANGE: OpenCode config with HTTP server
 		const configPath = path.join(tempDir, "opencode.json")
-		fs.writeFileSync(configPath, JSON.stringify(opencodeJsonWithHttpServer, null, 2))
+		fs.writeFileSync(
+			configPath,
+			JSON.stringify(opencodeJsonWithHttpServer, null, 2),
+		)
 
 		mockGetClientConfiguration.mockReturnValue({
 			label: "OpenCode",
@@ -415,7 +420,10 @@ describe("opencode client", () => {
 	test("should merge existing OpenCode configs", () => {
 		// ARRANGE: Existing OpenCode config
 		const configPath = path.join(tempDir, "opencode.json")
-		fs.writeFileSync(configPath, JSON.stringify(opencodeJsonWithExistingServer, null, 2))
+		fs.writeFileSync(
+			configPath,
+			JSON.stringify(opencodeJsonWithExistingServer, null, 2),
+		)
 
 		mockGetClientConfiguration.mockReturnValue({
 			label: "OpenCode",
@@ -443,7 +451,10 @@ describe("opencode client", () => {
 	test("should preserve other top-level fields in OpenCode config", () => {
 		// ARRANGE: OpenCode config with other fields
 		const configPath = path.join(tempDir, "opencode.json")
-		fs.writeFileSync(configPath, JSON.stringify(opencodeJsonWithOtherFields, null, 2))
+		fs.writeFileSync(
+			configPath,
+			JSON.stringify(opencodeJsonWithOtherFields, null, 2),
+		)
 
 		mockGetClientConfiguration.mockReturnValue({
 			label: "OpenCode",
@@ -479,7 +490,10 @@ describe("windsurf client", () => {
 	test("should read Windsurf config with serverUrl field", () => {
 		// ARRANGE: Windsurf config with serverUrl
 		const configPath = path.join(tempDir, "windsurf.json")
-		fs.writeFileSync(configPath, JSON.stringify(windsurfJsonWithServerUrl, null, 2))
+		fs.writeFileSync(
+			configPath,
+			JSON.stringify(windsurfJsonWithServerUrl, null, 2),
+		)
 
 		mockGetClientConfiguration.mockReturnValue({
 			label: "Windsurf",
@@ -530,7 +544,10 @@ describe("windsurf client", () => {
 	test("should handle read-modify-write cycle for Windsurf", () => {
 		// ARRANGE: Existing Windsurf config
 		const configPath = path.join(tempDir, "windsurf.json")
-		fs.writeFileSync(configPath, JSON.stringify(windsurfJsonWithExistingServer, null, 2))
+		fs.writeFileSync(
+			configPath,
+			JSON.stringify(windsurfJsonWithExistingServer, null, 2),
+		)
 
 		mockGetClientConfiguration.mockReturnValue({
 			label: "Windsurf",
@@ -571,7 +588,10 @@ describe("cline client", () => {
 	test("should read Cline config with streamableHttp type", () => {
 		// ARRANGE: Cline config with streamableHttp
 		const configPath = path.join(tempDir, "cline.json")
-		fs.writeFileSync(configPath, JSON.stringify(clineJsonWithStreamableHttp, null, 2))
+		fs.writeFileSync(
+			configPath,
+			JSON.stringify(clineJsonWithStreamableHttp, null, 2),
+		)
 
 		mockGetClientConfiguration.mockReturnValue({
 			label: "Cline",
@@ -621,7 +641,10 @@ describe("cline client", () => {
 	test("should handle read-modify-write cycle for Cline", () => {
 		// ARRANGE: Existing Cline config
 		const configPath = path.join(tempDir, "cline.json")
-		fs.writeFileSync(configPath, JSON.stringify(clineJsonWithExistingServer, null, 2))
+		fs.writeFileSync(
+			configPath,
+			JSON.stringify(clineJsonWithExistingServer, null, 2),
+		)
 
 		mockGetClientConfiguration.mockReturnValue({
 			label: "Cline",
@@ -648,4 +671,3 @@ describe("cline client", () => {
 		expect(written.someOtherField).toBe("preserved")
 	})
 })
-

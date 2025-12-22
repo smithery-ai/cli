@@ -11,8 +11,8 @@ import {
 	type FormatDescriptor,
 	getFormatDescriptor,
 } from "../config/format-descriptors.js"
-import { verbose } from "./logger.js"
 import type { MCPConfig } from "../types/registry.js"
+import { verbose } from "./logger.js"
 
 export interface ClientMCPConfig extends MCPConfig {
 	[key: string]: any
@@ -92,7 +92,10 @@ export function transformToStandard(
 		const commandKey = descriptor.fieldMappings?.stdio?.command || "command"
 
 		if (commandKey in clientConfig) {
-			if (commandFormat === "array" && Array.isArray(clientConfig[commandKey])) {
+			if (
+				commandFormat === "array" &&
+				Array.isArray(clientConfig[commandKey])
+			) {
 				// Array format: first element is command, rest are args
 				const commandArray = clientConfig[commandKey]
 				if (commandArray.length > 0) {
@@ -139,7 +142,7 @@ export function transformToStandard(
 export function transformFromStandard(
 	standardConfig: any,
 	descriptor: FormatDescriptor,
-	serverName: string,
+	_serverName: string,
 ): any {
 	if (!standardConfig || typeof standardConfig !== "object") {
 		return standardConfig
@@ -235,8 +238,6 @@ export function transformFromStandard(
 
 	return client
 }
-
-
 
 export function readConfig(client: string): ClientMCPConfig {
 	verbose(`Reading config for client: ${client}`)
@@ -476,7 +477,7 @@ function writeConfigJson(
 	const topLevelKey = descriptor.topLevelKey
 
 	// Transform standard format to client-specific format
-	let transformedServers: Record<string, any> = {}
+	const transformedServers: Record<string, any> = {}
 	if (mergedConfig.mcpServers) {
 		for (const [serverName, serverConfig] of Object.entries(
 			mergedConfig.mcpServers,
@@ -545,8 +546,7 @@ function writeConfigYaml(
 		: getFormatDescriptor(clientConfig.label.toLowerCase())
 
 	// Determine the YAML key to use
-	const yamlKey =
-		clientConfig.yamlKey || descriptor.topLevelKey || "mcpServers"
+	const yamlKey = clientConfig.yamlKey || descriptor.topLevelKey || "mcpServers"
 
 	if (originalDoc) {
 		let mcpServersNode = originalDoc.get(yamlKey)

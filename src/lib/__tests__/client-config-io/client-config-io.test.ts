@@ -435,7 +435,6 @@ describe("writeConfig", () => {
 			headers: {},
 		})
 	})
-
 })
 
 describe("read-modify-write cycle (real-world flow)", () => {
@@ -772,7 +771,9 @@ describe("transformation flow integration", () => {
 			})
 			// Verify no transformation was applied (fields match exactly)
 			expect("command" in writtenServer && writtenServer.command).toBe("npx")
-			expect("env" in writtenServer && writtenServer.env).toEqual({ KEY: "value" })
+			expect("env" in writtenServer && writtenServer.env).toEqual({
+				KEY: "value",
+			})
 		})
 
 		test("should apply transformation for HTTP configs with formatDescriptor", () => {
@@ -942,4 +943,3 @@ describe("transformation flow integration", () => {
 		})
 	})
 })
-

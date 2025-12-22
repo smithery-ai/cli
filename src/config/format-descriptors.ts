@@ -103,4 +103,3 @@ export function getFormatDescriptor(clientName: string): FormatDescriptor {
 		topLevelKey: "mcpServers",
 	}
 }
-

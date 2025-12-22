@@ -4,17 +4,17 @@ import chalk from "chalk"
 import ora from "ora"
 import type { ValidClient } from "../config/clients"
 import { getClientConfiguration } from "../config/clients"
+import {
+	readConfig,
+	runConfigCommand,
+	writeConfig,
+} from "../lib/client-config-io"
 import { saveConfig } from "../lib/keychain"
 import { verbose } from "../lib/logger"
 import { resolveServer } from "../lib/registry"
 import type { ServerConfig } from "../types/registry"
 import { checkAnalyticsConsent } from "../utils/analytics"
 import { promptForRestart } from "../utils/client"
-import {
-	readConfig,
-	runConfigCommand,
-	writeConfig,
-} from "../lib/client-config-io"
 import { getServerName } from "../utils/install/helpers"
 import { formatServerConfig } from "../utils/install/server-config"
 import { resolveUserConfig } from "../utils/install/user-config"

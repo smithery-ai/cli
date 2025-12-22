@@ -72,8 +72,12 @@ describe("transformFromStandard", () => {
 	for (const testCase of transformFromStandardCases) {
 		test(testCase.name, () => {
 			// ARRANGE: Test case is already set up with input, descriptor, and serverName
-			const { input, expected, descriptor, serverName = "test-server" } =
-				testCase
+			const {
+				input,
+				expected,
+				descriptor,
+				serverName = "test-server",
+			} = testCase
 
 			// ACT: Transform standard format to client format
 			const result = transformFromStandard(input, descriptor, serverName)
@@ -200,4 +204,3 @@ describe("transformFromStandard", () => {
 		expect(result).not.toHaveProperty("args")
 	})
 })
-
