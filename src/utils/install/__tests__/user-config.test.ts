@@ -42,7 +42,7 @@ vi.mock("../../command-prompts", () => ({
 	promptForExistingConfig: vi.fn(),
 }))
 
-vi.mock("../../../lib/bundle-manager", () => ({
+vi.mock("../../../lib/mcpb", () => ({
 	ensureBundleInstalled: vi.fn(),
 	getBundleUserConfigSchema: vi.fn(),
 }))
