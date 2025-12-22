@@ -2,8 +2,7 @@ import type { ServerDetailResponse } from "@smithery/registry/models/components"
 import { logWithTimestamp } from "../../commands/run/runner-utils.js"
 import {
 	ensureBundleInstalled,
-	getBundleCommand,
-	hydrateBundleCommand,
+	getHydratedBundleCommand,
 } from "../../lib/mcpb.js"
 import type { ServerConfig } from "../../types/registry.js"
 
@@ -43,11 +42,8 @@ export async function prepareStdioConnection(
 			serverDetails.qualifiedName,
 			bundleConnection.bundleUrl,
 		)
-		const bundleCommand = getBundleCommand(bundleDir)
-
 		// Config is already resolved from keychain before calling this function
-		// Hydrate all templates in args and env
-		const hydrated = hydrateBundleCommand(bundleCommand, config, bundleDir)
+		const hydrated = getHydratedBundleCommand(bundleDir, config)
 
 		return {
 			command: hydrated.command,

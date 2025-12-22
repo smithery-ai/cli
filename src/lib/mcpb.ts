@@ -142,28 +142,6 @@ async function downloadBundle(
 }
 
 /**
- * Extracts a .mcpb bundle using the @anthropic-ai/mcpb library
- */
-async function extractBundle(
-	mcpbPath: string,
-	extractDir: string,
-): Promise<void> {
-	verbose(`Extracting bundle to: ${extractDir}`)
-
-	const success = await unpackExtension({
-		mcpbPath,
-		outputDir: extractDir,
-		silent: true,
-	})
-
-	if (!success) {
-		throw new Error("Failed to extract bundle")
-	}
-
-	verbose("Bundle extracted successfully")
-}
-
-/**
  * Downloads and extracts a bundle to the local cache
  * @param qualifiedName - Server qualified name (e.g., @user/server)
  * @param bundleUrl - URL to download the .mcpb bundle from
@@ -183,7 +161,18 @@ export async function downloadAndExtractBundle(
 	const { etag, lastModified } = await downloadBundle(bundleUrl, mcpbPath)
 
 	// Extract bundle using @anthropic/mcpb CLI
-	await extractBundle(mcpbPath, bundleDir)
+	verbose(`Extracting bundle to: ${bundleDir}`)
+	const success = await unpackExtension({
+		mcpbPath,
+		outputDir: bundleDir,
+		silent: true,
+	})
+
+	if (!success) {
+		throw new Error("Failed to extract bundle")
+	}
+
+	verbose("Bundle extracted successfully")
 
 	// Save cache metadata for future ETag comparisons
 	const cacheMetadata: CacheMetadata = {
@@ -235,53 +224,21 @@ export async function ensureBundleInstalled(
 }
 
 /**
- * Resolves template strings in environment variables
- * @param env - Environment variables with template strings
- * @param userConfig - User configuration values
- * @param bundleDir - Bundle directory for __dirname resolution
- * @returns Resolved environment variables
+ * Reads manifest and hydrates all templates in a bundle command
+ * @param bundleDir - Directory containing the extracted bundle (must already be installed)
+ * @param userConfig - User configuration values for template resolution
+ * @returns Fully hydrated bundle command ready to execute
  */
-/**
- * Resolves a single template string
- * @param template - Template string like "${user_config.apiKey}" or "${__dirname}"
- * @param userConfig - User configuration values
- * @param bundleDir - Bundle directory for __dirname resolution
- * @returns Resolved string
- */
-function resolveTemplate(
-	template: string,
+export function getHydratedBundleCommand(
+	bundleDir: string,
 	userConfig: Record<string, any>,
-	bundleDir?: string,
-): string {
-	return template.replace(/\$\{([^}]+)\}/g, (match, path) => {
-		// Handle __dirname replacement
-		if (path === "__dirname" && bundleDir) {
-			return bundleDir
-		}
-
-		// Handle user_config paths like "user_config.apiKey"
-		if (path.startsWith("user_config.")) {
-			const configPath = path.replace("user_config.", "")
-			const parts = configPath.split(".")
-			let value: any = userConfig
-
-			for (const part of parts) {
-				if (value && typeof value === "object") {
-					value = value[part]
-				} else {
-					// If path doesn't exist in userConfig, return the original template
-					return match
-				}
-			}
-
-			// If value exists and is not null/undefined, return it as string
-			// Otherwise return the original template
-			return value != null ? String(value) : match
-		}
-
-		// For other template patterns, return as-is (could be extended for more patterns)
-		return match
-	})
+): {
+	command: string
+	args: string[]
+	env: Record<string, string>
+} {
+	const bundleCommand = getBundleCommand(bundleDir)
+	return hydrateBundleCommand(bundleCommand, userConfig, bundleDir)
 }
 
 /**
@@ -305,13 +262,13 @@ export function hydrateBundleCommand(
 	env: Record<string, string>
 } {
 	const resolvedArgs = bundleCommand.args.map((arg) =>
-		resolveTemplate(arg, userConfig, bundleDir),
+		resolveTemplateString(arg, userConfig, bundleDir),
 	)
 
 	const resolvedEnv: Record<string, string> = {}
 	if (bundleCommand.env) {
 		for (const [key, value] of Object.entries(bundleCommand.env)) {
-			resolvedEnv[key] = resolveTemplate(value, userConfig, bundleDir)
+			resolvedEnv[key] = resolveTemplateString(value, userConfig, bundleDir)
 		}
 	}
 
