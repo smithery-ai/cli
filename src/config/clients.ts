@@ -59,6 +59,10 @@ export interface ClientConfiguration {
 	// Optional override for YAML top-level key (defaults to "mcpServers")
 	// Some clients use different keys like "extensions"
 	yamlKey?: string
+
+	// Optional format descriptor key (references FORMAT_DESCRIPTORS registry)
+	// If not provided, will fall back to defaults or legacy fields (httpUrlKey, httpType, yamlKey)
+	formatDescriptor?: string
 }
 
 // Initialize platform-specific paths
@@ -113,6 +117,8 @@ export const CLIENT_CONFIGURATIONS: Record<string, ClientConfiguration> = {
 		supportedTransports: [Transport.STDIO, Transport.HTTP],
 		installType: "json",
 		supportsOAuth: true,
+		formatDescriptor: "windsurf",
+		// Legacy field kept for backward compatibility
 		httpUrlKey: "serverUrl",
 		path: path.join(homeDir, ".codeium", "windsurf", "mcp_config.json"),
 	},
@@ -121,6 +127,8 @@ export const CLIENT_CONFIGURATIONS: Record<string, ClientConfiguration> = {
 		supportedTransports: [Transport.STDIO, Transport.HTTP],
 		installType: "json",
 		supportsOAuth: true,
+		formatDescriptor: "cline",
+		// Legacy field kept for backward compatibility
 		httpType: "streamableHttp",
 		path: path.join(
 			baseDir,
@@ -195,6 +203,7 @@ export const CLIENT_CONFIGURATIONS: Record<string, ClientConfiguration> = {
 		supportedTransports: [Transport.STDIO, Transport.HTTP],
 		installType: "json",
 		supportsOAuth: true,
+		formatDescriptor: "opencode",
 		path: path.join(homeDir, ".config", "opencode", "opencode.json"),
 	},
 	claude: {
@@ -256,6 +265,8 @@ export const CLIENT_CONFIGURATIONS: Record<string, ClientConfiguration> = {
 		label: "Goose",
 		supportedTransports: [Transport.STDIO, Transport.HTTP],
 		installType: "yaml",
+		formatDescriptor: "goose",
+		// Legacy field kept for backward compatibility
 		yamlKey: "extensions",
 		path: path.join(homeDir, ".config", "goose", "config.yaml"),
 	},

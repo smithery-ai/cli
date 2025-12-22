@@ -5,7 +5,7 @@ import type { ValidClient } from "../config/clients"
 import { getClientConfiguration } from "../config/clients.js"
 import { deleteConfig } from "../lib/keychain.js"
 import { promptForRestart } from "../utils/client"
-import { readConfig, writeConfig } from "../utils/client-config-io"
+import { readConfig, writeConfig } from "../lib/client-config-io"
 
 /* uninstalls server for given client */
 export async function uninstallServer(

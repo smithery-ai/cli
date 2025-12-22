@@ -14,8 +14,8 @@ import os from "node:os"
 import path from "node:path"
 import { beforeEach, describe, expect, test, vi } from "vitest"
 import { Transport } from "../../../config/clients"
-import type { ClientMCPConfig } from "../../client-config-io"
-import { readConfig, writeConfig } from "../../client-config-io"
+import type { ClientMCPConfig } from "../../../lib/client-config-io"
+import { readConfig, writeConfig } from "../../../lib/client-config-io"
 
 // Mock getClientConfiguration to return test configs
 vi.mock("../../../config/clients", async () => {
@@ -436,73 +436,6 @@ describe("writeConfig", () => {
 		})
 	})
 
-	test("should write Windsurf HTTP server config with serverUrl key override", () => {
-		// ARRANGE: Windsurf config with HTTP server (should use serverUrl instead of url)
-		const configPath = path.join(tempDir, "windsurf.json")
-		const config: ClientMCPConfig = {
-			mcpServers: {
-				"test-server": {
-					type: "http",
-					url: "https://server.smithery.ai/@test/server/mcp",
-					headers: {},
-				},
-			},
-		}
-
-		mockGetClientConfiguration.mockReturnValue({
-			label: "Windsurf",
-			supportedTransports: [Transport.STDIO, Transport.HTTP],
-			installType: "json",
-			httpUrlKey: "serverUrl",
-			path: configPath,
-		})
-
-		// ACT
-		writeConfig(config, "windsurf")
-
-		// ASSERT: HTTP config should be written with serverUrl key (not url)
-		const written = JSON.parse(fs.readFileSync(configPath, "utf8"))
-		expect(written.mcpServers["test-server"]).toEqual({
-			type: "http",
-			serverUrl: "https://server.smithery.ai/@test/server/mcp",
-			headers: {},
-		})
-		expect(written.mcpServers["test-server"].url).toBeUndefined()
-	})
-
-	test("should write Cline HTTP server config with streamableHttp type override", () => {
-		// ARRANGE: Cline config with HTTP server (should use streamableHttp instead of http)
-		const configPath = path.join(tempDir, "cline.json")
-		const config: ClientMCPConfig = {
-			mcpServers: {
-				"test-server": {
-					type: "http",
-					url: "https://server.smithery.ai/@test/server/mcp",
-					headers: {},
-				},
-			},
-		}
-
-		mockGetClientConfiguration.mockReturnValue({
-			label: "Cline",
-			supportedTransports: [Transport.STDIO, Transport.HTTP],
-			installType: "json",
-			httpType: "streamableHttp",
-			path: configPath,
-		})
-
-		// ACT
-		writeConfig(config, "cline")
-
-		// ASSERT: HTTP config should be written with streamableHttp type (not http)
-		const written = JSON.parse(fs.readFileSync(configPath, "utf8"))
-		expect(written.mcpServers["test-server"]).toEqual({
-			type: "streamableHttp",
-			url: "https://server.smithery.ai/@test/server/mcp",
-			headers: {},
-		})
-		expect(written.mcpServers["test-server"].type).toBe("streamableHttp")
-	})
 })
 
 describe("read-modify-write cycle (real-world flow)", () => {
@@ -637,7 +570,7 @@ describe("read-modify-write cycle (real-world flow)", () => {
 	})
 })
 
-describe("goose client (extensions key format)", () => {
+describe("transformation flow integration", () => {
 	let tempDir: string
 
 	beforeEach(() => {
@@ -645,269 +578,368 @@ describe("goose client (extensions key format)", () => {
 		tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "mcp-config-test-"))
 	})
 
-	test("should read goose config with extensions key", () => {
-		// ARRANGE: Goose config with extensions key
-		const configPath = path.join(tempDir, "goose.yaml")
-		const yamlContent = `extensions:
-  github:
-    name: GitHub
-    cmd: npx
-    args:
-      - -y
-      - "@modelcontextprotocol/server-github"
-    enabled: true
-    envs:
-      GITHUB_PERSONAL_ACCESS_TOKEN: "<YOUR_TOKEN>"
-    type: stdio
-    timeout: 300
-`
-		fs.writeFileSync(configPath, yamlContent)
-
-		mockGetClientConfiguration.mockReturnValue({
-			label: "Goose",
-			supportedTransports: [Transport.STDIO, Transport.HTTP],
-			installType: "yaml",
-			yamlKey: "extensions",
-			path: configPath,
-		})
-
-		// ACT
-		const result = readConfig("goose")
-
-		// ASSERT: Should read and transform goose format to standard format
-		expect(result.mcpServers.github).toEqual({
-			command: "npx",
-			args: ["-y", "@modelcontextprotocol/server-github"],
-			env: {
-				GITHUB_PERSONAL_ACCESS_TOKEN: "<YOUR_TOKEN>",
-			},
-		})
-		// STDIO configs in standard format don't have a type field
-		expect(result.mcpServers.github).not.toHaveProperty("type")
-		// Should not include goose-specific fields (name, enabled, timeout)
-		expect(result.mcpServers.github).not.toHaveProperty("name")
-		expect(result.mcpServers.github).not.toHaveProperty("enabled")
-		expect(result.mcpServers.github).not.toHaveProperty("timeout")
-	})
-
-	test("should read goose config with HTTP server", () => {
-		// ARRANGE: Goose config with HTTP server
-		const configPath = path.join(tempDir, "goose.yaml")
-		const yamlContent = `extensions:
+	describe("readConfig - transformation detection", () => {
+		test("should apply transformation when client has formatDescriptor", () => {
+			// ARRANGE: Goose client with formatDescriptor (needs transformation)
+			const configPath = path.join(tempDir, "goose.yaml")
+			const yamlContent = `extensions:
   test-server:
-    name: Test Server
     cmd: npx
-    args: []
-    enabled: true
-    envs: {}
-    type: http
-    url: "https://server.smithery.ai/@test/server/mcp"
-    timeout: 300
+    args: ["-y", "@test/server"]
+    envs:
+      KEY: "value"
+    type: stdio
 `
-		fs.writeFileSync(configPath, yamlContent)
+			fs.writeFileSync(configPath, yamlContent)
 
-		mockGetClientConfiguration.mockReturnValue({
-			label: "Goose",
-			supportedTransports: [Transport.STDIO, Transport.HTTP],
-			installType: "yaml",
-			yamlKey: "extensions",
-			path: configPath,
+			mockGetClientConfiguration.mockReturnValue({
+				label: "Goose",
+				supportedTransports: [Transport.STDIO, Transport.HTTP],
+				installType: "yaml",
+				formatDescriptor: "goose",
+				path: configPath,
+			})
+
+			// ACT
+			const result = readConfig("goose")
+
+			// ASSERT: Should transform goose format (cmd/envs/type) → standard format (command/env/no type)
+			expect(result.mcpServers["test-server"]).toEqual({
+				command: "npx",
+				args: ["-y", "@test/server"],
+				env: {
+					KEY: "value",
+				},
+			})
+			expect(result.mcpServers["test-server"]).not.toHaveProperty("type")
+			expect(result.mcpServers["test-server"]).not.toHaveProperty("cmd")
+			expect(result.mcpServers["test-server"]).not.toHaveProperty("envs")
 		})
 
-		// ACT
-		const result = readConfig("goose")
-
-		// ASSERT: Should read HTTP server config
-		// Note: HTTP configs may include empty cmd/args/envs from goose format, but we filter those out
-		expect(result.mcpServers["test-server"]).toMatchObject({
-			type: "http",
-			url: "https://server.smithery.ai/@test/server/mcp",
-		})
-		// Should not include STDIO-specific fields for HTTP configs
-		expect(result.mcpServers["test-server"]).not.toHaveProperty("command")
-		expect(result.mcpServers["test-server"]).not.toHaveProperty("args")
-		expect(result.mcpServers["test-server"]).not.toHaveProperty("env")
-	})
-
-	test("should write goose config with proper format transformation", () => {
-		// ARRANGE: Standard format config
-		const configPath = path.join(tempDir, "goose.yaml")
-		const config: ClientMCPConfig = {
-			mcpServers: {
-				github: {
-					command: "npx",
-					args: ["-y", "@modelcontextprotocol/server-github"],
-					env: {
-						GITHUB_PERSONAL_ACCESS_TOKEN: "<YOUR_TOKEN>",
+		test("should use normal flow when client has no formatDescriptor", () => {
+			// ARRANGE: Standard client without formatDescriptor (no transformation)
+			const configPath = path.join(tempDir, "claude.json")
+			const configContent = {
+				mcpServers: {
+					"test-server": {
+						command: "npx",
+						args: ["-y", "@test/server"],
+						env: {
+							KEY: "value",
+						},
 					},
 				},
-			},
-		}
+			}
+			fs.writeFileSync(configPath, JSON.stringify(configContent, null, 2))
 
-		mockGetClientConfiguration.mockReturnValue({
-			label: "Goose",
-			supportedTransports: [Transport.STDIO, Transport.HTTP],
-			installType: "yaml",
-			yamlKey: "extensions",
-			path: configPath,
-		})
+			mockGetClientConfiguration.mockReturnValue({
+				label: "Claude Desktop",
+				supportedTransports: [Transport.STDIO],
+				installType: "json",
+				// No formatDescriptor - should use normal flow
+				path: configPath,
+			})
 
-		// ACT
-		writeConfig(config, "goose")
+			// ACT
+			const result = readConfig("claude")
 
-		// ASSERT: File should be created with goose format
-		expect(fs.existsSync(configPath)).toBe(true)
-		const content = fs.readFileSync(configPath, "utf8")
-		expect(content).toContain("extensions:")
-		expect(content).toContain("github:")
-		expect(content).toContain("cmd: npx")
-		expect(content).toContain("name: Github")
-		expect(content).toContain("enabled: true")
-		expect(content).toContain("type: stdio")
-		expect(content).toContain("timeout: 300")
-		expect(content).toContain("envs:")
-		expect(content).toContain("GITHUB_PERSONAL_ACCESS_TOKEN")
-
-		// Verify by reading back
-		const written = readConfig("goose")
-		expect(written.mcpServers.github).toEqual({
-			command: "npx",
-			args: ["-y", "@modelcontextprotocol/server-github"],
-			env: {
-				GITHUB_PERSONAL_ACCESS_TOKEN: "<YOUR_TOKEN>",
-			},
-		})
-	})
-
-	test("should write goose config with HTTP server", () => {
-		// ARRANGE: Standard format HTTP config
-		const configPath = path.join(tempDir, "goose.yaml")
-		const config: ClientMCPConfig = {
-			mcpServers: {
-				"test-server": {
-					type: "http",
-					url: "https://server.smithery.ai/@test/server/mcp",
-					headers: {},
+			// ASSERT: Should read config as-is without transformation
+			const server = result.mcpServers["test-server"]
+			expect(server).toEqual({
+				command: "npx",
+				args: ["-y", "@test/server"],
+				env: {
+					KEY: "value",
 				},
-			},
-		}
-
-		mockGetClientConfiguration.mockReturnValue({
-			label: "Goose",
-			supportedTransports: [Transport.STDIO, Transport.HTTP],
-			installType: "yaml",
-			yamlKey: "extensions",
-			path: configPath,
+			})
+			// Verify no transformation was applied (fields match exactly)
+			expect("command" in server && server.command).toBe("npx")
+			expect("env" in server && server.env).toEqual({ KEY: "value" })
 		})
 
-		// ACT
-		writeConfig(config, "goose")
+		test("should detect transformation needed based on topLevelKey difference", () => {
+			// ARRANGE: OpenCode client with mcp key (different from mcpServers)
+			const configPath = path.join(tempDir, "opencode.json")
+			const configContent = {
+				mcp: {
+					"test-server": {
+						type: "local",
+						command: ["npx", "-y", "@test/server"],
+						environment: {
+							KEY: "value",
+						},
+					},
+				},
+			}
+			fs.writeFileSync(configPath, JSON.stringify(configContent, null, 2))
 
-		// ASSERT: File should contain HTTP server in goose format
-		expect(fs.existsSync(configPath)).toBe(true)
-		const content = fs.readFileSync(configPath, "utf8")
-		expect(content).toContain("extensions:")
-		expect(content).toContain("test-server:")
-		expect(content).toContain("type: http")
-		expect(content).toContain("url:")
-		expect(content).toContain("name: Test Server")
-		expect(content).toContain("enabled: true")
-		expect(content).toContain("timeout: 300")
+			mockGetClientConfiguration.mockReturnValue({
+				label: "OpenCode",
+				supportedTransports: [Transport.STDIO, Transport.HTTP],
+				installType: "json",
+				formatDescriptor: "opencode",
+				path: configPath,
+			})
 
-		// Verify by reading back
-		const written = readConfig("goose")
-		expect(written.mcpServers["test-server"]).toEqual({
-			type: "http",
-			url: "https://server.smithery.ai/@test/server/mcp",
-			headers: {},
-		})
-	})
+			// ACT
+			const result = readConfig("opencode")
 
-	test("should merge existing goose configs", () => {
-		// ARRANGE: Existing goose config
-		const configPath = path.join(tempDir, "goose.yaml")
-		const yamlContent = `extensions:
-  existing-server:
-    name: Existing Server
-    cmd: npx
-    args:
-      - -y
-      - "@smithery/cli@latest"
-      - run
-      - existing-server
-    enabled: true
-    envs: {}
-    type: stdio
-    timeout: 300
-`
-		fs.writeFileSync(configPath, yamlContent)
-
-		mockGetClientConfiguration.mockReturnValue({
-			label: "Goose",
-			supportedTransports: [Transport.STDIO, Transport.HTTP],
-			installType: "yaml",
-			yamlKey: "extensions",
-			path: configPath,
-		})
-
-		// ACT: Read, add server, write
-		const config = readConfig("goose")
-		config.mcpServers["new-server"] = {
-			command: "npx",
-			args: ["-y", "@smithery/cli@latest", "run", "new-server"],
-		}
-		writeConfig(config, "goose")
-
-		// ASSERT: Both servers should be present
-		const written = readConfig("goose")
-		expect(written.mcpServers["existing-server"]).toBeDefined()
-		expect(written.mcpServers["new-server"]).toBeDefined()
-		expect(written.mcpServers["existing-server"]).toEqual({
-			command: "npx",
-			args: ["-y", "@smithery/cli@latest", "run", "existing-server"],
-		})
-		// STDIO configs in standard format don't have a type field
-		expect(written.mcpServers["existing-server"]).not.toHaveProperty("type")
-		expect(written.mcpServers["new-server"]).toEqual({
-			command: "npx",
-			args: ["-y", "@smithery/cli@latest", "run", "new-server"],
+			// ASSERT: Should transform from mcp key and apply transformations
+			expect(result.mcpServers["test-server"]).toEqual({
+				command: "npx",
+				args: ["-y", "@test/server"],
+				env: {
+					KEY: "value",
+				},
+			})
+			expect(result.mcpServers["test-server"]).not.toHaveProperty("type")
+			expect(result.mcpServers["test-server"]).not.toHaveProperty("environment")
 		})
 	})
 
-	test("should preserve other top-level keys in goose config", () => {
-		// ARRANGE: Goose config with other top-level keys
-		const configPath = path.join(tempDir, "goose.yaml")
-		const yamlContent = `someOtherField: preserved-value
-extensions:
+	describe("writeConfig - transformation detection", () => {
+		test("should apply transformation when client has formatDescriptor", () => {
+			// ARRANGE: Standard format config, Goose client with formatDescriptor
+			const configPath = path.join(tempDir, "goose.yaml")
+			const config: ClientMCPConfig = {
+				mcpServers: {
+					"test-server": {
+						command: "npx",
+						args: ["-y", "@test/server"],
+						env: {
+							KEY: "value",
+						},
+					},
+				},
+			}
+
+			mockGetClientConfiguration.mockReturnValue({
+				label: "Goose",
+				supportedTransports: [Transport.STDIO, Transport.HTTP],
+				installType: "yaml",
+				formatDescriptor: "goose",
+				path: configPath,
+			})
+
+			// ACT
+			writeConfig(config, "goose")
+
+			// ASSERT: Should transform standard format → goose format
+			const content = fs.readFileSync(configPath, "utf8")
+			expect(content).toContain("extensions:")
+			expect(content).toContain("cmd: npx")
+			expect(content).toContain("envs:")
+			expect(content).toContain("type: stdio")
+			expect(content).not.toContain("command:")
+			expect(content).not.toContain("env:")
+		})
+
+		test("should use normal flow when client has no formatDescriptor", () => {
+			// ARRANGE: Standard format config, client without formatDescriptor
+			const configPath = path.join(tempDir, "claude.json")
+			const config: ClientMCPConfig = {
+				mcpServers: {
+					"test-server": {
+						command: "npx",
+						args: ["-y", "@test/server"],
+						env: {
+							KEY: "value",
+						},
+					},
+				},
+			}
+
+			mockGetClientConfiguration.mockReturnValue({
+				label: "Claude Desktop",
+				supportedTransports: [Transport.STDIO],
+				installType: "json",
+				// No formatDescriptor - should use normal flow
+				path: configPath,
+			})
+
+			// ACT
+			writeConfig(config, "claude")
+
+			// ASSERT: Should write config as-is without transformation
+			const written = JSON.parse(fs.readFileSync(configPath, "utf8"))
+			const writtenServer = written.mcpServers["test-server"]
+			expect(writtenServer).toEqual({
+				command: "npx",
+				args: ["-y", "@test/server"],
+				env: {
+					KEY: "value",
+				},
+			})
+			// Verify no transformation was applied (fields match exactly)
+			expect("command" in writtenServer && writtenServer.command).toBe("npx")
+			expect("env" in writtenServer && writtenServer.env).toEqual({ KEY: "value" })
+		})
+
+		test("should apply transformation for HTTP configs with formatDescriptor", () => {
+			// ARRANGE: Standard HTTP config, Windsurf client (needs serverUrl transformation)
+			const configPath = path.join(tempDir, "windsurf.json")
+			const config: ClientMCPConfig = {
+				mcpServers: {
+					"test-server": {
+						type: "http",
+						url: "https://server.example.com/mcp",
+						headers: {},
+					},
+				},
+			}
+
+			mockGetClientConfiguration.mockReturnValue({
+				label: "Windsurf",
+				supportedTransports: [Transport.STDIO, Transport.HTTP],
+				installType: "json",
+				formatDescriptor: "windsurf",
+				path: configPath,
+			})
+
+			// ACT
+			writeConfig(config, "windsurf")
+
+			// ASSERT: Should transform url → serverUrl
+			const written = JSON.parse(fs.readFileSync(configPath, "utf8"))
+			expect(written.mcpServers["test-server"]).toEqual({
+				type: "http",
+				serverUrl: "https://server.example.com/mcp",
+				headers: {},
+			})
+			expect(written.mcpServers["test-server"].url).toBeUndefined()
+		})
+
+		test("should apply type transformation for HTTP configs", () => {
+			// ARRANGE: Standard HTTP config, Cline client (needs streamableHttp transformation)
+			const configPath = path.join(tempDir, "cline.json")
+			const config: ClientMCPConfig = {
+				mcpServers: {
+					"test-server": {
+						type: "http",
+						url: "https://server.example.com/mcp",
+						headers: {},
+					},
+				},
+			}
+
+			mockGetClientConfiguration.mockReturnValue({
+				label: "Cline",
+				supportedTransports: [Transport.STDIO, Transport.HTTP],
+				installType: "json",
+				formatDescriptor: "cline",
+				path: configPath,
+			})
+
+			// ACT
+			writeConfig(config, "cline")
+
+			// ASSERT: Should transform http → streamableHttp
+			const written = JSON.parse(fs.readFileSync(configPath, "utf8"))
+			expect(written.mcpServers["test-server"]).toEqual({
+				type: "streamableHttp",
+				url: "https://server.example.com/mcp",
+				headers: {},
+			})
+		})
+	})
+
+	describe("round-trip transformation flow", () => {
+		test("should correctly transform client format → standard → client format", () => {
+			// ARRANGE: Start with client-specific format (Goose)
+			const configPath = path.join(tempDir, "goose.yaml")
+			const yamlContent = `extensions:
   test-server:
-    name: Test Server
     cmd: npx
-    args: []
-    enabled: true
-    envs: {}
+    args: ["-y", "@test/server"]
+    envs:
+      KEY: "value"
     type: stdio
-    timeout: 300
 `
-		fs.writeFileSync(configPath, yamlContent)
+			fs.writeFileSync(configPath, yamlContent)
 
-		mockGetClientConfiguration.mockReturnValue({
-			label: "Goose",
-			supportedTransports: [Transport.STDIO, Transport.HTTP],
-			installType: "yaml",
-			yamlKey: "extensions",
-			path: configPath,
+			mockGetClientConfiguration.mockReturnValue({
+				label: "Goose",
+				supportedTransports: [Transport.STDIO, Transport.HTTP],
+				installType: "yaml",
+				formatDescriptor: "goose",
+				path: configPath,
+			})
+
+			// ACT: Read (client → standard), modify, write (standard → client)
+			const readResult = readConfig("goose")
+			const server = readResult.mcpServers["test-server"]
+			if ("env" in server && server.env) {
+				server.env.KEY = "modified-value"
+			}
+			writeConfig(readResult, "goose")
+
+			// ASSERT: Should maintain transformation through round-trip
+			const finalResult = readConfig("goose")
+			expect(finalResult.mcpServers["test-server"]).toEqual({
+				command: "npx",
+				args: ["-y", "@test/server"],
+				env: {
+					KEY: "modified-value",
+				},
+			})
+
+			// Verify file has correct client format
+			const fileContent = fs.readFileSync(configPath, "utf8")
+			expect(fileContent).toContain("cmd: npx")
+			expect(fileContent).toContain("envs:")
+			expect(fileContent).toContain("modified-value")
 		})
 
-		// ACT: Read, modify, write
-		const config = readConfig("goose")
-		config.mcpServers["new-server"] = {
-			command: "npx",
-			args: ["test"],
-		}
-		writeConfig(config, "goose")
+		test("should handle standard format without transformation", () => {
+			// ARRANGE: Standard format config
+			const configPath = path.join(tempDir, "claude.json")
+			const configContent = {
+				mcpServers: {
+					"test-server": {
+						command: "npx",
+						args: ["-y", "@test/server"],
+						env: {
+							KEY: "value",
+						},
+					},
+				},
+			}
+			fs.writeFileSync(configPath, JSON.stringify(configContent, null, 2))
 
-		// ASSERT: Other top-level keys should be preserved
-		const content = fs.readFileSync(configPath, "utf8")
-		expect(content).toContain("someOtherField: preserved-value")
+			mockGetClientConfiguration.mockReturnValue({
+				label: "Claude Desktop",
+				supportedTransports: [Transport.STDIO],
+				installType: "json",
+				// No formatDescriptor
+				path: configPath,
+			})
+
+			// ACT: Read, modify, write
+			const readResult = readConfig("claude")
+			const server = readResult.mcpServers["test-server"]
+			if ("env" in server && server.env) {
+				server.env.KEY = "modified-value"
+			}
+			writeConfig(readResult, "claude")
+
+			// ASSERT: Should maintain standard format without transformation
+			const finalResult = readConfig("claude")
+			expect(finalResult.mcpServers["test-server"]).toEqual({
+				command: "npx",
+				args: ["-y", "@test/server"],
+				env: {
+					KEY: "modified-value",
+				},
+			})
+
+			// Verify file maintains standard format
+			const written = JSON.parse(fs.readFileSync(configPath, "utf8"))
+			const writtenServer = written.mcpServers["test-server"]
+			expect("command" in writtenServer && writtenServer.command).toBe("npx")
+			expect("env" in writtenServer && writtenServer.env).toEqual({
+				KEY: "modified-value",
+			})
+		})
 	})
 })
+

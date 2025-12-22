@@ -7,7 +7,11 @@ import {
 	type ClientConfiguration,
 	getClientConfiguration,
 } from "../config/clients.js"
-import { verbose } from "../lib/logger.js"
+import {
+	type FormatDescriptor,
+	getFormatDescriptor,
+} from "../config/format-descriptors.js"
+import { verbose } from "./logger.js"
 import type { MCPConfig } from "../types/registry.js"
 
 export interface ClientMCPConfig extends MCPConfig {
@@ -15,160 +19,224 @@ export interface ClientMCPConfig extends MCPConfig {
 }
 
 /**
- * Transforms HTTP server config to use custom URL key and type if specified by client
- * @param serverConfig - The server configuration object
- * @param clientConfig - The client configuration
- * @returns Transformed server configuration
- */
-function transformHTTPServerConfig(
-	serverConfig: any,
-	clientConfig: ClientConfiguration,
-): any {
-	// Only transform HTTP configs (check both "http" and "streamableHttp" types)
-	const isHTTPConfig =
-		serverConfig.type === "http" || serverConfig.type === "streamableHttp"
-	if (!isHTTPConfig) {
-		return serverConfig
-	}
-
-	let transformed = { ...serverConfig }
-
-	// Override type if specified
-	if (clientConfig.httpType && clientConfig.httpType !== "http") {
-		transformed.type = clientConfig.httpType
-	}
-
-	// Transform URL key if specified
-	if (clientConfig.httpUrlKey && clientConfig.httpUrlKey !== "url") {
-		const { url, ...rest } = transformed
-		transformed = {
-			...rest,
-			[clientConfig.httpUrlKey]: url,
-		}
-	}
-
-	return transformed
-}
-
-/**
- * Transforms goose format server config to standard format
- * @param gooseConfig - The goose format server configuration
+ * Transforms client-specific format to standard format using format descriptor
+ * @param clientConfig - The client-specific server configuration
+ * @param descriptor - The format descriptor
  * @returns Standard format server configuration
  */
-function transformGooseToStandard(gooseConfig: any): any {
-	if (!gooseConfig || typeof gooseConfig !== "object") {
-		return gooseConfig
+export function transformToStandard(
+	clientConfig: any,
+	descriptor: FormatDescriptor,
+): any {
+	if (!clientConfig || typeof clientConfig !== "object") {
+		return clientConfig
 	}
 
 	const standard: any = {}
 
-	// Check if this is an HTTP config
-	const isHTTP =
-		gooseConfig.type === "http" || gooseConfig.type === "streamableHttp"
+	// Determine if this is an HTTP config
+	const httpTypeValue = descriptor.typeTransformations?.http?.typeValue
+	const stdioTypeValue = descriptor.typeTransformations?.stdio?.typeValue
+	const configType = clientConfig.type
 
-	if (isHTTP) {
-		// HTTP config: preserve type, url, headers
-		standard.type = gooseConfig.type
-		if ("url" in gooseConfig) {
-			standard.url = gooseConfig.url
-		}
-		if ("headers" in gooseConfig) {
-			standard.headers = gooseConfig.headers
-		}
+	// Check for known HTTP types
+	let isHTTP = false
+	if (
+		configType === "http" ||
+		configType === "streamableHttp" ||
+		configType === "remote" ||
+		(httpTypeValue && configType === httpTypeValue)
+	) {
+		isHTTP = true
+	} else if (
+		configType === "local" ||
+		configType === "stdio" ||
+		(stdioTypeValue && configType === stdioTypeValue)
+	) {
+		isHTTP = false
 	} else {
-		// STDIO config: transform cmd -> command, preserve args and env
-		// Note: STDIO configs in standard format don't have a type field
-		if ("cmd" in gooseConfig) {
-			standard.command = gooseConfig.cmd
-		}
-		if (
-			"args" in gooseConfig &&
-			Array.isArray(gooseConfig.args) &&
-			gooseConfig.args.length > 0
-		) {
-			standard.args = gooseConfig.args
-		}
-		// Transform envs -> env (only if present and not empty)
-		if (
-			"envs" in gooseConfig &&
-			gooseConfig.envs &&
-			Object.keys(gooseConfig.envs).length > 0
-		) {
-			standard.env = gooseConfig.envs
-		}
-		// Don't include type for STDIO configs in standard format
+		// Fallback: check for URL field presence (HTTP) vs command field (STDIO)
+		const urlKey = descriptor.fieldMappings?.http?.url || "url"
+		const commandKey = descriptor.fieldMappings?.stdio?.command || "command"
+		isHTTP = urlKey in clientConfig && !(commandKey in clientConfig)
 	}
 
-	// Ignore name, enabled, timeout (write-only metadata)
+	if (isHTTP) {
+		// HTTP config transformation
+		standard.type = "http"
+
+		// Map URL field
+		const urlKey = descriptor.fieldMappings?.http?.url || "url"
+		if (urlKey in clientConfig) {
+			standard.url = clientConfig[urlKey]
+		}
+
+		// Map headers field
+		const headersKey = descriptor.fieldMappings?.http?.headers || "headers"
+		if (headersKey in clientConfig && clientConfig[headersKey]) {
+			standard.headers = clientConfig[headersKey]
+		}
+
+		// Map oauth field
+		const oauthKey = descriptor.fieldMappings?.http?.oauth || "oauth"
+		if (oauthKey in clientConfig && clientConfig[oauthKey]) {
+			standard.oauth = clientConfig[oauthKey]
+		}
+	} else {
+		// STDIO config transformation
+		// Standard format doesn't have a type field for STDIO
+
+		// Handle command format (string vs array)
+		const commandFormat =
+			descriptor.structureTransformations?.stdio?.commandFormat || "string"
+		const commandKey = descriptor.fieldMappings?.stdio?.command || "command"
+
+		if (commandKey in clientConfig) {
+			if (commandFormat === "array" && Array.isArray(clientConfig[commandKey])) {
+				// Array format: first element is command, rest are args
+				const commandArray = clientConfig[commandKey]
+				if (commandArray.length > 0) {
+					standard.command = commandArray[0]
+					if (commandArray.length > 1) {
+						standard.args = commandArray.slice(1)
+					}
+				}
+			} else {
+				// String format: command is a string
+				standard.command = clientConfig[commandKey]
+			}
+		}
+
+		// Map args field (only if not already set from array format)
+		if (!standard.args) {
+			const argsKey = descriptor.fieldMappings?.stdio?.args || "args"
+			if (argsKey in clientConfig && Array.isArray(clientConfig[argsKey])) {
+				standard.args = clientConfig[argsKey]
+			}
+		}
+
+		// Map env field
+		const envKey = descriptor.fieldMappings?.stdio?.env || "env"
+		if (
+			envKey in clientConfig &&
+			clientConfig[envKey] &&
+			Object.keys(clientConfig[envKey]).length > 0
+		) {
+			standard.env = clientConfig[envKey]
+		}
+	}
 
 	return standard
 }
 
 /**
- * Transforms standard format server config to goose format
+ * Transforms standard format to client-specific format using format descriptor
  * @param standardConfig - The standard format server configuration
- * @param serverName - The server name (used for generating display name)
- * @returns Goose format server configuration
+ * @param descriptor - The format descriptor
+ * @param serverName - The server name (used for metadata generation)
+ * @returns Client-specific format server configuration
  */
-function transformStandardToGoose(
+export function transformFromStandard(
 	standardConfig: any,
+	descriptor: FormatDescriptor,
 	serverName: string,
 ): any {
 	if (!standardConfig || typeof standardConfig !== "object") {
 		return standardConfig
 	}
 
-	const goose: any = {}
+	const client: any = {}
 
-	// Check if this is an HTTP config
+	// Determine if this is an HTTP config
 	const isHTTP =
 		"type" in standardConfig &&
 		(standardConfig.type === "http" || standardConfig.type === "streamableHttp")
 
 	if (isHTTP) {
-		// HTTP config: preserve type, url, headers
-		goose.type = standardConfig.type
+		// HTTP config transformation
+		const httpTypeValue =
+			descriptor.typeTransformations?.http?.typeValue || "http"
+		client.type = httpTypeValue
+
+		// Map URL field
+		const urlKey = descriptor.fieldMappings?.http?.url || "url"
 		if ("url" in standardConfig) {
-			goose.url = standardConfig.url
+			client[urlKey] = standardConfig.url
 		}
-		if ("headers" in standardConfig) {
-			goose.headers = standardConfig.headers
+
+		// Map headers field
+		const headersKey = descriptor.fieldMappings?.http?.headers || "headers"
+		if ("headers" in standardConfig && standardConfig.headers) {
+			client[headersKey] = standardConfig.headers
+		}
+
+		// Map oauth field
+		const oauthKey = descriptor.fieldMappings?.http?.oauth || "oauth"
+		if ("oauth" in standardConfig && standardConfig.oauth) {
+			client[oauthKey] = standardConfig.oauth
 		}
 	} else {
-		// STDIO config: transform command -> cmd, preserve args and env
+		// STDIO config transformation
+		// Only add type if there are actual STDIO fields
+		const hasStdioFields =
+			"command" in standardConfig ||
+			"args" in standardConfig ||
+			"env" in standardConfig
+		const stdioTypeValue = descriptor.typeTransformations?.stdio?.typeValue
+		if (
+			hasStdioFields &&
+			stdioTypeValue !== null &&
+			stdioTypeValue !== undefined
+		) {
+			client.type = stdioTypeValue
+		}
+
+		// Handle command format (string vs array)
+		const commandFormat =
+			descriptor.structureTransformations?.stdio?.commandFormat || "string"
+		const commandKey = descriptor.fieldMappings?.stdio?.command || "command"
+
 		if ("command" in standardConfig) {
-			goose.cmd = standardConfig.command
+			if (commandFormat === "array") {
+				// Array format: combine command and args into single array
+				const commandArray = [standardConfig.command]
+				if (
+					"args" in standardConfig &&
+					Array.isArray(standardConfig.args) &&
+					standardConfig.args.length > 0
+				) {
+					commandArray.push(...standardConfig.args)
+				}
+				client[commandKey] = commandArray
+			} else {
+				// String format: command is a string
+				client[commandKey] = standardConfig.command
+			}
 		}
-		if (
-			"args" in standardConfig &&
-			Array.isArray(standardConfig.args) &&
-			standardConfig.args.length > 0
-		) {
-			goose.args = standardConfig.args
+
+		// Map args field (only if not using array format)
+		if (commandFormat !== "array") {
+			const argsKey = descriptor.fieldMappings?.stdio?.args || "args"
+			if (
+				"args" in standardConfig &&
+				Array.isArray(standardConfig.args) &&
+				standardConfig.args.length > 0
+			) {
+				client[argsKey] = standardConfig.args
+			}
 		}
-		// Transform env -> envs (only if present)
-		if (
-			"env" in standardConfig &&
-			standardConfig.env &&
-			Object.keys(standardConfig.env).length > 0
-		) {
-			goose.envs = standardConfig.env
+
+		// Map env field
+		const envKey = descriptor.fieldMappings?.stdio?.env || "env"
+		if ("env" in standardConfig && standardConfig.env) {
+			client[envKey] = standardConfig.env
 		}
-		// Add type for STDIO configs
-		goose.type = "stdio"
 	}
 
-	// Add goose-specific fields
-	// Capitalize first letter of each word
-	const nameParts = serverName
-		.split("-")
-		.map((part) => part.charAt(0).toUpperCase() + part.slice(1))
-	goose.name = nameParts.join(" ")
-	goose.enabled = true
-	goose.timeout = 300
-
-	return goose
+	return client
 }
+
+
 
 export function readConfig(client: string): ClientMCPConfig {
 	verbose(`Reading config for client: ${client}`)
@@ -214,70 +282,44 @@ export function readConfig(client: string): ClientMCPConfig {
 
 		verbose(`Config loaded successfully: ${JSON.stringify(rawConfig, null, 2)}`)
 
-		// Handle different naming conventions for MCP servers
-		let mcpServers = rawConfig.mcpServers || {}
-		if (clientConfig.installType === "toml" && rawConfig.mcp_servers) {
+		// Get format descriptor
+		const descriptor = clientConfig.formatDescriptor
+			? getFormatDescriptor(clientConfig.formatDescriptor)
+			: getFormatDescriptor(client)
+
+		// Determine top-level key to use
+		let topLevelKey = descriptor.topLevelKey
+		if (clientConfig.installType === "toml") {
 			// TOML format uses mcp_servers (underscore) instead of mcpServers (camelCase)
-			mcpServers = rawConfig.mcp_servers
+			topLevelKey = "mcp_servers"
 		} else if (
 			clientConfig.installType === "yaml" &&
 			clientConfig.yamlKey &&
-			clientConfig.yamlKey !== "mcpServers" &&
-			rawConfig[clientConfig.yamlKey]
+			clientConfig.yamlKey !== "mcpServers"
 		) {
-			// YAML format may use custom key (e.g., "extensions" for goose)
-			const rawServers = rawConfig[clientConfig.yamlKey]
-			// Transform goose format to standard format
-			mcpServers = {}
-			for (const [serverName, serverConfig] of Object.entries(rawServers)) {
-				mcpServers[serverName] = transformGooseToStandard(serverConfig)
-			}
+			// Legacy YAML key override
+			topLevelKey = clientConfig.yamlKey
 		}
 
-		// Normalize HTTP server configs: convert custom URL keys and types back to standard format for internal consistency
+		// Extract MCP servers from config using the appropriate top-level key
+		let mcpServers = rawConfig[topLevelKey] || rawConfig.mcpServers || {}
+
+		// Transform client-specific format to standard format if needed
+		// (if using custom top-level key or if descriptor has custom mappings)
 		if (
-			(clientConfig.httpUrlKey && clientConfig.httpUrlKey !== "url") ||
-			(clientConfig.httpType && clientConfig.httpType !== "http")
+			topLevelKey !== "mcpServers" ||
+			descriptor.fieldMappings ||
+			descriptor.typeTransformations ||
+			descriptor.structureTransformations
 		) {
-			const normalizedServers: Record<string, any> = {}
+			const transformedServers: Record<string, any> = {}
 			for (const [serverName, serverConfig] of Object.entries(mcpServers)) {
-				if (
-					serverConfig &&
-					typeof serverConfig === "object" &&
-					"type" in serverConfig &&
-					(serverConfig.type === "http" ||
-						serverConfig.type === "streamableHttp")
-				) {
-					const serverConfigObj = serverConfig as any
-					let normalized = { ...serverConfigObj }
-
-					// Normalize type back to "http"
-					if (
-						clientConfig.httpType &&
-						serverConfigObj.type === clientConfig.httpType
-					) {
-						normalized.type = "http"
-					}
-
-					// Normalize URL key back to "url"
-					if (
-						clientConfig.httpUrlKey &&
-						clientConfig.httpUrlKey !== "url" &&
-						clientConfig.httpUrlKey in serverConfigObj
-					) {
-						const { [clientConfig.httpUrlKey]: customUrl, ...rest } = normalized
-						normalized = {
-							...rest,
-							url: customUrl,
-						}
-					}
-
-					normalizedServers[serverName] = normalized
-				} else {
-					normalizedServers[serverName] = serverConfig
-				}
+				transformedServers[serverName] = transformToStandard(
+					serverConfig,
+					descriptor,
+				)
 			}
-			mcpServers = normalizedServers
+			mcpServers = transformedServers
 		}
 
 		return {
@@ -425,27 +467,40 @@ function writeConfigJson(
 		...config,
 	}
 
-	// Transform HTTP server configs if client has httpUrlKey or httpType override
-	if (
-		mergedConfig.mcpServers &&
-		(clientConfig.httpUrlKey || clientConfig.httpType)
-	) {
-		const transformedServers: Record<string, any> = {}
+	// Get format descriptor
+	const descriptor = clientConfig.formatDescriptor
+		? getFormatDescriptor(clientConfig.formatDescriptor)
+		: getFormatDescriptor(clientConfig.label.toLowerCase())
+
+	// Determine top-level key to use
+	const topLevelKey = descriptor.topLevelKey
+
+	// Transform standard format to client-specific format
+	let transformedServers: Record<string, any> = {}
+	if (mergedConfig.mcpServers) {
 		for (const [serverName, serverConfig] of Object.entries(
 			mergedConfig.mcpServers,
 		)) {
-			transformedServers[serverName] = transformHTTPServerConfig(
+			transformedServers[serverName] = transformFromStandard(
 				serverConfig,
-				clientConfig,
+				descriptor,
+				serverName,
 			)
 		}
-		mergedConfig.mcpServers = transformedServers
 	}
 
-	verbose(`Merged config: ${JSON.stringify(mergedConfig, null, 2)}`)
+	// Merge with existing config, preserving other fields
+	// Remove mcpServers if it's different from topLevelKey to avoid duplication
+	const { mcpServers: _, ...otherFields } = mergedConfig
+	const finalConfig = {
+		...otherFields,
+		[topLevelKey]: transformedServers,
+	}
+
+	verbose(`Merged config: ${JSON.stringify(finalConfig, null, 2)}`)
 
 	verbose(`Writing config to file: ${configPath}`)
-	fs.writeFileSync(configPath, JSON.stringify(mergedConfig, null, 2))
+	fs.writeFileSync(configPath, JSON.stringify(finalConfig, null, 2))
 	verbose(`Config successfully written`)
 }
 
@@ -484,9 +539,14 @@ function writeConfigYaml(
 
 	verbose(`Merging YAML configs`)
 
-	// Determine the YAML key to use (defaults to "mcpServers")
-	const yamlKey = clientConfig.yamlKey || "mcpServers"
-	const isGooseFormat = yamlKey === "extensions"
+	// Get format descriptor
+	const descriptor = clientConfig.formatDescriptor
+		? getFormatDescriptor(clientConfig.formatDescriptor)
+		: getFormatDescriptor(clientConfig.label.toLowerCase())
+
+	// Determine the YAML key to use
+	const yamlKey =
+		clientConfig.yamlKey || descriptor.topLevelKey || "mcpServers"
 
 	if (originalDoc) {
 		let mcpServersNode = originalDoc.get(yamlKey)
@@ -519,19 +579,12 @@ function writeConfigYaml(
 			)) {
 				verbose(`Adding/updating server: ${serverName}`)
 
-				// Transform HTTP server config if client has httpUrlKey override
-				let transformedConfig = transformHTTPServerConfig(
+				// Transform standard format to client-specific format
+				const transformedConfig = transformFromStandard(
 					serverConfig,
-					clientConfig,
+					descriptor,
+					serverName,
 				)
-
-				// Transform to goose format if needed
-				if (isGooseFormat) {
-					transformedConfig = transformStandardToGoose(
-						transformedConfig,
-						serverName,
-					)
-				}
 
 				const existingServer = mcpServersNode.get(serverName)
 				if (existingServer && typeof existingServer.set === "function") {
@@ -557,24 +610,17 @@ function writeConfigYaml(
 		verbose(`YAML config updated`)
 	} else {
 		// Create new file from scratch
-		// Determine the YAML key to use (defaults to "mcpServers")
-		const yamlKey = clientConfig.yamlKey || "mcpServers"
-		const isGooseFormat = yamlKey === "extensions"
-
-		// Transform HTTP server configs if client has httpUrlKey or httpType override
+		// Transform standard format to client-specific format
 		const transformedServers: Record<string, any> = {}
 		if (config.mcpServers) {
 			for (const [serverName, serverConfig] of Object.entries(
 				config.mcpServers,
 			)) {
-				let transformed = serverConfig
-				if (clientConfig.httpUrlKey || clientConfig.httpType) {
-					transformed = transformHTTPServerConfig(serverConfig, clientConfig)
-				}
-				if (isGooseFormat) {
-					transformed = transformStandardToGoose(transformed, serverName)
-				}
-				transformedServers[serverName] = transformed
+				transformedServers[serverName] = transformFromStandard(
+					serverConfig,
+					descriptor,
+					serverName,
+				)
 			}
 		}
 		const newConfig = { [yamlKey]: transformedServers }
@@ -623,13 +669,21 @@ function writeConfigToml(
 
 	verbose(`Merging TOML configs`)
 
-	// Convert mcpServers to mcp_servers for Codex format
-	// Transform HTTP server configs if client has httpUrlKey override
+	// Get format descriptor (TOML always uses mcp_servers key)
+	const descriptor = getFormatDescriptor(clientConfig.label.toLowerCase())
+	// Override top-level key for TOML
+	const tomlDescriptor: FormatDescriptor = {
+		...descriptor,
+		topLevelKey: "mcp_servers",
+	}
+
+	// Transform standard format to client-specific format
 	const mcpServersForToml: { [key: string]: any } = {}
 	for (const [serverName, serverConfig] of Object.entries(config.mcpServers)) {
-		mcpServersForToml[serverName] = transformHTTPServerConfig(
+		mcpServersForToml[serverName] = transformFromStandard(
 			serverConfig,
-			clientConfig,
+			tomlDescriptor,
+			serverName,
 		)
 	}
 
