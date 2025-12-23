@@ -38,8 +38,6 @@ export async function dev(options: DevOptions = {}): Promise<void> {
 
 		// Function to start the server process
 		const startServer = async () => {
-			const _startTime = Date.now()
-
 			// Kill existing process
 			if (childProcess && !childProcess.killed) {
 				isRebuilding = true

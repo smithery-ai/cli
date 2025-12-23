@@ -1,7 +1,7 @@
 import chalk from "chalk"
-import { setupTunnelAndPlayground } from "../lib/dev-lifecycle"
-import { setupProcessLifecycle } from "../utils/process-lifecycle"
-import { createArbitraryCommandRunner } from "./run/arbitrary-command-runner"
+import { setupTunnelAndPlayground } from "../../lib/dev-lifecycle"
+import { setupProcessLifecycle } from "../../utils/process-lifecycle"
+import { createArbitraryCommandRunner } from "./arbitrary-command-runner"
 
 /**
  * Opens the MCP playground in a browser, supporting two modes:

@@ -7,7 +7,7 @@ import chalk from "chalk"
 import cors from "cors"
 import express from "express"
 import { setupTunnelAndPlayground } from "../../lib/dev-lifecycle.js"
-import { handleTransportError, logWithTimestamp } from "./utils.js"
+import { handleTransportError, logWithTimestamp } from "../run/utils.js"
 
 interface ArbitraryCommandOptions {
 	open?: boolean

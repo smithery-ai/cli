@@ -353,12 +353,10 @@ export function getBundleCommand(bundleDir: string): {
 	)
 
 	// Include env vars if present (raw templates that need resolution later)
-	const env = mcpConfig.env
-
 	return {
 		command: mcpConfig.command,
 		args,
-		env,
+		...(mcpConfig.env && { env: mcpConfig.env }),
 	}
 }
 
