@@ -20,7 +20,6 @@ import { formatServerConfig } from "../utils/install/server-config"
 import { resolveUserConfig } from "../utils/install/user-config"
 import {
 	checkAndNotifyRemoteServer,
-	ensureApiKey,
 	ensureBunInstalled,
 	ensureUVInstalled,
 } from "../utils/runtime"
@@ -45,7 +44,7 @@ export async function installServer(
 	/* check analytics consent */
 	await checkAnalyticsConsent()
 
-	// get client configuration details early (needed for OAuth check)
+	// get client configuration details
 	const clientConfig = getClientConfiguration(client)
 
 	/* resolve server */
@@ -64,12 +63,6 @@ export async function installServer(
 
 		// Notify user if remote server
 		checkAndNotifyRemoteServer(server)
-
-		// For HTTP connections, ensure API key is available
-		// Skip for OAuth-capable clients (they handle auth automatically)
-		if (connection.type === "http" && !clientConfig.supportsOAuth) {
-			await ensureApiKey()
-		}
 
 		/* resolve server configuration */
 		const finalConfig = await resolveUserConfig(
