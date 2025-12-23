@@ -128,26 +128,13 @@ program
 	.command("run <server>")
 	.description("run a server")
 	.option("--config <json>", "Provide configuration as JSON")
-	.option("--playground", "Create playground tunnel and open playground")
-	.option(
-		"--no-open",
-		"Don't automatically open the playground (when using --playground)",
-	)
-	.option(
-		"--prompt <prompt>",
-		"Initial message to start the playground with (when using --playground)",
-	)
 	.action(async (server, options) => {
 		// Parse config if provided
 		const config: ServerConfig = options.config
 			? parseConfigOption(options.config)
 			: {}
 
-		await run(server, config, {
-			playground: options.playground,
-			open: options.open,
-			initialMessage: options.prompt,
-		})
+		await run(server, config)
 	})
 
 // Dev command
@@ -222,7 +209,7 @@ program
 
 // Playground command
 program
-	.command("playground")
+	.command("playground [server]")
 	.description(
 		"open MCP playground in browser (supports HTTP servers or STDIO MCP servers)",
 	)
@@ -231,11 +218,12 @@ program
 		`Port to expose (default: ${DEFAULT_PORT} for HTTP, 6969 for STDIO)`,
 	)
 	.option("--key <apikey>", "Provide an API key")
+	.option("--config <json>", "Provide configuration as JSON (when using server)")
 	.option("--no-open", "Don't automatically open the playground")
 	.option("--prompt <prompt>", "Initial message to start the playground with")
 	.allowUnknownOption() // Allow pass-through for command after --
 	.allowExcessArguments() // Allow extra args after -- without error
-	.action(async (options) => {
+	.action(async (server, options) => {
 		// Extract command after -- separator
 		let command: string | undefined
 		const rawArgs = process.argv
@@ -244,9 +232,16 @@ program
 			command = rawArgs.slice(separatorIndex + 1).join(" ")
 		}
 
+		// Parse config if provided
+		const configOverride: ServerConfig = options.config
+			? parseConfigOption(options.config)
+			: {}
+
 		await playground({
+			server,
 			port: options.port,
 			command,
+			configOverride,
 			apiKey: await ensureApiKey(options.key),
 			open: options.open !== false,
 			initialMessage: options.prompt,

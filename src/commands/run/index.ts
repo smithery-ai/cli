@@ -5,30 +5,21 @@ import { resolveServer } from "../../lib/registry"
 import type { ServerConfig } from "../../types/registry"
 import { prepareStdioConnection } from "../../utils/run/prepare-stdio-connection"
 import { getApiKey, initializeSettings } from "../../utils/smithery-settings.js"
-import { createLocalPlaygroundRunner } from "./local-playground-runner.js"
 import { createStdioRunner as startSTDIOrunner } from "./stdio-runner.js"
 import { createStreamableHTTPRunner } from "./streamable-http-runner.js"
 import { logWithTimestamp } from "./utils.js"
-
-interface RunOptions {
-	playground?: boolean
-	open?: boolean
-	initialMessage?: string
-}
 
 /**
  * Runs a server with the specified configuration
  *
  * @param {string} qualifiedName - The qualified name of the server to run
  * @param {ServerConfig} configOverride - Optional configuration override (from --config flag)
- * @param {RunOptions} [options] - Additional options for playground functionality
  * @returns {Promise<void>} A promise that resolves when the server is running or fails
  * @throws {Error} If the server cannot be resolved or connection fails
  */
 export async function run(
 	qualifiedName: string,
 	configOverride: ServerConfig,
-	options?: RunOptions,
 ) {
 	try {
 		const settingsResult = await initializeSettings()
@@ -78,37 +69,14 @@ export async function run(
 					config,
 				)
 
-				if (options?.playground) {
-					// Get API key from global config for local playground
-					const apiKey = await getApiKey()
-					if (!apiKey) {
-						throw new Error(
-							"API key required for local playground. Please run 'smithery login' or install the server first.",
-						)
-					}
-
-					await createLocalPlaygroundRunner(
-						preparedConnection.command,
-						preparedConnection.args,
-						preparedConnection.env,
-						preparedConnection.qualifiedName,
-						apiKey,
-						{
-							open: options.open !== false,
-							initialMessage:
-								options.initialMessage || "Say hello to the world!",
-						},
-					)
-				} else {
-					const apiKey = await getApiKey()
-					await startSTDIOrunner(
-						preparedConnection.command,
-						preparedConnection.args,
-						preparedConnection.env,
-						preparedConnection.qualifiedName,
-						apiKey,
-					)
-				}
+				const apiKey = await getApiKey()
+				await startSTDIOrunner(
+					preparedConnection.command,
+					preparedConnection.args,
+					preparedConnection.env,
+					preparedConnection.qualifiedName,
+					apiKey,
+				)
 				break
 			}
 			default:

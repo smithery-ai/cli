@@ -21,12 +21,6 @@ vi.mock("../run/streamable-http-runner", () => ({
 		.mockResolvedValue(() => Promise.resolve()),
 }))
 
-vi.mock("../run/local-playground-runner", () => ({
-	createLocalPlaygroundRunner: vi
-		.fn()
-		.mockResolvedValue(() => Promise.resolve()),
-}))
-
 // Mock registry
 vi.mock("../../lib/registry", () => ({
 	resolveServer: vi.fn(),
