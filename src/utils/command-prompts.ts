@@ -210,8 +210,8 @@ export async function promptForServerId(): Promise<string> {
 					return "Please enter a server ID"
 				}
 				// Basic validation for server ID format (can be enhanced)
-				if (!/^[a-zA-Z0-9._/-]+$/.test(trimmed)) {
-					return "Server ID should only contain letters, numbers, dots, underscores, hyphens, and forward slashes"
+				if (!/^[a-zA-Z0-9._/@-]+$/.test(trimmed)) {
+					return "Server ID should only contain letters, numbers, dots, underscores, hyphens, forward slashes, and @"
 				}
 				return true
 			},
