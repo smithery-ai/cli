@@ -1,13 +1,13 @@
 import { RequestTimeoutError } from "@smithery/registry/models/errors"
 import chalk from "chalk"
+import { setupTunnelAndPlayground } from "../../lib/dev-lifecycle"
 import { getConfig } from "../../lib/keychain"
 import { resolveServer } from "../../lib/registry"
 import type { ServerConfig } from "../../types/registry"
+import { setupProcessLifecycle } from "../../utils/process-lifecycle"
 import { prepareStdioConnection } from "../../utils/run/prepare-stdio-connection"
 import { initializeSettings } from "../../utils/smithery-settings.js"
 import { logWithTimestamp } from "../run/utils.js"
-import { setupTunnelAndPlayground } from "../../lib/dev-lifecycle"
-import { setupProcessLifecycle } from "../../utils/process-lifecycle"
 import { createStdioPlaygroundRunner } from "./stdio-playground-runner"
 
 /**
@@ -80,9 +80,7 @@ export async function playground(options: {
 				config,
 			)
 
-			const port = options.port
-				? Number.parseInt(options.port, 10)
-				: 6969
+			const port = options.port ? Number.parseInt(options.port, 10) : 6969
 
 			await createStdioPlaygroundRunner(
 				{
@@ -95,8 +93,7 @@ export async function playground(options: {
 				{
 					port,
 					open: options.open !== false,
-					initialMessage:
-						options.initialMessage || "Say hello to the world!",
+					initialMessage: options.initialMessage || "Say hello to the world!",
 				},
 			)
 
@@ -155,9 +152,7 @@ export async function playground(options: {
 		}
 
 		// No valid mode specified
-		console.error(
-			chalk.red("× Please provide a server, command, or port."),
-		)
+		console.error(chalk.red("× Please provide a server, command, or port."))
 		console.error(
 			chalk.yellow(
 				"Usage:\n  smithery playground <server>\n  smithery playground -- <command>\n  smithery playground --port <port>",

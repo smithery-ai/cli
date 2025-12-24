@@ -218,7 +218,10 @@ program
 		`Port to expose (default: ${DEFAULT_PORT} for HTTP, 6969 for STDIO)`,
 	)
 	.option("--key <apikey>", "Provide an API key")
-	.option("--config <json>", "Provide configuration as JSON (when using server)")
+	.option(
+		"--config <json>",
+		"Provide configuration as JSON (when using server)",
+	)
 	.option("--no-open", "Don't automatically open the playground")
 	.option("--prompt <prompt>", "Initial message to start the playground with")
 	.allowUnknownOption() // Allow pass-through for command after --

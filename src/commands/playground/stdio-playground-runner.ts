@@ -1,5 +1,5 @@
-import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js"
 import { type ChildProcess, spawn } from "node:child_process"
+import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js"
 import type {
 	JSONRPCErrorResponse,
 	JSONRPCMessage,
@@ -203,7 +203,9 @@ export const createStdioPlaygroundRunner = async (
 					env: runtimeEnv,
 				})
 			} catch (error) {
-				logWithTimestamp("For more help, see: https://smithery.ai/docs/faq/users")
+				logWithTimestamp(
+					"For more help, see: https://smithery.ai/docs/faq/users",
+				)
 				throw error
 			}
 
@@ -247,9 +249,7 @@ export const createStdioPlaygroundRunner = async (
 				if (isReady && !isShuttingDown) {
 					logWithTimestamp("[Playground] Process terminated unexpectedly")
 					handleExit().catch((error) => {
-						logWithTimestamp(
-							`[Playground] Error during exit cleanup: ${error}`,
-						)
+						logWithTimestamp(`[Playground] Error during exit cleanup: ${error}`)
 						process.exit(1)
 					})
 				}
@@ -348,9 +348,7 @@ export const createStdioPlaygroundRunner = async (
 				if (isReady && !isShuttingDown) {
 					logWithTimestamp("[Playground] Process terminated unexpectedly")
 					handleExit().catch((error) => {
-						logWithTimestamp(
-							`[Playground] Error during exit cleanup: ${error}`,
-						)
+						logWithTimestamp(`[Playground] Error during exit cleanup: ${error}`)
 						process.exit(1)
 					})
 				}
@@ -385,9 +383,7 @@ export const createStdioPlaygroundRunner = async (
 
 	const cleanup = async () => {
 		if (isShuttingDown) {
-			logWithTimestamp(
-				"[Playground] Cleanup already in progress, skipping...",
-			)
+			logWithTimestamp("[Playground] Cleanup already in progress, skipping...")
 			return
 		}
 
@@ -439,13 +435,9 @@ export const createStdioPlaygroundRunner = async (
 						),
 					),
 				])
-				logWithTimestamp(
-					"[Playground] STDIO transport closed successfully",
-				)
+				logWithTimestamp("[Playground] STDIO transport closed successfully")
 			} catch (error) {
-				logWithTimestamp(
-					`[Playground] Error closing STDIO transport: ${error}`,
-				)
+				logWithTimestamp(`[Playground] Error closing STDIO transport: ${error}`)
 			}
 			transport = null
 		} else if (!useMcpTransport && childProcess && !childProcess.killed) {
@@ -476,9 +468,7 @@ export const createStdioPlaygroundRunner = async (
 				// Wait for either graceful exit or force kill timeout
 				await Promise.race([processExited, forceKill])
 
-				logWithTimestamp(
-					"[Playground] Child process terminated successfully",
-				)
+				logWithTimestamp("[Playground] Child process terminated successfully")
 			} catch (error) {
 				logWithTimestamp(
 					`[Playground] Error terminating child process: ${error}`,
@@ -535,4 +525,3 @@ export const createStdioPlaygroundRunner = async (
 
 	return cleanup
 }
-

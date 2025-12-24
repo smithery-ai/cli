@@ -3,8 +3,8 @@
  *
  * Tests with real-world examples:
  * - Real client configs (claude, cursor, windsurf, codex)
- * - Note: Codex now uses command-based installation, but TOML parsing is still tested
- * - Real file formats (JSON, YAML, TOML)
+ * - Note: Codex now uses command-based installation
+ * - Real file formats (JSON, YAML)
  * - File I/O operations (reading, writing, merging)
  * - Assert expected outputs and file contents
  */
@@ -171,33 +171,6 @@ describe("readConfig", () => {
 		})
 	})
 
-	test("should read TOML config with mcp_servers normalization", () => {
-		// ARRANGE: TOML config (uses mcp_servers format)
-		const configPath = path.join(tempDir, "test-toml.toml")
-		const tomlContent = `[mcp_servers.test-server]
-command = "npx"
-args = ["-y", "@smithery/cli@latest", "run", "test-server"]
-`
-		fs.writeFileSync(configPath, tomlContent)
-
-		mockGetClientConfiguration.mockReturnValue({
-			label: "Test TOML Client",
-			supportedTransports: [Transport.STDIO],
-			installType: "toml",
-			path: configPath,
-		})
-
-		// ACT
-		const result = readConfig("test-toml-client")
-
-		// ASSERT: Should normalize mcp_servers to mcpServers
-		expect(result.mcpServers).toBeDefined()
-		expect(result.mcpServers["test-server"]).toEqual({
-			command: "npx",
-			args: ["-y", "@smithery/cli@latest", "run", "test-server"],
-		})
-	})
-
 	test("should return empty config on parse error", () => {
 		// ARRANGE: Invalid JSON file
 		const configPath = path.join(tempDir, "invalid.json")
@@ -325,35 +298,6 @@ describe("writeConfig", () => {
 		expect(content).toContain("mcpServers:")
 		expect(content).toContain("test-server:")
 		expect(content).toContain("command: npx")
-	})
-
-	test("should write TOML config with mcp_servers format", () => {
-		// ARRANGE: New TOML config
-		const configPath = path.join(tempDir, "test-toml.toml")
-		const config: ClientMCPConfig = {
-			mcpServers: {
-				"test-server": {
-					command: "npx",
-					args: ["-y", "@smithery/cli@latest", "run", "test-server"],
-				},
-			},
-		}
-
-		mockGetClientConfiguration.mockReturnValue({
-			label: "Test TOML Client",
-			supportedTransports: [Transport.STDIO],
-			installType: "toml",
-			path: configPath,
-		})
-
-		// ACT
-		writeConfig(config, "test-toml-client")
-
-		// ASSERT: File should use mcp_servers format
-		expect(fs.existsSync(configPath)).toBe(true)
-		const content = fs.readFileSync(configPath, "utf8")
-		expect(content).toContain("[mcp_servers.test-server]")
-		expect(content).toContain('command = "npx"')
 	})
 
 	test("should create directory if it does not exist", () => {

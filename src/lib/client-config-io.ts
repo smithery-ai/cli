@@ -1,7 +1,6 @@
 import { execFileSync } from "node:child_process"
 import fs from "node:fs"
 import path from "node:path"
-import { parse as parseToml, stringify as stringifyToml } from "smol-toml"
 import * as YAML from "yaml"
 import {
 	type ClientConfiguration,
@@ -267,16 +266,6 @@ export function readConfig(client: string): ClientMCPConfig {
 
 		if (clientConfig.installType === "yaml") {
 			rawConfig = (YAML.parse(fileContent) as any) || {}
-		} else if (clientConfig.installType === "toml") {
-			try {
-				rawConfig = parseToml(fileContent) as any
-				verbose(`TOML config parsed successfully`)
-			} catch (tomlError) {
-				verbose(
-					`Error parsing TOML: ${tomlError instanceof Error ? tomlError.message : String(tomlError)}`,
-				)
-				throw tomlError
-			}
 		} else {
 			rawConfig = JSON.parse(fileContent)
 		}
@@ -289,18 +278,7 @@ export function readConfig(client: string): ClientMCPConfig {
 			: getFormatDescriptor(client)
 
 		// Determine top-level key to use
-		let topLevelKey = descriptor.topLevelKey
-		if (clientConfig.installType === "toml") {
-			// TOML format uses mcp_servers (underscore) instead of mcpServers (camelCase)
-			topLevelKey = "mcp_servers"
-		} else if (
-			clientConfig.installType === "yaml" &&
-			clientConfig.yamlKey &&
-			clientConfig.yamlKey !== "mcpServers"
-		) {
-			// Legacy YAML key override
-			topLevelKey = clientConfig.yamlKey
-		}
+		const topLevelKey = descriptor.topLevelKey
 
 		// Extract MCP servers from config using the appropriate top-level key
 		let mcpServers = rawConfig[topLevelKey] || rawConfig.mcpServers || {}
@@ -348,8 +326,6 @@ export function writeConfig(config: ClientMCPConfig, client: string): void {
 	const clientConfig = getClientConfiguration(client)
 	if (clientConfig.installType === "yaml") {
 		writeConfigYaml(config, clientConfig)
-	} else if (clientConfig.installType === "toml") {
-		writeConfigToml(config, clientConfig)
 	} else {
 		writeConfigJson(config, clientConfig)
 	}
@@ -545,8 +521,8 @@ function writeConfigYaml(
 		? getFormatDescriptor(clientConfig.formatDescriptor)
 		: getFormatDescriptor(clientConfig.label.toLowerCase())
 
-	// Determine the YAML key to use
-	const yamlKey = clientConfig.yamlKey || descriptor.topLevelKey || "mcpServers"
+	// Determine the YAML key to use from format descriptor
+	const yamlKey = descriptor.topLevelKey
 
 	if (originalDoc) {
 		let mcpServersNode = originalDoc.get(yamlKey)
@@ -633,71 +609,4 @@ function writeConfigYaml(
 	}
 
 	verbose(`YAML config successfully written`)
-}
-
-function writeConfigToml(
-	config: ClientMCPConfig,
-	clientConfig: ClientConfiguration,
-): void {
-	const configPath = clientConfig.path
-	if (!configPath) {
-		throw new Error(`No path defined for client: ${clientConfig.label}`)
-	}
-
-	const configDir = path.dirname(configPath)
-
-	verbose(`Ensuring config directory exists: ${configDir}`)
-	if (!fs.existsSync(configDir)) {
-		verbose(`Creating directory: ${configDir}`)
-		fs.mkdirSync(configDir, { recursive: true })
-	}
-
-	let existingConfig: any = {}
-	try {
-		if (fs.existsSync(configPath)) {
-			verbose(`Reading existing TOML config file for merging`)
-			const existingContent = fs.readFileSync(configPath, "utf8")
-			existingConfig = parseToml(existingContent)
-			verbose(`Existing TOML config loaded successfully`)
-		}
-	} catch (error) {
-		verbose(
-			`Error reading existing TOML config for merge: ${error instanceof Error ? error.message : String(error)}`,
-		)
-		// If reading fails, continue with empty existing config
-	}
-
-	verbose(`Merging TOML configs`)
-
-	// Get format descriptor (TOML always uses mcp_servers key)
-	const descriptor = getFormatDescriptor(clientConfig.label.toLowerCase())
-	// Override top-level key for TOML
-	const tomlDescriptor: FormatDescriptor = {
-		...descriptor,
-		topLevelKey: "mcp_servers",
-	}
-
-	// Transform standard format to client-specific format
-	const mcpServersForToml: { [key: string]: any } = {}
-	for (const [serverName, serverConfig] of Object.entries(config.mcpServers)) {
-		mcpServersForToml[serverName] = transformFromStandard(
-			serverConfig,
-			tomlDescriptor,
-			serverName,
-		)
-	}
-
-	const mergedConfig = {
-		...existingConfig,
-		mcp_servers: mcpServersForToml, // Replace entire mcp_servers section
-	}
-
-	verbose(`Merged TOML config: ${JSON.stringify(mergedConfig, null, 2)}`)
-
-	// Convert to TOML format using smol-toml
-	const tomlContent = stringifyToml(mergedConfig)
-
-	verbose(`Writing TOML config to file: ${configPath}`)
-	fs.writeFileSync(configPath, tomlContent)
-	verbose(`TOML config successfully written`)
 }

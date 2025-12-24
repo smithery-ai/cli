@@ -29,7 +29,7 @@ export interface ClientConfiguration {
 	supportedTransports: Transport[]
 
 	// Installation method
-	installType: "json" | "command" | "yaml" | "toml"
+	installType: "json" | "command" | "yaml"
 
 	// File path or command for installation
 	path?: string
@@ -56,12 +56,8 @@ export interface ClientConfiguration {
 	// Some clients require different type values like "streamableHttp"
 	httpType?: string
 
-	// Optional override for YAML top-level key (defaults to "mcpServers")
-	// Some clients use different keys like "extensions"
-	yamlKey?: string
-
 	// Optional format descriptor key (references FORMAT_DESCRIPTORS registry)
-	// If not provided, will fall back to defaults or legacy fields (httpUrlKey, httpType, yamlKey)
+	// If not provided, will fall back to defaults or legacy fields (httpUrlKey, httpType)
 	formatDescriptor?: string
 }
 
@@ -266,8 +262,6 @@ export const CLIENT_CONFIGURATIONS: Record<string, ClientConfiguration> = {
 		supportedTransports: [Transport.STDIO, Transport.HTTP],
 		installType: "yaml",
 		formatDescriptor: "goose",
-		// Legacy field kept for backward compatibility
-		yamlKey: "extensions",
 		path: path.join(homeDir, ".config", "goose", "config.yaml"),
 	},
 }

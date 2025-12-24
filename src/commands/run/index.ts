@@ -17,10 +17,7 @@ import { logWithTimestamp } from "./utils.js"
  * @returns {Promise<void>} A promise that resolves when the server is running or fails
  * @throws {Error} If the server cannot be resolved or connection fails
  */
-export async function run(
-	qualifiedName: string,
-	configOverride: ServerConfig,
-) {
+export async function run(qualifiedName: string, configOverride: ServerConfig) {
 	try {
 		const settingsResult = await initializeSettings()
 		if (!settingsResult.success) {

@@ -102,8 +102,7 @@ export async function installServer(
 				break
 			}
 			case "json":
-			case "yaml":
-			case "toml": {
+			case "yaml": {
 				// For file-based clients, read existing config and merge
 				const config = readConfig(client)
 				config.mcpServers[serverName] = serverConfig
