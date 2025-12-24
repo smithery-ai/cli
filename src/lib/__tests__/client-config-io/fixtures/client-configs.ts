@@ -231,3 +231,44 @@ export const clineJsonWithExistingServer = {
 	},
 	someOtherField: "preserved",
 }
+
+/**
+ * Standard format fixtures (for clients like Claude Desktop, Cursor, etc.)
+ */
+export const standardJsonWithStdioServer = {
+	mcpServers: {
+		"test-server": {
+			command: "npx",
+			args: ["-y", "@smithery/cli@latest", "run", "test-server"],
+		},
+	},
+}
+
+export const standardStdioConfig: ClientMCPConfig = {
+	mcpServers: {
+		"test-server": {
+			command: "npx",
+			args: ["-y", "@smithery/cli@latest", "run", "test-server"],
+		},
+	},
+}
+
+export const standardYamlWithStdioServer = `mcpServers:
+  test-server:
+    command: npx
+    args:
+      - -y
+      - "@smithery/cli@latest"
+      - run
+      - test-server
+`
+
+export const standardYamlWithExistingServer = `mcpServers:
+  existing-server:
+    command: npx
+    args:
+      - -y
+      - "@smithery/cli@latest"
+      - run
+      - existing-server
+`
