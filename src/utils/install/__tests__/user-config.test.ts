@@ -7,11 +7,11 @@
 
 import type { ConnectionInfo } from "@smithery/registry/models/components"
 import { beforeEach, describe, expect, it, vi } from "vitest"
+import { getConfig } from "../../../lib/keychain"
 import {
 	ensureBundleInstalled,
 	getBundleUserConfigSchema,
-} from "../../../lib/bundle-manager"
-import { getConfig } from "../../../lib/keychain"
+} from "../../../lib/mcpb"
 import type { ServerConfig } from "../../../types/registry"
 import { promptForExistingConfig } from "../../command-prompts"
 import { collectConfigValues } from "../prompt-user-config"
@@ -42,7 +42,7 @@ vi.mock("../../command-prompts", () => ({
 	promptForExistingConfig: vi.fn(),
 }))
 
-vi.mock("../../../lib/bundle-manager", () => ({
+vi.mock("../../../lib/mcpb", () => ({
 	ensureBundleInstalled: vi.fn(),
 	getBundleUserConfigSchema: vi.fn(),
 }))

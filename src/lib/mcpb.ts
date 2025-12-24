@@ -1,10 +1,13 @@
 import * as fs from "node:fs"
 import * as os from "node:os"
 import * as path from "node:path"
-import { unpackExtension } from "@anthropic-ai/mcpb"
+import {
+	type McpbUserConfigurationOption,
+	unpackExtension,
+} from "@anthropic-ai/mcpb"
 import fetch from "cross-fetch"
 import type { JSONSchema } from "../types/registry.js"
-import { verbose } from "./logger"
+import { verbose } from "./logger.js"
 
 const BUNDLE_FILENAME = "server.mcpb"
 const CACHE_META_FILENAME = ".metadata.json"
@@ -142,28 +145,6 @@ async function downloadBundle(
 }
 
 /**
- * Extracts a .mcpb bundle using the @anthropic-ai/mcpb library
- */
-async function extractBundle(
-	mcpbPath: string,
-	extractDir: string,
-): Promise<void> {
-	verbose(`Extracting bundle to: ${extractDir}`)
-
-	const success = await unpackExtension({
-		mcpbPath,
-		outputDir: extractDir,
-		silent: true,
-	})
-
-	if (!success) {
-		throw new Error("Failed to extract bundle")
-	}
-
-	verbose("Bundle extracted successfully")
-}
-
-/**
  * Downloads and extracts a bundle to the local cache
  * @param qualifiedName - Server qualified name (e.g., @user/server)
  * @param bundleUrl - URL to download the .mcpb bundle from
@@ -183,7 +164,18 @@ export async function downloadAndExtractBundle(
 	const { etag, lastModified } = await downloadBundle(bundleUrl, mcpbPath)
 
 	// Extract bundle using @anthropic/mcpb CLI
-	await extractBundle(mcpbPath, bundleDir)
+	verbose(`Extracting bundle to: ${bundleDir}`)
+	const success = await unpackExtension({
+		mcpbPath,
+		outputDir: bundleDir,
+		silent: true,
+	})
+
+	if (!success) {
+		throw new Error("Failed to extract bundle")
+	}
+
+	verbose("Bundle extracted successfully")
 
 	// Save cache metadata for future ETag comparisons
 	const cacheMetadata: CacheMetadata = {
@@ -235,35 +227,59 @@ export async function ensureBundleInstalled(
 }
 
 /**
- * Gets the entrypoint path within a bundle based on runtime
- * @param bundleDir - Directory containing the extracted bundle
- * @param runtime - Runtime type (node)
- * @returns Path to the executable file
+ * Reads manifest and hydrates all templates in a bundle command
+ * @param bundleDir - Directory containing the extracted bundle (must already be installed)
+ * @param userConfig - User configuration values for template resolution
+ * @returns Fully hydrated bundle command ready to execute
  */
-/**
- * Gets command and args from bundle manifest
- * @param bundleDir - Directory containing the extracted bundle
- * @returns Command and args from manifest
- */
-/**
- * Resolves template strings in environment variables
- * @param env - Environment variables with template strings
- * @param userConfig - User configuration values
- * @param bundleDir - Bundle directory for __dirname resolution
- * @returns Resolved environment variables
- */
-export function resolveEnvTemplates(
-	env: Record<string, string>,
-	userConfig: Record<string, any> = {},
-	bundleDir?: string,
-): Record<string, string> {
-	const resolved: Record<string, string> = {}
+export function getHydratedBundleCommand(
+	bundleDir: string,
+	userConfig: Record<string, any>,
+): {
+	command: string
+	args: string[]
+	env: Record<string, string>
+} {
+	const bundleCommand = getBundleCommand(bundleDir)
+	return hydrateBundleCommand(bundleCommand, userConfig, bundleDir)
+}
 
-	for (const [key, value] of Object.entries(env)) {
-		resolved[key] = resolveTemplateString(value, userConfig, bundleDir)
+/**
+ * Hydrates a bundle command by resolving all template strings in args and env
+ * @param bundleCommand - Bundle command from getBundleCommand (may contain templates)
+ * @param userConfig - User configuration values for ${user_config.*} templates
+ * @param bundleDir - Bundle directory for ${__dirname} resolution
+ * @returns Fully hydrated bundle command with all templates resolved
+ */
+export function hydrateBundleCommand(
+	bundleCommand: {
+		command: string
+		args: string[]
+		env?: Record<string, string>
+	},
+	userConfig: Record<string, any>,
+	bundleDir: string,
+): {
+	command: string
+	args: string[]
+	env: Record<string, string>
+} {
+	const resolvedArgs = bundleCommand.args.map((arg) =>
+		resolveTemplateString(arg, userConfig, bundleDir),
+	)
+
+	const resolvedEnv: Record<string, string> = {}
+	if (bundleCommand.env) {
+		for (const [key, value] of Object.entries(bundleCommand.env)) {
+			resolvedEnv[key] = resolveTemplateString(value, userConfig, bundleDir)
+		}
 	}
 
-	return resolved
+	return {
+		command: bundleCommand.command,
+		args: resolvedArgs,
+		env: resolvedEnv,
+	}
 }
 
 /**
@@ -309,6 +325,11 @@ export function resolveTemplateString(
 	})
 }
 
+/**
+ * Gets command and args from bundle manifest
+ * @param bundleDir - Directory containing the extracted bundle
+ * @returns Command and args from manifest
+ */
 export function getBundleCommand(bundleDir: string): {
 	command: string
 	args: string[]
@@ -332,15 +353,19 @@ export function getBundleCommand(bundleDir: string): {
 	)
 
 	// Include env vars if present (raw templates that need resolution later)
-	const env = mcpConfig.env
-
 	return {
 		command: mcpConfig.command,
 		args,
-		env,
+		...(mcpConfig.env && { env: mcpConfig.env }),
 	}
 }
 
+/**
+ * Gets the entrypoint path within a bundle based on runtime
+ * @param bundleDir - Directory containing the extracted bundle
+ * @param runtime - Runtime type (node)
+ * @returns Path to the executable file
+ */
 export function getBundleEntrypoint(
 	bundleDir: string,
 	_runtime = "node",
@@ -360,26 +385,12 @@ export function getBundleEntrypoint(
 }
 
 /**
- * MCPB user configuration option format (from manifest.user_config)
- */
-interface McpbUserConfigurationOption {
-	type: "string" | "number" | "boolean" | "array"
-	title?: string
-	description?: string
-	required?: boolean
-	default?: string | number | boolean | string[]
-	sensitive?: boolean
-	min?: number
-	max?: number
-}
-
-/**
  * Converts flat MCPB user_config format to nested JSONSchema format
  * MCPB format: {"auth.apiKey": {type: "string", required: true}}
  * JSONSchema format: {auth: {apiKey: {type: "string", required: true}}}
  */
 export function convertMCPBUserConfigToJSONSchema(
-	mcpbUserConfig: Record<string, McpbUserConfigurationOption>,
+	mcpbUserConfig: Record<string, Partial<McpbUserConfigurationOption>>,
 ): JSONSchema {
 	const schema: JSONSchema = {
 		type: "object",
@@ -419,18 +430,21 @@ export function convertMCPBUserConfigToJSONSchema(
 			current.properties = {}
 		}
 
-		const jsonSchemaProp: JSONSchema = {
-			type: configOption.type,
-			description: configOption.description,
-			default: configOption.default,
-		}
-
-		// Handle array items if type is array
-		if (configOption.type === "array") {
-			jsonSchemaProp.items = {
-				type: "string",
-			}
-		}
+		// Handle multiple values (arrays) - when multiple is true, convert to array type
+		const jsonSchemaProp: JSONSchema = configOption.multiple
+			? {
+					type: "array",
+					items: {
+						type: configOption.type,
+					},
+					description: configOption.description,
+					default: configOption.default,
+				}
+			: {
+					type: configOption.type,
+					description: configOption.description,
+					default: configOption.default,
+				}
 
 		current.properties[leafKey] = jsonSchemaProp
 

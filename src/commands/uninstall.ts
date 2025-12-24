@@ -1,11 +1,10 @@
 import "../utils/suppress-punycode-warning"
 import chalk from "chalk"
 import type { ValidClient } from "../config/clients"
-// import { getConfig } from "../utils/client-config"
 import { getClientConfiguration } from "../config/clients.js"
+import { readConfig, writeConfig } from "../lib/client-config-io"
 import { deleteConfig } from "../lib/keychain.js"
 import { promptForRestart } from "../utils/client"
-import { readConfig, writeConfig } from "../utils/client-config"
 
 /* uninstalls server for given client */
 export async function uninstallServer(

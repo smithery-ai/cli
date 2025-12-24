@@ -94,7 +94,7 @@ program
 		`Specify the AI client (${VALID_CLIENTS.join(", ")})`,
 	)
 	.action(async (server, options) => {
-		const { readConfig } = await import("./utils/client-config")
+		const { readConfig } = await import("./lib/client-config-io")
 
 		// Step 1: Select client if not provided
 		const selectedClient = await selectClient(options.client, "Uninstall")
@@ -128,26 +128,13 @@ program
 	.command("run <server>")
 	.description("run a server")
 	.option("--config <json>", "Provide configuration as JSON")
-	.option("--playground", "Create playground tunnel and open playground")
-	.option(
-		"--no-open",
-		"Don't automatically open the playground (when using --playground)",
-	)
-	.option(
-		"--prompt <prompt>",
-		"Initial message to start the playground with (when using --playground)",
-	)
 	.action(async (server, options) => {
 		// Parse config if provided
 		const config: ServerConfig = options.config
 			? parseConfigOption(options.config)
 			: {}
 
-		await run(server, config, {
-			playground: options.playground,
-			open: options.open,
-			initialMessage: options.prompt,
-		})
+		await run(server, config)
 	})
 
 // Dev command
@@ -222,39 +209,24 @@ program
 
 // Playground command
 program
-	.command("playground")
-	.description("open MCP playground in browser")
-	.option("--port <port>", `Port to expose (default: ${DEFAULT_PORT})`)
+	.command("playground [server]")
+	.description(
+		"open MCP playground in browser (supports HTTP servers or STDIO MCP servers)",
+	)
+	.option(
+		"--port <port>",
+		`Port to expose (default: ${DEFAULT_PORT} for HTTP, 6969 for STDIO)`,
+	)
 	.option("--key <apikey>", "Provide an API key")
-	.allowUnknownOption() // Allow pass-through for command after --
-	.allowExcessArguments() // Allow extra args after -- without error
-	.action(async (options) => {
-		// Extract command after -- separator
-		let command: string | undefined
-		const rawArgs = process.argv
-		const separatorIndex = rawArgs.indexOf("--")
-		if (separatorIndex !== -1 && separatorIndex + 1 < rawArgs.length) {
-			command = rawArgs.slice(separatorIndex + 1).join(" ")
-		}
-
-		await playground({
-			port: options.port,
-			command,
-			apiKey: await ensureApiKey(options.key),
-		})
-	})
-
-// Playground STDIO command
-program
-	.command("playground-stdio")
-	.description("Run arbitrary command as stdio MCP server in playground")
-	.option("--port <port>", "Port for HTTP server (default: 6969)")
-	.option("--key <apikey>", "Provide an API key")
+	.option(
+		"--config <json>",
+		"Provide configuration as JSON (when using server)",
+	)
 	.option("--no-open", "Don't automatically open the playground")
 	.option("--prompt <prompt>", "Initial message to start the playground with")
 	.allowUnknownOption() // Allow pass-through for command after --
 	.allowExcessArguments() // Allow extra args after -- without error
-	.action(async (options) => {
+	.action(async (server, options) => {
 		// Extract command after -- separator
 		let command: string | undefined
 		const rawArgs = process.argv
@@ -263,36 +235,20 @@ program
 			command = rawArgs.slice(separatorIndex + 1).join(" ")
 		}
 
-		if (!command) {
-			console.error(chalk.red("❌ Command is required."))
-			console.error(
-				chalk.yellow("Usage: smithery playground-stdio -- <command>"),
-			)
-			console.error(
-				chalk.gray(
-					"Example: smithery playground-stdio -- python my_mcp_server.py",
-				),
-			)
-			process.exit(1)
-		}
+		// Parse config if provided
+		const configOverride: ServerConfig = options.config
+			? parseConfigOption(options.config)
+			: {}
 
-		const { createArbitraryCommandRunner } = await import(
-			"./commands/run/arbitrary-command-runner.js"
-		)
-
-		const _cleanup = await createArbitraryCommandRunner(
+		await playground({
+			server,
+			port: options.port,
 			command,
-			await ensureApiKey(options.key),
-			{
-				port: options.port ? Number.parseInt(options.port, 10) : 6969,
-				open: options.open !== false,
-				initialMessage: options.prompt,
-			},
-		)
-
-		// Keep the process alive
-		process.stdin.resume()
-		await new Promise<void>(() => {})
+			configOverride,
+			apiKey: await ensureApiKey(options.key),
+			open: options.open !== false,
+			initialMessage: options.prompt,
+		})
 	})
 
 // List command

@@ -1,11 +1,9 @@
 import type { ServerDetailResponse } from "@smithery/registry/models/components"
-import { logWithTimestamp } from "../../commands/run/runner-utils.js"
+import { logWithTimestamp } from "../../commands/run/utils.js"
 import {
 	ensureBundleInstalled,
-	getBundleCommand,
-	resolveEnvTemplates,
-	resolveTemplateString,
-} from "../../lib/bundle-manager.js"
+	getHydratedBundleCommand,
+} from "../../lib/mcpb.js"
 import type { ServerConfig } from "../../types/registry.js"
 
 export interface PreparedStdioConnection {
@@ -44,21 +42,13 @@ export async function prepareStdioConnection(
 			serverDetails.qualifiedName,
 			bundleConnection.bundleUrl,
 		)
-		const { command, args, env } = getBundleCommand(bundleDir)
-
 		// Config is already resolved from keychain before calling this function
-		// Resolve templates in args (both ${__dirname} and ${user_config.*})
-		const resolvedArgs = args.map((arg) =>
-			resolveTemplateString(arg, config, bundleDir),
-		)
-
-		// Resolve environment variable templates
-		const resolvedEnv = env ? resolveEnvTemplates(env, config, bundleDir) : {}
+		const hydrated = getHydratedBundleCommand(bundleDir, config)
 
 		return {
-			command,
-			args: resolvedArgs,
-			env: resolvedEnv,
+			command: hydrated.command,
+			args: hydrated.args,
+			env: hydrated.env,
 			qualifiedName: serverDetails.qualifiedName,
 		}
 	}

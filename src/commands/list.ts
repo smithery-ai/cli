@@ -4,7 +4,7 @@ import {
 	VALID_CLIENTS,
 	type ValidClient,
 } from "../config/clients"
-import { readConfig } from "../utils/client-config"
+import { readConfig } from "../lib/client-config-io"
 
 export async function list(
 	subcommand: string | undefined,

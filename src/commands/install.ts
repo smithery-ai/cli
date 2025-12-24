@@ -4,23 +4,22 @@ import chalk from "chalk"
 import ora from "ora"
 import type { ValidClient } from "../config/clients"
 import { getClientConfiguration } from "../config/clients"
+import {
+	readConfig,
+	runConfigCommand,
+	writeConfig,
+} from "../lib/client-config-io"
 import { saveConfig } from "../lib/keychain"
 import { verbose } from "../lib/logger"
 import { resolveServer } from "../lib/registry"
 import type { ServerConfig } from "../types/registry"
 import { checkAnalyticsConsent } from "../utils/analytics"
 import { promptForRestart } from "../utils/client"
-import {
-	readConfig,
-	runConfigCommand,
-	writeConfig,
-} from "../utils/client-config"
 import { getServerName } from "../utils/install/helpers"
 import { formatServerConfig } from "../utils/install/server-config"
 import { resolveUserConfig } from "../utils/install/user-config"
 import {
 	checkAndNotifyRemoteServer,
-	ensureApiKey,
 	ensureBunInstalled,
 	ensureUVInstalled,
 } from "../utils/runtime"
@@ -45,7 +44,7 @@ export async function installServer(
 	/* check analytics consent */
 	await checkAnalyticsConsent()
 
-	// get client configuration details early (needed for OAuth check)
+	// get client configuration details
 	const clientConfig = getClientConfiguration(client)
 
 	/* resolve server */
@@ -64,12 +63,6 @@ export async function installServer(
 
 		// Notify user if remote server
 		checkAndNotifyRemoteServer(server)
-
-		// For HTTP connections, ensure API key is available
-		// Skip for OAuth-capable clients (they handle auth automatically)
-		if (connection.type === "http" && !clientConfig.supportsOAuth) {
-			await ensureApiKey()
-		}
 
 		/* resolve server configuration */
 		const finalConfig = await resolveUserConfig(
@@ -109,8 +102,7 @@ export async function installServer(
 				break
 			}
 			case "json":
-			case "yaml":
-			case "toml": {
+			case "yaml": {
 				// For file-based clients, read existing config and merge
 				const config = readConfig(client)
 				config.mcpServers[serverName] = serverConfig

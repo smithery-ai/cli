@@ -21,16 +21,6 @@ vi.mock("../run/streamable-http-runner", () => ({
 		.mockResolvedValue(() => Promise.resolve()),
 }))
 
-vi.mock("../run/local-playground-runner", () => ({
-	createLocalPlaygroundRunner: vi
-		.fn()
-		.mockResolvedValue(() => Promise.resolve()),
-}))
-
-vi.mock("../run/uplink-runner", () => ({
-	createUplinkRunner: vi.fn().mockResolvedValue(() => Promise.resolve()),
-}))
-
 // Mock registry
 vi.mock("../../lib/registry", () => ({
 	resolveServer: vi.fn(),
@@ -79,9 +69,6 @@ describe("run command", () => {
 
 		expect(createStreamableHTTPRunner).toHaveBeenCalledWith(
 			"https://server.smithery.ai",
-			"test-api-key",
-			{},
-			undefined,
 		)
 	})
 
@@ -111,7 +98,6 @@ describe("run command", () => {
 			{ PATH: "/usr/bin" },
 			"author/stdio-server",
 			"test-api-key",
-			false,
 		)
 	})
 
@@ -143,7 +129,6 @@ describe("run command", () => {
 			{ API_KEY: "test" },
 			"author/bundle-server",
 			"test-api-key",
-			false,
 		)
 	})
 })
