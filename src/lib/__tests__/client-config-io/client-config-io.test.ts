@@ -458,10 +458,12 @@ describe("transformation flow integration", () => {
 			const result = readConfig("goose")
 
 			// ASSERT: Should transform goose format (cmd/envs/type) → standard format (command/env/no type)
-			expect(result.mcpServers["github"]).toEqual(gooseStdioConfig.mcpServers.github)
-			expect(result.mcpServers["github"]).not.toHaveProperty("type")
-			expect(result.mcpServers["github"]).not.toHaveProperty("cmd")
-			expect(result.mcpServers["github"]).not.toHaveProperty("envs")
+			expect(result.mcpServers.github).toEqual(
+				gooseStdioConfig.mcpServers.github,
+			)
+			expect(result.mcpServers.github).not.toHaveProperty("type")
+			expect(result.mcpServers.github).not.toHaveProperty("cmd")
+			expect(result.mcpServers.github).not.toHaveProperty("envs")
 		})
 
 		test("should use normal flow when client has no formatDescriptor", () => {
@@ -483,7 +485,9 @@ describe("transformation flow integration", () => {
 
 			// ASSERT: Should read config as-is without transformation
 			const server = result.mcpServers["simple-server"]
-			expect(server).toEqual(opencodeSimpleStdioConfig.mcpServers["simple-server"])
+			expect(server).toEqual(
+				opencodeSimpleStdioConfig.mcpServers["simple-server"],
+			)
 			// Verify no transformation was applied (fields match exactly)
 			expect("command" in server && server.command).toBe("npx")
 			expect("env" in server && server.env).toEqual({ KEY: "value" })
@@ -513,7 +517,9 @@ describe("transformation flow integration", () => {
 				opencodeStdioConfig.mcpServers["github-server"],
 			)
 			expect(result.mcpServers["github-server"]).not.toHaveProperty("type")
-			expect(result.mcpServers["github-server"]).not.toHaveProperty("environment")
+			expect(result.mcpServers["github-server"]).not.toHaveProperty(
+				"environment",
+			)
 		})
 	})
 
@@ -637,7 +643,7 @@ describe("transformation flow integration", () => {
 
 			// ACT: Read (client → standard), modify, write (standard → client)
 			const readResult = readConfig("goose")
-			const server = readResult.mcpServers["github"]
+			const server = readResult.mcpServers.github
 			if ("env" in server && server.env) {
 				server.env.GITHUB_PERSONAL_ACCESS_TOKEN = "modified-token"
 			}
@@ -645,7 +651,7 @@ describe("transformation flow integration", () => {
 
 			// ASSERT: Should maintain transformation through round-trip
 			const finalResult = readConfig("goose")
-			expect(finalResult.mcpServers["github"]).toEqual({
+			expect(finalResult.mcpServers.github).toEqual({
 				command: "npx",
 				args: ["-y", "@modelcontextprotocol/server-github"],
 				env: {
