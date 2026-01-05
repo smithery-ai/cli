@@ -340,7 +340,27 @@ export function getBundleCommand(bundleDir: string): {
 		throw new Error(`Bundle manifest not found: ${manifestPath}`)
 	}
 
-	const manifest = JSON.parse(fs.readFileSync(manifestPath, "utf-8"))
+	const manifestContent = fs.readFileSync(manifestPath, "utf-8")
+	if (!manifestContent.trim()) {
+		throw new Error(`Bundle manifest is empty: ${manifestPath}`)
+	}
+
+	let manifest: {
+		server?: {
+			mcp_config?: {
+				command?: string
+				args?: string[]
+				env?: Record<string, string>
+			}
+		}
+	}
+	try {
+		manifest = JSON.parse(manifestContent) as typeof manifest
+	} catch (error) {
+		throw new Error(
+			`Failed to parse bundle manifest at ${manifestPath}: ${error instanceof Error ? error.message : String(error)}`,
+		)
+	}
 	const mcpConfig = manifest.server?.mcp_config
 
 	if (!mcpConfig?.command) {
@@ -376,7 +396,18 @@ export function getBundleEntrypoint(
 		throw new Error(`Bundle manifest not found: ${manifestPath}`)
 	}
 
-	const manifest = JSON.parse(fs.readFileSync(manifestPath, "utf-8"))
+	const manifestContent = fs.readFileSync(manifestPath, "utf-8")
+	if (!manifestContent.trim()) {
+		throw new Error(`Bundle manifest is empty: ${manifestPath}`)
+	}
+	let manifest: { server?: { entry_point?: string } }
+	try {
+		manifest = JSON.parse(manifestContent) as typeof manifest
+	} catch (error) {
+		throw new Error(
+			`Failed to parse bundle manifest at ${manifestPath}: ${error instanceof Error ? error.message : String(error)}`,
+		)
+	}
 	if (!manifest.server?.entry_point) {
 		throw new Error("Bundle manifest missing server.entry_point")
 	}
@@ -498,7 +529,20 @@ export function getBundleUserConfigSchema(
 		throw new Error(`Bundle manifest not found: ${manifestPath}`)
 	}
 
-	const manifest = JSON.parse(fs.readFileSync(manifestPath, "utf-8"))
+	const manifestContent = fs.readFileSync(manifestPath, "utf-8")
+	if (!manifestContent.trim()) {
+		throw new Error(`Bundle manifest is empty: ${manifestPath}`)
+	}
+	let manifest: {
+		user_config?: Record<string, Partial<McpbUserConfigurationOption>>
+	}
+	try {
+		manifest = JSON.parse(manifestContent) as typeof manifest
+	} catch (error) {
+		throw new Error(
+			`Failed to parse bundle manifest at ${manifestPath}: ${error instanceof Error ? error.message : String(error)}`,
+		)
+	}
 	const userConfig = manifest.user_config
 
 	if (!userConfig || typeof userConfig !== "object") {
