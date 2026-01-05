@@ -145,7 +145,7 @@ program
 		if (options.playground) {
 			console.warn(
 				chalk.yellow(
-					"⚠️  Warning: --playground flag is deprecated. Use 'smithery playground <server>' instead.",
+					"⚠ Warning: --playground flag is deprecated. Use 'smithery playground <server>' instead.",
 				),
 			)
 			// Parse config if provided
@@ -299,7 +299,7 @@ program
 	.action(async (options) => {
 		console.warn(
 			chalk.yellow(
-				"⚠️  Warning: 'playground-stdio' command is deprecated. Use 'smithery playground -- <command>' instead.",
+				"⚠ Warning: 'playground-stdio' command is deprecated. Use 'smithery playground -- <command>' instead.",
 			),
 		)
 		// Extract command after -- separator
@@ -311,7 +311,7 @@ program
 		}
 
 		if (!command) {
-			console.error(chalk.red("❌ Command is required."))
+			console.error(chalk.red("✗ Command is required."))
 			console.error(
 				chalk.yellow("Usage: smithery playground-stdio -- <command>"),
 			)
