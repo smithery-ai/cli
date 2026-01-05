@@ -18,9 +18,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - OS keychain integration using `keytar` library for secure local configuration storage
 - New `keychain.ts` module with `saveConfig()`, `getConfig()`, and `deleteConfig()` functions
 - `mcp-remote` integration for non-OAuth clients connecting to HTTP servers
-- Comprehensive test suite for user configuration resolution
-- Test coverage for server configuration formatting
-- Test coverage for client configuration I/O operations
+- Test coverage for user configuration resolution, server configuration formatting, and client configuration I/O operations
 - Support for HTTP URL key customization (`httpUrlKey`), HTTP type overrides (`httpType`), and format descriptor support for client-specific configuration formats
 
 ### Removed
