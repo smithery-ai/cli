@@ -4,6 +4,32 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [2.0.0] - 2025-12-21
+
+### Changed
+- **BREAKING**: Store server configurations in OS keychain instead of remote storage for local servers. Configurations are now stored securely on the user's local machine using the system keychain (macOS Keychain, Windows Credential Manager, Linux Secret Service)
+- **BREAKING**: Remote server configuration handling - OAuth-capable clients now use direct HTTP URLs without API keys. Configuration is handled through OAuth flow instead of CLI prompts
+- For clients that don't support OAuth but need HTTP servers, use `mcp-remote` as a fallback transport
+- Simplified server resolution API - removed `ResolveServerSource` enum and `apiKey` parameter from `resolveServer()` function
+- Refactored configuration handling - split `session-config.ts` into focused modules: `user-config.ts` for config resolution and `server-config.ts` for server configuration formatting
+- Updated `run` command to load configurations from keychain instead of remote storage
+
+### Added
+- OS keychain integration using `keytar` library for secure local configuration storage
+- New `keychain.ts` module with `saveConfig()`, `getConfig()`, and `deleteConfig()` functions
+- `mcp-remote` integration for non-OAuth clients connecting to HTTP servers
+- Comprehensive test suite for user configuration resolution
+- Test coverage for server configuration formatting
+- Test coverage for client configuration I/O operations
+- Support for HTTP URL key customization (`httpUrlKey`), HTTP type overrides (`httpType`), and format descriptor support for client-specific configuration formats
+
+### Removed
+- Remote configuration storage for local servers
+- `session-config.ts` module (functionality moved to `user-config.ts` and `server-config.ts`)
+- Widget-related code (`widget-bundler.ts`, `widget-discovery.ts`, `widget-validation.ts`)
+- Old test files (`install.test.ts`, `installation-flow.test.ts`, `registry.test.ts`, `config-to-args.test.ts`)
+- `config-to-args.ts` utility (functionality integrated into other modules)
+
 ## [1.5.2] - 2025-10-14
 
 ### Fixed
