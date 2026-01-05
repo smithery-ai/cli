@@ -1,4 +1,6 @@
-import { mkdir, rm, writeFile } from "node:fs/promises"
+import { mkdtempSync } from "node:fs"
+import { rm, writeFile } from "node:fs/promises"
+import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { afterEach, beforeEach, describe, expect, it } from "vitest"
 import { getBundleCommand } from "../../mcpb.js"
@@ -6,9 +8,8 @@ import { getBundleCommand } from "../../mcpb.js"
 describe("getBundleCommand", () => {
 	let tempDir: string
 
-	beforeEach(async () => {
-		tempDir = `/tmp/bundle-manager-test-${Date.now()}`
-		await mkdir(tempDir, { recursive: true })
+	beforeEach(() => {
+		tempDir = mkdtempSync(join(tmpdir(), "bundle-manager-test-"))
 	})
 
 	afterEach(async () => {
