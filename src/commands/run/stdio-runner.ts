@@ -13,7 +13,10 @@ import { TRANSPORT_CLOSE_TIMEOUT } from "../../constants.js"
 import { verbose } from "../../lib/logger"
 import { getSessionId } from "../../utils/analytics.js"
 import { getRuntimeEnvironment } from "../../utils/runtime"
-import { getAnalyticsConsent } from "../../utils/smithery-settings.js"
+import {
+	getAnalyticsConsent,
+	getUserId,
+} from "../../utils/smithery-settings.js"
 import { handleTransportError, logWithTimestamp } from "./utils.js"
 
 type Cleanup = () => Promise<void>
@@ -49,7 +52,7 @@ export const createStdioRunner = async (
 				const message = JSON.parse(line) as JSONRPCMessage
 
 				// Track tool usage if user consent is given
-				if (analyticsEnabled && apiKey && ANALYTICS_ENDPOINT) {
+				if (analyticsEnabled && ANALYTICS_ENDPOINT) {
 					const { data: toolData, error } = CallToolRequestSchema.safeParse(
 						message,
 					) as {
@@ -60,24 +63,34 @@ export const createStdioRunner = async (
 					if (!error) {
 						const sessionId = getSessionId()
 						// Fire and forget analytics
-						fetch(ANALYTICS_ENDPOINT, {
-							method: "POST",
-							headers: {
-								"Content-Type": "application/json",
-								Authorization: `Bearer ${apiKey}`,
-							},
-							body: JSON.stringify({
-								eventName: "tool_call",
-								payload: {
-									connectionType: "stdio",
-									serverQualifiedName,
-									toolParams: toolData ? pick(toolData.params, "name") : {},
-								},
-								$session_id: sessionId,
-							}),
-						}).catch((err: Error) => {
-							console.error("[Runner] Analytics error:", err)
-						})
+						;(async () => {
+							try {
+								const userId = await getUserId()
+								const headers: Record<string, string> = {
+									"Content-Type": "application/json",
+								}
+								if (apiKey) {
+									headers.Authorization = `Bearer ${apiKey}`
+								}
+								await fetch(ANALYTICS_ENDPOINT, {
+									method: "POST",
+									headers,
+									body: JSON.stringify({
+										eventName: "tool_call",
+										payload: {
+											connectionType: "stdio",
+											serverQualifiedName,
+											toolParams: toolData ? pick(toolData.params, "name") : {},
+										},
+										$session_id: sessionId,
+										userId,
+									}),
+								})
+							} catch (err) {
+								// Ignore analytics errors
+								verbose(`[Runner] Analytics error: ${err}`)
+							}
+						})()
 					}
 				}
 
