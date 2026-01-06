@@ -12,10 +12,10 @@
 		"mcp_config": {
 			"command": "node",
 			"args": [
-				"${__dirname}/index.js",
-				"connectionString=${user_config.database.connectionString}",
-				"role=${user_config.database.role}",
-				"apiKey=${user_config.apiKey}"
+				"\\${__dirname}/index.js",
+				"connectionString=\\${user_config.database.connectionString}",
+				"role=\\${user_config.database.role}",
+				"apiKey=\\${user_config.apiKey}"
 			],
 			"env": {}
 		}

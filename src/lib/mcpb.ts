@@ -234,7 +234,7 @@ export async function ensureBundleInstalled(
  */
 export function getHydratedBundleCommand(
 	bundleDir: string,
-	userConfig: Record<string, any>,
+	userConfig: Record<string, unknown>,
 ): {
 	command: string
 	args: string[]
@@ -257,7 +257,7 @@ export function hydrateBundleCommand(
 		args: string[]
 		env?: Record<string, string>
 	},
-	userConfig: Record<string, any>,
+	userConfig: Record<string, unknown>,
 	bundleDir: string,
 ): {
 	command: string
@@ -291,7 +291,7 @@ export function hydrateBundleCommand(
  */
 export function resolveTemplateString(
 	template: string,
-	userConfig: Record<string, any>,
+	userConfig: Record<string, unknown>,
 	bundleDir?: string,
 ): string {
 	return template.replace(/\$\{([^}]+)\}/g, (match, path) => {
@@ -304,11 +304,16 @@ export function resolveTemplateString(
 		if (path.startsWith("user_config.")) {
 			const configPath = path.replace("user_config.", "")
 			const parts = configPath.split(".")
-			let value: any = userConfig
+			let value: unknown = userConfig
 
 			for (const part of parts) {
-				if (value && typeof value === "object") {
-					value = value[part]
+				if (
+					value &&
+					typeof value === "object" &&
+					!Array.isArray(value) &&
+					value !== null
+				) {
+					value = (value as Record<string, unknown>)[part]
 				} else {
 					// If path doesn't exist in userConfig, return the original template
 					return match
@@ -369,6 +374,7 @@ export function getBundleCommand(bundleDir: string): {
 
 	// Resolve __dirname in args (user_config templates remain as-is for later resolution)
 	const args = (mcpConfig.args || []).map((arg: string) =>
+		// biome-ignore lint/suspicious/noTemplateCurlyInString: Literal template string for fallback
 		arg.replace(/\$\{__dirname\}/g, bundleDir || "${__dirname}"),
 	)
 

@@ -13,7 +13,7 @@ export interface ChildProcessCleanupOptions {
 export async function cleanupChildProcess(
 	options: ChildProcessCleanupOptions,
 ): Promise<void> {
-	const { childProcess, processName } = options
+	const { childProcess } = options
 
 	// Skip if process is already killed or doesn't exist
 	if (!childProcess || childProcess.killed) {

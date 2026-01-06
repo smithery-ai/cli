@@ -1,4 +1,5 @@
 import { type ChildProcess, spawn } from "node:child_process"
+import type { Server } from "node:http"
 import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js"
 import type {
 	JSONRPCErrorResponse,
@@ -48,7 +49,7 @@ export const createStdioPlaygroundRunner = async (
 	let isReady = false
 	let transport: StdioClientTransport | null = null
 	let childProcess: ChildProcess | null = null
-	let httpServer: any = null
+	let httpServer: Server | null = null
 	let tunnelListener: { close: () => Promise<void> } | undefined
 	const pendingRequests = new Map<
 		string,
@@ -412,7 +413,7 @@ export const createStdioPlaygroundRunner = async (
 			try {
 				logWithTimestamp("[Playground] Closing HTTP server...")
 				await new Promise<void>((resolve) => {
-					httpServer.close(() => {
+					httpServer!.close(() => {
 						logWithTimestamp("[Playground] HTTP server closed")
 						resolve()
 					})

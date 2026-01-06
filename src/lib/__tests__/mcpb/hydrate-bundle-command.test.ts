@@ -97,6 +97,7 @@ describe("hydrateBundleCommand", () => {
 
 		// Assert: env value still contains "${user_config.missing}"
 		expect(result.env).toEqual({
+			// biome-ignore lint/suspicious/noTemplateCurlyInString: Literal template string for testing
 			MISSING: "${user_config.missing}",
 		})
 		expect(result.command).toBe("node")

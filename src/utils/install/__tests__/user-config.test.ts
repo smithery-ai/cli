@@ -17,6 +17,7 @@ import { promptForExistingConfig } from "../../command-prompts"
 import { collectConfigValues } from "../prompt-user-config"
 import {
 	applySchemaDefaults,
+	type OraSpinner,
 	resolveUserConfig,
 	serverNeedsConfig,
 } from "../user-config"
@@ -67,12 +68,12 @@ const createMockSpinner = () => ({
 })
 
 describe("resolveUserConfig", () => {
-	let mockSpinner: ReturnType<typeof createMockSpinner>
+	let mockSpinner: OraSpinner
 	const qualifiedName = "@test/test-server"
 
 	beforeEach(() => {
 		vi.clearAllMocks()
-		mockSpinner = createMockSpinner()
+		mockSpinner = createMockSpinner() as OraSpinner
 	})
 
 	describe("when server needs no config", () => {
@@ -83,7 +84,7 @@ describe("resolveUserConfig", () => {
 				connection,
 				qualifiedName,
 				{},
-				mockSpinner as any,
+				mockSpinner,
 			)
 
 			expect(result).toEqual({})
@@ -100,7 +101,7 @@ describe("resolveUserConfig", () => {
 			mockGetConfig.mockResolvedValue(savedConfigs.requiredAndOptional)
 			mockPromptForExistingConfig.mockResolvedValue(true)
 
-			await resolveUserConfig(connection, qualifiedName, {}, mockSpinner as any)
+			await resolveUserConfig(connection, qualifiedName, {}, mockSpinner)
 
 			expect(mockGetConfig).toHaveBeenCalledWith(qualifiedName)
 			expect(mockPromptForExistingConfig).toHaveBeenCalled()
@@ -120,7 +121,7 @@ describe("resolveUserConfig", () => {
 						connection,
 						qualifiedName,
 						{},
-						mockSpinner as any,
+						mockSpinner,
 					)
 
 					expect(result).toEqual(existingConfig)
@@ -136,12 +137,7 @@ describe("resolveUserConfig", () => {
 						collectedConfigs.missingEndpoint,
 					)
 
-					await resolveUserConfig(
-						connection,
-						qualifiedName,
-						{},
-						mockSpinner as any,
-					)
+					await resolveUserConfig(connection, qualifiedName, {}, mockSpinner)
 
 					expect(mockCollectConfigValues).toHaveBeenCalled()
 				})
@@ -153,12 +149,7 @@ describe("resolveUserConfig", () => {
 						collectedConfigs.missingEndpoint,
 					)
 
-					await resolveUserConfig(
-						connection,
-						qualifiedName,
-						{},
-						mockSpinner as any,
-					)
+					await resolveUserConfig(connection, qualifiedName, {}, mockSpinner)
 
 					expect(mockCollectConfigValues).toHaveBeenCalled()
 				})
@@ -174,7 +165,7 @@ describe("resolveUserConfig", () => {
 						connection,
 						qualifiedName,
 						userConfig,
-						mockSpinner as any,
+						mockSpinner,
 					)
 
 					expect(result.apiKey).toBe("user-api-key")
@@ -195,7 +186,7 @@ describe("resolveUserConfig", () => {
 						connection,
 						qualifiedName,
 						userConfig,
-						mockSpinner as any,
+						mockSpinner,
 					)
 
 					expect(mockCollectConfigValues).toHaveBeenCalled()
@@ -214,7 +205,7 @@ describe("resolveUserConfig", () => {
 						connection,
 						qualifiedName,
 						userConfig,
-						mockSpinner as any,
+						mockSpinner,
 					)
 
 					expect(result.apiKey).toBe("user-api-key")
@@ -225,12 +216,7 @@ describe("resolveUserConfig", () => {
 				const existingConfig = savedConfigs.requiredAndOptional!
 				mockGetConfig.mockResolvedValue(existingConfig)
 
-				await resolveUserConfig(
-					connection,
-					qualifiedName,
-					{},
-					mockSpinner as any,
-				)
+				await resolveUserConfig(connection, qualifiedName, {}, mockSpinner)
 
 				expect(mockPromptForExistingConfig).toHaveBeenCalled()
 			})
@@ -243,7 +229,7 @@ describe("resolveUserConfig", () => {
 					connection,
 					qualifiedName,
 					{},
-					mockSpinner as any,
+					mockSpinner,
 				)
 
 				expect(result).toEqual(existingConfig)
@@ -254,12 +240,7 @@ describe("resolveUserConfig", () => {
 				const existingConfig = savedConfigs.requiredAndOptional!
 				mockGetConfig.mockResolvedValue(existingConfig)
 
-				await resolveUserConfig(
-					connection,
-					qualifiedName,
-					{},
-					mockSpinner as any,
-				)
+				await resolveUserConfig(connection, qualifiedName, {}, mockSpinner)
 
 				expect(mockPromptForExistingConfig).toHaveBeenCalled()
 			})
@@ -280,7 +261,7 @@ describe("resolveUserConfig", () => {
 						connection,
 						qualifiedName,
 						userConfig,
-						mockSpinner as any,
+						mockSpinner,
 					)
 
 					expect(result.apiKey).toBe("new-api-key")
@@ -301,7 +282,7 @@ describe("resolveUserConfig", () => {
 						connection,
 						qualifiedName,
 						userConfig,
-						mockSpinner as any,
+						mockSpinner,
 					)
 
 					expect(mockCollectConfigValues).toHaveBeenCalled()
@@ -315,12 +296,7 @@ describe("resolveUserConfig", () => {
 						collectedConfigs.requiredAndOptional,
 					)
 
-					await resolveUserConfig(
-						connection,
-						qualifiedName,
-						{},
-						mockSpinner as any,
-					)
+					await resolveUserConfig(connection, qualifiedName, {}, mockSpinner)
 
 					expect(mockCollectConfigValues).toHaveBeenCalled()
 					expect(mockSpinner.stop).toHaveBeenCalled()
@@ -334,12 +310,7 @@ describe("resolveUserConfig", () => {
 					collectedConfigs.requiredAndOptional,
 				)
 
-				await resolveUserConfig(
-					connection,
-					qualifiedName,
-					{},
-					mockSpinner as any,
-				)
+				await resolveUserConfig(connection, qualifiedName, {}, mockSpinner)
 
 				expect(mockCollectConfigValues).toHaveBeenCalled()
 			})
@@ -350,12 +321,7 @@ describe("resolveUserConfig", () => {
 					collectedConfigs.requiredAndOptional,
 				)
 
-				await resolveUserConfig(
-					connection,
-					qualifiedName,
-					{},
-					mockSpinner as any,
-				)
+				await resolveUserConfig(connection, qualifiedName, {}, mockSpinner)
 
 				expect(mockCollectConfigValues).toHaveBeenCalled()
 			})
@@ -377,7 +343,7 @@ describe("resolveUserConfig", () => {
 					connection,
 					qualifiedName,
 					userConfig,
-					mockSpinner as any,
+					mockSpinner,
 				)
 
 				expect(result).toEqual(userConfig)
@@ -395,7 +361,7 @@ describe("resolveUserConfig", () => {
 					connection,
 					qualifiedName,
 					userConfig,
-					mockSpinner as any,
+					mockSpinner,
 				)
 
 				expect(mockCollectConfigValues).toHaveBeenCalled()
@@ -408,7 +374,7 @@ describe("resolveUserConfig", () => {
 					connection,
 					qualifiedName,
 					userConfig,
-					mockSpinner as any,
+					mockSpinner,
 				)
 
 				// Should have defaults applied
@@ -423,7 +389,7 @@ describe("resolveUserConfig", () => {
 					connection,
 					qualifiedName,
 					userConfig,
-					mockSpinner as any,
+					mockSpinner,
 				)
 
 				expect(result).toEqual(userConfig)
@@ -436,12 +402,7 @@ describe("resolveUserConfig", () => {
 					collectedConfigs.requiredAndOptional,
 				)
 
-				await resolveUserConfig(
-					connection,
-					qualifiedName,
-					{},
-					mockSpinner as any,
-				)
+				await resolveUserConfig(connection, qualifiedName, {}, mockSpinner)
 
 				expect(mockCollectConfigValues).toHaveBeenCalled()
 				expect(mockSpinner.stop).toHaveBeenCalled()
@@ -453,12 +414,7 @@ describe("resolveUserConfig", () => {
 					collectedConfigs.requiredAndOptional,
 				)
 
-				await resolveUserConfig(
-					connection,
-					qualifiedName,
-					{},
-					mockSpinner as any,
-				)
+				await resolveUserConfig(connection, qualifiedName, {}, mockSpinner)
 
 				expect(mockCollectConfigValues).toHaveBeenCalled()
 			})
@@ -478,7 +434,7 @@ describe("resolveUserConfig", () => {
 				connection,
 				qualifiedName,
 				{},
-				mockSpinner as any,
+				mockSpinner,
 			)
 
 			expect(result.debugMode).toBe(false)
@@ -495,7 +451,7 @@ describe("resolveUserConfig", () => {
 				connection,
 				qualifiedName,
 				{},
-				mockSpinner as any,
+				mockSpinner,
 			)
 
 			expect(result.debugMode).toBe(true)
@@ -514,7 +470,7 @@ describe("resolveUserConfig", () => {
 
 			// This should throw because endpoint is required
 			await expect(
-				resolveUserConfig(connection, qualifiedName, {}, mockSpinner as any),
+				resolveUserConfig(connection, qualifiedName, {}, mockSpinner),
 			).rejects.toThrow()
 		})
 	})
@@ -537,12 +493,7 @@ describe("resolveUserConfig", () => {
 			})
 			mockCollectConfigValues.mockResolvedValue({ apiKey: "test" })
 
-			await resolveUserConfig(
-				bundleConnection,
-				qualifiedName,
-				{},
-				mockSpinner as any,
-			)
+			await resolveUserConfig(bundleConnection, qualifiedName, {}, mockSpinner)
 
 			expect(mockEnsureBundleInstalled).toHaveBeenCalledWith(
 				qualifiedName,
@@ -567,12 +518,7 @@ describe("resolveUserConfig", () => {
 			})
 			mockCollectConfigValues.mockResolvedValue({ apiKey: "test" })
 
-			await resolveUserConfig(
-				bundleConnection,
-				qualifiedName,
-				{},
-				mockSpinner as any,
-			)
+			await resolveUserConfig(bundleConnection, qualifiedName, {}, mockSpinner)
 
 			expect(mockGetBundleUserConfigSchema).toHaveBeenCalledWith("/tmp/bundle")
 		})
@@ -600,7 +546,7 @@ describe("resolveUserConfig", () => {
 				bundleConnection,
 				qualifiedName,
 				{},
-				mockSpinner as any,
+				mockSpinner,
 			)
 
 			expect(result.debugMode).toBe(false)
@@ -614,7 +560,7 @@ describe("resolveUserConfig", () => {
 			mockGetConfig.mockRejectedValue(new Error("Keychain read failed"))
 
 			await expect(
-				resolveUserConfig(connection, qualifiedName, {}, mockSpinner as any),
+				resolveUserConfig(connection, qualifiedName, {}, mockSpinner),
 			).rejects.toThrow("Keychain read failed")
 		})
 
@@ -630,12 +576,7 @@ describe("resolveUserConfig", () => {
 			)
 
 			await expect(
-				resolveUserConfig(
-					bundleConnection,
-					qualifiedName,
-					{},
-					mockSpinner as any,
-				),
+				resolveUserConfig(bundleConnection, qualifiedName, {}, mockSpinner),
 			).rejects.toThrow("Bundle download failed")
 		})
 
@@ -646,7 +587,7 @@ describe("resolveUserConfig", () => {
 			)
 
 			await expect(
-				resolveUserConfig(connection, qualifiedName, {}, mockSpinner as any),
+				resolveUserConfig(connection, qualifiedName, {}, mockSpinner),
 			).rejects.toThrow("User cancelled collection")
 		})
 
@@ -659,7 +600,7 @@ describe("resolveUserConfig", () => {
 			})
 
 			await expect(
-				resolveUserConfig(connection, qualifiedName, {}, mockSpinner as any),
+				resolveUserConfig(connection, qualifiedName, {}, mockSpinner),
 			).rejects.toThrow("Missing required config values")
 		})
 	})

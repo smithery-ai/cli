@@ -42,9 +42,6 @@ export interface ClientConfiguration {
 		http?: (name: string, url: string) => string[]
 	}
 
-	// Whether this client prefers HTTP over STDIO when both are available
-	preferHTTP?: boolean
-
 	// Whether this client supports OAuth authentication (no API key needed in URL)
 	supportsOAuth?: boolean
 
@@ -55,10 +52,6 @@ export interface ClientConfiguration {
 	// Optional override for HTTP type value (defaults to "http")
 	// Some clients require different type values like "streamableHttp"
 	httpType?: string
-
-	// Optional format descriptor key (references FORMAT_DESCRIPTORS registry)
-	// If not provided, will fall back to defaults or legacy fields (httpUrlKey, httpType)
-	formatDescriptor?: string
 }
 
 // Initialize platform-specific paths
@@ -92,7 +85,6 @@ export const CLIENT_CONFIGURATIONS: Record<string, ClientConfiguration> = {
 		label: "Claude Code",
 		supportedTransports: [Transport.HTTP, Transport.STDIO],
 		installType: "command",
-		preferHTTP: true,
 		command: "claude",
 		supportsOAuth: true,
 		commandConfig: {
@@ -104,7 +96,6 @@ export const CLIENT_CONFIGURATIONS: Record<string, ClientConfiguration> = {
 		label: "Cursor",
 		supportedTransports: [Transport.STDIO, Transport.HTTP],
 		installType: "json",
-		preferHTTP: true,
 		supportsOAuth: true,
 		path: path.join(homeDir, ".cursor", "mcp.json"),
 	},
@@ -113,7 +104,6 @@ export const CLIENT_CONFIGURATIONS: Record<string, ClientConfiguration> = {
 		supportedTransports: [Transport.STDIO, Transport.HTTP],
 		installType: "json",
 		supportsOAuth: true,
-		formatDescriptor: "windsurf",
 		// Legacy field kept for backward compatibility
 		httpUrlKey: "serverUrl",
 		path: path.join(homeDir, ".codeium", "windsurf", "mcp_config.json"),
@@ -123,7 +113,6 @@ export const CLIENT_CONFIGURATIONS: Record<string, ClientConfiguration> = {
 		supportedTransports: [Transport.STDIO, Transport.HTTP],
 		installType: "json",
 		supportsOAuth: true,
-		formatDescriptor: "cline",
 		// Legacy field kept for backward compatibility
 		httpType: "streamableHttp",
 		path: path.join(
@@ -138,7 +127,6 @@ export const CLIENT_CONFIGURATIONS: Record<string, ClientConfiguration> = {
 		label: "VS Code",
 		supportedTransports: [Transport.STDIO, Transport.HTTP],
 		installType: "command",
-		preferHTTP: true,
 		supportsOAuth: true,
 		command: process.platform === "win32" ? "code.cmd" : "code",
 		commandConfig: {
@@ -150,7 +138,6 @@ export const CLIENT_CONFIGURATIONS: Record<string, ClientConfiguration> = {
 		label: "VS Code Insiders",
 		supportedTransports: [Transport.STDIO, Transport.HTTP],
 		installType: "command",
-		preferHTTP: true,
 		supportsOAuth: true,
 		command:
 			process.platform === "win32" ? "code-insiders.cmd" : "code-insiders",
@@ -174,7 +161,6 @@ export const CLIENT_CONFIGURATIONS: Record<string, ClientConfiguration> = {
 		label: "Gemini CLI",
 		supportedTransports: [Transport.STDIO, Transport.HTTP],
 		installType: "command",
-		preferHTTP: true,
 		command: "gemini",
 		supportsOAuth: true,
 		commandConfig: {
@@ -186,7 +172,6 @@ export const CLIENT_CONFIGURATIONS: Record<string, ClientConfiguration> = {
 		label: "Codex",
 		supportedTransports: [Transport.STDIO, Transport.HTTP],
 		installType: "command",
-		preferHTTP: true,
 		command: "codex",
 		supportsOAuth: true,
 		commandConfig: {
@@ -199,7 +184,6 @@ export const CLIENT_CONFIGURATIONS: Record<string, ClientConfiguration> = {
 		supportedTransports: [Transport.STDIO, Transport.HTTP],
 		installType: "json",
 		supportsOAuth: true,
-		formatDescriptor: "opencode",
 		path: path.join(homeDir, ".config", "opencode", "opencode.json"),
 	},
 	claude: {
@@ -261,7 +245,6 @@ export const CLIENT_CONFIGURATIONS: Record<string, ClientConfiguration> = {
 		label: "Goose",
 		supportedTransports: [Transport.STDIO, Transport.HTTP],
 		installType: "yaml",
-		formatDescriptor: "goose",
 		path: path.join(homeDir, ".config", "goose", "config.yaml"),
 	},
 }
@@ -286,68 +269,7 @@ export function getClientConfiguration(
 }
 
 /**
- * Check if a client supports a specific transport
- */
-export function clientSupportsTransport(
-	clientName: string,
-	transport: Transport,
-): boolean {
-	const config = getClientConfiguration(clientName)
-	return config.supportedTransports.includes(transport)
-}
-
-/**
- * Get the preferred transport for a client when multiple are available
- */
-export function getPreferredTransport(
-	clientName: string,
-	availableTransports: Transport[],
-): Transport | null {
-	const config = getClientConfiguration(clientName)
-
-	// Filter to only transports the client supports
-	const supportedAvailable = availableTransports.filter((transport) =>
-		config.supportedTransports.includes(transport),
-	)
-
-	if (supportedAvailable.length === 0) return null
-	if (supportedAvailable.length === 1) return supportedAvailable[0]
-
-	// If client prefers HTTP and it's available, use it
-	if (config.preferHTTP && supportedAvailable.includes(Transport.HTTP)) {
-		return Transport.HTTP
-	}
-
-	// Otherwise prefer STDIO if available (more reliable)
-	if (supportedAvailable.includes(Transport.STDIO)) {
-		return Transport.STDIO
-	}
-
-	// Fallback to first available
-	return supportedAvailable[0]
-}
-
-/**
- * Check if a client is HTTP-only (supports HTTP but not STDIO)
- */
-export function isHttpOnlyClient(clientName: string): boolean {
-	const config = getClientConfiguration(clientName)
-
-	return (
-		config.supportedTransports.includes(Transport.HTTP) &&
-		!config.supportedTransports.includes(Transport.STDIO)
-	)
-}
-
-/**
  * Valid client names - derived from CLIENT_CONFIGURATIONS keys
  */
 export const VALID_CLIENTS = Object.keys(CLIENT_CONFIGURATIONS) as string[]
 export type ValidClient = keyof typeof CLIENT_CONFIGURATIONS
-
-/**
- * Check if a client name is valid
- */
-export function isValidClient(clientName: string): clientName is ValidClient {
-	return VALID_CLIENTS.includes(clientName as ValidClient)
-}

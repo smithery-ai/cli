@@ -99,8 +99,10 @@ export const clineHttpConfig = {
  */
 export interface TransformationTestCase {
 	name: string
-	input: any
-	expected: any
+	// Input can be standard format or client-specific format (e.g., goose with cmd/envs, opencode with type: "local")
+	input: Record<string, unknown> | null
+	// Expected output after transformation
+	expected: Record<string, unknown> | null
 	descriptor: FormatDescriptor
 	serverName?: string
 }

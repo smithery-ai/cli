@@ -442,7 +442,7 @@ describe("transformation flow integration", () => {
 
 	describe("readConfig - transformation detection", () => {
 		test("should apply transformation when client has formatDescriptor", () => {
-			// ARRANGE: Goose client with formatDescriptor (needs transformation)
+			// ARRANGE: Goose client (needs transformation)
 			const configPath = path.join(tempDir, "goose.yaml")
 			fs.writeFileSync(configPath, gooseYamlWithStdioServer)
 
@@ -450,7 +450,6 @@ describe("transformation flow integration", () => {
 				label: "Goose",
 				supportedTransports: [Transport.STDIO, Transport.HTTP],
 				installType: "yaml",
-				formatDescriptor: "goose",
 				path: configPath,
 			})
 
@@ -467,7 +466,7 @@ describe("transformation flow integration", () => {
 		})
 
 		test("should use normal flow when client has no formatDescriptor", () => {
-			// ARRANGE: Standard client without formatDescriptor (no transformation)
+			// ARRANGE: Standard client (no transformation)
 			const configPath = path.join(tempDir, "claude.json")
 			const configContent: ClientMCPConfig = opencodeSimpleStdioConfig
 			fs.writeFileSync(configPath, JSON.stringify(configContent, null, 2))
@@ -476,7 +475,6 @@ describe("transformation flow integration", () => {
 				label: "Claude Desktop",
 				supportedTransports: [Transport.STDIO],
 				installType: "json",
-				// No formatDescriptor - should use normal flow
 				path: configPath,
 			})
 
@@ -505,7 +503,6 @@ describe("transformation flow integration", () => {
 				label: "OpenCode",
 				supportedTransports: [Transport.STDIO, Transport.HTTP],
 				installType: "json",
-				formatDescriptor: "opencode",
 				path: configPath,
 			})
 
@@ -525,7 +522,7 @@ describe("transformation flow integration", () => {
 
 	describe("writeConfig - transformation detection", () => {
 		test("should apply transformation when client has formatDescriptor", () => {
-			// ARRANGE: Standard format config, Goose client with formatDescriptor
+			// ARRANGE: Standard format config, Goose client
 			const configPath = path.join(tempDir, "goose.yaml")
 			const config: ClientMCPConfig = gooseStdioConfig
 
@@ -533,7 +530,6 @@ describe("transformation flow integration", () => {
 				label: "Goose",
 				supportedTransports: [Transport.STDIO, Transport.HTTP],
 				installType: "yaml",
-				formatDescriptor: "goose",
 				path: configPath,
 			})
 
@@ -559,7 +555,6 @@ describe("transformation flow integration", () => {
 				label: "Claude Desktop",
 				supportedTransports: [Transport.STDIO],
 				installType: "json",
-				// No formatDescriptor - should use normal flow
 				path: configPath,
 			})
 
@@ -588,7 +583,6 @@ describe("transformation flow integration", () => {
 				label: "Windsurf",
 				supportedTransports: [Transport.STDIO, Transport.HTTP],
 				installType: "json",
-				formatDescriptor: "windsurf",
 				path: configPath,
 			})
 
@@ -612,7 +606,6 @@ describe("transformation flow integration", () => {
 				label: "Cline",
 				supportedTransports: [Transport.STDIO, Transport.HTTP],
 				installType: "json",
-				formatDescriptor: "cline",
 				path: configPath,
 			})
 
@@ -637,7 +630,6 @@ describe("transformation flow integration", () => {
 				label: "Goose",
 				supportedTransports: [Transport.STDIO, Transport.HTTP],
 				installType: "yaml",
-				formatDescriptor: "goose",
 				path: configPath,
 			})
 
