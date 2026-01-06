@@ -6,7 +6,6 @@ import type { ServerConfig } from "../../types/registry"
 import { prepareStdioConnection } from "../../utils/run/prepare-stdio-connection"
 import { getApiKey, initializeSettings } from "../../utils/smithery-settings.js"
 import { createStdioRunner as startSTDIOrunner } from "./stdio-runner.js"
-import { createStreamableHTTPRunner } from "./streamable-http-runner.js"
 import { logWithTimestamp } from "./utils.js"
 
 /**
@@ -48,15 +47,20 @@ export async function run(qualifiedName: string, configOverride: ServerConfig) {
 					throw new Error("Missing deployment URL")
 				}
 
-				// Get API key from global config for HTTP servers
-				const apiKey = await getApiKey()
-				if (!apiKey) {
-					throw new Error(
-						"API key required for HTTP servers. Please run 'smithery login' or install the server first.",
-					)
-				}
+				// Convert HTTP connection to STDIO using mcp-remote (like install does for non-OAuth clients)
+				// No API key needed - OAuth servers track remotely
+				const args = ["-y", "mcp-remote", connection.deploymentUrl]
+				const command = process.platform === "win32" ? "cmd" : "npx"
+				const finalArgs =
+					process.platform === "win32" ? ["/c", "npx", ...args] : args
 
-				await createStreamableHTTPRunner(connection.deploymentUrl)
+				await startSTDIOrunner(
+					command,
+					finalArgs,
+					{},
+					server.qualifiedName,
+					undefined, // No API key needed - OAuth servers track remotely
+				)
 				break
 			}
 			case "stdio": {

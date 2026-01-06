@@ -11,7 +11,7 @@ export interface ProcessLifecycleOptions {
  * Sets up proper signal handling and process lifecycle management for long-running commands.
  * This utility ensures that processes respond properly to Ctrl+C and other termination signals.
  *
- * Based on the pattern used in runner files (stdio-runner.ts, streamable-http-runner.ts)
+ * Based on the pattern used in runner files (stdio-runner.ts)
  */
 export function setupProcessLifecycle(options: ProcessLifecycleOptions): void {
 	const { cleanupFn, processName = "server", showExitMessage = true } = options
