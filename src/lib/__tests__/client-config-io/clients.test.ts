@@ -72,7 +72,6 @@ describe("goose client", () => {
 			label: "Goose",
 			supportedTransports: [Transport.STDIO, Transport.HTTP],
 			installType: "yaml",
-			formatDescriptor: "goose",
 			path: configPath,
 		})
 
@@ -104,7 +103,6 @@ describe("goose client", () => {
 			label: "Goose",
 			supportedTransports: [Transport.STDIO, Transport.HTTP],
 			installType: "yaml",
-			formatDescriptor: "goose",
 			path: configPath,
 		})
 
@@ -131,7 +129,6 @@ describe("goose client", () => {
 			label: "Goose",
 			supportedTransports: [Transport.STDIO, Transport.HTTP],
 			installType: "yaml",
-			formatDescriptor: "goose",
 			path: configPath,
 		})
 
@@ -172,7 +169,6 @@ describe("goose client", () => {
 			label: "Goose",
 			supportedTransports: [Transport.STDIO, Transport.HTTP],
 			installType: "yaml",
-			formatDescriptor: "goose",
 			path: configPath,
 		})
 
@@ -209,7 +205,6 @@ describe("goose client", () => {
 			label: "Goose",
 			supportedTransports: [Transport.STDIO, Transport.HTTP],
 			installType: "yaml",
-			formatDescriptor: "goose",
 			path: configPath,
 		})
 
@@ -246,7 +241,6 @@ describe("goose client", () => {
 			label: "Goose",
 			supportedTransports: [Transport.STDIO, Transport.HTTP],
 			installType: "yaml",
-			formatDescriptor: "goose",
 			path: configPath,
 		})
 
@@ -284,7 +278,6 @@ describe("opencode client", () => {
 			label: "OpenCode",
 			supportedTransports: [Transport.STDIO, Transport.HTTP],
 			installType: "json",
-			formatDescriptor: "opencode",
 			path: configPath,
 		})
 
@@ -315,7 +308,6 @@ describe("opencode client", () => {
 			label: "OpenCode",
 			supportedTransports: [Transport.STDIO, Transport.HTTP],
 			installType: "json",
-			formatDescriptor: "opencode",
 			path: configPath,
 		})
 
@@ -341,7 +333,6 @@ describe("opencode client", () => {
 			label: "OpenCode",
 			supportedTransports: [Transport.STDIO, Transport.HTTP],
 			installType: "json",
-			formatDescriptor: "opencode",
 			path: configPath,
 		})
 
@@ -371,7 +362,6 @@ describe("opencode client", () => {
 			label: "OpenCode",
 			supportedTransports: [Transport.STDIO, Transport.HTTP],
 			installType: "json",
-			formatDescriptor: "opencode",
 			path: configPath,
 		})
 
@@ -399,7 +389,6 @@ describe("opencode client", () => {
 			label: "OpenCode",
 			supportedTransports: [Transport.STDIO, Transport.HTTP],
 			installType: "json",
-			formatDescriptor: "opencode",
 			path: configPath,
 		})
 
@@ -429,7 +418,6 @@ describe("opencode client", () => {
 			label: "OpenCode",
 			supportedTransports: [Transport.STDIO, Transport.HTTP],
 			installType: "json",
-			formatDescriptor: "opencode",
 			path: configPath,
 		})
 
@@ -460,7 +448,6 @@ describe("opencode client", () => {
 			label: "OpenCode",
 			supportedTransports: [Transport.STDIO, Transport.HTTP],
 			installType: "json",
-			formatDescriptor: "opencode",
 			path: configPath,
 		})
 
@@ -499,7 +486,6 @@ describe("windsurf client", () => {
 			label: "Windsurf",
 			supportedTransports: [Transport.STDIO, Transport.HTTP],
 			installType: "json",
-			formatDescriptor: "windsurf",
 			path: configPath,
 		})
 
@@ -524,7 +510,6 @@ describe("windsurf client", () => {
 			label: "Windsurf",
 			supportedTransports: [Transport.STDIO, Transport.HTTP],
 			installType: "json",
-			formatDescriptor: "windsurf",
 			path: configPath,
 		})
 
@@ -553,7 +538,6 @@ describe("windsurf client", () => {
 			label: "Windsurf",
 			supportedTransports: [Transport.STDIO, Transport.HTTP],
 			installType: "json",
-			formatDescriptor: "windsurf",
 			path: configPath,
 		})
 
@@ -597,7 +581,6 @@ describe("cline client", () => {
 			label: "Cline",
 			supportedTransports: [Transport.STDIO, Transport.HTTP],
 			installType: "json",
-			formatDescriptor: "cline",
 			path: configPath,
 		})
 
@@ -621,7 +604,6 @@ describe("cline client", () => {
 			label: "Cline",
 			supportedTransports: [Transport.STDIO, Transport.HTTP],
 			installType: "json",
-			formatDescriptor: "cline",
 			path: configPath,
 		})
 
@@ -650,7 +632,6 @@ describe("cline client", () => {
 			label: "Cline",
 			supportedTransports: [Transport.STDIO, Transport.HTTP],
 			installType: "json",
-			formatDescriptor: "cline",
 			path: configPath,
 		})
 

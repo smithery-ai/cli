@@ -23,7 +23,7 @@ export default function ({
 	// Stateful: same instance persists across requests within a session
 	let callCount = 0
 	const instanceId = Math.random().toString(36).substring(7)
-	const sessionData = new Map<string, any>()
+	const sessionData = new Map<string, unknown>()
 
 	server.tool(
 		"increment",

@@ -26,13 +26,18 @@ describe("Bundle Manager End-to-End", () => {
 				mcp_config: {
 					command: "node",
 					args: [
+						// biome-ignore lint/suspicious/noTemplateCurlyInString: Literal template strings for testing
 						"${__dirname}/server.js",
+						// biome-ignore lint/suspicious/noTemplateCurlyInString: Literal template string for testing
 						"--config=${user_config.configPath}",
 					],
 					env: {
+						// biome-ignore lint/suspicious/noTemplateCurlyInString: Literal template strings for testing
 						API_KEY: "${user_config.apiKey}",
 						DATABASE_URL:
+							// biome-ignore lint/suspicious/noTemplateCurlyInString: Literal template string for testing
 							"${user_config.database.host}:${user_config.database.port}",
+						// biome-ignore lint/suspicious/noTemplateCurlyInString: Literal template string for testing
 						LOG_FILE: "${__dirname}/logs/app.log",
 					},
 				},
@@ -69,13 +74,18 @@ describe("Bundle Manager End-to-End", () => {
 				mcp_config: {
 					command: "node",
 					args: [
+						// biome-ignore lint/suspicious/noTemplateCurlyInString: Literal template strings for testing
 						"${__dirname}/server.js",
+						// biome-ignore lint/suspicious/noTemplateCurlyInString: Literal template string for testing
 						"--config=${user_config.configPath}",
 					],
 					env: {
+						// biome-ignore lint/suspicious/noTemplateCurlyInString: Literal template strings for testing
 						API_KEY: "${user_config.apiKey}",
 						DATABASE_URL:
+							// biome-ignore lint/suspicious/noTemplateCurlyInString: Literal template string for testing
 							"${user_config.database.host}:${user_config.database.port}",
+						// biome-ignore lint/suspicious/noTemplateCurlyInString: Literal template string for testing
 						LOG_FILE: "${__dirname}/logs/app.log",
 					},
 				},

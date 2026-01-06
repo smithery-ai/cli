@@ -21,6 +21,7 @@ describe("getBundleCommand", () => {
 			server: {
 				mcp_config: {
 					command: "node",
+					// biome-ignore lint/suspicious/noTemplateCurlyInString: Literal template string for testing
 					args: ["${__dirname}/server.js"],
 				},
 			},
@@ -43,9 +44,12 @@ describe("getBundleCommand", () => {
 			server: {
 				mcp_config: {
 					command: "python",
+					// biome-ignore lint/suspicious/noTemplateCurlyInString: Literal template string for testing
 					args: ["${__dirname}/main.py"],
 					env: {
+						// biome-ignore lint/suspicious/noTemplateCurlyInString: Literal template strings for testing
 						API_KEY: "${user_config.apiKey}",
+						// biome-ignore lint/suspicious/noTemplateCurlyInString: Literal template string for testing
 						DEBUG: "${user_config.debugMode}",
 					},
 				},
@@ -60,7 +64,9 @@ describe("getBundleCommand", () => {
 		expect(result.command).toBe("python")
 		expect(result.args).toEqual([`${tempDir}/main.py`])
 		expect(result.env).toEqual({
+			// biome-ignore lint/suspicious/noTemplateCurlyInString: Literal template strings for testing
 			API_KEY: "${user_config.apiKey}",
+			// biome-ignore lint/suspicious/noTemplateCurlyInString: Literal template string for testing
 			DEBUG: "${user_config.debugMode}",
 		})
 	})
@@ -70,6 +76,7 @@ describe("getBundleCommand", () => {
 			server: {
 				mcp_config: {
 					command: "node",
+					// biome-ignore lint/suspicious/noTemplateCurlyInString: Literal template string for testing
 					args: ["${__dirname}/server.js"],
 				},
 			},
@@ -91,6 +98,7 @@ describe("getBundleCommand", () => {
 		const manifest = {
 			server: {
 				mcp_config: {
+					// biome-ignore lint/suspicious/noTemplateCurlyInString: Literal template string for testing
 					args: ["${__dirname}/server.js"],
 				},
 			},
@@ -110,8 +118,11 @@ describe("getBundleCommand", () => {
 				mcp_config: {
 					command: "node",
 					args: [
+						// biome-ignore lint/suspicious/noTemplateCurlyInString: Literal template strings for testing
 						"--config=${__dirname}/config.json",
+						// biome-ignore lint/suspicious/noTemplateCurlyInString: Literal template string for testing
 						"--data=${__dirname}/data",
+						// biome-ignore lint/suspicious/noTemplateCurlyInString: Literal template string for testing
 						"--output=${__dirname}/output.log",
 					],
 				},
@@ -136,8 +147,11 @@ describe("getBundleCommand", () => {
 				mcp_config: {
 					command: "node",
 					args: [
+						// biome-ignore lint/suspicious/noTemplateCurlyInString: Literal template strings for testing
 						"--api-key=${user_config.apiKey}",
+						// biome-ignore lint/suspicious/noTemplateCurlyInString: Literal template string for testing
 						"--port=${user_config.port}",
+						// biome-ignore lint/suspicious/noTemplateCurlyInString: Literal template string for testing
 						"--host=${__dirname}/server.js",
 					],
 				},
@@ -152,7 +166,9 @@ describe("getBundleCommand", () => {
 		// Note: user_config templates in args are not resolved here
 		// They would be resolved when calling hydrateBundleCommand
 		expect(result.args).toEqual([
+			// biome-ignore lint/suspicious/noTemplateCurlyInString: Literal template strings for testing
 			"--api-key=${user_config.apiKey}",
+			// biome-ignore lint/suspicious/noTemplateCurlyInString: Literal template string for testing
 			"--port=${user_config.port}",
 			`--host=${tempDir}/server.js`,
 		])

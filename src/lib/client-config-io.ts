@@ -10,11 +10,11 @@ import {
 	type FormatDescriptor,
 	getFormatDescriptor,
 } from "../config/format-descriptors.js"
-import type { MCPConfig } from "../types/registry.js"
+import type { ConfiguredServer, MCPConfig } from "../types/registry.js"
 import { verbose } from "./logger.js"
 
 export interface ClientMCPConfig extends MCPConfig {
-	[key: string]: any
+	[key: string]: unknown
 }
 
 /**
@@ -24,14 +24,14 @@ export interface ClientMCPConfig extends MCPConfig {
  * @returns Standard format server configuration
  */
 export function transformToStandard(
-	clientConfig: any,
+	clientConfig: Record<string, unknown> | null,
 	descriptor: FormatDescriptor,
-): any {
+): Record<string, unknown> | null {
 	if (!clientConfig || typeof clientConfig !== "object") {
 		return clientConfig
 	}
 
-	const standard: any = {}
+	const standard: Record<string, unknown> = {}
 
 	// Determine if this is an HTTP config
 	const httpTypeValue = descriptor.typeTransformations?.http?.typeValue
@@ -139,15 +139,15 @@ export function transformToStandard(
  * @returns Client-specific format server configuration
  */
 export function transformFromStandard(
-	standardConfig: any,
+	standardConfig: Record<string, unknown> | null,
 	descriptor: FormatDescriptor,
 	_serverName: string,
-): any {
+): Record<string, unknown> | null {
 	if (!standardConfig || typeof standardConfig !== "object") {
 		return standardConfig
 	}
 
-	const client: any = {}
+	const client: Record<string, unknown> = {}
 
 	// Determine if this is an HTTP config
 	const isHTTP =
@@ -262,26 +262,33 @@ export function readConfig(client: string): ClientMCPConfig {
 
 		verbose(`Reading config file content`)
 		const fileContent = fs.readFileSync(configPath, "utf8")
-		let rawConfig: any = {}
+		let rawConfig: Record<string, unknown> = {}
 
 		if (clientConfig.installType === "yaml") {
-			rawConfig = (YAML.parse(fileContent) as any) || {}
+			const parsed = YAML.parse(fileContent)
+			rawConfig =
+				(parsed &&
+					typeof parsed === "object" &&
+					!Array.isArray(parsed) &&
+					(parsed as Record<string, unknown>)) ||
+				{}
 		} else {
-			rawConfig = JSON.parse(fileContent)
+			rawConfig = JSON.parse(fileContent) as Record<string, unknown>
 		}
 
 		verbose(`Config loaded successfully: ${JSON.stringify(rawConfig, null, 2)}`)
 
-		// Get format descriptor
-		const descriptor = clientConfig.formatDescriptor
-			? getFormatDescriptor(clientConfig.formatDescriptor)
-			: getFormatDescriptor(client)
+		// Get format descriptor using client name
+		const descriptor = getFormatDescriptor(client)
 
 		// Determine top-level key to use
 		const topLevelKey = descriptor.topLevelKey
 
 		// Extract MCP servers from config using the appropriate top-level key
-		let mcpServers = rawConfig[topLevelKey] || rawConfig.mcpServers || {}
+		let mcpServers: Record<string, ConfiguredServer> =
+			(rawConfig[topLevelKey] as Record<string, ConfiguredServer>) ||
+			(rawConfig.mcpServers as Record<string, ConfiguredServer>) ||
+			{}
 
 		// Transform client-specific format to standard format if needed
 		// (if using custom top-level key or if descriptor has custom mappings)
@@ -291,12 +298,21 @@ export function readConfig(client: string): ClientMCPConfig {
 			descriptor.typeTransformations ||
 			descriptor.structureTransformations
 		) {
-			const transformedServers: Record<string, any> = {}
+			const transformedServers: Record<string, ConfiguredServer> = {}
 			for (const [serverName, serverConfig] of Object.entries(mcpServers)) {
-				transformedServers[serverName] = transformToStandard(
-					serverConfig,
-					descriptor,
-				)
+				if (
+					serverConfig &&
+					typeof serverConfig === "object" &&
+					!Array.isArray(serverConfig)
+				) {
+					const transformed = transformToStandard(
+						serverConfig as Record<string, unknown>,
+						descriptor,
+					)
+					if (transformed !== null) {
+						transformedServers[serverName] = transformed as ConfiguredServer
+					}
+				}
 			}
 			mcpServers = transformedServers
 		}
@@ -325,9 +341,9 @@ export function writeConfig(config: ClientMCPConfig, client: string): void {
 
 	const clientConfig = getClientConfiguration(client)
 	if (clientConfig.installType === "yaml") {
-		writeConfigYaml(config, clientConfig)
+		writeConfigYaml(config, clientConfig, client)
 	} else {
-		writeConfigJson(config, clientConfig)
+		writeConfigJson(config, clientConfig, client)
 	}
 }
 
@@ -359,7 +375,8 @@ export function runConfigCommand(
 		if (isHTTPServer && commandConfig.http) {
 			// Extract URL - check for override key first, then fallback to "url"
 			const urlKey = clientConfig.httpUrlKey || "url"
-			const serverUrl = (server as any)[urlKey] || (server as any).url
+			const serverRecord = server as Record<string, unknown>
+			const serverUrl = serverRecord[urlKey] || serverRecord.url
 
 			if (serverUrl) {
 				// Use HTTP template function
@@ -408,6 +425,7 @@ export function runConfigCommand(
 function writeConfigJson(
 	config: ClientMCPConfig,
 	clientConfig: ClientConfiguration,
+	client: string,
 ): void {
 	const configPath = clientConfig.path
 	if (!configPath) {
@@ -444,25 +462,26 @@ function writeConfigJson(
 		...config,
 	}
 
-	// Get format descriptor
-	const descriptor = clientConfig.formatDescriptor
-		? getFormatDescriptor(clientConfig.formatDescriptor)
-		: getFormatDescriptor(clientConfig.label.toLowerCase())
+	// Get format descriptor using client name
+	const descriptor = getFormatDescriptor(client)
 
 	// Determine top-level key to use
 	const topLevelKey = descriptor.topLevelKey
 
 	// Transform standard format to client-specific format
-	const transformedServers: Record<string, any> = {}
+	const transformedServers: Record<string, Record<string, unknown>> = {}
 	if (mergedConfig.mcpServers) {
 		for (const [serverName, serverConfig] of Object.entries(
 			mergedConfig.mcpServers,
 		)) {
-			transformedServers[serverName] = transformFromStandard(
+			const transformed = transformFromStandard(
 				serverConfig,
 				descriptor,
 				serverName,
 			)
+			if (transformed !== null) {
+				transformedServers[serverName] = transformed
+			}
 		}
 	}
 
@@ -484,6 +503,7 @@ function writeConfigJson(
 function writeConfigYaml(
 	config: ClientMCPConfig,
 	clientConfig: ClientConfiguration,
+	client: string,
 ): void {
 	const configPath = clientConfig.path
 	if (!configPath) {
@@ -498,7 +518,7 @@ function writeConfigYaml(
 		fs.mkdirSync(configDir, { recursive: true })
 	}
 
-	let originalDoc: any = null
+	let originalDoc: ReturnType<typeof YAML.parseDocument> | null = null
 
 	try {
 		if (fs.existsSync(configPath)) {
@@ -516,10 +536,8 @@ function writeConfigYaml(
 
 	verbose(`Merging YAML configs`)
 
-	// Get format descriptor
-	const descriptor = clientConfig.formatDescriptor
-		? getFormatDescriptor(clientConfig.formatDescriptor)
-		: getFormatDescriptor(clientConfig.label.toLowerCase())
+	// Get format descriptor using client name
+	const descriptor = getFormatDescriptor(client)
 
 	// Determine the YAML key to use from format descriptor
 	const yamlKey = descriptor.topLevelKey
@@ -562,6 +580,11 @@ function writeConfigYaml(
 					serverName,
 				)
 
+				if (transformedConfig === null) {
+					verbose(`Skipping server ${serverName} due to null transformation`)
+					continue
+				}
+
 				const existingServer = mcpServersNode.get(serverName)
 				if (existingServer && typeof existingServer.set === "function") {
 					verbose(
@@ -587,16 +610,19 @@ function writeConfigYaml(
 	} else {
 		// Create new file from scratch
 		// Transform standard format to client-specific format
-		const transformedServers: Record<string, any> = {}
+		const transformedServers: Record<string, Record<string, unknown>> = {}
 		if (config.mcpServers) {
 			for (const [serverName, serverConfig] of Object.entries(
 				config.mcpServers,
 			)) {
-				transformedServers[serverName] = transformFromStandard(
+				const transformed = transformFromStandard(
 					serverConfig,
 					descriptor,
 					serverName,
 				)
+				if (transformed !== null) {
+					transformedServers[serverName] = transformed
+				}
 			}
 		}
 		const newConfig = { [yamlKey]: transformedServers }

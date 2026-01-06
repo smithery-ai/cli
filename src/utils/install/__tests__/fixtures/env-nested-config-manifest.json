@@ -11,11 +11,11 @@
 		"entry_point": "server.js",
 		"mcp_config": {
 			"command": "node",
-			"args": ["${__dirname}/server.js"],
+			"args": ["\\${__dirname}/server.js"],
 			"env": {
-				"API_KEY": "${user_config.apiKey}",
-				"DATABASE_URL": "${user_config.database.host}:${user_config.database.port}",
-				"LOG_LEVEL": "${user_config.logging.level}"
+				"API_KEY": "\\${user_config.apiKey}",
+				"DATABASE_URL": "\\${user_config.database.host}:\\${user_config.database.port}",
+				"LOG_LEVEL": "\\${user_config.logging.level}"
 			}
 		}
 	}
