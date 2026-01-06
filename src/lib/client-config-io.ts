@@ -24,9 +24,9 @@ export interface ClientMCPConfig extends MCPConfig {
  * @returns Standard format server configuration
  */
 export function transformToStandard(
-	clientConfig: Record<string, unknown>,
+	clientConfig: Record<string, unknown> | null,
 	descriptor: FormatDescriptor,
-): Record<string, unknown> {
+): Record<string, unknown> | null {
 	if (!clientConfig || typeof clientConfig !== "object") {
 		return clientConfig
 	}
@@ -139,10 +139,10 @@ export function transformToStandard(
  * @returns Client-specific format server configuration
  */
 export function transformFromStandard(
-	standardConfig: Record<string, unknown>,
+	standardConfig: Record<string, unknown> | null,
 	descriptor: FormatDescriptor,
 	_serverName: string,
-): Record<string, unknown> {
+): Record<string, unknown> | null {
 	if (!standardConfig || typeof standardConfig !== "object") {
 		return standardConfig
 	}
@@ -309,7 +309,9 @@ export function readConfig(client: string): ClientMCPConfig {
 						serverConfig as Record<string, unknown>,
 						descriptor,
 					)
-					transformedServers[serverName] = transformed as ConfiguredServer
+					if (transformed !== null) {
+						transformedServers[serverName] = transformed as ConfiguredServer
+					}
 				}
 			}
 			mcpServers = transformedServers
@@ -472,11 +474,14 @@ function writeConfigJson(
 		for (const [serverName, serverConfig] of Object.entries(
 			mergedConfig.mcpServers,
 		)) {
-			transformedServers[serverName] = transformFromStandard(
+			const transformed = transformFromStandard(
 				serverConfig,
 				descriptor,
 				serverName,
 			)
+			if (transformed !== null) {
+				transformedServers[serverName] = transformed
+			}
 		}
 	}
 
@@ -575,6 +580,11 @@ function writeConfigYaml(
 					serverName,
 				)
 
+				if (transformedConfig === null) {
+					verbose(`Skipping server ${serverName} due to null transformation`)
+					continue
+				}
+
 				const existingServer = mcpServersNode.get(serverName)
 				if (existingServer && typeof existingServer.set === "function") {
 					verbose(
@@ -605,11 +615,14 @@ function writeConfigYaml(
 			for (const [serverName, serverConfig] of Object.entries(
 				config.mcpServers,
 			)) {
-				transformedServers[serverName] = transformFromStandard(
+				const transformed = transformFromStandard(
 					serverConfig,
 					descriptor,
 					serverName,
 				)
+				if (transformed !== null) {
+					transformedServers[serverName] = transformed
+				}
 			}
 		}
 		const newConfig = { [yamlKey]: transformedServers }

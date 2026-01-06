@@ -73,7 +73,7 @@ describe("resolveUserConfig", () => {
 
 	beforeEach(() => {
 		vi.clearAllMocks()
-		mockSpinner = createMockSpinner() as OraSpinner
+		mockSpinner = createMockSpinner() as unknown as OraSpinner
 	})
 
 	describe("when server needs no config", () => {
