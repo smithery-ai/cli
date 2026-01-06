@@ -1,6 +1,6 @@
 /**
  * PrepareStdioConnection Tests
- * Tests the 2 connection preparation paths: direct and bundle
+ * Tests the 3 connection preparation paths: direct, stdioFunction, and bundle
  */
 
 import type { ServerDetailResponse } from "@smithery/registry/models/components"
@@ -12,7 +12,7 @@ vi.mock("../../../lib/mcpb", () => ({
 	getHydratedBundleCommand: vi.fn(),
 }))
 
-vi.mock("../../../commands/run/runner-utils", () => ({
+vi.mock("../../../commands/run/utils", () => ({
 	logWithTimestamp: vi.fn(),
 }))
 
@@ -59,6 +59,81 @@ describe("prepareStdioConnection", () => {
 		expect(getHydratedBundleCommand).not.toHaveBeenCalled()
 	})
 
+	test("evaluates stdioFunction to get command and args", async () => {
+		const server: ServerDetailResponse = {
+			qualifiedName: "author/stdio-function-server",
+			remote: false,
+			connections: [
+				{
+					type: "stdio",
+					stdioFunction:
+						"config => ({command: 'npx', args: ['-y', '@playwright/mcp@latest'] })",
+					configSchema: {},
+				},
+			],
+		} as unknown as ServerDetailResponse
+
+		const result = await prepareStdioConnection(server, server.connections[0], {
+			apiKey: "test-key",
+		})
+
+		expect(result).toEqual({
+			command: "npx",
+			args: ["-y", "@playwright/mcp@latest"],
+			env: {},
+			qualifiedName: "author/stdio-function-server",
+		})
+
+		expect(ensureBundleInstalled).not.toHaveBeenCalled()
+		expect(getHydratedBundleCommand).not.toHaveBeenCalled()
+	})
+
+	test("evaluates stdioFunction with env from config", async () => {
+		const server: ServerDetailResponse = {
+			qualifiedName: "author/stdio-function-env-server",
+			remote: false,
+			connections: [
+				{
+					type: "stdio",
+					stdioFunction:
+						"config => ({command: 'node', args: ['server.js'], env: { API_KEY: config.apiKey } })",
+					configSchema: {},
+				},
+			],
+		} as unknown as ServerDetailResponse
+
+		const result = await prepareStdioConnection(server, server.connections[0], {
+			apiKey: "test-api-key",
+		})
+
+		expect(result).toEqual({
+			command: "node",
+			args: ["server.js"],
+			env: { API_KEY: "test-api-key" },
+			qualifiedName: "author/stdio-function-env-server",
+		})
+	})
+
+	test("throws error when stdioFunction returns invalid result", async () => {
+		const server: ServerDetailResponse = {
+			qualifiedName: "author/invalid-stdio-function-server",
+			remote: false,
+			connections: [
+				{
+					type: "stdio",
+					stdioFunction: "config => ({ invalid: 'result' })",
+					configSchema: {},
+				},
+			],
+		} as unknown as ServerDetailResponse
+
+		await expect(
+			prepareStdioConnection(server, server.connections[0], {}),
+		).rejects.toThrow(
+			"stdioFunction did not return a valid object with command property",
+		)
+	})
+
 	test("calls ensureBundleInstalled and getHydratedBundleCommand for bundle connections", async () => {
 		const server: ServerDetailResponse = {
 			qualifiedName: "author/bundle-server",
@@ -103,7 +178,7 @@ describe("prepareStdioConnection", () => {
 		})
 	})
 
-	test("throws error when no command or bundleUrl", async () => {
+	test("throws error when no command, stdioFunction, or bundleUrl", async () => {
 		const server: ServerDetailResponse = {
 			qualifiedName: "author/registry-server",
 			remote: false,

@@ -15,12 +15,6 @@ vi.mock("../run/stdio-runner", () => ({
 	createStdioRunner: vi.fn().mockResolvedValue(() => Promise.resolve()),
 }))
 
-vi.mock("../run/streamable-http-runner", () => ({
-	createStreamableHTTPRunner: vi
-		.fn()
-		.mockResolvedValue(() => Promise.resolve()),
-}))
-
 // Mock registry
 vi.mock("../../lib/registry", () => ({
 	resolveServer: vi.fn(),
@@ -52,14 +46,13 @@ import { resolveServer } from "../../lib/registry"
 import { prepareStdioConnection } from "../../utils/run/prepare-stdio-connection"
 import { run } from "../run/index"
 import { createStdioRunner } from "../run/stdio-runner"
-import { createStreamableHTTPRunner } from "../run/streamable-http-runner"
 
 describe("run command", () => {
 	beforeEach(() => {
 		vi.clearAllMocks()
 	})
 
-	test("HTTP remote server calls createStreamableHTTPRunner", async () => {
+	test("HTTP remote server calls createStdioRunner with mcp-remote command", async () => {
 		vi.mocked(resolveServer).mockResolvedValue({
 			server: httpRemoteServer,
 			connection: httpRemoteServer.connections[0],
@@ -67,8 +60,16 @@ describe("run command", () => {
 
 		await run("author/remote-server", {})
 
-		expect(createStreamableHTTPRunner).toHaveBeenCalledWith(
-			"https://server.smithery.ai",
+		// HTTP connections should be converted to STDIO using mcp-remote
+		// No API key needed - OAuth servers track remotely
+		expect(createStdioRunner).toHaveBeenCalledWith(
+			process.platform === "win32" ? "cmd" : "npx",
+			process.platform === "win32"
+				? ["/c", "npx", "-y", "mcp-remote", "https://server.smithery.ai"]
+				: ["-y", "mcp-remote", "https://server.smithery.ai"],
+			{},
+			"author/remote-server",
+			undefined, // No API key needed - OAuth servers track remotely
 		)
 	})
 
