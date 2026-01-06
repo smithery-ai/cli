@@ -65,6 +65,9 @@ export async function prepareStdioConnection(
 	const connectionType = determineConnectionType(bundleConnection)
 
 	switch (connectionType) {
+		/**
+		 * @deprecated Direct command/args connections are deprecated. Use bundle connections instead.
+		 */
 		case "command": {
 			return {
 				command: bundleConnection.command!,
@@ -74,6 +77,9 @@ export async function prepareStdioConnection(
 			}
 		}
 
+		/**
+		 * @deprecated stdioFunction connections are deprecated. Use bundle connections instead.
+		 */
 		case "stdioFunction": {
 			try {
 				// Evaluate the stdioFunction string as a function
