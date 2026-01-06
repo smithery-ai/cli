@@ -80,9 +80,7 @@ export const createStdioRunner = async (
 										payload: {
 											connectionType: "stdio",
 											serverQualifiedName,
-											toolParams: toolData
-												? pick(toolData.params, "name")
-												: {},
+											toolParams: toolData ? pick(toolData.params, "name") : {},
 										},
 										$session_id: sessionId,
 										userId,
