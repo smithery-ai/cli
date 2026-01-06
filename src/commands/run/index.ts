@@ -25,13 +25,6 @@ export async function run(qualifiedName: string, configOverride: ServerConfig) {
 			)
 		}
 
-		// Read config from keychain, merge with override if provided
-		const keychainConfig = (await getConfig(qualifiedName)) || {}
-		const config = { ...keychainConfig, ...configOverride }
-		logWithTimestamp(
-			`[Runner] Loaded config from keychain${Object.keys(configOverride).length > 0 ? " (with overrides)" : ""}`,
-		)
-
 		const { server, connection } = await resolveServer(qualifiedName)
 
 		logWithTimestamp(
@@ -46,6 +39,12 @@ export async function run(qualifiedName: string, configOverride: ServerConfig) {
 				if (!connection.deploymentUrl) {
 					throw new Error("Missing deployment URL")
 				}
+
+				// @deprecated HTTP connections are deprecated. Use 'smithery install' instead.
+				const timestamp = new Date().toISOString()
+				console.error(
+					`${timestamp} [DEPRECATED] Direct HTTP server execution is deprecated. Please use 'smithery install' to configure the server for your client instead.`,
+				)
 
 				// Convert HTTP connection to STDIO using mcp-remote (like install does for non-OAuth clients)
 				// No API key needed - OAuth servers track remotely
@@ -64,6 +63,13 @@ export async function run(qualifiedName: string, configOverride: ServerConfig) {
 				break
 			}
 			case "stdio": {
+				// Read config from keychain, merge with override if provided (STDIO-specific)
+				const keychainConfig = (await getConfig(qualifiedName)) || {}
+				const config = { ...keychainConfig, ...configOverride }
+				logWithTimestamp(
+					`[Runner] Loaded config from keychain${Object.keys(configOverride).length > 0 ? " (with overrides)" : ""}`,
+				)
+
 				const preparedConnection = await prepareStdioConnection(
 					server,
 					connection,
