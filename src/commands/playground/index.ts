@@ -1,9 +1,11 @@
 import { RequestTimeoutError } from "@smithery/registry/models/errors"
 import chalk from "chalk"
+import ora from "ora"
 import { setupTunnelAndPlayground } from "../../lib/dev-lifecycle"
-import { getConfig } from "../../lib/keychain"
+import { saveConfig } from "../../lib/keychain"
 import { resolveServer } from "../../lib/registry"
 import type { ServerConfig } from "../../types/registry"
+import { resolveUserConfig } from "../../utils/install/user-config"
 import { setupProcessLifecycle } from "../../utils/process-lifecycle"
 import { prepareStdioConnection } from "../../utils/run/prepare-stdio-connection"
 import { initializeSettings } from "../../utils/smithery-settings.js"
@@ -49,58 +51,78 @@ export async function playground(options: {
 
 		// Mode 1: Server provided - resolve and run in playground
 		if (options.server) {
-			// Read config from keychain, merge with override if provided
-			const keychainConfig = (await getConfig(options.server)) || {}
-			const config = {
-				...keychainConfig,
-				...(options.configOverride || {}),
-			}
-			logWithTimestamp(
-				`[Playground] Loaded config from keychain${Object.keys(options.configOverride || {}).length > 0 ? " (with overrides)" : ""}`,
-			)
-
-			const { server, connection } = await resolveServer(options.server)
-
-			logWithTimestamp(
-				`[Playground] Connecting to server: ${JSON.stringify({
-					id: server.qualifiedName,
-					connectionType: connection.type,
-				})}`,
-			)
-
-			if (connection.type !== "stdio") {
-				throw new Error(
-					`Server "${options.server}" uses ${connection.type} connection type. Only STDIO servers are supported in playground mode.`,
+			const spinner = ora(`Resolving ${options.server}...`).start()
+			try {
+				const { server, connection } = await resolveServer(options.server)
+				spinner.succeed(
+					chalk.dim(`Successfully resolved ${chalk.cyan(options.server)}`),
 				)
+
+				logWithTimestamp(
+					`[Playground] Connecting to server: ${JSON.stringify({
+						id: server.qualifiedName,
+						connectionType: connection.type,
+					})}`,
+				)
+
+				if (connection.type !== "stdio") {
+					throw new Error(
+						`Server "${options.server}" uses ${connection.type} connection type. Only STDIO servers are supported in playground mode.`,
+					)
+				}
+
+				// Resolve server configuration (validates, prompts if needed, saves to keychain)
+				// Note: resolveUserConfig manages spinner internally (stops for prompts, starts after)
+				const config = await resolveUserConfig(
+					connection,
+					options.server,
+					options.configOverride || {},
+					spinner,
+				)
+
+				// Stop spinner after config resolution (resolveUserConfig may leave it running)
+				spinner.stop()
+
+				logWithTimestamp(
+					`[Playground] Config resolved${Object.keys(options.configOverride || {}).length > 0 ? " (with overrides)" : ""}`,
+				)
+
+				// Save config to keychain if it has values
+				if (Object.keys(config).length > 0) {
+					await saveConfig(options.server, config)
+				}
+
+				const preparedConnection = await prepareStdioConnection(
+					server,
+					connection,
+					config,
+				)
+
+				const port = options.port ? Number.parseInt(options.port, 10) : 6969
+
+				await createStdioPlaygroundRunner(
+					{
+						command: preparedConnection.command,
+						args: preparedConnection.args,
+						env: preparedConnection.env,
+						qualifiedName: preparedConnection.qualifiedName,
+					},
+					options.apiKey,
+					{
+						port,
+						open: options.open !== false,
+						initialMessage: options.initialMessage || "Say hello to the world!",
+					},
+				)
+
+				// Keep the process alive
+				process.stdin.resume()
+				await new Promise<void>(() => {})
+				return
+			} catch (error) {
+				spinner.fail(`Failed to setup playground for ${options.server}`)
+				throw error
 			}
-
-			const preparedConnection = await prepareStdioConnection(
-				server,
-				connection,
-				config,
-			)
-
-			const port = options.port ? Number.parseInt(options.port, 10) : 6969
-
-			await createStdioPlaygroundRunner(
-				{
-					command: preparedConnection.command,
-					args: preparedConnection.args,
-					env: preparedConnection.env,
-					qualifiedName: preparedConnection.qualifiedName,
-				},
-				options.apiKey,
-				{
-					port,
-					open: options.open !== false,
-					initialMessage: options.initialMessage || "Say hello to the world!",
-				},
-			)
-
-			// Keep the process alive
-			process.stdin.resume()
-			await new Promise<void>(() => {})
-			return
 		}
 
 		// Mode 2: Command provided - use STDIO mode with raw command
