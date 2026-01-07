@@ -298,54 +298,6 @@ program
 		})
 	})
 
-// Deprecated playground-stdio command (kept for backward compatibility)
-program
-	.command("playground-stdio")
-	.description(
-		"[DEPRECATED] Use 'smithery playground -- <command>' instead. Run arbitrary command as stdio MCP server in playground",
-	)
-	.option("--port <port>", "Port for HTTP server (default: 6969)")
-	.option("--key <apikey>", "Provide an API key")
-	.option("--no-open", "Don't automatically open the playground")
-	.option("--prompt <prompt>", "Initial message to start the playground with")
-	.allowUnknownOption() // Allow pass-through for command after --
-	.allowExcessArguments() // Allow extra args after -- without error
-	.action(async (options) => {
-		console.warn(
-			chalk.yellow(
-				"⚠ Warning: 'playground-stdio' command is deprecated. Use 'smithery playground -- <command>' instead.",
-			),
-		)
-		// Extract command after -- separator
-		let command: string | undefined
-		const rawArgs = process.argv
-		const separatorIndex = rawArgs.indexOf("--")
-		if (separatorIndex !== -1 && separatorIndex + 1 < rawArgs.length) {
-			command = rawArgs.slice(separatorIndex + 1).join(" ")
-		}
-
-		if (!command) {
-			console.error(chalk.red("✗ Command is required."))
-			console.error(
-				chalk.yellow("Usage: smithery playground-stdio -- <command>"),
-			)
-			console.error(
-				chalk.gray(
-					"Example: smithery playground-stdio -- python my_mcp_server.py",
-				),
-			)
-			process.exit(1)
-		}
-
-		await playground({
-			command,
-			port: options.port,
-			apiKey: await ensureApiKey(options.key),
-			open: options.open !== false,
-			initialMessage: options.prompt,
-		})
-	})
-
 // List command
 program
 	.command("list")
