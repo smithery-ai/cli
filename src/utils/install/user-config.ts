@@ -1,4 +1,4 @@
-import type { ConnectionInfo } from "@smithery/registry/models/components"
+import type { Connection } from "@smithery/registry/models/components"
 import type ora from "ora"
 import { getConfig } from "../../lib/keychain"
 import { verbose } from "../../lib/logger"
@@ -74,7 +74,7 @@ function convertValueToType(value: unknown, type: string | undefined): unknown {
  * @throws Error if any required config values are missing
  */
 export async function validateAndFormatConfig(
-	connection: ConnectionInfo,
+	connection: Connection,
 	configValues?: ServerConfig,
 ): Promise<ServerConfig> {
 	if (!connection.configSchema?.properties) {
@@ -148,11 +148,11 @@ export async function validateAndFormatConfig(
 
 // Helper function to get config schema (from connection or bundle)
 async function getConfigSchema(
-	connection: ConnectionInfo,
+	connection: Connection,
 	qualifiedName: string,
-): Promise<ConnectionInfo["configSchema"] | undefined> {
-	let configSchema = connection.configSchema || undefined
-	if (connection.bundleUrl) {
+): Promise<Connection["configSchema"] | undefined> {
+	let configSchema = connection.configSchema
+	if ("bundleUrl" in connection && connection.bundleUrl) {
 		verbose("Downloading bundle to extract user_config schema...")
 		const bundleDir = await ensureBundleInstalled(
 			qualifiedName,
@@ -168,19 +168,19 @@ async function getConfigSchema(
 
 // Helper function to create connection with schema
 async function createConnectionWithSchema(
-	connection: ConnectionInfo,
+	connection: Connection,
 	qualifiedName: string,
-): Promise<ConnectionInfo> {
+): Promise<Connection> {
 	const configSchema = await getConfigSchema(connection, qualifiedName)
 	return {
 		...connection,
 		...(configSchema && { configSchema }),
-	}
+	} as Connection
 }
 
 // Helper function to check if server needs config
 export async function serverNeedsConfig(
-	connection: ConnectionInfo,
+	connection: Connection,
 	qualifiedName: string,
 ): Promise<boolean> {
 	const configSchema = await getConfigSchema(connection, qualifiedName)
@@ -192,7 +192,7 @@ export async function serverNeedsConfig(
 // Handle keychain found scenario
 // Always prompt "use existing or provide new" when keychain exists
 async function handleKeychainFound(
-	connection: ConnectionInfo,
+	connection: Connection,
 	qualifiedName: string,
 	configValues: ServerConfig,
 	spinner: OraSpinner,
@@ -282,7 +282,7 @@ async function handleKeychainFound(
 
 // Handle no keychain scenario
 async function handleNoKeychain(
-	connection: ConnectionInfo,
+	connection: Connection,
 	qualifiedName: string,
 	configValues: ServerConfig,
 	spinner: OraSpinner,
@@ -336,7 +336,7 @@ export function applySchemaDefaults(
 // Public API: Resolve user configuration based on connection, qualified name, and provided config values
 // Follows the principle: always prompt for keychain if found, regardless of --config
 export async function resolveUserConfig(
-	connection: ConnectionInfo,
+	connection: Connection,
 	qualifiedName: string,
 	configValues: ServerConfig,
 	spinner: OraSpinner,

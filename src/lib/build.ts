@@ -1,12 +1,13 @@
-import { existsSync, mkdirSync, readFileSync, statSync } from "node:fs"
-import { dirname, join, resolve } from "node:path"
+import { existsSync, mkdirSync, statSync } from "node:fs"
+import { dirname } from "node:path"
 import chalk from "chalk"
 import * as esbuild from "esbuild"
+import { resolveEntryPoint } from "./config-loader.js"
 
 // TypeScript declarations for global constants injected at build time
-declare const __SMITHERY_SHTTP_BOOTSTRAP__: string
-declare const __SMITHERY_STDIO_BOOTSTRAP__: string
 declare const __SMITHERY_VERSION__: string
+declare const __SHTTP_BOOTSTRAP__: string
+declare const __STDIO_BOOTSTRAP__: string
 
 export interface BuildOptions {
 	entryFile?: string
@@ -14,90 +15,10 @@ export interface BuildOptions {
 	watch?: boolean
 	onRebuild?: (success: boolean, outputs: string[]) => void
 	production?: boolean
-	transport?: "shttp" | "stdio"
-	configFile?: string
-	bundleAll?: boolean
 	minify?: boolean
-}
-
-/**
- * Resolves the entry point from package.json or uses provided entryFile
- */
-function resolveEntryPoint(providedEntry?: string): string {
-	if (providedEntry) {
-		const resolvedPath = resolve(process.cwd(), providedEntry)
-		if (!existsSync(resolvedPath)) {
-			throw new Error(`Entry file not found at ${resolvedPath}`)
-		}
-		return resolvedPath
-	}
-
-	// Read package.json to find entry point
-	const packageJsonPath = join(process.cwd(), "package.json")
-	if (!existsSync(packageJsonPath)) {
-		throw new Error(
-			"No package.json found in current directory. Please run this command from your project root or specify an entry file.",
-		)
-	}
-
-	let packageJson: Record<string, unknown>
-	try {
-		const packageContent = readFileSync(packageJsonPath, "utf-8")
-		packageJson = JSON.parse(packageContent)
-	} catch (error) {
-		throw new Error(`Failed to parse package.json: ${error}`)
-	}
-
-	// Check "module" field (TypeScript entry point)
-	if (!packageJson.module || typeof packageJson.module !== "string") {
-		throw new Error(
-			'No entry point found in package.json. Please define the "module" field:\n' +
-				'  "module": "./src/index.ts"\n' +
-				"Or specify an entry file directly with the command.",
-		)
-	}
-
-	const entryPoint = packageJson.module
-	const resolvedPath = resolve(process.cwd(), entryPoint)
-	if (!existsSync(resolvedPath)) {
-		throw new Error(
-			`Entry file specified in package.json not found at ${resolvedPath}.
-Check that the file exists or update your package.json`,
-		)
-	}
-
-	return resolvedPath
-}
-
-// no-op helper removed after Bun support was dropped
-
-/**
- * Load custom build configuration from file
- */
-async function loadCustomConfig(
-	configPath?: string,
-): Promise<Record<string, unknown>> {
-	const possiblePaths = configPath
-		? [configPath]
-		: ["smithery.config.js", "smithery.config.mjs", "smithery.config.cjs"]
-
-	for (const path of possiblePaths) {
-		const resolvedPath = resolve(process.cwd(), path)
-		if (existsSync(resolvedPath)) {
-			try {
-				// Use dynamic import to support both ESM and CJS
-				const config = await import(resolvedPath)
-				const cfg = (config.default ?? config) as Record<string, unknown>
-				// Prefer tool-specific section if present; otherwise entire object
-				const esCfg = (cfg as { esbuild?: Record<string, unknown> }).esbuild
-				return (esCfg as Record<string, unknown>) || cfg || {}
-			} catch (error) {
-				console.warn(`Failed to load config from ${path}:`, error)
-			}
-		}
-	}
-
-	return {}
+	transport?: "shttp" | "stdio"
+	bundleMode?: "bootstrap" | "user-module"
+	sourceMaps?: boolean
 }
 
 /**
@@ -108,8 +29,14 @@ async function esbuildServer(
 	entryFile: string,
 ): Promise<esbuild.BuildContext | esbuild.BuildResult> {
 	const startTime = performance.now()
-	const outFile = options.outFile || ".smithery/index.cjs"
-	const transport = options.transport ?? "shttp"
+	const transport = options.transport || "shttp"
+
+	// shttp = workerd (ESM), stdio = Node.js (CJS with bootstrap)
+	const isStdio = transport === "stdio"
+	const defaultOutFile = isStdio
+		? ".smithery/index.cjs"
+		: ".smithery/bundle/module.js"
+	const outFile = options.outFile || defaultOutFile
 
 	// Create output directory if it doesn't exist
 	const outDir = dirname(outFile)
@@ -117,32 +44,33 @@ async function esbuildServer(
 		mkdirSync(outDir, { recursive: true })
 	}
 
-	const transportDisplay = transport === "shttp" ? "streamable http" : transport
+	const transportDisplay = isStdio ? "stdio" : "shttp"
+
 	console.log(
 		chalk.dim(
-			`${chalk.bold.italic.hex("#ea580c")("SMITHERY")} ${chalk.bold.italic.hex("#ea580c")(`v${__SMITHERY_VERSION__}`)} Building MCP server with ${chalk.cyan(transportDisplay)} transport...`,
+			`${chalk.bold.italic.hex("#ea580c")("SMITHERY")} ${chalk.bold.italic.hex("#ea580c")(`v${__SMITHERY_VERSION__}`)} Building MCP server for ${chalk.cyan(transportDisplay)}...`,
 		),
 	)
 
-	// Create a unified plugin that handles both dev and production
-	const createBootstrapPlugin = (): esbuild.Plugin => ({
+	// Create a bootstrap plugin for the given transport
+	const createBootstrapPlugin = (type: "stdio" | "shttp"): esbuild.Plugin => ({
 		name: "smithery-bootstrap-plugin",
-		setup(build) {
+		setup(build: esbuild.PluginBuild) {
 			build.onResolve({ filter: /^virtual:bootstrap$/ }, () => ({
 				path: "virtual:bootstrap",
 				namespace: "bootstrap",
 			}))
 
 			build.onLoad({ filter: /.*/, namespace: "bootstrap" }, () => {
-				// Get the bootstrap code
-				const bootstrapCode =
-					transport === "stdio"
-						? __SMITHERY_STDIO_BOOTSTRAP__
-						: __SMITHERY_SHTTP_BOOTSTRAP__
+				const bootstrapSource =
+					type === "stdio" ? __STDIO_BOOTSTRAP__ : __SHTTP_BOOTSTRAP__
 
-				const modifiedBootstrap = bootstrapCode.replace(
-					'import * as _entry from "virtual:user-module"',
-					`import * as _entry from ${JSON.stringify(entryFile)}`,
+				// Replace the user-module import with the actual entry file
+				const pattern = /from\s*["']virtual:user-module["']/g
+
+				const modifiedBootstrap = bootstrapSource.replace(
+					pattern,
+					`from ${JSON.stringify(entryFile)}`,
 				)
 
 				return {
@@ -156,33 +84,37 @@ async function esbuildServer(
 
 	// Common build options
 	const shouldMinify = options.minify ?? true // Default to minified
-	const commonOptions: esbuild.BuildOptions = {
+	const bundleMode = options.bundleMode ?? "bootstrap"
+	// Use bootstrap unless explicitly set to user-module mode
+	const useBootstrap = bundleMode === "bootstrap"
+
+	const buildConfig: esbuild.BuildOptions = {
 		bundle: true,
-		platform: "node",
-		target: "node20",
 		outfile: outFile,
 		minify: shouldMinify,
-		sourcemap: shouldMinify ? false : "inline",
-		format: "cjs",
-		external: ["keytar"], // Native module, cannot be bundled
-	}
-
-	let buildConfig: esbuild.BuildOptions
-
-	buildConfig = {
-		...commonOptions,
-		entryPoints: ["virtual:bootstrap"],
-		plugins: [createBootstrapPlugin()],
+		sourcemap: options.sourceMaps ?? !shouldMinify,
+		entryPoints: useBootstrap ? ["virtual:bootstrap"] : [entryFile],
+		plugins: useBootstrap ? [createBootstrapPlugin(transport)] : [],
 		define: {
 			"process.env.NODE_ENV": JSON.stringify(
 				options.production ? "production" : "development",
 			),
 		},
+		...(isStdio
+			? {
+					// stdio: Node.js CJS bundle with bootstrap
+					platform: "node",
+					target: "node20",
+					format: "cjs",
+				}
+			: {
+					// shttp: workerd ESM bundle with Node.js compat
+					platform: "node",
+					target: "esnext",
+					format: "esm",
+					conditions: ["workerd", "worker", "browser"],
+				}),
 	}
-
-	// Load custom config
-	const customConfig = await loadCustomConfig(options.configFile)
-	buildConfig = { ...buildConfig, ...(customConfig as esbuild.BuildOptions) }
 
 	if (options.watch && options.onRebuild) {
 		// Set up esbuild with watch mode and rebuild plugin
@@ -232,7 +164,6 @@ async function esbuildServer(
 		// Display file size info for the output file
 		if (existsSync(outFile)) {
 			const stats = statSync(outFile)
-			// const fileName = basename(outFile)
 			const relativePath = outFile.replace(`${process.cwd()}/`, "")
 			const bytes = stats.size
 			const fileSize =

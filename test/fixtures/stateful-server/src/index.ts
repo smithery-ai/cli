@@ -1,4 +1,5 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js"
+import type { Session } from "@smithery/sdk"
 import { z } from "zod"
 
 export const configSchema = z.object({
@@ -6,13 +7,13 @@ export const configSchema = z.object({
 	maxConnections: z.number().default(100),
 })
 
-export const stateless = false
+export const stateful = true
 
 export default function ({
-	sessionId,
+	session,
 	config,
 }: {
-	sessionId: string
+	session: Session
 	config: z.infer<typeof configSchema>
 }) {
 	const server = new McpServer({
@@ -20,18 +21,13 @@ export default function ({
 		version: "1.0.0",
 	})
 
-	// Stateful: same instance persists across requests within a session
-	let callCount = 0
-	const instanceId = Math.random().toString(36).substring(7)
-	const sessionData = new Map<string, unknown>()
-
 	server.tool(
 		"increment",
 		"Test stateful behavior - should increment across calls",
 		{},
 		async () => {
-			callCount++
-			sessionData.set("lastCall", Date.now())
+			const callCount = ((await session.get<number>("callCount")) ?? 0) + 1
+			await session.set("callCount", callCount)
 
 			return {
 				content: [
@@ -39,8 +35,7 @@ export default function ({
 						type: "text",
 						text: JSON.stringify({
 							callCount,
-							sessionId,
-							instanceId, // Same ID across calls
+							sessionId: session.id,
 							message:
 								"This increments in stateful mode (same instance per session)",
 							sessionTimeout: config.sessionTimeout,
@@ -55,22 +50,23 @@ export default function ({
 		"get_session_data",
 		"Get accumulated session data",
 		{},
-		async () => ({
-			content: [
-				{
-					type: "text",
-					text: JSON.stringify({
-						sessionId,
-						instanceId,
-						serverType: "stateful",
-						totalCalls: callCount,
-						sessionData: Object.fromEntries(sessionData),
-						config,
-						message: "Same server instance maintains state across requests",
-					}),
-				},
-			],
-		}),
+		async () => {
+			const callCount = (await session.get<number>("callCount")) ?? 0
+			return {
+				content: [
+					{
+						type: "text",
+						text: JSON.stringify({
+							sessionId: session.id,
+							serverType: "stateful",
+							totalCalls: callCount,
+							config,
+							message: "Same server instance maintains state across requests",
+						}),
+					},
+				],
+			}
+		},
 	)
 
 	return server.server

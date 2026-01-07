@@ -1,6 +1,6 @@
-import type { ServerDetailResponse } from "@smithery/registry/models/components"
+import type { Server } from "@smithery/registry/models/components"
 
-export const httpRemoteServer: ServerDetailResponse = {
+export const httpRemoteServer: Server = {
 	qualifiedName: "author/remote-server",
 	remote: true,
 	connections: [
@@ -10,9 +10,9 @@ export const httpRemoteServer: ServerDetailResponse = {
 			configSchema: {},
 		},
 	],
-} as unknown as ServerDetailResponse
+} as unknown as Server
 
-export const stdioRegularServer: ServerDetailResponse = {
+export const stdioRegularServer: Server = {
 	qualifiedName: "author/stdio-server",
 	remote: false,
 	connections: [
@@ -24,9 +24,9 @@ export const stdioRegularServer: ServerDetailResponse = {
 			configSchema: {},
 		},
 	],
-} as unknown as ServerDetailResponse
+} as unknown as Server
 
-export const studioBundleServer: ServerDetailResponse = {
+export const studioBundleServer: Server = {
 	qualifiedName: "author/bundle-server",
 	remote: false,
 	connections: [
@@ -36,4 +36,4 @@ export const studioBundleServer: ServerDetailResponse = {
 			configSchema: {},
 		},
 	],
-} as unknown as ServerDetailResponse
+} as unknown as Server

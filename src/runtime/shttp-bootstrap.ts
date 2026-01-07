@@ -1,130 +1,178 @@
-// These will be replaced by esbuild at build time.
-// @ts-expect-error
-import * as _entry from "virtual:user-module"
-import {
-	type CreateServerFn as CreateStatefulServerFn,
-	type CreateStatelessServerFn,
-	createStatefulServer,
-	createStatelessServer,
-	type IdentityHandler,
-	mountOAuth,
-	type OAuthProvider,
-	type TokenVerifier,
-} from "@smithery/sdk"
-import chalk from "chalk"
-import cors from "cors"
-import express from "express"
-import type { z } from "zod"
-import * as zod from "zod"
-import { DEFAULT_PORT } from "../constants.js"
+// @ts-expect-error - virtual:user-module is a placeholder replaced at upload time
+import createServer, { stateful } from "virtual:user-module"
+import { WebStandardStreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/webStandardStreamableHttp.js"
+import type { Session, StatelessServerContext } from "@smithery/sdk"
 
-// Type declaration for the user module
-interface SmitheryModule {
-	configSchema?: z.ZodSchema<Record<string, unknown>>
-	stateless?: boolean
-	// Default export (can be stateful or stateless server)
-	default?: CreateStatefulServerFn | CreateStatelessServerFn
-	// Optional OAuth provider instance. Provider carries its own options.
-	oauth?: OAuthProvider | TokenVerifier
-	identity?: IdentityHandler
-	// Optional function to initialize the app
-	initApp?(): express.Application
+interface McpSessionStub {
+	fetch(request: Request): Promise<Response>
 }
 
-const entry: SmitheryModule = _entry
+interface McpSessionId {
+	toString(): string
+}
 
-async function startMcpServer() {
-	try {
-		const port = process.env.PORT || DEFAULT_PORT.toString()
+interface McpSessionNamespace {
+	idFromString(id: string): McpSessionId
+	newUniqueId(): McpSessionId
+	get(id: McpSessionId): McpSessionStub
+}
 
-		let server: { app: express.Application }
-
-		const app = entry.initApp ? entry.initApp() : express()
-
-		// Inject cors for development
-		console.log(`${chalk.dim("> Injecting cors middleware")}`)
-		app.use(
-			cors({
-				exposedHeaders: ["mcp-session-id"],
-			}),
-		)
-
-		// Auto-wire OAuth and/or Identity if configured
-		if (entry.oauth) {
-			console.log(chalk.dim(`> OAuth detected. Mounting auth routes.`))
+/**
+ * Set a nested value in an object using dot-notation path parts.
+ * e.g., setNested(obj, ["a", "b", "c"], value) → obj.a.b.c = value
+ */
+function setNested(
+	obj: Record<string, unknown>,
+	pathParts: string[],
+	value: unknown,
+) {
+	let current = obj
+	for (let i = 0; i < pathParts.length - 1; i++) {
+		const part = pathParts[i]
+		if (!(part in current) || typeof current[part] !== "object") {
+			current[part] = {}
 		}
-		if (entry.identity) {
-			console.log(chalk.dim(`> Identity detected. Mounting identity routes.`))
-		}
-		if (entry.oauth || entry.identity) {
-			mountOAuth(app, { provider: entry.oauth, identity: entry.identity })
+		current = current[part] as Record<string, unknown>
+	}
+	current[pathParts[pathParts.length - 1]] = value
+}
+
+/**
+ * Extract config from URL query parameters using dot-notation.
+ * e.g., ?apiKey=abc&db.host=localhost → { apiKey: "abc", db: { host: "localhost" } }
+ */
+function extractConfigFromUrl(url: URL): Record<string, unknown> {
+	const config: Record<string, unknown> = {}
+
+	url.searchParams.forEach((value, key) => {
+		const pathParts = key.split(".")
+
+		// Try to parse value as JSON (for booleans, numbers, objects)
+		let parsedValue: unknown = value
+		try {
+			parsedValue = JSON.parse(value)
+		} catch {
+			// If parsing fails, use the raw string value
 		}
 
-		if (entry.default && typeof entry.default === "function") {
-			console.log(
-				chalk.dim(
-					`> Setting up ${entry.stateless ? "stateless" : "stateful"} server`,
-				),
-			)
+		setNested(config, pathParts, parsedValue)
+	})
 
-			// Show detected config schema
-			if (entry.configSchema) {
-				try {
-					const schema = zod.toJSONSchema(entry.configSchema)
-					const total = Object.keys(schema.properties || {}).length
-					const required = (schema.required || []).length
-					if (total > 0)
-						console.log(
-							chalk.dim(
-								`> Config schema: ${total} field${total === 1 ? "" : "s"} (${required} required)`,
-							),
-						)
-				} catch {
-					console.log(chalk.dim(`> Config schema detected`))
-				}
+	return config
+}
+
+// Stateful session handler - in-memory state (no persistence needed for dev)
+export class McpSession {
+	private ctx: { id: McpSessionId }
+	private env: Record<string, string | undefined>
+	private server: Awaited<ReturnType<typeof createServer>> | null = null
+	private transport: WebStandardStreamableHTTPServerTransport | null = null
+	private sessionData = new Map<string, unknown>()
+	private initialized = false
+
+	constructor(
+		ctx: { id: McpSessionId },
+		env: Record<string, string | undefined>,
+	) {
+		this.ctx = ctx
+		this.env = env
+	}
+
+	async fetch(request: Request): Promise<Response> {
+		const url = new URL(request.url)
+		const config = extractConfigFromUrl(url)
+
+		if (!this.server) {
+			const session: Session = {
+				id: this.ctx.id.toString(),
+				get: async <T = unknown>(key: string) =>
+					this.sessionData.get(key) as T | undefined,
+				set: async (key, value) => {
+					this.sessionData.set(key, value)
+				},
+				delete: async (key) => {
+					this.sessionData.delete(key)
+				},
 			}
-
-			const oauth = entry.oauth
-			if (oauth) {
-			}
-
-			// Read log level from environment (default: info)
-			const logLevel = (process.env.LOG_LEVEL || "info") as
-				| "debug"
-				| "info"
-				| "warn"
-				| "error"
-
-			if (entry.stateless) {
-				server = createStatelessServer(
-					entry.default as CreateStatelessServerFn,
-					{ app, schema: entry.configSchema, logLevel },
-				)
-			} else {
-				server = createStatefulServer(entry.default as CreateStatefulServerFn, {
-					app,
-					schema: entry.configSchema,
-					logLevel,
-				})
-			}
-		} else {
-			throw new Error(
-				"No valid server export found. Please export:\n" +
-					"- export default function({ sessionId, config }) { ... } (stateful)\n" +
-					"- export default function({ config }) { ... } (stateless)",
-			)
+			this.server = await createServer({ config, session, env: this.env })
+			this.transport = new WebStandardStreamableHTTPServerTransport({
+				sessionIdGenerator: () => this.ctx.id.toString(),
+			})
+			await this.server.connect(this.transport)
+		} else if (this.initialized && this.transport) {
+			// @ts-expect-error restore transport state for reconnection
+			this.transport._initialized = true
+			this.transport.sessionId = this.ctx.id.toString()
 		}
 
-		// Start the server
-		server.app.listen(Number.parseInt(port, 10))
-		// console.log(
-		// 	`${chalk.green("[smithery]")} MCP server started successfully on port ${port}`,
-		// )
-	} catch (error) {
-		console.error(`${chalk.red("✗ Failed to start MCP server:")}`, error)
-		process.exit(1)
+		const response = await this.transport!.handleRequest(request)
+		if (!this.initialized) this.initialized = true
+		return response
 	}
 }
 
-// Start the server
-startMcpServer()
+// Stateless handler - new server/transport per request, no session
+async function handleStateless(
+	request: Request,
+	env: Record<string, string | undefined>,
+) {
+	if (request.method === "GET") {
+		return new Response(
+			JSON.stringify({
+				jsonrpc: "2.0",
+				error: { code: -32000, message: "GET not supported in stateless mode" },
+				id: null,
+			}),
+			{
+				status: 405,
+				headers: { "Content-Type": "application/json", Allow: "POST, DELETE" },
+			},
+		)
+	}
+
+	const url = new URL(request.url)
+	const config = extractConfigFromUrl(url)
+	const context: StatelessServerContext = { config, env }
+	const server = await createServer(context)
+	const transport = new WebStandardStreamableHTTPServerTransport({
+		sessionIdGenerator: undefined,
+	})
+	await server.connect(transport)
+	return transport.handleRequest(request)
+}
+
+// Stateful handler - route to session
+async function handleStateful(
+	request: Request,
+	env: {
+		MCP_SESSION: McpSessionNamespace
+	},
+) {
+	const sessionId = request.headers.get("mcp-session-id")
+	const id = sessionId
+		? env.MCP_SESSION.idFromString(sessionId)
+		: env.MCP_SESSION.newUniqueId()
+	return env.MCP_SESSION.get(id).fetch(request)
+}
+
+async function loggedFetch(request: Request, env: Record<string, unknown>) {
+	const url = new URL(request.url)
+	const sessionId = request.headers.get("mcp-session-id")
+	console.log(
+		`[MCP] ${request.method} ${url.pathname}${sessionId ? ` (session: ${sessionId.slice(0, 8)}...)` : ""}`,
+	)
+
+	const startTime = Date.now()
+	const response = stateful
+		? await handleStateful(
+				request,
+				env as unknown as { MCP_SESSION: McpSessionNamespace },
+			)
+		: await handleStateless(request, env as Record<string, string | undefined>)
+	const duration = Date.now() - startTime
+
+	console.log(`[MCP] ${response.status} (${duration}ms)`)
+	return response
+}
+
+export default { fetch: loggedFetch }

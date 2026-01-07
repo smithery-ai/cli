@@ -1,9 +1,5 @@
 import type { JSONRPCErrorResponse } from "@modelcontextprotocol/sdk/types.js"
 import { ErrorCode } from "@modelcontextprotocol/sdk/types.js"
-
-export const MAX_RETRIES = 3
-export const RETRY_DELAY = 1000
-
 // Add timestamp to logs
 export const logWithTimestamp = (message: string) => {
 	const timestamp = new Date().toISOString()

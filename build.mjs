@@ -22,41 +22,57 @@ for (const k in process.env) {
 	define[`process.env.${k}`] = JSON.stringify(process.env[k])
 }
 
-// Compile bootstrap TypeScript files to JavaScript
-console.log("Compiling bootstrap files...")
-const shttpResult = await esbuild.build({
+// 1. Bundle bootstraps into string constants
+console.log("Compiling bootstraps...")
+
+const shttp = await esbuild.build({
 	entryPoints: ["src/runtime/shttp-bootstrap.ts"],
 	bundle: true,
-	platform: "node",
-	target: "node20",
 	format: "esm",
+	platform: "browser",
+	target: "es2022",
 	write: false,
-	packages: "external",
+	minify: true,
+	external: ["virtual:user-module"],
 })
 
-const stdioResult = await esbuild.build({
+const stdio = await esbuild.build({
 	entryPoints: ["src/runtime/stdio-bootstrap.ts"],
 	bundle: true,
+	format: "esm",
 	platform: "node",
 	target: "node20",
-	format: "esm",
 	write: false,
-	packages: "external",
+	minify: true,
+	external: ["virtual:user-module"],
 })
 
-// Get the compiled code as strings and inject via define
-const shttpBootstrapJs = shttpResult.outputFiles[0].text
-const stdioBootstrapJs = stdioResult.outputFiles[0].text
+define.__SHTTP_BOOTSTRAP__ = JSON.stringify(shttp.outputFiles[0].text)
+define.__STDIO_BOOTSTRAP__ = JSON.stringify(stdio.outputFiles[0].text)
 
 // Get package version
 const packageJson = JSON.parse(readFileSync("package.json", "utf-8"))
 
-// Inject bootstrap content and version as global constants
-define.__SMITHERY_SHTTP_BOOTSTRAP__ = JSON.stringify(shttpBootstrapJs)
-define.__SMITHERY_STDIO_BOOTSTRAP__ = JSON.stringify(stdioBootstrapJs)
+// Inject version as global constant
 define.__SMITHERY_VERSION__ = JSON.stringify(packageJson.version)
 
 console.log("✓ Compiled bootstrap files")
+
+// Packages with native binaries that cannot be bundled - they must be required at runtime.
+// Only include packages that are DIRECTLY imported by CLI code and have native binaries.
+// Transitive native deps (like workerd via miniflare) are handled by their parent package.
+// - keytar: .node native addon for OS keychain
+// - esbuild: platform-specific binaries for bundling
+// - @ngrok/ngrok: native binary for tunneling
+// - miniflare: has complex native deps (workerd) that must resolve at runtime
+// - cross-spawn: has pnpm symlink resolution issues with path-key
+const nativePackages = [
+	"@ngrok/ngrok",
+	"cross-spawn",
+	"esbuild",
+	"keytar",
+	"miniflare",
+]
 
 // Build main CLI entry point
 await esbuild.build({
@@ -68,7 +84,7 @@ await esbuild.build({
 	minify: true,
 	treeShaking: true,
 	outfile: "dist/index.js",
-	external: ["@ngrok/ngrok", "esbuild", "keytar"],
+	external: nativePackages,
 	banner: {
 		js: `import { createRequire } from 'module'; const require = createRequire(import.meta.url);`,
 	},
@@ -81,4 +97,4 @@ if (!existsSync(runtimeDir)) {
 	mkdirSync(runtimeDir, { recursive: true })
 }
 
-console.log("✓ Build complete - runtime files copied")
+console.log("✓ Build complete")

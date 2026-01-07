@@ -1,4 +1,4 @@
-import type { ConnectionInfo } from "@smithery/registry/models/components"
+import type { Connection } from "@smithery/registry/models/components"
 import chalk from "chalk"
 import inquirer from "inquirer"
 import type { ServerConfig } from "../../types/registry"
@@ -11,7 +11,7 @@ import { validateAndFormatConfig } from "./user-config.js"
  * @returns Object containing collected config values
  */
 export async function collectConfigValues(
-	connection: ConnectionInfo,
+	connection: Connection,
 	existingValues?: ServerConfig,
 ): Promise<ServerConfig> {
 	// Early exit if no config needed

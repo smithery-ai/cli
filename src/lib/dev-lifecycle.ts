@@ -1,4 +1,3 @@
-import boxen from "boxen"
 import chalk from "chalk"
 import {
 	createClickableLink,
@@ -62,24 +61,24 @@ export async function setupTunnelAndPlayground(
 	)
 	console.log("")
 
-	// Create boxed client links
-	const clientLinks = [
-		`${chalk.bold("Cursor")}: ${chalk.cyan(clickableCursorLink)}`,
-		`${chalk.bold("VS Code")}: ${chalk.cyan(clickableVSCodeLink)}`,
-		"",
-		`${chalk.dim("Note: If required config needed, attach using URL params")}`,
-		`${chalk.dim("e.g.")} ${chalk.dim.cyan("https://server.com/mcp")}${chalk.cyan("?weatherApiKey=abc123")}`,
-	].join("\n")
-
+	// Display client links without boxen - OSC 8 escape sequences cause boxen
+	// to miscalculate string width, leading to negative .repeat() values
+	console.log(chalk.dim("  ╭─ Add to Client ─────────────────────────────╮"))
 	console.log(
-		boxen(clientLinks, {
-			title: "Add to Client",
-			padding: { left: 1, right: 1, top: 0, bottom: 0 },
-			margin: { left: 2 },
-			borderStyle: "round",
-			borderColor: "dim",
-		}),
+		`  ${chalk.dim("│")} ${chalk.bold("Cursor")}: ${chalk.cyan(clickableCursorLink)}`,
 	)
+	console.log(
+		`  ${chalk.dim("│")} ${chalk.bold("VS Code")}: ${chalk.cyan(clickableVSCodeLink)}`,
+	)
+	console.log(chalk.dim("  │"))
+	console.log(
+		`  ${chalk.dim("│")} ${chalk.dim("Note: If required config needed, attach using URL params")}`,
+	)
+	console.log(
+		`  ${chalk.dim("│")} ${chalk.dim("e.g.")} ${chalk.dim.cyan("https://server.com/mcp")}${chalk.cyan("?weatherApiKey=abc123")}`,
+	)
+	console.log(chalk.dim("  ╰────────────────────────────────────────────╯"))
+
 	console.log("")
 
 	if (autoOpen) {

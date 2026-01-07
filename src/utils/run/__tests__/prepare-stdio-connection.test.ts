@@ -3,7 +3,10 @@
  * Tests the 3 connection preparation paths: direct, stdioFunction, and bundle
  */
 
-import type { ServerDetailResponse } from "@smithery/registry/models/components"
+import type {
+	Server,
+	StdioConnection,
+} from "@smithery/registry/models/components"
 import { beforeEach, describe, expect, test, vi } from "vitest"
 
 // Mock dependencies
@@ -28,7 +31,7 @@ describe("prepareStdioConnection", () => {
 	})
 
 	test("returns command and args directly when provided", async () => {
-		const server: ServerDetailResponse = {
+		const server: Server = {
 			qualifiedName: "author/direct-server",
 			remote: false,
 			connections: [
@@ -40,11 +43,11 @@ describe("prepareStdioConnection", () => {
 					configSchema: {},
 				},
 			],
-		} as unknown as ServerDetailResponse
+		} as unknown as Server
 
 		const result = await prepareStdioConnection(
 			server,
-			server.connections[0],
+			server.connections[0] as StdioConnection,
 			{},
 		)
 
@@ -60,7 +63,7 @@ describe("prepareStdioConnection", () => {
 	})
 
 	test("evaluates stdioFunction to get command and args", async () => {
-		const server: ServerDetailResponse = {
+		const server: Server = {
 			qualifiedName: "author/stdio-function-server",
 			remote: false,
 			connections: [
@@ -71,11 +74,13 @@ describe("prepareStdioConnection", () => {
 					configSchema: {},
 				},
 			],
-		} as unknown as ServerDetailResponse
+		} as unknown as Server
 
-		const result = await prepareStdioConnection(server, server.connections[0], {
-			apiKey: "test-key",
-		})
+		const result = await prepareStdioConnection(
+			server,
+			server.connections[0] as StdioConnection,
+			{ apiKey: "test-key" },
+		)
 
 		expect(result).toEqual({
 			command: "npx",
@@ -89,7 +94,7 @@ describe("prepareStdioConnection", () => {
 	})
 
 	test("evaluates stdioFunction with env from config", async () => {
-		const server: ServerDetailResponse = {
+		const server: Server = {
 			qualifiedName: "author/stdio-function-env-server",
 			remote: false,
 			connections: [
@@ -100,11 +105,13 @@ describe("prepareStdioConnection", () => {
 					configSchema: {},
 				},
 			],
-		} as unknown as ServerDetailResponse
+		} as unknown as Server
 
-		const result = await prepareStdioConnection(server, server.connections[0], {
-			apiKey: "test-api-key",
-		})
+		const result = await prepareStdioConnection(
+			server,
+			server.connections[0] as StdioConnection,
+			{ apiKey: "test-api-key" },
+		)
 
 		expect(result).toEqual({
 			command: "node",
@@ -115,7 +122,7 @@ describe("prepareStdioConnection", () => {
 	})
 
 	test("throws error when stdioFunction returns invalid result", async () => {
-		const server: ServerDetailResponse = {
+		const server: Server = {
 			qualifiedName: "author/invalid-stdio-function-server",
 			remote: false,
 			connections: [
@@ -125,17 +132,21 @@ describe("prepareStdioConnection", () => {
 					configSchema: {},
 				},
 			],
-		} as unknown as ServerDetailResponse
+		} as unknown as Server
 
 		await expect(
-			prepareStdioConnection(server, server.connections[0], {}),
+			prepareStdioConnection(
+				server,
+				server.connections[0] as StdioConnection,
+				{},
+			),
 		).rejects.toThrow(
 			"stdioFunction did not return a valid object with command property",
 		)
 	})
 
 	test("calls ensureBundleInstalled and getHydratedBundleCommand for bundle connections", async () => {
-		const server: ServerDetailResponse = {
+		const server: Server = {
 			qualifiedName: "author/bundle-server",
 			remote: false,
 			connections: [
@@ -145,7 +156,7 @@ describe("prepareStdioConnection", () => {
 					configSchema: {},
 				},
 			],
-		} as unknown as ServerDetailResponse
+		} as unknown as Server
 
 		const bundleDir =
 			"/home/.smithery/cache/servers/author/bundle-server/current"
@@ -160,7 +171,7 @@ describe("prepareStdioConnection", () => {
 
 		const result = await prepareStdioConnection(
 			server,
-			server.connections[0],
+			server.connections[0] as StdioConnection,
 			userConfig,
 		)
 
@@ -179,7 +190,7 @@ describe("prepareStdioConnection", () => {
 	})
 
 	test("throws error when no command, stdioFunction, or bundleUrl", async () => {
-		const server: ServerDetailResponse = {
+		const server: Server = {
 			qualifiedName: "author/registry-server",
 			remote: false,
 			connections: [
@@ -188,10 +199,14 @@ describe("prepareStdioConnection", () => {
 					configSchema: {},
 				},
 			],
-		} as unknown as ServerDetailResponse
+		} as unknown as Server
 
 		await expect(
-			prepareStdioConnection(server, server.connections[0], {}),
+			prepareStdioConnection(
+				server,
+				server.connections[0] as StdioConnection,
+				{},
+			),
 		).rejects.toThrow("Invalid connection configuration")
 	})
 })

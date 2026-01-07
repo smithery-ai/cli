@@ -5,7 +5,7 @@
  * always prompt for keychain if found, regardless of --config
  */
 
-import type { ConnectionInfo } from "@smithery/registry/models/components"
+import type { StdioConnection } from "@smithery/registry/models/components"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 import { getConfig } from "../../../lib/keychain"
 import {
@@ -477,11 +477,11 @@ describe("resolveUserConfig", () => {
 
 	describe("with bundle connections", () => {
 		it("calls ensureBundleInstalled when connection has bundleUrl", async () => {
-			const bundleConnection: ConnectionInfo = {
+			const bundleConnection: StdioConnection = {
 				type: "stdio",
 				bundleUrl: "https://example.com/bundle.tar.gz",
 				configSchema: {},
-			} as ConnectionInfo
+			}
 			mockGetConfig.mockResolvedValue(null)
 			mockEnsureBundleInstalled.mockResolvedValue("/tmp/bundle")
 			mockGetBundleUserConfigSchema.mockReturnValue({
@@ -502,11 +502,11 @@ describe("resolveUserConfig", () => {
 		})
 
 		it("extracts config schema from bundle manifest", async () => {
-			const bundleConnection: ConnectionInfo = {
+			const bundleConnection: StdioConnection = {
 				type: "stdio",
 				bundleUrl: "https://example.com/bundle.tar.gz",
 				configSchema: {},
-			} as ConnectionInfo
+			}
 			mockGetConfig.mockResolvedValue(null)
 			mockEnsureBundleInstalled.mockResolvedValue("/tmp/bundle")
 			mockGetBundleUserConfigSchema.mockReturnValue({
@@ -524,11 +524,11 @@ describe("resolveUserConfig", () => {
 		})
 
 		it("uses bundle schema for validation and defaults", async () => {
-			const bundleConnection: ConnectionInfo = {
+			const bundleConnection: StdioConnection = {
 				type: "stdio",
 				bundleUrl: "https://example.com/bundle.tar.gz",
 				configSchema: {},
-			} as ConnectionInfo
+			}
 			const bundleSchema = {
 				type: "object",
 				properties: {
@@ -565,11 +565,11 @@ describe("resolveUserConfig", () => {
 		})
 
 		it("throws when bundle download fails", async () => {
-			const bundleConnection: ConnectionInfo = {
+			const bundleConnection: StdioConnection = {
 				type: "stdio",
 				bundleUrl: "https://example.com/bundle.tar.gz",
 				configSchema: {},
-			} as ConnectionInfo
+			}
 			mockGetConfig.mockResolvedValue(null)
 			mockEnsureBundleInstalled.mockRejectedValue(
 				new Error("Bundle download failed"),
@@ -618,7 +618,7 @@ describe("serverNeedsConfig", () => {
 	})
 
 	it("returns false when schema is undefined", async () => {
-		const connection: ConnectionInfo = {
+		const connection: StdioConnection = {
 			type: "stdio",
 			configSchema: {},
 		}

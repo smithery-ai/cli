@@ -1,20 +1,31 @@
-import type { ServerDetailResponse } from "@smithery/registry/models/components"
+import type { Server } from "@smithery/registry/models/components"
 
-export const noConfigServer: ServerDetailResponse = {
+export const noConfigServer: Server = {
 	qualifiedName: "@test/no-config-server",
+	displayName: "No Config Server",
+	description: "A test server with no config",
+	iconUrl: null,
 	remote: false,
+	deploymentUrl: null,
+	security: null,
+	tools: null,
 	connections: [
 		{
 			type: "stdio",
 			configSchema: {},
 		},
 	],
-} as unknown as ServerDetailResponse
+}
 
-export const optionalOnlyServer: ServerDetailResponse = {
+export const optionalOnlyServer: Server = {
 	qualifiedName: "@test/optional-only-server",
+	displayName: "Optional Only Server",
+	description: "A test server with optional only config",
+	iconUrl: null,
 	remote: true,
 	deploymentUrl: "https://server.smithery.ai",
+	security: null,
+	tools: null,
 	connections: [
 		{
 			type: "http",
@@ -34,12 +45,17 @@ export const optionalOnlyServer: ServerDetailResponse = {
 			},
 		},
 	],
-} as unknown as ServerDetailResponse
+}
 
-export const requiredOnlyServer: ServerDetailResponse = {
+export const requiredOnlyServer: Server = {
 	qualifiedName: "@test/required-only-server",
+	displayName: "Required Only Server",
+	description: "A test server with required only config",
+	iconUrl: null,
 	remote: true,
 	deploymentUrl: "https://server.smithery.ai",
+	security: null,
+	tools: null,
 	connections: [
 		{
 			type: "http",
@@ -58,11 +74,17 @@ export const requiredOnlyServer: ServerDetailResponse = {
 			},
 		},
 	],
-} as unknown as ServerDetailResponse
+}
 
-export const requiredAndOptionalServer: ServerDetailResponse = {
+export const requiredAndOptionalServer: Server = {
 	qualifiedName: "@test/required-and-optional-server",
+	displayName: "Required and Optional Server",
+	description: "A test server with both required and optional config",
+	iconUrl: null,
 	remote: false,
+	deploymentUrl: null,
+	security: null,
+	tools: null,
 	connections: [
 		{
 			type: "stdio",
@@ -88,4 +110,4 @@ export const requiredAndOptionalServer: ServerDetailResponse = {
 			},
 		},
 	],
-} as unknown as ServerDetailResponse
+}

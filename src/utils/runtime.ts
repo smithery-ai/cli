@@ -1,7 +1,7 @@
 import { exec } from "node:child_process"
 import { promisify } from "node:util"
 import { getDefaultEnvironment } from "@modelcontextprotocol/sdk/client/stdio.js"
-import type { ConnectionInfo } from "@smithery/registry/models/components"
+import type { Connection } from "@smithery/registry/models/components"
 import chalk from "chalk"
 import inquirer from "inquirer"
 import ora from "ora"
@@ -63,7 +63,7 @@ export async function promptForUVInstall(): Promise<boolean> {
 	}
 }
 
-export function isUVRequired(connection: ConnectionInfo): boolean {
+export function isUVRequired(connection: Connection): boolean {
 	// Check for stdio connection with uvx in stdioFunction
 	if (
 		connection.type === "stdio" &&
@@ -133,7 +133,7 @@ export async function promptForBunInstall(): Promise<boolean> {
 	}
 }
 
-export function isBunRequired(connection: ConnectionInfo): boolean {
+export function isBunRequired(connection: Connection): boolean {
 	// Check for stdio connection with uvx in stdioFunction
 	if (
 		connection.type === "stdio" &&
@@ -161,9 +161,7 @@ export function getRuntimeEnvironment(
  * @param connection The connection details to check
  * @returns Promise<void>
  */
-export async function ensureUVInstalled(
-	connection: ConnectionInfo,
-): Promise<void> {
+export async function ensureUVInstalled(connection: Connection): Promise<void> {
 	if (isUVRequired(connection)) {
 		verbose("UV installation check required")
 		const uvInstalled = await checkUVInstalled()
@@ -184,7 +182,7 @@ export async function ensureUVInstalled(
  * @returns Promise<void>
  */
 export async function ensureBunInstalled(
-	connection: ConnectionInfo,
+	connection: Connection,
 ): Promise<void> {
 	if (isBunRequired(connection)) {
 		verbose("Bun installation check required")
@@ -208,7 +206,7 @@ export async function ensureBunInstalled(
  * @returns boolean indicating if the server is remote
  */
 export function isRemote(server: {
-	connections: ConnectionInfo[]
+	connections: Connection[]
 	remote?: boolean
 }): boolean {
 	return (
@@ -224,7 +222,7 @@ export function isRemote(server: {
  * @returns boolean indicating if the server is remote
  */
 export function checkAndNotifyRemoteServer(server: {
-	connections: ConnectionInfo[]
+	connections: Connection[]
 	remote?: boolean
 }): boolean {
 	const remote = isRemote(server)

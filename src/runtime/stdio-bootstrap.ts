@@ -3,23 +3,26 @@
 import * as _entry from "virtual:user-module"
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js"
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js"
-import type {
-	CreateServerFn as CreateStatefulServerFn,
-	Logger,
-} from "@smithery/sdk"
+import type { ServerModule } from "@smithery/sdk"
 import chalk from "chalk"
 import _ from "lodash"
 import { uuidv7 } from "uuidv7"
-import * as z from "zod"
+import type * as z from "zod"
 
-// Type declaration for the user module
-interface SmitheryModule {
-	configSchema?: z.ZodSchema<Record<string, unknown>>
-	// Default export (treated as stateful server)
-	default?: CreateStatefulServerFn
+// Logger interface for structured logging
+interface Logger {
+	info(msg: string, ...args: unknown[]): void
+	info(obj: Record<string, unknown>, msg?: string, ...args: unknown[]): void
+	error(msg: string, ...args: unknown[]): void
+	error(obj: Record<string, unknown>, msg?: string, ...args: unknown[]): void
+	warn(msg: string, ...args: unknown[]): void
+	warn(obj: Record<string, unknown>, msg?: string, ...args: unknown[]): void
+	debug(msg: string, ...args: unknown[]): void
+	debug(obj: Record<string, unknown>, msg?: string, ...args: unknown[]): void
 }
 
-const entry: SmitheryModule = _entry
+// Type declaration for the user module
+const entry: ServerModule = _entry
 
 // Simple stderr logger for stdio mode
 const formatLog = (
@@ -85,7 +88,6 @@ function parseCliConfig<T = Record<string, unknown>>(
 	if (schema) {
 		const result = schema.safeParse(config)
 		if (!result.success) {
-			const jsonSchema = z.toJSONSchema(schema)
 			const errors = result.error.issues.map((issue) => {
 				const path = issue.path.join(".")
 				const message = issue.message
@@ -108,8 +110,6 @@ function parseCliConfig<T = Record<string, unknown>>(
 			// Print schema information
 			logger.error("Configuration validation failed:")
 			logger.error(errors.join("\n"))
-			logger.error("Expected schema:")
-			logger.error(JSON.stringify(jsonSchema, null, 2))
 			logger.error("Example usage:")
 			logger.error(
 				"  node server.js server.host=localhost server.port=8080 debug=true",
@@ -138,16 +138,20 @@ async function startMcpServer() {
 		let mcpServer: McpServer["server"]
 		if (entry.default && typeof entry.default === "function") {
 			logger.info("Creating server")
-			// Type assertion needed due to Zod version mismatch between dependencies
-			mcpServer = entry.default({
-				sessionId: uuidv7(),
+			mcpServer = await entry.default({
 				config: config as Record<string, unknown>,
-				logger,
-			}) as unknown as McpServer["server"]
+				session: {
+					id: uuidv7(),
+					get: async () => undefined,
+					set: async () => {},
+					delete: async () => {},
+				},
+				env: process.env,
+			})
 		} else {
 			throw new Error(
 				"No valid server export found. Please export:\n" +
-					"- export default function({ sessionId, config, logger }) { ... }",
+					"- export default function({ config, session, env }) { ... }",
 			)
 		}
 

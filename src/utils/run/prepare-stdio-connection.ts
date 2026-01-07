@@ -1,10 +1,16 @@
-import type { ServerDetailResponse } from "@smithery/registry/models/components"
+import type {
+	Server,
+	StdioConnection,
+} from "@smithery/registry/models/components"
 import { logWithTimestamp } from "../../commands/run/utils.js"
 import {
 	ensureBundleInstalled,
 	getHydratedBundleCommand,
 } from "../../lib/mcpb.js"
-import type { ServerConfig, StdioConnection } from "../../types/registry.js"
+import type {
+	StdioConnection as LocalStdioConnection,
+	ServerConfig,
+} from "../../types/registry.js"
 
 export interface PreparedStdioConnection {
 	command: string
@@ -18,7 +24,9 @@ export interface PreparedStdioConnection {
  * The stdioFunction is a string that, when evaluated, should be a function
  * that takes a ServerConfig and returns a StdioConnection.
  */
-function isValidStdioConnection(result: unknown): result is StdioConnection {
+function isValidStdioConnection(
+	result: unknown,
+): result is LocalStdioConnection {
 	return (
 		result !== null &&
 		typeof result === "object" &&
@@ -29,13 +37,12 @@ function isValidStdioConnection(result: unknown): result is StdioConnection {
 
 type ConnectionType = "command" | "stdioFunction" | "bundle"
 
-function determineConnectionType(connection: {
-	command?: string
-	args?: string[]
-	stdioFunction?: string
-	bundleUrl?: string
-}): ConnectionType {
-	if (connection.command && connection.args) {
+function determineConnectionType(connection: StdioConnection): ConnectionType {
+	const conn = connection as StdioConnection & {
+		command?: string
+		args?: string[]
+	}
+	if (conn.command && conn.args) {
 		return "command"
 	}
 	if (connection.stdioFunction) {
@@ -50,16 +57,14 @@ function determineConnectionType(connection: {
 }
 
 export async function prepareStdioConnection(
-	serverDetails: ServerDetailResponse,
-	connection: (typeof serverDetails.connections)[number],
+	serverDetails: Server,
+	connection: StdioConnection,
 	config: ServerConfig,
 ): Promise<PreparedStdioConnection> {
-	const bundleConnection = connection as typeof connection & {
-		bundleUrl?: string
+	const bundleConnection = connection as StdioConnection & {
 		command?: string
 		args?: string[]
 		env?: Record<string, string>
-		stdioFunction?: string
 	}
 
 	const connectionType = determineConnectionType(bundleConnection)

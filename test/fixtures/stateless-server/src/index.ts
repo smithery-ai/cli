@@ -2,11 +2,16 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js"
 import { z } from "zod"
 
 export const configSchema = z.object({
-	apiKey: z.string(),
+	apiKey: z.string().optional(),
 	timeout: z.number().optional(),
+	nested: z
+		.object({
+			value: z.string().optional(),
+		})
+		.optional(),
 })
 
-export const stateless = true
+export const stateful = false
 
 export default function ({ config }: { config: z.infer<typeof configSchema> }) {
 	const server = new McpServer({
@@ -51,6 +56,20 @@ export default function ({ config }: { config: z.infer<typeof configSchema> }) {
 			},
 		],
 	}))
+
+	server.tool(
+		"get_config",
+		"Returns the config passed to the server",
+		{},
+		async () => ({
+			content: [
+				{
+					type: "text",
+					text: JSON.stringify(config),
+				},
+			],
+		}),
+	)
 
 	return server.server
 }

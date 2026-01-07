@@ -3,6 +3,7 @@
 import chalk from "chalk"
 import { Command } from "commander"
 import { build } from "./commands/build"
+import { deploy } from "./commands/deploy"
 import { dev } from "./commands/dev"
 import { inspectServer } from "./commands/inspect"
 import { installServer } from "./commands/install"
@@ -183,10 +184,6 @@ program
 	.option("--no-open", "Don't automatically open the playground")
 	.option("--prompt <prompt>", "Initial message to start the playground with")
 	.option(
-		"-c, --config <path>",
-		"Path to config file (default: auto-detect smithery.config.js)",
-	)
-	.option(
 		"--no-minify",
 		"Build widgets without minification for easier debugging",
 	)
@@ -198,7 +195,6 @@ program
 			tunnel: options.tunnel,
 			open: options.open,
 			initialMessage: options.prompt,
-			configFile: options.config,
 			minify: options.minify,
 		})
 	})
@@ -209,23 +205,19 @@ program
 	.description("build MCP server for production")
 	.option(
 		"-o, --out <outfile>",
-		"Output file path (default: .smithery/index.cjs)",
+		"Output file path (default: .smithery/bundle/module.js for shttp, .smithery/index.cjs for stdio)",
 	)
 	.option(
-		"--transport <type>",
+		"-t, --transport <type>",
 		"Transport type: shttp or stdio (default: shttp)",
-	)
-	.option(
-		"-c, --config <path>",
-		"Path to config file (default: auto-detect smithery.config.js)",
+		"shttp",
 	)
 	.action(async (entryFile, options) => {
 		// Validate transport option
-		const transport = options.transport || "shttp"
-		if (!["shttp", "stdio"].includes(transport)) {
+		if (!["shttp", "stdio"].includes(options.transport)) {
 			console.error(
 				chalk.red(
-					`Invalid transport type "${transport}". Valid options are: shttp, stdio`,
+					`Invalid transport type "${options.transport}". Valid options are: shttp, stdio`,
 				),
 			)
 			process.exit(1)
@@ -234,9 +226,31 @@ program
 		await build({
 			entryFile,
 			outFile: options.out,
-			transport: transport as "shttp" | "stdio",
-			configFile: options.config,
-			bundleAll: options.bundleAll,
+			transport: options.transport as "shttp" | "stdio",
+		})
+	})
+
+// Deploy command
+program
+	.command("deploy [entryFile]")
+	.description("Deploy MCP server to Smithery")
+	.option("-n, --name <name>", "Target server qualified name (e.g., @org/name)")
+	.option(
+		"-u, --url <url>",
+		"External MCP server URL (makes this an external deploy)",
+	)
+	.option("-k, --key <apikey>", "Smithery API key")
+	.option(
+		"--resume",
+		"Resume the latest paused deployment (e.g., after OAuth authorization)",
+	)
+	.action(async (entryFile, options) => {
+		await deploy({
+			entryFile,
+			key: options.key,
+			name: options.name,
+			url: options.url,
+			resume: options.resume,
 		})
 	})
 
@@ -396,4 +410,14 @@ program
 	})
 
 // Parse arguments and run
-program.parse(process.argv)
+program.parseAsync(process.argv).catch((error: unknown) => {
+	if (error instanceof Error) {
+		console.error(chalk.red(`\n❌ ${error.message}`))
+		if (process.argv.includes("--debug") && error.stack) {
+			console.error(chalk.gray(error.stack))
+		}
+	} else {
+		console.error(chalk.red(`\n❌ ${String(error)}`))
+	}
+	process.exit(1)
+})

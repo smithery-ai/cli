@@ -1,7 +1,4 @@
-import type {
-	ConnectionInfo,
-	ServerDetailResponse,
-} from "@smithery/registry/models/components"
+import type { Connection, Server } from "@smithery/registry/models/components"
 import { getClientConfiguration } from "../../config/clients.js"
 import type {
 	ConfiguredServer,
@@ -84,15 +81,12 @@ function createStdioConfig(qualifiedName: string): ConfiguredServer {
  * @param server - Server details
  * @returns The configuration type to use
  */
-function determineConfigType(
-	client: string,
-	server: ServerDetailResponse,
-): ConfigType {
+function determineConfigType(client: string, server: Server): ConfigType {
 	const clientConfig = getClientConfiguration(client)
 
 	// Check if server supports HTTP
 	const serverHasHTTP = server.connections?.some(
-		(conn: ConnectionInfo) => conn.type === "http",
+		(conn: Connection) => conn.type === "http",
 	)
 
 	// If server has HTTP, check OAuth support
@@ -118,7 +112,7 @@ function determineConfigType(
 export function formatServerConfig(
 	qualifiedName: string,
 	client: string,
-	server: ServerDetailResponse,
+	server: Server,
 ): ConfiguredServer {
 	const configType = determineConfigType(client, server)
 

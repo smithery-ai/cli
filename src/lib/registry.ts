@@ -1,13 +1,9 @@
 import { type SDKOptions, SmitheryRegistry } from "@smithery/registry"
-import type {
-	ConnectionInfo,
-	ServerDetailResponse,
-} from "@smithery/registry/models/components"
+import type { Connection, Server } from "@smithery/registry/models/components"
 import {
 	RequestTimeoutError,
 	SDKValidationError,
-	ServerError,
-	UnauthorizedError,
+	SmitheryRegistryError,
 } from "@smithery/registry/models/errors"
 import fetch from "cross-fetch"
 import { config as dotenvConfig } from "dotenv"
@@ -37,12 +33,7 @@ const createSDKOptions = (apiKey?: string): SDKOptions => {
 			},
 			retryConnectionErrors: true,
 		},
-	}
-	if (
-		process.env.NODE_ENV === "development" &&
-		process.env.LOCAL_REGISTRY_ENDPOINT
-	) {
-		options.serverURL = process.env.LOCAL_REGISTRY_ENDPOINT
+		serverURL: process.env.REGISTRY_ENDPOINT,
 	}
 	return options
 }
@@ -53,8 +44,8 @@ const createSDKOptions = (apiKey?: string): SDKOptions => {
  * @returns Details about the server and the selected connection
  */
 export interface ResolvedServer {
-	server: ServerDetailResponse
-	connection: ConnectionInfo
+	server: Server
+	connection: Connection
 }
 
 export const resolveServer = async (
@@ -98,9 +89,15 @@ export const resolveServer = async (
 		`Resolving package ${serverQualifiedName} using Smithery SDK at ${options.serverURL || "<default>"}`,
 	)
 
+	// Parse qualified name into namespace and name parts
+	const parts = serverQualifiedName.split("/")
+	const namespace = parts.length === 2 ? parts[0] : ""
+	const name = parts.length === 2 ? parts[1] : serverQualifiedName
+
 	try {
 		const result = await smitheryRegistry.servers.get({
-			qualifiedName: serverQualifiedName,
+			namespace,
+			name,
 		})
 		verbose("Successfully received server data from Smithery SDK")
 		verbose(`Server data: ${JSON.stringify(result, null, 2)}`)
@@ -124,11 +121,12 @@ export const resolveServer = async (
 			verbose(`SDK validation error: ${error.pretty()}`)
 			verbose(JSON.stringify(error.rawValue))
 			throw error
-		} else if (error instanceof UnauthorizedError) {
-			verbose(`Unauthorized: ${error.message}`)
-			throw error
-		} else if (error instanceof ServerError) {
-			verbose(`Server error: ${error.message}`)
+		} else if (error instanceof SmitheryRegistryError) {
+			if (error.statusCode === 401) {
+				verbose(`Unauthorized: ${error.message}`)
+			} else {
+				verbose(`Server error: ${error.message}`)
+			}
 			throw error
 		} else if (error instanceof Error) {
 			verbose(`Unknown error: ${error.message}`)
@@ -214,11 +212,12 @@ export const searchServers = async (
 			verbose(`SDK validation error: ${error.pretty()}`)
 			verbose(JSON.stringify(error.rawValue))
 			throw error
-		} else if (error instanceof UnauthorizedError) {
-			verbose(`Unauthorized: ${error.message}`)
-			throw error
-		} else if (error instanceof ServerError) {
-			verbose(`Server error: ${error.message}`)
+		} else if (error instanceof SmitheryRegistryError) {
+			if (error.statusCode === 401) {
+				verbose(`Unauthorized: ${error.message}`)
+			} else {
+				verbose(`Server error: ${error.message}`)
+			}
 			throw error
 		} else if (error instanceof Error) {
 			throw new Error(`Failed to search servers: ${error.message}`)
@@ -231,7 +230,7 @@ export const searchServers = async (
  * Validates an API key by making a test request to the registry
  * @param apiKey API key to validate
  * @returns Promise that resolves to true if valid, throws error if invalid
- * @throws UnauthorizedError if API key is invalid
+ * @throws SmitheryRegistryError if API key is invalid
  */
 export const validateApiKey = async (apiKey: string): Promise<boolean> => {
 	const options = createSDKOptions(apiKey)
@@ -244,7 +243,7 @@ export const validateApiKey = async (apiKey: string): Promise<boolean> => {
 		return true
 	} catch (error: unknown) {
 		verbose(`API key validation failed: ${JSON.stringify(error)}`)
-		if (error instanceof UnauthorizedError) {
+		if (error instanceof SmitheryRegistryError && error.statusCode === 401) {
 			verbose("API key is invalid (unauthorized)")
 			throw error
 		}

@@ -1,12 +1,11 @@
-import { type ChildProcess, spawn } from "node:child_process"
 import { existsSync } from "node:fs"
 import { join } from "node:path"
 import chalk from "chalk"
 import { DEFAULT_PORT } from "../constants"
 import { buildServer } from "../lib/build"
 import { setupTunnelAndPlayground } from "../lib/dev-lifecycle"
+import { createDevServer } from "../lib/dev-server"
 import { debug } from "../lib/logger"
-import { cleanupChildProcess } from "../utils/child-process-cleanup"
 import { setupProcessLifecycle } from "../utils/process-lifecycle"
 import { ensureApiKey } from "../utils/runtime"
 
@@ -17,7 +16,6 @@ interface DevOptions {
 	tunnel?: boolean
 	open?: boolean
 	initialMessage?: string
-	configFile?: string
 	minify?: boolean
 }
 
@@ -27,25 +25,23 @@ export async function dev(options: DevOptions = {}): Promise<void> {
 		const apiKey = await ensureApiKey(options.key)
 
 		const smitheryDir = join(".smithery")
-		const outFile = join(smitheryDir, "index.cjs")
+		const outFile = join(smitheryDir, "bundle", "module.js")
 		const finalPort = options.port || DEFAULT_PORT.toString()
 		const shouldSetupTunnel = options.tunnel !== false
 
-		let childProcess: ChildProcess | undefined
+		let devServer: Awaited<ReturnType<typeof createDevServer>> | undefined
 		let tunnelListener: { close: () => Promise<void> } | undefined
 		let isFirstBuild = true
-		let isRebuilding = false
 
-		// Function to start the server process
+		// Function to start/restart the server using Miniflare
 		const startServer = async () => {
-			// Kill existing process
-			if (childProcess && !childProcess.killed) {
-				isRebuilding = true
-				childProcess.kill("SIGTERM")
-				await new Promise((resolve) => setTimeout(resolve, 100))
+			// If server exists, just reload it
+			if (devServer) {
+				await devServer.reload()
+				return
 			}
 
-			// Ensure the output file exists before starting the process (handles async fs write timing)
+			// Ensure the output file exists
 			await new Promise<void>((resolve) => {
 				if (existsSync(outFile)) {
 					return resolve()
@@ -58,54 +54,15 @@ export async function dev(options: DevOptions = {}): Promise<void> {
 				}, 50)
 			})
 
-			// Display the actual command being executed on first start
+			// Display a user-friendly message on first start
 			if (isFirstBuild) {
-				const relativeOutFile = join(process.cwd(), outFile).replace(
-					`${process.cwd()}/`,
-					"",
-				)
-				const commandStr = `node ${relativeOutFile}`
-				console.log(chalk.dim(`$ ${commandStr}`))
+				console.log(chalk.dim("> Starting local development server..."))
 			}
 
-			// Start new process with Node
-			childProcess = spawn("node", [join(process.cwd(), outFile)], {
-				stdio: ["inherit", "pipe", "pipe"],
-				env: {
-					...process.env,
-					PORT: finalPort,
-					FORCE_COLOR: "1", // Enable chalk colors even when piped
-					LOG_LEVEL: process.env.LOG_LEVEL || "debug", // Default to debug in dev mode
-				},
-			})
-
-			const processOutput = (data: Buffer) => {
-				const chunk = data.toString()
-				process.stdout.write(chunk)
-			}
-
-			childProcess.stdout?.on("data", processOutput)
-			childProcess.stderr?.on("data", (data) => {
-				const chunk = data.toString()
-				process.stderr.write(chunk)
-			})
-
-			childProcess.on("error", (error) => {
-				console.error(chalk.red("× Process error:"), error)
-				cleanup()
-			})
-
-			childProcess.on("exit", (code) => {
-				// Ignore exits during rebuilds - this is expected behavior
-				if (isRebuilding) {
-					isRebuilding = false
-					return
-				}
-
-				if (code !== 0 && code !== null) {
-					console.log(chalk.yellow(`! Process exited with code ${code}`))
-					cleanup()
-				}
+			// Start new server with Miniflare wrapper
+			devServer = await createDevServer({
+				port: Number.parseInt(finalPort, 10),
+				modulePath: outFile,
 			})
 
 			// Start tunnel and open playground on first successful start
@@ -132,9 +89,9 @@ export async function dev(options: DevOptions = {}): Promise<void> {
 		const buildContext = await buildServer({
 			outFile,
 			entryFile: options.entryFile,
-			configFile: options.configFile,
 			watch: true,
 			minify: options.minify,
+			transport: "shttp",
 			onRebuild: () => {
 				startServer()
 			},
@@ -149,12 +106,9 @@ export async function dev(options: DevOptions = {}): Promise<void> {
 				await buildContext.dispose()
 			}
 
-			// Kill child process
-			if (childProcess) {
-				await cleanupChildProcess({
-					childProcess,
-					processName: "server",
-				})
+			// Close dev server
+			if (devServer) {
+				await devServer.close()
 			}
 
 			// Close tunnel
