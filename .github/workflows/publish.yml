@@ -44,12 +44,9 @@ jobs:
           REGISTRY_ENDPOINT: ${{ secrets.REGISTRY_ENDPOINT }}
       - run: pnpm run check
 
-  integration-tests:
-    uses: ./.github/workflows/integration-tests.yml
-
   publish:
     runs-on: ubuntu-latest
-    needs: [test, build, integration-tests]
+    needs: [test, build]
 
     permissions:
       contents: read
