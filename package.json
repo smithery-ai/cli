@@ -42,7 +42,6 @@
 		"express": "^5.1.0",
 		"inquirer": "^8.2.4",
 		"inquirer-autocomplete-prompt": "^2.0.0",
-		"keytar": "^7.9.0",
 		"lodash": "^4.17.21",
 		"miniflare": "^4.20260103.0",
 		"ora": "^8.2.0",
@@ -83,5 +82,8 @@
 	},
 	"engines": {
 		"node": ">=20.0.0"
+	},
+	"optionalDependencies": {
+		"keytar": "^7.9.0"
 	}
 }

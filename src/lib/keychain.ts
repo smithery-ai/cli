@@ -4,9 +4,29 @@ import { maskConfig } from "../utils/mask-config.js"
 import { verbose } from "./logger.js"
 
 const require = createRequire(import.meta.url)
-const keytar = require("keytar")
 
 const SERVICE_NAME = "smithery"
+
+interface Keytar {
+	setPassword(service: string, account: string, password: string): Promise<void>
+	getPassword(service: string, account: string): Promise<string | null>
+	deletePassword(service: string, account: string): Promise<boolean>
+}
+
+let keytar: Keytar | null = null
+let keytarLoadAttempted = false
+
+function getKeytar(): Keytar | null {
+	if (!keytarLoadAttempted) {
+		keytarLoadAttempted = true
+		try {
+			keytar = require("keytar")
+		} catch {
+			verbose("keytar not available - keychain features disabled")
+		}
+	}
+	return keytar
+}
 const ACCOUNT_PREFIX = "config:"
 
 /**
@@ -26,12 +46,18 @@ export async function saveConfig(
 	qualifiedName: string,
 	config: ServerConfig,
 ): Promise<void> {
+	const kt = getKeytar()
+	if (!kt) {
+		verbose(`Keychain not available, skipping save for ${qualifiedName}`)
+		return
+	}
+
 	const accountName = getAccountName(qualifiedName)
 	const configJson = JSON.stringify(config)
 
 	verbose(`Saving config to keychain for ${qualifiedName}`)
 	try {
-		await keytar.setPassword(SERVICE_NAME, accountName, configJson)
+		await kt.setPassword(SERVICE_NAME, accountName, configJson)
 		verbose(`Successfully saved config to keychain for ${qualifiedName}`)
 	} catch (error) {
 		verbose(
@@ -51,11 +77,17 @@ export async function saveConfig(
 export async function getConfig(
 	qualifiedName: string,
 ): Promise<ServerConfig | null> {
+	const kt = getKeytar()
+	if (!kt) {
+		verbose(`Keychain not available, skipping read for ${qualifiedName}`)
+		return null
+	}
+
 	const accountName = getAccountName(qualifiedName)
 
 	verbose(`Reading config from keychain for ${qualifiedName}`)
 	try {
-		const configJson = await keytar.getPassword(SERVICE_NAME, accountName)
+		const configJson = await kt.getPassword(SERVICE_NAME, accountName)
 		if (!configJson) {
 			verbose(`No config found in keychain for ${qualifiedName}`)
 			return null
@@ -71,7 +103,6 @@ export async function getConfig(
 		verbose(
 			`Failed to read config from keychain: ${error instanceof Error ? error.message : String(error)}`,
 		)
-		// Return null instead of throwing - allows graceful handling
 		return null
 	}
 }
@@ -81,11 +112,17 @@ export async function getConfig(
  * @param qualifiedName - The qualified name of the server (e.g., @user/server)
  */
 export async function deleteConfig(qualifiedName: string): Promise<void> {
+	const kt = getKeytar()
+	if (!kt) {
+		verbose(`Keychain not available, skipping delete for ${qualifiedName}`)
+		return
+	}
+
 	const accountName = getAccountName(qualifiedName)
 
 	verbose(`Deleting config from keychain for ${qualifiedName}`)
 	try {
-		const deleted = await keytar.deletePassword(SERVICE_NAME, accountName)
+		const deleted = await kt.deletePassword(SERVICE_NAME, accountName)
 		if (deleted) {
 			verbose(`Successfully deleted config from keychain for ${qualifiedName}`)
 		} else {
@@ -95,6 +132,5 @@ export async function deleteConfig(qualifiedName: string): Promise<void> {
 		verbose(
 			`Failed to delete config from keychain: ${error instanceof Error ? error.message : String(error)}`,
 		)
-		// Don't throw - allow uninstall to continue even if keychain deletion fails
 	}
 }
