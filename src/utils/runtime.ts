@@ -278,27 +278,11 @@ export async function ensureApiKey(apiKey?: string): Promise<string> {
 		existingApiKey = await getApiKey()
 	}
 
-	// If no API key found, prompt for one
+	// If no API key found, prompt for one and set it as existing
 	if (!existingApiKey) {
 		const promptedApiKey = await promptForApiKey()
-
-		try {
-			await validateApiKey(promptedApiKey)
-		} catch (error) {
-			if (error instanceof SmitheryRegistryError && error.statusCode === 401) {
-				console.error(
-					chalk.red(
-						"✗ Invalid API key. Please check your API key and try again.",
-					),
-				)
-				throw error
-			}
-			// Re-throw other errors (network, timeout, etc.)
-			throw error
-		}
-
 		await setApiKey(promptedApiKey)
-		return promptedApiKey
+		existingApiKey = promptedApiKey
 	}
 
 	// Validate the existing API key
