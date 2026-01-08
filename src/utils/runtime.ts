@@ -2,11 +2,13 @@ import { exec } from "node:child_process"
 import { promisify } from "node:util"
 import { getDefaultEnvironment } from "@modelcontextprotocol/sdk/client/stdio.js"
 import type { Connection } from "@smithery/registry/models/components"
+import { SmitheryRegistryError } from "@smithery/registry/models/errors"
 import chalk from "chalk"
 import inquirer from "inquirer"
 import ora from "ora"
 import { verbose } from "../lib/logger"
-import { getApiKey, setApiKey } from "./smithery-settings"
+import { validateApiKey } from "../lib/registry"
+import { clearApiKey, getApiKey, setApiKey } from "./smithery-settings"
 
 const execAsync = promisify(exec)
 
@@ -260,34 +262,72 @@ export async function promptForApiKey(): Promise<string> {
 }
 
 /**
- * Ensures that an API key is available, prompting the user if not provided
+ * Ensures that an API key is available, validating it and prompting the user if invalid or missing
  * @param apiKey - Optional API key that may have been provided via command line
- * @returns Promise<string> The API key (either provided or prompted)
+ * @returns Promise<string> The validated API key
  */
 export async function ensureApiKey(apiKey?: string): Promise<string> {
-	// If API key provided via command line, use it
+	// Check if API key exists
+	let existingApiKey: string | undefined
+
 	if (apiKey) {
-		return apiKey
+		// API key provided via command line
+		existingApiKey = apiKey
+	} else {
+		// Check if API key exists in config
+		existingApiKey = await getApiKey()
 	}
 
-	// Check if API key exists in config
-	const savedApiKey = await getApiKey()
-	if (savedApiKey) {
-		return savedApiKey
+	// If no API key found, prompt for one and set it as existing
+	if (!existingApiKey) {
+		const promptedApiKey = await promptForApiKey()
+		await setApiKey(promptedApiKey)
+		existingApiKey = promptedApiKey
 	}
 
-	// Prompt user for API key and save it
-	const promptedApiKey = await promptForApiKey()
+	// Validate the existing API key
+	try {
+		await validateApiKey(existingApiKey)
+		// API key is valid, return it
+		return existingApiKey
+	} catch (error) {
+		// Handle invalid API key (401 error)
+		if (error instanceof SmitheryRegistryError && error.statusCode === 401) {
+			console.error(
+				chalk.red("✗ Invalid API key detected. Please enter a valid API key."),
+			)
 
-	// Save the API key to config for future use
-	const saveResult = await setApiKey(promptedApiKey)
-	if (!saveResult.success) {
-		console.warn(
-			chalk.yellow(
-				"Warning: Could not save API key to config. You may need to enter it again next time.",
-			),
-		)
+			// Clear invalid saved key if it was from config (not command line)
+			if (!apiKey) {
+				await clearApiKey()
+			}
+
+			// Prompt for new API key, validate, and save
+			const promptedApiKey = await promptForApiKey()
+
+			try {
+				await validateApiKey(promptedApiKey)
+			} catch (validationError) {
+				if (
+					validationError instanceof SmitheryRegistryError &&
+					validationError.statusCode === 401
+				) {
+					console.error(
+						chalk.red(
+							"✗ Invalid API key. Please check your API key and try again.",
+						),
+					)
+					throw validationError
+				}
+				// Re-throw other errors (network, timeout, etc.)
+				throw validationError
+			}
+
+			await setApiKey(promptedApiKey)
+			return promptedApiKey
+		}
+
+		// Re-throw other errors (network, timeout, etc.) - don't prompt for new key
+		throw error
 	}
-
-	return promptedApiKey
 }

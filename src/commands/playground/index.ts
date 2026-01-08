@@ -8,6 +8,7 @@ import type { ServerConfig } from "../../types/registry"
 import { resolveUserConfig } from "../../utils/install/user-config"
 import { setupProcessLifecycle } from "../../utils/process-lifecycle"
 import { prepareStdioConnection } from "../../utils/run/prepare-stdio-connection"
+import { ensureApiKey } from "../../utils/runtime"
 import { initializeSettings } from "../../utils/smithery-settings.js"
 import { logWithTimestamp } from "../run/utils.js"
 import { createStdioPlaygroundRunner } from "./stdio-playground-runner"
@@ -27,7 +28,7 @@ import { createStdioPlaygroundRunner } from "./stdio-playground-runner"
  * @param options.port - Port number (default: 6969 for STDIO, DEFAULT_PORT for HTTP)
  * @param options.command - Command to run as STDIO MCP server (triggers STDIO mode with raw command)
  * @param options.configOverride - Optional configuration override (from --config flag)
- * @param options.apiKey - Smithery API key for authentication
+ * @param options.apiKey - Optional Smithery API key for authentication (will be prompted/validated if not provided)
  * @param options.open - Whether to automatically open playground in browser (default: true)
  * @param options.initialMessage - Initial message to send when playground opens
  * @throws {Error} If neither server, command, nor port is provided
@@ -37,7 +38,7 @@ export async function playground(options: {
 	port?: string
 	command?: string
 	configOverride?: ServerConfig
-	apiKey: string
+	apiKey?: string
 	open?: boolean
 	initialMessage?: string
 }): Promise<void> {
@@ -48,6 +49,9 @@ export async function playground(options: {
 				`[Playground] Settings initialization warning: ${settingsResult.error}`,
 			)
 		}
+
+		// Ensure API key is available and validated
+		const apiKey = await ensureApiKey(options.apiKey)
 
 		// Mode 1: Server provided - resolve and run in playground
 		if (options.server) {
@@ -107,7 +111,7 @@ export async function playground(options: {
 						env: preparedConnection.env,
 						qualifiedName: preparedConnection.qualifiedName,
 					},
-					options.apiKey,
+					apiKey,
 					{
 						port,
 						open: options.open !== false,
@@ -131,7 +135,7 @@ export async function playground(options: {
 
 			await createStdioPlaygroundRunner(
 				{ rawCommand: options.command },
-				options.apiKey,
+				apiKey,
 				{
 					port,
 					open: options.open !== false,
@@ -149,7 +153,7 @@ export async function playground(options: {
 		if (options.port) {
 			const { listener } = await setupTunnelAndPlayground(
 				options.port,
-				options.apiKey,
+				apiKey,
 				options.open !== false,
 			)
 

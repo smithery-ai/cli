@@ -292,7 +292,7 @@ program
 			port: options.port,
 			command,
 			configOverride,
-			apiKey: await ensureApiKey(options.key),
+			apiKey: options.key,
 			open: options.open !== false,
 			initialMessage: options.prompt,
 		})
