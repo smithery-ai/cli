@@ -259,6 +259,19 @@ export const setApiKey = async (apiKey: string): Promise<SettingsResult> => {
 	return await saveSettings(settingsData, getSettingsPath())
 }
 
+export const clearApiKey = async (): Promise<SettingsResult> => {
+	const initResult = await initializeSettings()
+	if (!initResult.success || !initResult.data) {
+		return initResult
+	}
+
+	// Remove apiKey from settings
+	const { apiKey: _removed, ...settingsWithoutKey } = initResult.data
+	settingsData = settingsWithoutKey as Settings
+
+	return await saveSettings(settingsData, getSettingsPath())
+}
+
 export const hasAskedConsent = async (): Promise<boolean> => {
 	await initializeSettings()
 	return settingsData?.askedConsent || false

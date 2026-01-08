@@ -5,8 +5,10 @@ import type { Connection } from "@smithery/registry/models/components"
 import chalk from "chalk"
 import inquirer from "inquirer"
 import ora from "ora"
+import { validateApiKey } from "../lib/registry"
+import { SmitheryRegistryError } from "@smithery/registry/models/errors"
 import { verbose } from "../lib/logger"
-import { getApiKey, setApiKey } from "./smithery-settings"
+import { clearApiKey, getApiKey, setApiKey } from "./smithery-settings"
 
 const execAsync = promisify(exec)
 
@@ -260,24 +262,24 @@ export async function promptForApiKey(): Promise<string> {
 }
 
 /**
- * Ensures that an API key is available, prompting the user if not provided
- * @param apiKey - Optional API key that may have been provided via command line
- * @returns Promise<string> The API key (either provided or prompted)
+ * Prompts for API key, validates it, and saves it
+ * @returns Promise<string> The validated API key
  */
-export async function ensureApiKey(apiKey?: string): Promise<string> {
-	// If API key provided via command line, use it
-	if (apiKey) {
-		return apiKey
-	}
-
-	// Check if API key exists in config
-	const savedApiKey = await getApiKey()
-	if (savedApiKey) {
-		return savedApiKey
-	}
-
-	// Prompt user for API key and save it
+async function promptValidateAndSaveApiKey(): Promise<string> {
 	const promptedApiKey = await promptForApiKey()
+
+	try {
+		await validateApiKey(promptedApiKey)
+	} catch (error) {
+		if (error instanceof SmitheryRegistryError && error.statusCode === 401) {
+			console.error(
+				chalk.red("✗ Invalid API key. Please check your API key and try again."),
+			)
+			throw error
+		}
+		// Re-throw other errors (network, timeout, etc.)
+		throw error
+	}
 
 	// Save the API key to config for future use
 	const saveResult = await setApiKey(promptedApiKey)
@@ -290,4 +292,52 @@ export async function ensureApiKey(apiKey?: string): Promise<string> {
 	}
 
 	return promptedApiKey
+}
+
+/**
+ * Ensures that an API key is available, validating it and prompting the user if invalid or missing
+ * @param apiKey - Optional API key that may have been provided via command line
+ * @returns Promise<string> The validated API key
+ */
+export async function ensureApiKey(apiKey?: string): Promise<string> {
+	// Check if API key exists
+	let existingApiKey: string | undefined
+
+	if (apiKey) {
+		// API key provided via command line
+		existingApiKey = apiKey
+	} else {
+		// Check if API key exists in config
+		existingApiKey = await getApiKey()
+	}
+
+	// If no API key found, prompt for one
+	if (!existingApiKey) {
+		return await promptValidateAndSaveApiKey()
+	}
+
+	// Validate the existing API key
+	try {
+		await validateApiKey(existingApiKey)
+		// API key is valid, return it
+		return existingApiKey
+	} catch (error) {
+		// Handle invalid API key (401 error)
+		if (error instanceof SmitheryRegistryError && error.statusCode === 401) {
+			console.error(
+				chalk.red("✗ Invalid API key detected. Please enter a valid API key."),
+			)
+
+			// Clear invalid saved key if it was from config (not command line)
+			if (!apiKey) {
+				await clearApiKey()
+			}
+
+			// Prompt for new API key, validate, and save
+			return await promptValidateAndSaveApiKey()
+		}
+
+		// Re-throw other errors (network, timeout, etc.) - don't prompt for new key
+		throw error
+	}
 }
