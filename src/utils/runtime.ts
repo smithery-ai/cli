@@ -2,12 +2,12 @@ import { exec } from "node:child_process"
 import { promisify } from "node:util"
 import { getDefaultEnvironment } from "@modelcontextprotocol/sdk/client/stdio.js"
 import type { Connection } from "@smithery/registry/models/components"
+import { SmitheryRegistryError } from "@smithery/registry/models/errors"
 import chalk from "chalk"
 import inquirer from "inquirer"
 import ora from "ora"
-import { validateApiKey } from "../lib/registry"
-import { SmitheryRegistryError } from "@smithery/registry/models/errors"
 import { verbose } from "../lib/logger"
+import { validateApiKey } from "../lib/registry"
 import { clearApiKey, getApiKey, setApiKey } from "./smithery-settings"
 
 const execAsync = promisify(exec)
@@ -273,7 +273,9 @@ async function promptValidateAndSaveApiKey(): Promise<string> {
 	} catch (error) {
 		if (error instanceof SmitheryRegistryError && error.statusCode === 401) {
 			console.error(
-				chalk.red("✗ Invalid API key. Please check your API key and try again."),
+				chalk.red(
+					"✗ Invalid API key. Please check your API key and try again.",
+				),
 			)
 			throw error
 		}
