@@ -1,5 +1,5 @@
 import "../utils/suppress-punycode-warning"
-import { RequestTimeoutError } from "@smithery/registry/models/errors"
+import { APIConnectionTimeoutError } from "@smithery/api"
 import chalk from "chalk"
 import ora from "ora"
 import type { ValidClient } from "../config/clients"
@@ -122,7 +122,7 @@ export async function installServer(
 		verbose(
 			`Installation error: ${error instanceof Error ? error.stack : JSON.stringify(error)}`,
 		)
-		if (error instanceof RequestTimeoutError) {
+		if (error instanceof APIConnectionTimeoutError) {
 			console.error(
 				chalk.red(
 					"Error: Request timed out. Please check your connection and try again.",

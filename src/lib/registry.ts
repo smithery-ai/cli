@@ -1,10 +1,10 @@
-import { type SDKOptions, SmitheryRegistry } from "@smithery/registry"
-import type { Connection, Server } from "@smithery/registry/models/components"
 import {
-	RequestTimeoutError,
-	SDKValidationError,
-	SmitheryRegistryError,
-} from "@smithery/registry/models/errors"
+	APIConnectionTimeoutError,
+	AuthenticationError,
+	type ClientOptions,
+	Smithery,
+} from "@smithery/api"
+import type { ServerRetrieveResponse } from "@smithery/api/resources/servers/servers"
 import fetch from "cross-fetch"
 import { config as dotenvConfig } from "dotenv"
 import { ANALYTICS_ENDPOINT } from "../constants"
@@ -19,21 +19,12 @@ dotenvConfig({ quiet: true })
  * @param apiKey Optional API key for authentication
  * @returns SDK options configured for the registry
  */
-const createSDKOptions = (apiKey?: string): SDKOptions => {
-	const options: SDKOptions = {
-		bearerAuth: apiKey ?? process.env.SMITHERY_BEARER_AUTH ?? "",
-		timeoutMs: 5000,
-		retryConfig: {
-			strategy: "backoff",
-			backoff: {
-				initialInterval: 1000,
-				maxInterval: 4000,
-				exponent: 2,
-				maxElapsedTime: 15000,
-			},
-			retryConnectionErrors: true,
-		},
-		serverURL: process.env.REGISTRY_ENDPOINT,
+const createSDKOptions = (apiKey?: string): ClientOptions => {
+	const options: ClientOptions = {
+		apiKey: apiKey ?? process.env.SMITHERY_API_KEY ?? "",
+		timeout: 5000,
+		maxRetries: 2,
+		baseURL: process.env.REGISTRY_ENDPOINT,
 	}
 	return options
 }
@@ -44,15 +35,17 @@ const createSDKOptions = (apiKey?: string): SDKOptions => {
  * @returns Details about the server and the selected connection
  */
 export interface ResolvedServer {
-	server: Server
-	connection: Connection
+	server: ServerRetrieveResponse
+	connection:
+		| ServerRetrieveResponse.StdioConnection
+		| ServerRetrieveResponse.HTTPConnection
 }
 
 export const resolveServer = async (
 	serverQualifiedName: string,
 ): Promise<ResolvedServer> => {
 	// Read API key from environment variable
-	const apiKey = process.env.SMITHERY_BEARER_AUTH
+	const apiKey = process.env.SMITHERY_API_KEY
 
 	// Fire analytics event if apiKey is missing
 	if (ANALYTICS_ENDPOINT) {
@@ -84,21 +77,13 @@ export const resolveServer = async (
 	}
 
 	const options = createSDKOptions(apiKey)
-	const smitheryRegistry = new SmitheryRegistry(options)
+	const smithery = new Smithery(options)
 	verbose(
-		`Resolving package ${serverQualifiedName} using Smithery SDK at ${options.serverURL || "<default>"}`,
+		`Resolving package ${serverQualifiedName} using Smithery SDK at ${options.baseURL || "<default>"}`,
 	)
 
-	// Parse qualified name into namespace and name parts
-	const parts = serverQualifiedName.split("/")
-	const namespace = parts.length === 2 ? parts[0] : ""
-	const name = parts.length === 2 ? parts[1] : serverQualifiedName
-
 	try {
-		const result = await smitheryRegistry.servers.get({
-			namespace,
-			name,
-		})
+		const result = await smithery.servers.retrieve(serverQualifiedName)
 		verbose("Successfully received server data from Smithery SDK")
 		verbose(`Server data: ${JSON.stringify(result, null, 2)}`)
 
@@ -114,22 +99,14 @@ export const resolveServer = async (
 			connection,
 		}
 	} catch (error: unknown) {
-		if (error instanceof RequestTimeoutError) {
-			// Preserve RequestTimeoutError type
+		if (error instanceof APIConnectionTimeoutError) {
+			// Preserve timeout error type
 			throw error
-		} else if (error instanceof SDKValidationError) {
-			verbose(`SDK validation error: ${error.pretty()}`)
-			verbose(JSON.stringify(error.rawValue))
-			throw error
-		} else if (error instanceof SmitheryRegistryError) {
-			if (error.statusCode === 401) {
-				verbose(`Unauthorized: ${error.message}`)
-			} else {
-				verbose(`Server error: ${error.message}`)
-			}
+		} else if (error instanceof AuthenticationError) {
+			verbose(`Unauthorized: ${error.message}`)
 			throw error
 		} else if (error instanceof Error) {
-			verbose(`Unknown error: ${error.message}`)
+			verbose(`Server error: ${error.message}`)
 			throw error
 		} else {
 			throw new Error(`Failed to resolve package: ${String(error)}`)
@@ -152,52 +129,26 @@ export const searchServers = async (
 		displayName?: string
 		description?: string
 		useCount: number
-		// @TODO: Add verified field when API supports it
-		// verified?: boolean
+		verified: boolean
 	}>
 > => {
 	const options = createSDKOptions(apiKey)
-	const smitheryRegistry = new SmitheryRegistry(options)
+	const smithery = new Smithery(options)
 	verbose(`Searching servers for term: ${searchTerm}`)
 
 	try {
-		const iterator = await smitheryRegistry.servers.list({
+		const response = await smithery.servers.list({
 			q: searchTerm,
 			pageSize: 10,
 		})
 
-		// Get the first page from the iterator
-		const servers: Array<{
-			qualifiedName: string
-			displayName?: string
-			description?: string
-			useCount: number
-		}> = []
-
-		for await (const page of iterator) {
-			// The page is ListServersResponse, check its structure
-			const pageData = page as {
-				servers?: Array<{
-					qualifiedName: string
-					displayName?: string
-					description?: string
-					useCount?: number
-				}>
-			}
-
-			if (pageData.servers) {
-				servers.push(
-					...pageData.servers.map((server) => ({
-						qualifiedName: server.qualifiedName,
-						displayName: server.displayName,
-						description: server.description,
-						useCount: server.useCount ?? 0,
-					})),
-				)
-			}
-			// Only get the first page (pageSize: 10)
-			break
-		}
+		const servers = (response.servers || []).map((server) => ({
+			qualifiedName: server.qualifiedName,
+			displayName: server.displayName ?? undefined,
+			description: server.description ?? undefined,
+			useCount: server.useCount ?? 0,
+			verified: server.verified ?? false,
+		}))
 
 		verbose(`Search returned ${servers.length} servers`)
 		return servers
@@ -205,19 +156,10 @@ export const searchServers = async (
 		verbose(
 			`Search error: ${error instanceof Error ? error.message : String(error)}`,
 		)
-		if (error instanceof RequestTimeoutError) {
-			// Preserve RequestTimeoutError type
+		if (error instanceof APIConnectionTimeoutError) {
 			throw error
-		} else if (error instanceof SDKValidationError) {
-			verbose(`SDK validation error: ${error.pretty()}`)
-			verbose(JSON.stringify(error.rawValue))
-			throw error
-		} else if (error instanceof SmitheryRegistryError) {
-			if (error.statusCode === 401) {
-				verbose(`Unauthorized: ${error.message}`)
-			} else {
-				verbose(`Server error: ${error.message}`)
-			}
+		} else if (error instanceof AuthenticationError) {
+			verbose(`Unauthorized: ${error.message}`)
 			throw error
 		} else if (error instanceof Error) {
 			throw new Error(`Failed to search servers: ${error.message}`)
@@ -230,20 +172,20 @@ export const searchServers = async (
  * Validates an API key by making a test request to the registry
  * @param apiKey API key to validate
  * @returns Promise that resolves to true if valid, throws error if invalid
- * @throws SmitheryRegistryError if API key is invalid
+ * @throws AuthenticationError if API key is invalid
  */
 export const validateApiKey = async (apiKey: string): Promise<boolean> => {
 	const options = createSDKOptions(apiKey)
-	const smitheryRegistry = new SmitheryRegistry(options)
+	const smithery = new Smithery(options)
 	verbose("Validating API key with Smithery SDK")
 
 	try {
-		await smitheryRegistry.servers.list({ pageSize: 1 })
+		await smithery.servers.list({ pageSize: 1 })
 		verbose("API key validation successful")
 		return true
 	} catch (error: unknown) {
 		verbose(`API key validation failed: ${JSON.stringify(error)}`)
-		if (error instanceof SmitheryRegistryError && error.statusCode === 401) {
+		if (error instanceof AuthenticationError) {
 			verbose("API key is invalid (unauthorized)")
 			throw error
 		}

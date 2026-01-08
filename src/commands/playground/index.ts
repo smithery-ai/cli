@@ -1,4 +1,4 @@
-import { RequestTimeoutError } from "@smithery/registry/models/errors"
+import { APIConnectionTimeoutError } from "@smithery/api"
 import chalk from "chalk"
 import ora from "ora"
 import { setupTunnelAndPlayground } from "../../lib/dev-lifecycle"
@@ -186,7 +186,7 @@ export async function playground(options: {
 		)
 		process.exit(1)
 	} catch (error) {
-		if (error instanceof RequestTimeoutError) {
+		if (error instanceof APIConnectionTimeoutError) {
 			logWithTimestamp(
 				"[Playground] Error: Request timed out. Please check your connection and try again.",
 			)

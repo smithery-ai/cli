@@ -1,4 +1,6 @@
-import type { Server } from "@smithery/registry/models/components"
+import type { ServerRetrieveResponse } from "@smithery/api/resources/servers/servers"
+
+type Server = ServerRetrieveResponse
 
 export const noConfigServer: Server = {
 	qualifiedName: "@test/no-config-server",

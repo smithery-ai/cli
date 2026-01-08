@@ -17,9 +17,9 @@ importers:
       '@ngrok/ngrok':
         specifier: ^1.5.1
         version: 1.7.0
-      '@smithery/registry':
-        specifier: ^0.7.2
-        version: 0.7.2
+      '@smithery/api':
+        specifier: git+ssh://git@github.com:smithery-ai/typescript-api.git
+        version: https://codeload.github.com/smithery-ai/typescript-api/tar.gz/a97dcf95c4592025f84fe333cc83789a3b8982ad
       chalk:
         specifier: ^4.1.2
         version: 4.1.2
@@ -68,10 +68,6 @@ importers:
       yaml:
         specifier: ^2.3.4
         version: 2.8.2
-    optionalDependencies:
-      keytar:
-        specifier: ^7.9.0
-        version: 7.9.0
     devDependencies:
       '@biomejs/biome':
         specifier: ^2.2.4
@@ -115,6 +111,10 @@ importers:
       zod:
         specifier: ^4
         version: 4.2.1
+    optionalDependencies:
+      keytar:
+        specifier: ^7.9.0
+        version: 7.9.0
 
 packages:
 
@@ -1048,8 +1048,9 @@ packages:
     resolution: {integrity: sha512-P1Cz1dWaFfR4IR+U13mqqiGsLFf1KbayybWwdd2vfctdV6hDpUkgCY0nKOLLTMSoRd/jJNjtbqzf13K8DCCXQw==}
     engines: {node: '>=18'}
 
-  '@smithery/registry@0.7.2':
-    resolution: {integrity: sha512-TVg9Ck179xVq3qmvTJv4KmhIKjVueTT054IIGEtlo9hry5yiIE9PmA7LGiV8wlGsMUjb6CkGx4tuVWr4aYSxtg==}
+  '@smithery/api@https://codeload.github.com/smithery-ai/typescript-api/tar.gz/a97dcf95c4592025f84fe333cc83789a3b8982ad':
+    resolution: {tarball: https://codeload.github.com/smithery-ai/typescript-api/tar.gz/a97dcf95c4592025f84fe333cc83789a3b8982ad}
+    version: 0.1.0-alpha.2
 
   '@smithery/sdk@4.0.1':
     resolution: {integrity: sha512-u5lZYSzXLP72AJuOro4WLfcmn9X8exE75zcl9CbUb5Ydi/uIiMUr3vu8qzZ6/hXYI51wpiclQ8J4OYEKKOtYGQ==}
@@ -3118,9 +3119,7 @@ snapshots:
 
   '@sindresorhus/is@7.2.0': {}
 
-  '@smithery/registry@0.7.2':
-    dependencies:
-      zod: 4.2.1
+  '@smithery/api@https://codeload.github.com/smithery-ai/typescript-api/tar.gz/a97dcf95c4592025f84fe333cc83789a3b8982ad': {}
 
   '@smithery/sdk@4.0.1(@modelcontextprotocol/sdk@1.25.1(hono@4.11.1)(zod@4.2.1))(zod@4.2.1)':
     dependencies:

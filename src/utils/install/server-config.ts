@@ -1,4 +1,10 @@
-import type { Connection, Server } from "@smithery/registry/models/components"
+import type { ServerRetrieveResponse } from "@smithery/api/resources/servers/servers"
+
+type Connection =
+	| ServerRetrieveResponse.StdioConnection
+	| ServerRetrieveResponse.HTTPConnection
+type Server = ServerRetrieveResponse
+
 import { getClientConfiguration } from "../../config/clients.js"
 import type {
 	ConfiguredServer,

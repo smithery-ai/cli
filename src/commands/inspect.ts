@@ -2,7 +2,7 @@ import "../utils/suppress-punycode-warning"
 import { Client } from "@modelcontextprotocol/sdk/client/index.js"
 import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js"
 import { LoggingMessageNotificationSchema } from "@modelcontextprotocol/sdk/types.js"
-import { RequestTimeoutError } from "@smithery/registry/models/errors"
+import { APIConnectionTimeoutError } from "@smithery/api"
 import chalk from "chalk"
 import inquirer from "inquirer"
 import ora from "ora"
@@ -256,7 +256,7 @@ export async function inspectServer(
 		await connectServer(transport)
 	} catch (error) {
 		spinner.fail(`Failed to inspect ${qualifiedName}`)
-		if (error instanceof RequestTimeoutError) {
+		if (error instanceof APIConnectionTimeoutError) {
 			console.error(
 				chalk.red(
 					"Error: Request timed out. Please check your connection and try again.",

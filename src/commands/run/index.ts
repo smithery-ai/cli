@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import { RequestTimeoutError } from "@smithery/registry/models/errors"
+import { APIConnectionTimeoutError } from "@smithery/api"
 import { getConfig } from "../../lib/keychain"
 import { resolveServer } from "../../lib/registry"
 import type { ServerConfig } from "../../types/registry"
@@ -92,7 +92,7 @@ export async function run(qualifiedName: string, configOverride: ServerConfig) {
 				)
 		}
 	} catch (error) {
-		if (error instanceof RequestTimeoutError) {
+		if (error instanceof APIConnectionTimeoutError) {
 			logWithTimestamp(
 				"[Runner] Error: Request timed out. Please check your connection and try again.",
 			)

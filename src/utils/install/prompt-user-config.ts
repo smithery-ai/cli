@@ -1,7 +1,12 @@
-import type { Connection } from "@smithery/registry/models/components"
+import type { ServerRetrieveResponse } from "@smithery/api/resources/servers/servers"
+
+type Connection =
+	| ServerRetrieveResponse.StdioConnection
+	| ServerRetrieveResponse.HTTPConnection
+
 import chalk from "chalk"
 import inquirer from "inquirer"
-import type { ServerConfig } from "../../types/registry"
+import type { JSONSchema, ServerConfig } from "../../types/registry"
 import { validateAndFormatConfig } from "./user-config.js"
 
 /**
@@ -15,14 +20,15 @@ export async function collectConfigValues(
 	existingValues?: ServerConfig,
 ): Promise<ServerConfig> {
 	// Early exit if no config needed
-	if (!connection.configSchema?.properties) {
+	const configSchema = connection.configSchema as JSONSchema | undefined
+	if (!configSchema?.properties) {
 		return {}
 	}
 	const baseConfig = existingValues || {}
 
 	// Collect missing values
-	const properties = connection.configSchema.properties
-	const required = new Set<string>(connection.configSchema.required || [])
+	const properties = configSchema.properties
+	const required = new Set<string>(configSchema.required || [])
 
 	const collectedConfig: ServerConfig = {}
 

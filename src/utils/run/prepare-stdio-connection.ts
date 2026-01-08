@@ -1,7 +1,8 @@
-import type {
-	Server,
-	StdioConnection,
-} from "@smithery/registry/models/components"
+import type { ServerRetrieveResponse } from "@smithery/api/resources/servers/servers"
+
+type Server = ServerRetrieveResponse
+type StdioConnection = ServerRetrieveResponse.StdioConnection
+
 import { logWithTimestamp } from "../../commands/run/utils.js"
 import {
 	ensureBundleInstalled,

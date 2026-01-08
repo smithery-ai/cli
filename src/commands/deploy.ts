@@ -1,7 +1,7 @@
 import { existsSync, readFileSync } from "node:fs"
 import { join } from "node:path"
-import { SmitheryRegistry } from "@smithery/registry"
-import type { DeploymentLogEntry } from "@smithery/registry/models/components"
+import { Smithery } from "@smithery/api"
+import type { DeploymentRetrieveResponse } from "@smithery/api/resources/servers/deployments"
 import type { DeployPayload } from "@smithery/sdk/bundle"
 import chalk from "chalk"
 import { buildDeployBundle } from "../lib/bundle.js"
@@ -19,28 +19,10 @@ const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
 
 function createRegistry(apiKey: string) {
 	const registryEndpoint = process.env.REGISTRY_ENDPOINT
-	if (!registryEndpoint) {
-		throw new Error(
-			"Missing REGISTRY_ENDPOINT environment variable. This should have been injected during build.",
-		)
-	}
-	return new SmitheryRegistry({
-		bearerAuth: apiKey,
-		serverURL: registryEndpoint,
+	return new Smithery({
+		apiKey,
+		baseURL: registryEndpoint || "https://api.smithery.ai",
 	})
-}
-
-/** Parse a qualified name into namespace and name parts */
-function parseQualifiedName(qualifiedName: string): {
-	namespace: string
-	name: string
-} {
-	const parts = qualifiedName.split("/")
-	if (parts.length === 2) {
-		return { namespace: parts[0], name: parts[1] }
-	}
-	// Single-segment QN: namespace is empty
-	return { namespace: "", name: qualifiedName }
 }
 
 export async function deploy(options: DeployOptions = {}) {
@@ -66,7 +48,6 @@ export async function deploy(options: DeployOptions = {}) {
 	}
 
 	const registry = createRegistry(apiKey)
-	const { namespace, name } = parseQualifiedName(serverName)
 
 	if (options.resume) {
 		console.log(chalk.cyan(`\nResuming latest deployment for ${serverName}...`))
@@ -76,19 +57,11 @@ export async function deploy(options: DeployOptions = {}) {
 			),
 		)
 
-		const resumeResult = await registry.servers.resumeDeployment({
-			namespace,
-			name,
-			id: "latest",
+		const resumeResult = await registry.servers.deployments.resume("latest", {
+			qualifiedName: serverName,
 		})
 
-		await pollDeployment(
-			registry,
-			serverName,
-			namespace,
-			name,
-			resumeResult.deploymentId,
-		)
+		await pollDeployment(registry, serverName, resumeResult.deploymentId)
 		return
 	}
 
@@ -131,23 +104,11 @@ export async function deploy(options: DeployOptions = {}) {
 	console.log(chalk.dim("> Uploading deployment..."))
 
 	try {
-		const deployRequest = {
-			namespace,
-			name,
-			deployRequest: {
-				payload: JSON.stringify(payload),
-				module: moduleContent,
-				sourcemap: sourcemapContent,
-			},
-		}
-		if (process.argv.includes("--debug")) {
-			console.log(
-				chalk.dim(
-					`> SDK request: ${JSON.stringify({ namespace, name, hasModule: !!moduleContent })}`,
-				),
-			)
-		}
-		const result = await registry.servers.deploy(deployRequest)
+		const result = await registry.servers.deployments.deploy(serverName, {
+			payload: JSON.stringify(payload),
+			module: moduleContent,
+			sourcemap: sourcemapContent,
+		})
 
 		console.log(
 			chalk.dim(
@@ -160,13 +121,7 @@ export async function deploy(options: DeployOptions = {}) {
 			),
 		)
 
-		await pollDeployment(
-			registry,
-			serverName,
-			namespace,
-			name,
-			result.deploymentId,
-		)
+		await pollDeployment(registry, serverName, result.deploymentId)
 	} catch (error) {
 		if (error instanceof Error) {
 			throw error
@@ -179,19 +134,15 @@ export async function deploy(options: DeployOptions = {}) {
 }
 
 async function pollDeployment(
-	registry: SmitheryRegistry,
+	registry: Smithery,
 	serverName: string,
-	namespace: string,
-	name: string,
 	deploymentId: string,
 ) {
 	let lastLoggedIndex = 0
 
 	while (true) {
-		const data = await registry.servers.getDeploymentStatus({
-			namespace,
-			name,
-			id: deploymentId,
+		const data = await registry.servers.deployments.retrieve(deploymentId, {
+			qualifiedName: serverName,
 		})
 
 		// Log new logs
@@ -233,10 +184,8 @@ async function pollDeployment(
 				})
 
 				console.log(chalk.cyan("\nResuming deployment..."))
-				await registry.servers.resumeDeployment({
-					namespace,
-					name,
-					id: deploymentId,
+				await registry.servers.deployments.resume(deploymentId, {
+					qualifiedName: serverName,
 				})
 
 				await sleep(2000)
@@ -254,7 +203,7 @@ async function pollDeployment(
 			)
 		) {
 			const errorLog = data.logs?.find(
-				(l: DeploymentLogEntry) => l.level === "error",
+				(l: DeploymentRetrieveResponse.Log) => l.level === "error",
 			)
 			const errorMessage = errorLog?.message || "Deployment failed"
 			console.error(chalk.red(`\n❌ Deployment failed: ${errorMessage}`))

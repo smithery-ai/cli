@@ -3,10 +3,11 @@
  * Tests the 3 connection preparation paths: direct, stdioFunction, and bundle
  */
 
-import type {
-	Server,
-	StdioConnection,
-} from "@smithery/registry/models/components"
+import type { ServerRetrieveResponse } from "@smithery/api/resources/servers/servers"
+
+type Server = ServerRetrieveResponse
+type StdioConnection = ServerRetrieveResponse.StdioConnection
+
 import { beforeEach, describe, expect, test, vi } from "vitest"
 
 // Mock dependencies

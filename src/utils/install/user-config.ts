@@ -1,4 +1,9 @@
-import type { Connection } from "@smithery/registry/models/components"
+import type { ServerRetrieveResponse } from "@smithery/api/resources/servers/servers"
+
+type Connection =
+	| ServerRetrieveResponse.StdioConnection
+	| ServerRetrieveResponse.HTTPConnection
+
 import type ora from "ora"
 import { getConfig } from "../../lib/keychain"
 import { verbose } from "../../lib/logger"
@@ -77,18 +82,17 @@ export async function validateAndFormatConfig(
 	connection: Connection,
 	configValues?: ServerConfig,
 ): Promise<ServerConfig> {
-	if (!connection.configSchema?.properties) {
+	const configSchema = connection.configSchema as JSONSchema | undefined
+	if (!configSchema?.properties) {
 		return configValues || {}
 	}
 
-	const required = new Set<string>(connection.configSchema.required || [])
+	const required = new Set<string>(configSchema.required || [])
 	const formattedValues: ServerConfig = {}
 	const missingRequired: string[] = []
 	const validationErrors: Array<{ field: string; error: string }> = []
 
-	for (const [key, prop] of Object.entries(
-		connection.configSchema.properties,
-	)) {
+	for (const [key, prop] of Object.entries(configSchema.properties)) {
 		const schemaProp = prop as JSONSchema
 		const value = configValues?.[key]
 
@@ -150,8 +154,8 @@ export async function validateAndFormatConfig(
 async function getConfigSchema(
 	connection: Connection,
 	qualifiedName: string,
-): Promise<Connection["configSchema"] | undefined> {
-	let configSchema = connection.configSchema
+): Promise<JSONSchema | undefined> {
+	let configSchema = connection.configSchema as JSONSchema | undefined
 	if ("bundleUrl" in connection && connection.bundleUrl) {
 		verbose("Downloading bundle to extract user_config schema...")
 		const bundleDir = await ensureBundleInstalled(
@@ -174,7 +178,9 @@ async function createConnectionWithSchema(
 	const configSchema = await getConfigSchema(connection, qualifiedName)
 	return {
 		...connection,
-		...(configSchema && { configSchema }),
+		...(configSchema && {
+			configSchema: configSchema as { [key: string]: unknown },
+		}),
 	} as Connection
 }
 

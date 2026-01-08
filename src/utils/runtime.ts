@@ -1,14 +1,18 @@
 import { exec } from "node:child_process"
 import { promisify } from "node:util"
 import { getDefaultEnvironment } from "@modelcontextprotocol/sdk/client/stdio.js"
-import type { Connection } from "@smithery/registry/models/components"
-import { SmitheryRegistryError } from "@smithery/registry/models/errors"
+import { AuthenticationError } from "@smithery/api"
+import type { ServerRetrieveResponse } from "@smithery/api/resources/servers/servers"
 import chalk from "chalk"
 import inquirer from "inquirer"
 import ora from "ora"
 import { verbose } from "../lib/logger"
 import { validateApiKey } from "../lib/registry"
 import { clearApiKey, getApiKey, setApiKey } from "./smithery-settings"
+
+type Connection =
+	| ServerRetrieveResponse.StdioConnection
+	| ServerRetrieveResponse.HTTPConnection
 
 const execAsync = promisify(exec)
 
@@ -292,7 +296,7 @@ export async function ensureApiKey(apiKey?: string): Promise<string> {
 		return existingApiKey
 	} catch (error) {
 		// Handle invalid API key (401 error)
-		if (error instanceof SmitheryRegistryError && error.statusCode === 401) {
+		if (error instanceof AuthenticationError) {
 			console.error(
 				chalk.red("✗ Invalid API key detected. Please enter a valid API key."),
 			)
@@ -308,10 +312,7 @@ export async function ensureApiKey(apiKey?: string): Promise<string> {
 			try {
 				await validateApiKey(promptedApiKey)
 			} catch (validationError) {
-				if (
-					validationError instanceof SmitheryRegistryError &&
-					validationError.statusCode === 401
-				) {
+				if (validationError instanceof AuthenticationError) {
 					console.error(
 						chalk.red(
 							"✗ Invalid API key. Please check your API key and try again.",
