@@ -24,7 +24,13 @@
 		"test:watch": "vitest",
 		"knip": "knip"
 	},
-	"packageManager": "pnpm@9.0.0",
+	"packageManager": "pnpm@10.27.0",
+	"pnpm": {
+		"onlyBuiltDependencies": [
+			"esbuild",
+			"keytar"
+		]
+	},
 	"bin": {
 		"smithery": "dist/index.js"
 	},
