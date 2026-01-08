@@ -1,6 +1,7 @@
 import { promises as fs } from "node:fs"
 import { homedir, platform } from "node:os"
 import { join } from "node:path"
+import chalk from "chalk"
 import { v4 as uuidv4 } from "uuid"
 import { verbose } from "../lib/logger"
 
@@ -256,7 +257,18 @@ export const setApiKey = async (apiKey: string): Promise<SettingsResult> => {
 
 	settingsData = { ...initResult.data, apiKey }
 
-	return await saveSettings(settingsData, getSettingsPath())
+	const result = await saveSettings(settingsData, getSettingsPath())
+
+	// Add feedback for save failures
+	if (!result.success) {
+		console.warn(
+			chalk.yellow(
+				"Warning: Could not save API key to config. You may need to enter it again next time.",
+			),
+		)
+	}
+
+	return result
 }
 
 export const clearApiKey = async (): Promise<SettingsResult> => {

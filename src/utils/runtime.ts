@@ -262,41 +262,6 @@ export async function promptForApiKey(): Promise<string> {
 }
 
 /**
- * Prompts for API key, validates it, and saves it
- * @returns Promise<string> The validated API key
- */
-async function promptValidateAndSaveApiKey(): Promise<string> {
-	const promptedApiKey = await promptForApiKey()
-
-	try {
-		await validateApiKey(promptedApiKey)
-	} catch (error) {
-		if (error instanceof SmitheryRegistryError && error.statusCode === 401) {
-			console.error(
-				chalk.red(
-					"✗ Invalid API key. Please check your API key and try again.",
-				),
-			)
-			throw error
-		}
-		// Re-throw other errors (network, timeout, etc.)
-		throw error
-	}
-
-	// Save the API key to config for future use
-	const saveResult = await setApiKey(promptedApiKey)
-	if (!saveResult.success) {
-		console.warn(
-			chalk.yellow(
-				"Warning: Could not save API key to config. You may need to enter it again next time.",
-			),
-		)
-	}
-
-	return promptedApiKey
-}
-
-/**
  * Ensures that an API key is available, validating it and prompting the user if invalid or missing
  * @param apiKey - Optional API key that may have been provided via command line
  * @returns Promise<string> The validated API key
@@ -315,7 +280,25 @@ export async function ensureApiKey(apiKey?: string): Promise<string> {
 
 	// If no API key found, prompt for one
 	if (!existingApiKey) {
-		return await promptValidateAndSaveApiKey()
+		const promptedApiKey = await promptForApiKey()
+
+		try {
+			await validateApiKey(promptedApiKey)
+		} catch (error) {
+			if (error instanceof SmitheryRegistryError && error.statusCode === 401) {
+				console.error(
+					chalk.red(
+						"✗ Invalid API key. Please check your API key and try again.",
+					),
+				)
+				throw error
+			}
+			// Re-throw other errors (network, timeout, etc.)
+			throw error
+		}
+
+		await setApiKey(promptedApiKey)
+		return promptedApiKey
 	}
 
 	// Validate the existing API key
@@ -336,7 +319,28 @@ export async function ensureApiKey(apiKey?: string): Promise<string> {
 			}
 
 			// Prompt for new API key, validate, and save
-			return await promptValidateAndSaveApiKey()
+			const promptedApiKey = await promptForApiKey()
+
+			try {
+				await validateApiKey(promptedApiKey)
+			} catch (validationError) {
+				if (
+					validationError instanceof SmitheryRegistryError &&
+					validationError.statusCode === 401
+				) {
+					console.error(
+						chalk.red(
+							"✗ Invalid API key. Please check your API key and try again.",
+						),
+					)
+					throw validationError
+				}
+				// Re-throw other errors (network, timeout, etc.)
+				throw validationError
+			}
+
+			await setApiKey(promptedApiKey)
+			return promptedApiKey
 		}
 
 		// Re-throw other errors (network, timeout, etc.) - don't prompt for new key
