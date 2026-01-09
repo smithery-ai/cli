@@ -2,7 +2,6 @@
 
 import chalk from "chalk"
 import { Command } from "commander"
-import { build } from "./commands/build"
 import { deploy } from "./commands/deploy"
 import { dev } from "./commands/dev"
 import { inspectServer } from "./commands/inspect"
@@ -13,6 +12,7 @@ import { run } from "./commands/run/index"
 import { uninstallServer } from "./commands/uninstall"
 import { VALID_CLIENTS, type ValidClient } from "./config/clients"
 import { DEFAULT_PORT } from "./constants"
+import { buildBundle } from "./lib/bundle"
 import { setDebug, setVerbose } from "./lib/logger"
 import { validateApiKey } from "./lib/registry"
 import type { ServerConfig } from "./types/registry"
@@ -204,8 +204,8 @@ program
 	.command("build [entryFile]")
 	.description("build MCP server for production")
 	.option(
-		"-o, --out <outfile>",
-		"Output file path (default: .smithery/bundle/module.js for shttp, .smithery/index.cjs for stdio)",
+		"-o, --out <dir>",
+		"Output directory (default: .smithery/shttp or .smithery/stdio)",
 	)
 	.option(
 		"-t, --transport <type>",
@@ -223,10 +223,11 @@ program
 			process.exit(1)
 		}
 
-		await build({
+		await buildBundle({
 			entryFile,
-			outFile: options.out,
+			outDir: options.out,
 			transport: options.transport as "shttp" | "stdio",
+			production: true,
 		})
 	})
 
@@ -244,13 +245,29 @@ program
 		"--resume",
 		"Resume the latest paused deployment (e.g., after OAuth authorization)",
 	)
+	.option(
+		"-t, --transport <type>",
+		"Transport type: shttp or stdio (default: shttp)",
+		"shttp",
+	)
 	.action(async (entryFile, options) => {
+		// Validate transport option
+		if (options.transport && !["shttp", "stdio"].includes(options.transport)) {
+			console.error(
+				chalk.red(
+					`Invalid transport type "${options.transport}". Valid options are: shttp, stdio`,
+				),
+			)
+			process.exit(1)
+		}
+
 		await deploy({
 			entryFile,
 			key: options.key,
 			name: options.name,
 			url: options.url,
 			resume: options.resume,
+			transport: options.transport as "shttp" | "stdio",
 		})
 	})
 

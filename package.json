@@ -39,7 +39,7 @@
 		"@anthropic-ai/mcpb": "^1.1.1",
 		"@modelcontextprotocol/sdk": "^1.25.1",
 		"@ngrok/ngrok": "^1.5.1",
-		"@smithery/api": "0.1.0-alpha.6",
+		"@smithery/api": "0.1.0-alpha.10",
 		"chalk": "^4.1.2",
 		"commander": "^14.0.0",
 		"cors": "^2.8.5",

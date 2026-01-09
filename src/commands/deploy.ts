@@ -1,10 +1,11 @@
-import { existsSync, readFileSync } from "node:fs"
-import { join } from "node:path"
+import { createReadStream, existsSync } from "node:fs"
 import { Smithery } from "@smithery/api"
-import type { DeploymentRetrieveResponse } from "@smithery/api/resources/servers/deployments"
-import type { DeployPayload } from "@smithery/sdk/bundle"
+import type {
+	DeploymentRetrieveResponse,
+	DeployPayload,
+} from "@smithery/api/resources/servers/deployments"
 import chalk from "chalk"
-import { buildDeployBundle } from "../lib/bundle.js"
+import { buildBundle } from "../lib/bundle"
 import { ensureApiKey } from "../utils/runtime.js"
 
 interface DeployOptions {
@@ -13,6 +14,7 @@ interface DeployOptions {
 	name?: string
 	url?: string
 	resume?: boolean
+	transport?: "shttp" | "stdio"
 }
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
@@ -65,72 +67,85 @@ export async function deploy(options: DeployOptions = {}) {
 		return
 	}
 
-	// Determine deploy type: --url flag means external
+	// Determine deploy type
+	const transport = options.transport || "shttp"
 	const externalUrl = options.url
 	const isExternal = !!externalUrl
+	const isStdio = transport === "stdio"
 
+	// Reject --url with --transport stdio (incompatible)
+	if (isExternal && isStdio) {
+		console.error(
+			chalk.red("Error: --url cannot be used with --transport stdio"),
+		)
+		process.exit(1)
+	}
+
+	const deployType = isExternal ? "external" : isStdio ? "stdio" : "hosted"
 	console.log(
 		chalk.cyan(
-			`\nDeploying ${chalk.bold(serverName)} (${isExternal ? "external" : "hosted"}) to Smithery Registry...`,
+			`\nDeploying ${chalk.bold(serverName)} (${deployType}) to Smithery Registry...`,
 		),
 	)
 
 	let payload: DeployPayload
-	let moduleContent: string | undefined
-	let sourcemapContent: string | undefined
+	let moduleFile: ReturnType<typeof createReadStream> | undefined
+	let sourcemapFile: ReturnType<typeof createReadStream> | undefined
+	let bundleFile: ReturnType<typeof createReadStream> | undefined
 
 	if (isExternal) {
+		// External deployments don't need a build
 		payload = { type: "external", upstreamUrl: externalUrl }
 	} else {
-		const { outDir, payload: hostedPayload } = await buildDeployBundle({
+		// Build the bundle (handles both shttp and stdio)
+		const buildResult = await buildBundle({
 			entryFile: options.entryFile,
+			transport,
 			production: true,
 		})
 
-		const userModulePath = join(outDir, "user-module.js")
-		if (!existsSync(userModulePath)) {
-			throw new Error(`Bundle user module not found at ${userModulePath}`)
-		}
+		payload = buildResult.payload
 
-		payload = hostedPayload
-		moduleContent = readFileSync(userModulePath, "utf-8")
+		if (isStdio) {
+			// For stdio, read the mcpb bundle
+			if (!buildResult.mcpbFile || !existsSync(buildResult.mcpbFile)) {
+				throw new Error("MCPB bundle not found after build")
+			}
+			bundleFile = createReadStream(buildResult.mcpbFile)
+		} else {
+			// For shttp, read the module and sourcemap
+			if (!existsSync(buildResult.moduleFile)) {
+				throw new Error(`Bundle module not found at ${buildResult.moduleFile}`)
+			}
+			moduleFile = createReadStream(buildResult.moduleFile)
 
-		const sourcemapPath = join(outDir, "user-module.js.map")
-		if (existsSync(sourcemapPath)) {
-			sourcemapContent = readFileSync(sourcemapPath, "utf-8")
+			if (buildResult.sourcemapFile && existsSync(buildResult.sourcemapFile)) {
+				sourcemapFile = createReadStream(buildResult.sourcemapFile)
+			}
 		}
 	}
 
 	console.log(chalk.dim("> Uploading deployment..."))
 
-	try {
-		const result = await registry.servers.deployments.deploy(serverName, {
-			payload: JSON.stringify(payload),
-			module: moduleContent,
-			sourcemap: sourcemapContent,
-		})
+	const result = await registry.servers.deployments.deploy(serverName, {
+		payload: JSON.stringify(payload),
+		module: moduleFile,
+		sourcemap: sourcemapFile,
+		bundle: bundleFile,
+	})
 
-		console.log(
-			chalk.dim(
-				`> Deployment ${result.deploymentId} accepted. Waiting for completion...`,
-			),
-		)
-		console.log(
-			chalk.dim(
-				`> Track progress at: https://smithery.ai/server/${serverName}/deployments`,
-			),
-		)
+	console.log(
+		chalk.dim(
+			`> Deployment ${result.deploymentId} accepted. Waiting for completion...`,
+		),
+	)
+	console.log(
+		chalk.dim(
+			`> Track progress at: https://smithery.ai/server/${serverName}/deployments`,
+		),
+	)
 
-		await pollDeployment(registry, serverName, result.deploymentId)
-	} catch (error) {
-		if (error instanceof Error) {
-			throw error
-		}
-		// SDK errors may not be Error instances - extract message
-		const errorObj = error as { message?: string; body$?: string }
-		const message = errorObj.message || errorObj.body$ || JSON.stringify(error)
-		throw new Error(message)
-	}
+	await pollDeployment(registry, serverName, result.deploymentId)
 }
 
 async function pollDeployment(
