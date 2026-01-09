@@ -332,11 +332,11 @@ describe("deploy command", () => {
 		)
 	})
 
-	test("no --name, smithery.yaml with name and empty namespace: uses name without namespace", async () => {
+	test("no --name, smithery.yaml with name and no namespaces: uses name after creating namespace", async () => {
 		mockRegistry.namespaces.list.mockResolvedValue({
 			namespaces: [],
 		})
-		vi.mocked(promptForNamespaceCreation).mockResolvedValue("")
+		vi.mocked(promptForNamespaceCreation).mockResolvedValue("neworg")
 		vi.mocked(loadProjectConfig).mockReturnValue({
 			runtime: "typescript",
 			name: "my-server-name",
@@ -345,9 +345,13 @@ describe("deploy command", () => {
 		await deploy({})
 
 		expect(loadProjectConfig).toHaveBeenCalled()
+		expect(promptForNamespaceCreation).toHaveBeenCalled()
+		expect(mockRegistry.namespaces.create).toHaveBeenCalledWith({
+			name: "neworg",
+		})
 		expect(promptForServerNameInput).not.toHaveBeenCalled()
 		expect(mockRegistry.servers.deployments.deploy).toHaveBeenCalledWith(
-			"my-server-name",
+			"neworg/my-server-name",
 			expect.any(Object),
 		)
 	})
