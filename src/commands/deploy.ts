@@ -1,14 +1,10 @@
 import { createReadStream, existsSync } from "node:fs"
 import { Smithery } from "@smithery/api"
-import type {
-	DeploymentRetrieveResponse,
-	DeployPayload,
-} from "@smithery/api/resources/servers/deployments"
+import type { DeploymentRetrieveResponse } from "@smithery/api/resources/servers/deployments"
 import chalk from "chalk"
-import { buildBundle } from "../lib/bundle"
+import { buildBundle, type DeployPayload } from "../lib/bundle/index.js"
 import cliSpinners from "cli-spinners"
 import ora from "ora"
-import { buildDeployBundle } from "../lib/bundle.js"
 import {
 	promptForNamespaceCreation,
 	promptForNamespaceSelection,
@@ -262,12 +258,24 @@ export async function deploy(options: DeployOptions = {}) {
 		color: "yellow",
 	}).start()
 
-	const result = await registry.servers.deployments.deploy(serverName, {
-		payload: JSON.stringify(payload),
-		module: moduleFile,
-		sourcemap: sourcemapFile,
-		bundle: bundleFile,
-	})
+	try {
+		const deployParams: {
+			payload: string
+			module?: unknown
+			sourcemap?: unknown
+			bundle?: unknown
+		} = {
+			payload: JSON.stringify(payload),
+			module: moduleFile,
+			sourcemap: sourcemapFile,
+			bundle: bundleFile,
+		}
+		const result = await registry.servers.deployments.deploy(
+			serverName,
+			deployParams as Parameters<
+				typeof registry.servers.deployments.deploy
+			>[1],
+		)
 
 		uploadSpinner.stop()
 		console.log(chalk.dim(`✓ Deployment ${result.deploymentId} accepted`))
