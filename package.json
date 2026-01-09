@@ -29,7 +29,8 @@
 		"onlyBuiltDependencies": [
 			"esbuild",
 			"keytar",
-			"@smithery/api"
+			"@smithery/api",
+			"workerd"
 		]
 	},
 	"bin": {
@@ -39,8 +40,9 @@
 		"@anthropic-ai/mcpb": "^1.1.1",
 		"@modelcontextprotocol/sdk": "^1.25.1",
 		"@ngrok/ngrok": "^1.5.1",
-		"@smithery/api": "0.1.0-alpha.10",
+		"@smithery/api": "0.1.0-alpha.11",
 		"chalk": "^4.1.2",
+		"cli-spinners": "^3.3.0",
 		"commander": "^14.0.0",
 		"cors": "^2.8.5",
 		"cross-fetch": "^4.1.0",

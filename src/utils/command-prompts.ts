@@ -493,3 +493,95 @@ export async function interactiveServerSearch(
 		process.exit(1)
 	}
 }
+
+/**
+ * Prompts user to select a namespace from a list
+ * @param namespaces - Array of namespace names
+ * @returns Promise<string> - The selected namespace name
+ */
+export async function promptForNamespaceSelection(
+	namespaces: string[],
+): Promise<string> {
+	const inquirer = (await import("inquirer")).default
+
+	const { namespace } = await inquirer.prompt([
+		{
+			type: "list",
+			name: "namespace",
+			message: "Select namespace:",
+			choices: namespaces.map((ns) => ({ name: ns, value: ns })),
+		},
+	])
+
+	return namespace
+}
+
+/**
+ * Prompts user to enter a new namespace name
+ * @returns Promise<string> - The entered namespace name
+ */
+export async function promptForNamespaceCreation(): Promise<string> {
+	const inquirer = (await import("inquirer")).default
+
+	const { namespace } = await inquirer.prompt([
+		{
+			type: "input",
+			name: "namespace",
+			message: "Enter namespace name:",
+			validate: (input: string) => {
+				const trimmed = input.trim()
+				if (trimmed.length === 0) {
+					return "Please enter a namespace name"
+				}
+				if (trimmed.length > 100) {
+					return "Namespace name must be 100 characters or less"
+				}
+				if (!/^[a-zA-Z0-9_-]+$/.test(trimmed)) {
+					return "Namespace name must contain only letters, numbers, hyphens, and underscores"
+				}
+				return true
+			},
+		},
+	])
+
+	return namespace.trim()
+}
+
+/**
+ * Prompts user to enter a server name
+ * @param namespace - Optional namespace to display in the prompt
+ * @param defaultValue - Optional default value to pre-fill the prompt
+ * @returns Promise<string> - The entered server name
+ */
+export async function promptForServerNameInput(
+	namespace?: string,
+	defaultValue?: string,
+): Promise<string> {
+	const inquirer = (await import("inquirer")).default
+
+	const chalk = (await import("chalk")).default
+	const message = namespace
+		? `Enter server name ${chalk.dim(`(will be deployed as `)}${chalk.cyan.dim(`${namespace}/<name>`)}${chalk.dim(`)`)}:`
+		: "Enter server name:"
+
+	const { serverName } = await inquirer.prompt([
+		{
+			type: "input",
+			name: "serverName",
+			message,
+			default: defaultValue,
+			validate: (input: string) => {
+				const trimmed = input.trim()
+				if (trimmed.length === 0) {
+					return "Please enter a server name"
+				}
+				if (!/^[\w-]+$/.test(trimmed)) {
+					return "Server name must contain only letters, numbers, hyphens, and underscores"
+				}
+				return true
+			},
+		},
+	])
+
+	return serverName.trim()
+}

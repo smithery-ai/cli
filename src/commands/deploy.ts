@@ -1,17 +1,22 @@
 import { createReadStream, existsSync } from "node:fs"
 import { Smithery } from "@smithery/api"
 import type {
+	DeploymentDeployParams,
 	DeploymentRetrieveResponse,
-	DeployPayload,
 } from "@smithery/api/resources/servers/deployments"
 import chalk from "chalk"
-import { buildBundle } from "../lib/bundle"
+import cliSpinners from "cli-spinners"
+import ora from "ora"
+import { buildBundle, type DeployPayload } from "../lib/bundle/index.js"
+import { loadProjectConfig } from "../lib/config-loader.js"
+import { resolveNamespace } from "../lib/namespace.js"
+import { promptForServerNameInput } from "../utils/command-prompts.js"
 import { ensureApiKey } from "../utils/runtime.js"
 
 interface DeployOptions {
 	entryFile?: string
 	key?: string
-	name?: string
+	name?: string // CLI option name, internally mapped to qualifiedName
 	url?: string
 	resume?: boolean
 	transport?: "shttp" | "stdio"
@@ -27,43 +32,90 @@ function createRegistry(apiKey: string) {
 	})
 }
 
+/**
+ * Parse a qualified name into namespace and server name parts.
+ * Handles formats: namespace/serverName, @namespace/serverName, or serverName
+ */
+function parseQualifiedName(qualifiedName: string): {
+	namespace: string
+	serverName: string
+} {
+	// Strip @ prefix if present
+	const normalized = qualifiedName.startsWith("@")
+		? qualifiedName.slice(1)
+		: qualifiedName
+
+	const parts = normalized.split("/")
+	if (parts.length === 2) {
+		return { namespace: parts[0], serverName: parts[1] }
+	}
+	// Single-segment QN: namespace is empty
+	return { namespace: "", serverName: normalized }
+}
+
 export async function deploy(options: DeployOptions = {}) {
 	const apiKey = await ensureApiKey(options.key)
-
-	const serverName = options.name
-	if (!serverName) {
-		console.error(
-			chalk.red("Error: Server name is required."),
-			"\n\nProvide it via:",
-			"\n  --name @owner/name",
-		)
-		process.exit(1)
-	}
-
-	// Validate server name format: @owner/name or just name (un-namespaced)
-	if (!/^(@?[\w-]+\/)?[\w-]+$/.test(serverName)) {
-		console.error(
-			chalk.red(`Invalid server name: ${serverName}`),
-			"\nMust be in format @owner/name or name",
-		)
-		process.exit(1)
-	}
-
 	const registry = createRegistry(apiKey)
 
+	// Map CLI option 'name' to internal 'qualifiedName' for clarity
+	let qualifiedName = options.name
+
+	// If --name is not provided, run interactive flow
+	if (!qualifiedName) {
+		console.log(chalk.cyan("Deploying to Smithery Registry..."))
+
+		try {
+			// Load project config to get server name from smithery.yaml
+			const projectConfig = loadProjectConfig()
+			const configServerName =
+				projectConfig &&
+				projectConfig.runtime === "typescript" &&
+				projectConfig.name
+					? projectConfig.name
+					: undefined
+
+			// Resolve namespace through interactive flow
+			const namespace = await resolveNamespace(registry)
+
+			// If name exists in config, use it directly without prompting
+			if (configServerName) {
+				console.log(
+					chalk.dim(`Using server name "${chalk.cyan(configServerName)}" from smithery.yaml`),
+				)
+				qualifiedName = namespace
+					? `${namespace}/${configServerName}`
+					: configServerName
+			} else {
+				// Prompt for server name if not found in config
+				const serverNameInput = await promptForServerNameInput(namespace)
+				qualifiedName = namespace
+					? `${namespace}/${serverNameInput}`
+					: serverNameInput
+			}
+		} catch (error) {
+			console.error(
+				chalk.red("Error during interactive setup:"),
+				error instanceof Error ? error.message : String(error),
+			)
+			process.exit(1)
+		}
+	}
+
 	if (options.resume) {
-		console.log(chalk.cyan(`\nResuming latest deployment for ${serverName}...`))
+		console.log(
+			chalk.cyan(`\nResuming latest deployment for ${qualifiedName}...`),
+		)
 		console.log(
 			chalk.dim(
-				`> Track progress at: https://smithery.ai/server/${serverName}/deployments`,
+				`> Track progress at: https://smithery.ai/server/${qualifiedName}/deployments`,
 			),
 		)
 
 		const resumeResult = await registry.servers.deployments.resume("latest", {
-			qualifiedName: serverName,
+			qualifiedName,
 		})
 
-		await pollDeployment(registry, serverName, resumeResult.deploymentId)
+		await pollDeployment(registry, qualifiedName, resumeResult.deploymentId)
 		return
 	}
 
@@ -84,7 +136,7 @@ export async function deploy(options: DeployOptions = {}) {
 	const deployType = isExternal ? "external" : isStdio ? "stdio" : "hosted"
 	console.log(
 		chalk.cyan(
-			`\nDeploying ${chalk.bold(serverName)} (${deployType}) to Smithery Registry...`,
+			`\nDeploying ${chalk.bold(qualifiedName)} (${deployType}) to Smithery Registry...`,
 		),
 	)
 
@@ -125,30 +177,103 @@ export async function deploy(options: DeployOptions = {}) {
 		}
 	}
 
-	console.log(chalk.dim("> Uploading deployment..."))
+	const uploadSpinner = ora({
+		text: "Uploading deployment...",
+		spinner: cliSpinners.star,
+		color: "yellow",
+	}).start()
 
-	const result = await registry.servers.deployments.deploy(serverName, {
-		payload: JSON.stringify(payload),
-		module: moduleFile,
-		sourcemap: sourcemapFile,
-		bundle: bundleFile,
-	})
+	try {
+		const deployParams: DeploymentDeployParams = {
+			payload: JSON.stringify(payload),
+			module: moduleFile,
+			sourcemap: sourcemapFile,
+			bundle: bundleFile,
+		}
+		const result = await registry.servers.deployments.deploy(
+			qualifiedName,
+			deployParams,
+		)
 
-	console.log(
-		chalk.dim(
-			`> Deployment ${result.deploymentId} accepted. Waiting for completion...`,
-		),
-	)
-	console.log(
-		chalk.dim(
-			`> Track progress at: https://smithery.ai/server/${serverName}/deployments`,
-		),
-	)
+		uploadSpinner.stop()
+		console.log(chalk.dim(`✓ Deployment ${result.deploymentId} accepted`))
 
-	await pollDeployment(registry, serverName, result.deploymentId)
+		console.log(chalk.dim("> Waiting for completion..."))
+		console.log(
+			chalk.dim(
+				`> Track progress at: https://smithery.ai/server/${qualifiedName}/deployments`,
+			),
+		)
+
+		await pollDeployment(registry, qualifiedName, result.deploymentId)
+	} catch (error) {
+		uploadSpinner.fail("Upload failed")
+		// Handle HTTP errors with status codes
+		const errorObj = error as {
+			message?: string
+			body$?: string
+			status?: number
+			statusCode?: number
+		}
+
+		const status = errorObj.status || errorObj.statusCode
+
+		if (status === 403) {
+			const { namespace } = parseQualifiedName(qualifiedName)
+			const errorMessage = errorObj.body$ || errorObj.message || "Forbidden"
+			if (errorMessage.includes("namespace")) {
+				console.error(
+					chalk.red(`\n✗ Error: You don't own the namespace "${namespace}".`),
+				)
+				console.error(
+					chalk.dim(
+						"   Namespaces can only be used by their owners. Please use a namespace you own or create a new one.",
+					),
+				)
+			} else {
+				console.error(
+					chalk.red(`\n✗ Error: You don't own the server "${qualifiedName}".`),
+				)
+				console.error(
+					chalk.dim(
+						"   Servers can only be deployed by their owners. Please use a server name you own.",
+					),
+				)
+			}
+			process.exit(1)
+		}
+
+		if (status === 404) {
+			const errorMessage = errorObj.body$ || errorObj.message || "Not found"
+			if (errorMessage.includes("namespace")) {
+				const { namespace } = parseQualifiedName(qualifiedName)
+				console.error(
+					chalk.red(`\n✗ Error: Namespace "${namespace}" not found.`),
+				)
+				console.error(
+					chalk.dim(
+						"   The namespace doesn't exist. Please create it first or use a different namespace.",
+					),
+				)
+			} else {
+				console.error(
+					chalk.red(`\n✗ Error: Server "${qualifiedName}" not found.`),
+				)
+			}
+			process.exit(1)
+		}
+
+		// Handle other errors
+		if (error instanceof Error) {
+			throw error
+		}
+		// SDK errors may not be Error instances - extract message
+		const message = errorObj.message || errorObj.body$ || JSON.stringify(error)
+		throw new Error(message)
+	}
 }
 
-async function pollDeployment(
+export async function pollDeployment(
 	registry: Smithery,
 	serverName: string,
 	deploymentId: string,
@@ -172,11 +297,13 @@ async function pollDeployment(
 		}
 
 		if (data.status === "SUCCESS") {
-			console.log(chalk.green("\n✅ Deployment successful!"))
-			console.log(`${chalk.bold("Deployment ID:")} ${deploymentId}`)
-			console.log(`${chalk.bold("MCP URL:")}       ${chalk.cyan(data.mcpUrl)}`)
+			console.log(chalk.green("\n✓ Deployment successful!"))
+			console.log(chalk.dim(`${chalk.bold("Deployment ID:")} ${deploymentId}`))
 			console.log(
-				`${chalk.bold("Server Page:")}  ${chalk.cyan(`https://smithery.ai/server/${serverName}`)}`,
+				`  ${chalk.green(chalk.dim("➜"))}  ${chalk.bold(chalk.dim("MCP URL:"))}      ${chalk.cyan(data.mcpUrl)}`,
+			)
+			console.log(
+				`  ${chalk.green("➜")}  ${chalk.bold("Server Page:")} ${chalk.cyan(`https://smithery.ai/server/${serverName}`)}`,
 			)
 			return
 		}
@@ -185,29 +312,8 @@ async function pollDeployment(
 			const authUrl = `https://smithery.ai/server/${serverName}/deployments/`
 			console.log(chalk.yellow("\n⚠ OAuth authorization required."))
 			console.log(`Please authorize at: ${chalk.cyan(authUrl)}`)
-
-			if (process.stdin.isTTY) {
-				console.log(
-					chalk.dim("\nPress Enter once you have authorized to resume..."),
-				)
-				await new Promise<void>((resolve) => {
-					process.stdin.resume()
-					process.stdin.once("data", () => {
-						process.stdin.pause()
-						resolve()
-					})
-				})
-
-				console.log(chalk.cyan("\nResuming deployment..."))
-				await registry.servers.deployments.resume(deploymentId, {
-					qualifiedName: serverName,
-				})
-
-				await sleep(2000)
-				continue
-			}
 			console.log(
-				`Then run: ${chalk.bold(`smithery deploy --resume --name ${serverName}`)}`,
+				chalk.dim("Once authorized, deployment will automatically continue."),
 			)
 			return
 		}
@@ -221,7 +327,7 @@ async function pollDeployment(
 				(l: DeploymentRetrieveResponse.Log) => l.level === "error",
 			)
 			const errorMessage = errorLog?.message || "Deployment failed"
-			console.error(chalk.red(`\n❌ Deployment failed: ${errorMessage}`))
+			console.error(chalk.red(`\n✗ Deployment failed: ${errorMessage}`))
 
 			if (errorMessage.includes("timed out")) {
 				console.error(chalk.yellow("\nTroubleshooting tips:"))
