@@ -31,7 +31,7 @@ export function resolveEntryPoint(providedEntry?: string): string {
 
 	if (!packageJson.module || typeof packageJson.module !== "string") {
 		throw new Error(
-			'No entry point found in package.json. Please define the "module" field:\n' +
+			'✗ No entry point found in package.json. Please define the "module" field:\n' +
 				'  "module": "./src/index.ts"\n' +
 				"Or specify an entry file directly.",
 		)
