@@ -65,9 +65,9 @@ export async function deploy(options: DeployOptions = {}) {
 		console.log(chalk.cyan("Deploying to Smithery Registry..."))
 
 		try {
-			// Load project config to get default server name from smithery.yaml
+			// Load project config to get server name from smithery.yaml
 			const projectConfig = loadProjectConfig()
-			const defaultServerName =
+			const configServerName =
 				projectConfig &&
 				projectConfig.runtime === "typescript" &&
 				projectConfig.name
@@ -77,14 +77,21 @@ export async function deploy(options: DeployOptions = {}) {
 			// Resolve namespace through interactive flow
 			const namespace = await resolveNamespace(registry)
 
-			// Prompt for server name with default from config
-			const serverNameInput = await promptForServerNameInput(
-				namespace,
-				defaultServerName,
-			)
-			qualifiedName = namespace
-				? `${namespace}/${serverNameInput}`
-				: serverNameInput
+			// If name exists in config, use it directly without prompting
+			if (configServerName) {
+				console.log(
+					chalk.dim(`Using server name "${chalk.cyan(configServerName)}" from smithery.yaml`),
+				)
+				qualifiedName = namespace
+					? `${namespace}/${configServerName}`
+					: configServerName
+			} else {
+				// Prompt for server name if not found in config
+				const serverNameInput = await promptForServerNameInput(namespace)
+				qualifiedName = namespace
+					? `${namespace}/${serverNameInput}`
+					: serverNameInput
+			}
 		} catch (error) {
 			console.error(
 				chalk.red("Error during interactive setup:"),

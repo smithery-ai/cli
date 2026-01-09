@@ -148,7 +148,7 @@ describe("deploy command", () => {
 		expect(mockRegistry.namespaces.list).toHaveBeenCalled()
 		expect(promptForNamespaceSelection).not.toHaveBeenCalled()
 		expect(promptForNamespaceCreation).not.toHaveBeenCalled()
-		expect(promptForServerNameInput).toHaveBeenCalledWith("myorg", undefined)
+		expect(promptForServerNameInput).toHaveBeenCalledWith("myorg")
 		expect(mockRegistry.servers.deployments.deploy).toHaveBeenCalledWith(
 			"myorg/myserver",
 			expect.any(Object),
@@ -166,7 +166,7 @@ describe("deploy command", () => {
 
 		expect(mockRegistry.namespaces.list).toHaveBeenCalled()
 		expect(promptForNamespaceSelection).toHaveBeenCalledWith(["org1", "org2"])
-		expect(promptForServerNameInput).toHaveBeenCalledWith("org2", undefined)
+		expect(promptForServerNameInput).toHaveBeenCalledWith("org2")
 		expect(mockRegistry.servers.deployments.deploy).toHaveBeenCalledWith(
 			"org2/myserver",
 			expect.any(Object),
@@ -188,7 +188,7 @@ describe("deploy command", () => {
 		expect(mockRegistry.namespaces.create).toHaveBeenCalledWith({
 			name: "neworg",
 		})
-		expect(promptForServerNameInput).toHaveBeenCalledWith("neworg", undefined)
+		expect(promptForServerNameInput).toHaveBeenCalledWith("neworg")
 		expect(mockRegistry.servers.deployments.deploy).toHaveBeenCalledWith(
 			"neworg/myserver",
 			expect.any(Object),
@@ -258,7 +258,7 @@ describe("deploy command", () => {
 		)
 	})
 
-	test("no --name, smithery.yaml with typescript runtime and name: uses name as default", async () => {
+	test("no --name, smithery.yaml with typescript runtime and name: uses name without prompting", async () => {
 		mockRegistry.namespaces.list.mockResolvedValue({
 			namespaces: [{ name: "myorg" }],
 		})
@@ -266,22 +266,18 @@ describe("deploy command", () => {
 			runtime: "typescript",
 			name: "my-server-name",
 		})
-		vi.mocked(promptForServerNameInput).mockResolvedValue("my-server-name")
 
 		await deploy({})
 
 		expect(loadProjectConfig).toHaveBeenCalled()
-		expect(promptForServerNameInput).toHaveBeenCalledWith(
-			"myorg",
-			"my-server-name",
-		)
+		expect(promptForServerNameInput).not.toHaveBeenCalled()
 		expect(mockRegistry.servers.deployments.deploy).toHaveBeenCalledWith(
 			"myorg/my-server-name",
 			expect.any(Object),
 		)
 	})
 
-	test("no --name, smithery.yaml exists but no name field: works as before", async () => {
+	test("no --name, smithery.yaml exists but no name field: prompts for server name", async () => {
 		mockRegistry.namespaces.list.mockResolvedValue({
 			namespaces: [{ name: "myorg" }],
 		})
@@ -293,14 +289,14 @@ describe("deploy command", () => {
 		await deploy({})
 
 		expect(loadProjectConfig).toHaveBeenCalled()
-		expect(promptForServerNameInput).toHaveBeenCalledWith("myorg", undefined)
+		expect(promptForServerNameInput).toHaveBeenCalledWith("myorg")
 		expect(mockRegistry.servers.deployments.deploy).toHaveBeenCalledWith(
 			"myorg/myserver",
 			expect.any(Object),
 		)
 	})
 
-	test("no --name, smithery.yaml with non-typescript runtime: does not use name field", async () => {
+	test("no --name, smithery.yaml with non-typescript runtime: prompts for server name", async () => {
 		mockRegistry.namespaces.list.mockResolvedValue({
 			namespaces: [{ name: "myorg" }],
 		})
@@ -312,14 +308,14 @@ describe("deploy command", () => {
 		await deploy({})
 
 		expect(loadProjectConfig).toHaveBeenCalled()
-		expect(promptForServerNameInput).toHaveBeenCalledWith("myorg", undefined)
+		expect(promptForServerNameInput).toHaveBeenCalledWith("myorg")
 		expect(mockRegistry.servers.deployments.deploy).toHaveBeenCalledWith(
 			"myorg/myserver",
 			expect.any(Object),
 		)
 	})
 
-	test("no --name, smithery.yaml doesn't exist: works as before", async () => {
+	test("no --name, smithery.yaml doesn't exist: prompts for server name", async () => {
 		mockRegistry.namespaces.list.mockResolvedValue({
 			namespaces: [{ name: "myorg" }],
 		})
@@ -329,9 +325,29 @@ describe("deploy command", () => {
 		await deploy({})
 
 		expect(loadProjectConfig).toHaveBeenCalled()
-		expect(promptForServerNameInput).toHaveBeenCalledWith("myorg", undefined)
+		expect(promptForServerNameInput).toHaveBeenCalledWith("myorg")
 		expect(mockRegistry.servers.deployments.deploy).toHaveBeenCalledWith(
 			"myorg/myserver",
+			expect.any(Object),
+		)
+	})
+
+	test("no --name, smithery.yaml with name and empty namespace: uses name without namespace", async () => {
+		mockRegistry.namespaces.list.mockResolvedValue({
+			namespaces: [],
+		})
+		vi.mocked(promptForNamespaceCreation).mockResolvedValue("")
+		vi.mocked(loadProjectConfig).mockReturnValue({
+			runtime: "typescript",
+			name: "my-server-name",
+		})
+
+		await deploy({})
+
+		expect(loadProjectConfig).toHaveBeenCalled()
+		expect(promptForServerNameInput).not.toHaveBeenCalled()
+		expect(mockRegistry.servers.deployments.deploy).toHaveBeenCalledWith(
+			"my-server-name",
 			expect.any(Object),
 		)
 	})
