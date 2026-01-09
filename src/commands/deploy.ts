@@ -346,10 +346,12 @@ async function pollDeployment(
 
 		if (data.status === "SUCCESS") {
 			console.log(chalk.green("\n✓ Deployment successful!"))
-			console.log(`${chalk.bold("Deployment ID:")} ${deploymentId}`)
-			console.log(`${chalk.bold("MCP URL:")}       ${chalk.cyan(data.mcpUrl)}`)
+			console.log(chalk.dim(`${chalk.bold("Deployment ID:")} ${deploymentId}`))
 			console.log(
-				`${chalk.bold("Server Page:")}  ${chalk.cyan(`https://smithery.ai/server/${serverName}`)}`,
+				`  ${chalk.green(chalk.dim("➜"))}  ${chalk.bold(chalk.dim("MCP URL:"))}      ${chalk.cyan(data.mcpUrl)}`,
+			)
+			console.log(
+				`  ${chalk.green("➜")}  ${chalk.bold("Server Page:")} ${chalk.cyan(`https://smithery.ai/server/${serverName}`)}`,
 			)
 			return
 		}
