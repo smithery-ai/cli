@@ -54,6 +54,7 @@ function parseQualifiedName(qualifiedName: string): {
 
 /**
  * Get user's namespaces from the registry API
+ * TODO: Use @smithery/api SDK instead of raw fetch calls
  */
 async function getUserNamespaces(
 	baseURL: string,
@@ -84,6 +85,7 @@ async function getUserNamespaces(
 
 /**
  * Create a new namespace via the registry API
+ * TODO: Use @smithery/api SDK instead of raw fetch calls
  */
 async function createNamespace(
 	baseURL: string,
@@ -91,7 +93,7 @@ async function createNamespace(
 	name: string,
 ): Promise<void> {
 	const response = await fetch(`${baseURL}/namespaces`, {
-		method: "POST",
+		method: "PUT",
 		headers: {
 			Authorization: `Bearer ${apiKey}`,
 			"Content-Type": "application/json",
