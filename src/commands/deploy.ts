@@ -8,6 +8,7 @@ import chalk from "chalk"
 import cliSpinners from "cli-spinners"
 import ora from "ora"
 import { buildBundle, type DeployPayload } from "../lib/bundle/index.js"
+import { loadProjectConfig } from "../lib/config-loader.js"
 import { resolveNamespace } from "../lib/namespace.js"
 import { promptForServerNameInput } from "../utils/command-prompts.js"
 import { ensureApiKey } from "../utils/runtime.js"
@@ -64,11 +65,23 @@ export async function deploy(options: DeployOptions = {}) {
 		console.log(chalk.cyan("Deploying to Smithery Registry..."))
 
 		try {
+			// Load project config to get default server name from smithery.yaml
+			const projectConfig = loadProjectConfig()
+			const defaultServerName =
+				projectConfig &&
+				projectConfig.runtime === "typescript" &&
+				projectConfig.name
+					? projectConfig.name
+					: undefined
+
 			// Resolve namespace through interactive flow
 			const namespace = await resolveNamespace(registry)
 
-			// Prompt for server name
-			const serverNameInput = await promptForServerNameInput(namespace)
+			// Prompt for server name with default from config
+			const serverNameInput = await promptForServerNameInput(
+				namespace,
+				defaultServerName,
+			)
 			qualifiedName = namespace
 				? `${namespace}/${serverNameInput}`
 				: serverNameInput

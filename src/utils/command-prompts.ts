@@ -550,10 +550,12 @@ export async function promptForNamespaceCreation(): Promise<string> {
 /**
  * Prompts user to enter a server name
  * @param namespace - Optional namespace to display in the prompt
+ * @param defaultValue - Optional default value to pre-fill the prompt
  * @returns Promise<string> - The entered server name
  */
 export async function promptForServerNameInput(
 	namespace?: string,
+	defaultValue?: string,
 ): Promise<string> {
 	const inquirer = (await import("inquirer")).default
 
@@ -567,6 +569,7 @@ export async function promptForServerNameInput(
 			type: "input",
 			name: "serverName",
 			message,
+			default: defaultValue,
 			validate: (input: string) => {
 				const trimmed = input.trim()
 				if (trimmed.length === 0) {
