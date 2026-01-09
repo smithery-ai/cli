@@ -8,18 +8,14 @@ import chalk from "chalk"
 import cliSpinners from "cli-spinners"
 import ora from "ora"
 import { buildBundle, type DeployPayload } from "../lib/bundle/index.js"
-import { createError } from "../lib/errors.js"
-import {
-	promptForNamespaceCreation,
-	promptForNamespaceSelection,
-	promptForServerNameInput,
-} from "../utils/command-prompts.js"
+import { resolveNamespace } from "../lib/namespace.js"
+import { promptForServerNameInput } from "../utils/command-prompts.js"
 import { ensureApiKey } from "../utils/runtime.js"
 
 interface DeployOptions {
 	entryFile?: string
 	key?: string
-	name?: string
+	name?: string // CLI option name, internally mapped to qualifiedName
 	url?: string
 	resume?: boolean
 	transport?: "shttp" | "stdio"
@@ -56,76 +52,24 @@ function parseQualifiedName(qualifiedName: string): {
 	return { namespace: "", serverName: normalized }
 }
 
-/**
- * Get user's namespaces from the registry API
- */
-async function getUserNamespaces(client: Smithery): Promise<string[]> {
-	try {
-		const response = await client.namespaces.list()
-		return response.namespaces.map((ns) => ns.name)
-	} catch (error) {
-		throw createError(error, "Failed to fetch namespaces")
-	}
-}
-
-/**
- * Create a new namespace via the registry API
- */
-async function createNamespace(client: Smithery, name: string): Promise<void> {
-	try {
-		await client.namespaces.create({ name })
-	} catch (error) {
-		throw createError(error, "Failed to create namespace")
-	}
-}
-
 export async function deploy(options: DeployOptions = {}) {
 	const apiKey = await ensureApiKey(options.key)
 	const registry = createRegistry(apiKey)
 
-	let serverName = options.name
+	// Map CLI option 'name' to internal 'qualifiedName' for clarity
+	let qualifiedName = options.name
 
 	// If --name is not provided, run interactive flow
-	if (!serverName) {
+	if (!qualifiedName) {
 		console.log(chalk.cyan("Deploying to Smithery Registry..."))
 
 		try {
-			// Get user's namespaces
-			const spinner = ora({
-				text: "Fetching namespaces...",
-				spinner: cliSpinners.star,
-				color: "yellow",
-			}).start()
-			const userNamespaces = await getUserNamespaces(registry)
-			spinner.succeed(
-				chalk.dim(
-					`Found ${userNamespaces.length} namespace${userNamespaces.length === 1 ? "" : "s"}`,
-				),
-			)
-
-			let namespace: string
-
-			if (userNamespaces.length === 0) {
-				// No namespaces - prompt to create one
-				console.log(
-					chalk.yellow("No namespaces found. Creating a new namespace..."),
-				)
-				const newNamespaceName = await promptForNamespaceCreation()
-				await createNamespace(registry, newNamespaceName)
-				namespace = newNamespaceName
-				console.log(chalk.green(`✓ Created namespace: ${namespace}`))
-			} else if (userNamespaces.length === 1) {
-				// Single namespace - use it automatically
-				namespace = userNamespaces[0]
-				console.log(chalk.dim(`Using namespace: ${chalk.cyan(namespace)}`))
-			} else {
-				// Multiple namespaces - prompt to select
-				namespace = await promptForNamespaceSelection(userNamespaces)
-			}
+			// Resolve namespace through interactive flow
+			const namespace = await resolveNamespace(registry)
 
 			// Prompt for server name
 			const serverNameInput = await promptForServerNameInput(namespace)
-			serverName = namespace
+			qualifiedName = namespace
 				? `${namespace}/${serverNameInput}`
 				: serverNameInput
 		} catch (error) {
@@ -138,18 +82,20 @@ export async function deploy(options: DeployOptions = {}) {
 	}
 
 	if (options.resume) {
-		console.log(chalk.cyan(`\nResuming latest deployment for ${serverName}...`))
+		console.log(
+			chalk.cyan(`\nResuming latest deployment for ${qualifiedName}...`),
+		)
 		console.log(
 			chalk.dim(
-				`> Track progress at: https://smithery.ai/server/${serverName}/deployments`,
+				`> Track progress at: https://smithery.ai/server/${qualifiedName}/deployments`,
 			),
 		)
 
 		const resumeResult = await registry.servers.deployments.resume("latest", {
-			qualifiedName: serverName,
+			qualifiedName,
 		})
 
-		await pollDeployment(registry, serverName, resumeResult.deploymentId)
+		await pollDeployment(registry, qualifiedName, resumeResult.deploymentId)
 		return
 	}
 
@@ -170,7 +116,7 @@ export async function deploy(options: DeployOptions = {}) {
 	const deployType = isExternal ? "external" : isStdio ? "stdio" : "hosted"
 	console.log(
 		chalk.cyan(
-			`\nDeploying ${chalk.bold(serverName)} (${deployType}) to Smithery Registry...`,
+			`\nDeploying ${chalk.bold(qualifiedName)} (${deployType}) to Smithery Registry...`,
 		),
 	)
 
@@ -225,7 +171,7 @@ export async function deploy(options: DeployOptions = {}) {
 			bundle: bundleFile,
 		}
 		const result = await registry.servers.deployments.deploy(
-			serverName,
+			qualifiedName,
 			deployParams,
 		)
 
@@ -235,11 +181,11 @@ export async function deploy(options: DeployOptions = {}) {
 		console.log(chalk.dim("> Waiting for completion..."))
 		console.log(
 			chalk.dim(
-				`> Track progress at: https://smithery.ai/server/${serverName}/deployments`,
+				`> Track progress at: https://smithery.ai/server/${qualifiedName}/deployments`,
 			),
 		)
 
-		await pollDeployment(registry, serverName, result.deploymentId)
+		await pollDeployment(registry, qualifiedName, result.deploymentId)
 	} catch (error) {
 		uploadSpinner.fail("Upload failed")
 		// Handle HTTP errors with status codes
@@ -253,7 +199,7 @@ export async function deploy(options: DeployOptions = {}) {
 		const status = errorObj.status || errorObj.statusCode
 
 		if (status === 403) {
-			const { namespace } = parseQualifiedName(serverName)
+			const { namespace } = parseQualifiedName(qualifiedName)
 			const errorMessage = errorObj.body$ || errorObj.message || "Forbidden"
 			if (errorMessage.includes("namespace")) {
 				console.error(
@@ -266,7 +212,7 @@ export async function deploy(options: DeployOptions = {}) {
 				)
 			} else {
 				console.error(
-					chalk.red(`\n✗ Error: You don't own the server "${serverName}".`),
+					chalk.red(`\n✗ Error: You don't own the server "${qualifiedName}".`),
 				)
 				console.error(
 					chalk.dim(
@@ -280,7 +226,7 @@ export async function deploy(options: DeployOptions = {}) {
 		if (status === 404) {
 			const errorMessage = errorObj.body$ || errorObj.message || "Not found"
 			if (errorMessage.includes("namespace")) {
-				const { namespace } = parseQualifiedName(serverName)
+				const { namespace } = parseQualifiedName(qualifiedName)
 				console.error(
 					chalk.red(`\n✗ Error: Namespace "${namespace}" not found.`),
 				)
@@ -290,7 +236,9 @@ export async function deploy(options: DeployOptions = {}) {
 					),
 				)
 			} else {
-				console.error(chalk.red(`\n✗ Error: Server "${serverName}" not found.`))
+				console.error(
+					chalk.red(`\n✗ Error: Server "${qualifiedName}" not found.`),
+				)
 			}
 			process.exit(1)
 		}
@@ -305,7 +253,7 @@ export async function deploy(options: DeployOptions = {}) {
 	}
 }
 
-async function pollDeployment(
+export async function pollDeployment(
 	registry: Smithery,
 	serverName: string,
 	deploymentId: string,
