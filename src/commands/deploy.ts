@@ -2,9 +2,9 @@ import { createReadStream, existsSync } from "node:fs"
 import { Smithery } from "@smithery/api"
 import type { DeploymentRetrieveResponse } from "@smithery/api/resources/servers/deployments"
 import chalk from "chalk"
-import { buildBundle, type DeployPayload } from "../lib/bundle/index.js"
 import cliSpinners from "cli-spinners"
 import ora from "ora"
+import { buildBundle, type DeployPayload } from "../lib/bundle/index.js"
 import {
 	promptForNamespaceCreation,
 	promptForNamespaceSelection,
@@ -272,9 +272,7 @@ export async function deploy(options: DeployOptions = {}) {
 		}
 		const result = await registry.servers.deployments.deploy(
 			serverName,
-			deployParams as Parameters<
-				typeof registry.servers.deployments.deploy
-			>[1],
+			deployParams as Parameters<typeof registry.servers.deployments.deploy>[1],
 		)
 
 		uploadSpinner.stop()
