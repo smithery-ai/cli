@@ -239,7 +239,7 @@ export async function deploy(options: DeployOptions = {}) {
 			),
 		)
 
-		await pollDeployment(registry, serverName, result.deploymentId, isExternal)
+		await pollDeployment(registry, serverName, result.deploymentId)
 	} catch (error) {
 		uploadSpinner.fail("Upload failed")
 		// Handle HTTP errors with status codes
@@ -309,7 +309,6 @@ async function pollDeployment(
 	registry: Smithery,
 	serverName: string,
 	deploymentId: string,
-	isExternal = false,
 ) {
 	let lastLoggedIndex = 0
 
@@ -345,33 +344,8 @@ async function pollDeployment(
 			const authUrl = `https://smithery.ai/server/${serverName}/deployments/`
 			console.log(chalk.yellow("\n⚠ OAuth authorization required."))
 			console.log(`Please authorize at: ${chalk.cyan(authUrl)}`)
-
-			if (isExternal) {
-				return
-			}
-
-			if (process.stdin.isTTY) {
-				console.log(
-					chalk.dim("\nPress Enter once you have authorized to resume..."),
-				)
-				await new Promise<void>((resolve) => {
-					process.stdin.resume()
-					process.stdin.once("data", () => {
-						process.stdin.pause()
-						resolve()
-					})
-				})
-
-				console.log(chalk.cyan("\nResuming deployment..."))
-				await registry.servers.deployments.resume(deploymentId, {
-					qualifiedName: serverName,
-				})
-
-				await sleep(2000)
-				continue
-			}
 			console.log(
-				`Then run: ${chalk.bold(`smithery deploy --resume --name ${serverName}`)}`,
+				chalk.dim("Once authorized, deployment will automatically continue."),
 			)
 			return
 		}
