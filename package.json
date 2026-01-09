@@ -29,7 +29,8 @@
 		"onlyBuiltDependencies": [
 			"esbuild",
 			"keytar",
-			"@smithery/api"
+			"@smithery/api",
+			"workerd"
 		]
 	},
 	"bin": {
