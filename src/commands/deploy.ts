@@ -1,10 +1,14 @@
 import { createReadStream, existsSync } from "node:fs"
 import { Smithery } from "@smithery/api"
-import type { DeploymentRetrieveResponse } from "@smithery/api/resources/servers/deployments"
+import type {
+	DeploymentDeployParams,
+	DeploymentRetrieveResponse,
+} from "@smithery/api/resources/servers/deployments"
 import chalk from "chalk"
 import cliSpinners from "cli-spinners"
 import ora from "ora"
 import { buildBundle, type DeployPayload } from "../lib/bundle/index.js"
+import { createError } from "../lib/errors.js"
 import {
 	promptForNamespaceCreation,
 	promptForNamespaceSelection,
@@ -54,76 +58,29 @@ function parseQualifiedName(qualifiedName: string): {
 
 /**
  * Get user's namespaces from the registry API
- * TODO: Use @smithery/api SDK instead of raw fetch calls
  */
-async function getUserNamespaces(
-	baseURL: string,
-	apiKey: string,
-): Promise<string[]> {
-	const response = await fetch(`${baseURL}/namespaces`, {
-		method: "GET",
-		headers: {
-			Authorization: `Bearer ${apiKey}`,
-			"Content-Type": "application/json",
-		},
-	})
-
-	if (!response.ok) {
-		if (response.status === 401) {
-			throw new Error("Unauthorized: Invalid API key")
-		}
-		throw new Error(
-			`Failed to fetch namespaces: ${response.status} ${response.statusText}`,
-		)
+async function getUserNamespaces(client: Smithery): Promise<string[]> {
+	try {
+		const response = await client.namespaces.list()
+		return response.namespaces.map((ns) => ns.name)
+	} catch (error) {
+		throw createError(error, "Failed to fetch namespaces")
 	}
-
-	const data = (await response.json()) as {
-		namespaces: Array<{ name: string }>
-	}
-	return data.namespaces.map((ns) => ns.name)
 }
 
 /**
  * Create a new namespace via the registry API
- * TODO: Use @smithery/api SDK instead of raw fetch calls
  */
-async function createNamespace(
-	baseURL: string,
-	apiKey: string,
-	name: string,
-): Promise<void> {
-	const response = await fetch(`${baseURL}/namespaces`, {
-		method: "PUT",
-		headers: {
-			Authorization: `Bearer ${apiKey}`,
-			"Content-Type": "application/json",
-		},
-		body: JSON.stringify({ name }),
-	})
-
-	if (!response.ok) {
-		const errorData = (await response.json().catch(() => ({}))) as {
-			error?: string
-		}
-		const errorMessage = errorData.error || response.statusText
-
-		if (response.status === 401) {
-			throw new Error("Unauthorized: Invalid API key")
-		}
-		if (response.status === 409) {
-			throw new Error(`Namespace already exists: ${errorMessage}`)
-		}
-		if (response.status === 400) {
-			throw new Error(`Invalid namespace name: ${errorMessage}`)
-		}
-		throw new Error(`Failed to create namespace: ${errorMessage}`)
+async function createNamespace(client: Smithery, name: string): Promise<void> {
+	try {
+		await client.namespaces.create({ name })
+	} catch (error) {
+		throw createError(error, "Failed to create namespace")
 	}
 }
 
 export async function deploy(options: DeployOptions = {}) {
 	const apiKey = await ensureApiKey(options.key)
-	const registryEndpoint =
-		process.env.REGISTRY_ENDPOINT || "https://api.smithery.ai"
 	const registry = createRegistry(apiKey)
 
 	let serverName = options.name
@@ -139,7 +96,7 @@ export async function deploy(options: DeployOptions = {}) {
 				spinner: cliSpinners.star,
 				color: "yellow",
 			}).start()
-			const userNamespaces = await getUserNamespaces(registryEndpoint, apiKey)
+			const userNamespaces = await getUserNamespaces(registry)
 			spinner.succeed(
 				chalk.dim(
 					`Found ${userNamespaces.length} namespace${userNamespaces.length === 1 ? "" : "s"}`,
@@ -154,7 +111,7 @@ export async function deploy(options: DeployOptions = {}) {
 					chalk.yellow("No namespaces found. Creating a new namespace..."),
 				)
 				const newNamespaceName = await promptForNamespaceCreation()
-				await createNamespace(registryEndpoint, apiKey, newNamespaceName)
+				await createNamespace(registry, newNamespaceName)
 				namespace = newNamespaceName
 				console.log(chalk.green(`✓ Created namespace: ${namespace}`))
 			} else if (userNamespaces.length === 1) {
@@ -261,12 +218,7 @@ export async function deploy(options: DeployOptions = {}) {
 	}).start()
 
 	try {
-		const deployParams: {
-			payload: string
-			module?: unknown
-			sourcemap?: unknown
-			bundle?: unknown
-		} = {
+		const deployParams: DeploymentDeployParams = {
 			payload: JSON.stringify(payload),
 			module: moduleFile,
 			sourcemap: sourcemapFile,
@@ -274,7 +226,7 @@ export async function deploy(options: DeployOptions = {}) {
 		}
 		const result = await registry.servers.deployments.deploy(
 			serverName,
-			deployParams as Parameters<typeof registry.servers.deployments.deploy>[1],
+			deployParams,
 		)
 
 		uploadSpinner.stop()
