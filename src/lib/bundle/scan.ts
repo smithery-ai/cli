@@ -5,6 +5,7 @@ import type { Server } from "@modelcontextprotocol/sdk/server/index.js"
 import type { Prompt, Resource, Tool } from "@modelcontextprotocol/sdk/types.js"
 import type { ServerCard } from "@smithery/api/resources/servers/deployments"
 import type { ServerModule, Session } from "@smithery/sdk"
+import zodToJsonSchema from "zod-to-json-schema"
 
 import { z } from "zod"
 
@@ -48,8 +49,19 @@ function generateMockFromJsonSchema(schema: JsonSchema): unknown {
 	}
 }
 
-function generateMockConfig(zodSchema: z.ZodType): unknown {
-	const jsonSchema = z.toJSONSchema(zodSchema) as JsonSchema
+function zodSchemaToJsonSchema(zodSchema: unknown): JsonSchema {
+	// Try Zod v4 first (CLI's native version)
+	try {
+		return z.toJSONSchema(zodSchema as z.ZodType) as JsonSchema
+	} catch {
+		// Fall back to zod-to-json-schema for Zod v3 schemas
+		// eslint-disable-next-line @typescript-eslint/no-explicit-any
+		return zodToJsonSchema(zodSchema as any) as JsonSchema
+	}
+}
+
+function generateMockConfig(zodSchema: unknown): unknown {
+	const jsonSchema = zodSchemaToJsonSchema(zodSchema)
 	return generateMockFromJsonSchema(jsonSchema)
 }
 
@@ -116,7 +128,7 @@ export async function scanModule(modulePath: string): Promise<ScanResult> {
 	return {
 		serverCard,
 		configSchema: serverModule.configSchema
-			? (z.toJSONSchema(serverModule.configSchema as z.ZodType) as Record<
+			? (zodSchemaToJsonSchema(serverModule.configSchema) as Record<
 					string,
 					unknown
 				>)
