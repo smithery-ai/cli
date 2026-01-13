@@ -1,5 +1,5 @@
 import { createReadStream, existsSync } from "node:fs"
-import { Smithery } from "@smithery/api"
+import { NotFoundError, PermissionDeniedError, Smithery } from "@smithery/api"
 import type {
 	DeploymentDeployParams,
 	DeploymentRetrieveResponse,
@@ -80,7 +80,9 @@ export async function deploy(options: DeployOptions = {}) {
 			// If name exists in config, use it directly without prompting
 			if (configServerName) {
 				console.log(
-					chalk.dim(`Using server name "${chalk.cyan(configServerName)}" from smithery.yaml`),
+					chalk.dim(
+						`Using server name "${chalk.cyan(configServerName)}" from smithery.yaml`,
+					),
 				)
 				qualifiedName = namespace
 					? `${namespace}/${configServerName}`
@@ -208,43 +210,20 @@ export async function deploy(options: DeployOptions = {}) {
 		await pollDeployment(registry, qualifiedName, result.deploymentId)
 	} catch (error) {
 		uploadSpinner.fail("Upload failed")
-		// Handle HTTP errors with status codes
-		const errorObj = error as {
-			message?: string
-			body$?: string
-			status?: number
-			statusCode?: number
-		}
 
-		const status = errorObj.status || errorObj.statusCode
-
-		if (status === 403) {
-			const { namespace } = parseQualifiedName(qualifiedName)
-			const errorMessage = errorObj.body$ || errorObj.message || "Forbidden"
-			if (errorMessage.includes("namespace")) {
-				console.error(
-					chalk.red(`\n✗ Error: You don't own the namespace "${namespace}".`),
-				)
-				console.error(
-					chalk.dim(
-						"   Namespaces can only be used by their owners. Please use a namespace you own or create a new one.",
-					),
-				)
-			} else {
-				console.error(
-					chalk.red(`\n✗ Error: You don't own the server "${qualifiedName}".`),
-				)
-				console.error(
-					chalk.dim(
-						"   Servers can only be deployed by their owners. Please use a server name you own.",
-					),
-				)
-			}
+		// Handle 403 Permission Denied errors - extract error message from SDK error
+		if (error instanceof PermissionDeniedError) {
+			// SDK error.error contains the parsed JSON response body
+			const errorBody = error.error as { error?: string } | undefined
+			const errorMessage = errorBody?.error || "Forbidden"
+			console.error(chalk.red(`\n✗ Error: ${errorMessage}`))
 			process.exit(1)
 		}
 
-		if (status === 404) {
-			const errorMessage = errorObj.body$ || errorObj.message || "Not found"
+		// Handle 404 Not Found errors
+		if (error instanceof NotFoundError) {
+			const errorBody = error.error as { error?: string } | undefined
+			const errorMessage = errorBody?.error || error.message || "Not found"
 			if (errorMessage.includes("namespace")) {
 				const { namespace } = parseQualifiedName(qualifiedName)
 				console.error(
@@ -267,9 +246,7 @@ export async function deploy(options: DeployOptions = {}) {
 		if (error instanceof Error) {
 			throw error
 		}
-		// SDK errors may not be Error instances - extract message
-		const message = errorObj.message || errorObj.body$ || JSON.stringify(error)
-		throw new Error(message)
+		throw new Error(JSON.stringify(error))
 	}
 }
 

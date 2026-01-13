@@ -90,7 +90,7 @@ export async function dev(options: DevOptions = {}): Promise<void> {
 			outFile,
 			entryFile: options.entryFile,
 			watch: true,
-			minify: options.minify,
+			minify: false, // Always disable minification in dev mode
 			transport: "shttp",
 			onRebuild: () => {
 				startServer()

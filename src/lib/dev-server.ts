@@ -1,3 +1,5 @@
+import { readFile } from "node:fs/promises"
+import { dirname } from "node:path"
 import { Log, LogLevel, Miniflare } from "miniflare"
 
 export interface DevServerOptions {
@@ -12,10 +14,27 @@ class SmitheryLog extends Log {
 	}
 }
 
+async function getModuleSourceOptions(modulePath: string) {
+	const modulesRoot = dirname(modulePath)
+	const entrypointSource = await readFile(modulePath, "utf-8")
+
+	return {
+		modulesRoot,
+		modules: [
+			{
+				type: "ESModule" as const,
+				path: modulePath,
+				contents: entrypointSource,
+			},
+		],
+	}
+}
+
 export async function createDevServer(options: DevServerOptions) {
+	const sourceOptions = await getModuleSourceOptions(options.modulePath)
+
 	const mf = new Miniflare({
-		modules: true,
-		scriptPath: options.modulePath,
+		...sourceOptions,
 		compatibilityDate: "2026-01-07",
 		compatibilityFlags: ["nodejs_compat"],
 		host: "127.0.0.1",
@@ -34,9 +53,10 @@ export async function createDevServer(options: DevServerOptions) {
 	return {
 		mf,
 		reload: async () => {
-			await mf.setOptions({
-				scriptPath: options.modulePath,
-			})
+			const updatedSourceOptions = await getModuleSourceOptions(
+				options.modulePath,
+			)
+			await mf.setOptions(updatedSourceOptions)
 		},
 		close: async () => {
 			await mf.dispose()
