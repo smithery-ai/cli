@@ -1,5 +1,6 @@
 import { existsSync, readFileSync } from "node:fs"
 import { join, resolve } from "node:path"
+import type { ProjectConfig } from "@smithery/api/resources/servers/servers"
 import * as YAML from "yaml"
 import { z } from "zod"
 
@@ -60,34 +61,22 @@ const ServerNameSchema = z
 		/^[a-zA-Z][a-zA-Z0-9-_]{2,38}$/,
 		"Server name must be 3-39 characters, start with a letter, and contain only letters, numbers, hyphens, or underscores.",
 	)
+
+const BuildConfigSchema = z
+	.object({
+		installCommand: z.string().optional(),
+		buildCommand: z.string().optional(),
+		outputDirectory: z.string().optional(),
+	})
 	.optional()
 
-// Project config schema matching @smithery/db schema
-const ProjectConfigSchema = z.union([
-	z.object({
-		runtime: z.literal("typescript"),
-		name: ServerNameSchema,
+const ProjectConfigSchema = z
+	.object({
+		name: ServerNameSchema.optional(),
 		target: z.enum(["local", "remote"]).optional(),
-		env: z.record(z.string(), z.string()).optional(),
-	}),
-	z.object({
-		runtime: z.literal("python"),
-		env: z.record(z.string(), z.string()).optional(),
-	}),
-	z.object({
-		runtime: z.literal("container").optional(),
-		build: z
-			.object({
-				dockerfile: z.string().optional(),
-				dockerBuildPath: z.string().optional(),
-			})
-			.optional(),
-		startCommand: z.any().optional(),
-		env: z.record(z.string(), z.string()).optional(),
-	}),
-])
-
-export type ProjectConfig = z.infer<typeof ProjectConfigSchema>
+		build: BuildConfigSchema,
+	})
+	.loose() satisfies z.ZodType<ProjectConfig>
 
 /**
  * Load and parse smithery.yaml from the current working directory

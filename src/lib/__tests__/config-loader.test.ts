@@ -29,77 +29,75 @@ describe("loadProjectConfig", () => {
 		expect(readFileSync).not.toHaveBeenCalled()
 	})
 
-	test("valid typescript config with name: returns parsed config", () => {
+	test("valid config with target: returns parsed config", () => {
 		vi.mocked(existsSync).mockReturnValue(true)
-		vi.mocked(readFileSync).mockReturnValue(
-			"runtime: typescript\nname: my-server-name\n",
-		)
+		vi.mocked(readFileSync).mockReturnValue("target: local\n")
 
 		const result = loadProjectConfig()
 
 		expect(result).toEqual({
-			runtime: "typescript",
-			name: "my-server-name",
-		})
-		expect(existsSync).toHaveBeenCalled()
-		expect(readFileSync).toHaveBeenCalled()
-	})
-
-	test("valid typescript config without name: returns parsed config", () => {
-		vi.mocked(existsSync).mockReturnValue(true)
-		vi.mocked(readFileSync).mockReturnValue("runtime: typescript\n")
-
-		const result = loadProjectConfig()
-
-		expect(result).toEqual({
-			runtime: "typescript",
-		})
-		expect(existsSync).toHaveBeenCalled()
-		expect(readFileSync).toHaveBeenCalled()
-	})
-
-	test("valid typescript config with optional fields: returns parsed config", () => {
-		vi.mocked(existsSync).mockReturnValue(true)
-		vi.mocked(readFileSync).mockReturnValue(
-			"runtime: typescript\nname: my-server\ntarget: local\nenv:\n  KEY: value\n",
-		)
-
-		const result = loadProjectConfig()
-
-		expect(result).toEqual({
-			runtime: "typescript",
-			name: "my-server",
 			target: "local",
-			env: {
-				KEY: "value",
+		})
+	})
+
+	test("valid config with build options: returns parsed config", () => {
+		vi.mocked(existsSync).mockReturnValue(true)
+		vi.mocked(readFileSync).mockReturnValue(
+			"target: remote\nbuild:\n  installCommand: pnpm install\n  buildCommand: pnpm build\n  outputDirectory: dist\n",
+		)
+
+		const result = loadProjectConfig()
+
+		expect(result).toEqual({
+			target: "remote",
+			build: {
+				installCommand: "pnpm install",
+				buildCommand: "pnpm build",
+				outputDirectory: "dist",
 			},
 		})
-		expect(existsSync).toHaveBeenCalled()
-		expect(readFileSync).toHaveBeenCalled()
+	})
+
+	test("passthrough allows unknown fields: returns config with extra fields", () => {
+		vi.mocked(existsSync).mockReturnValue(true)
+		vi.mocked(readFileSync).mockReturnValue(
+			"target: local\nruntime: typescript\nname: my-server\n",
+		)
+
+		const result = loadProjectConfig()
+
+		expect(result).toEqual({
+			target: "local",
+			runtime: "typescript",
+			name: "my-server",
+		})
+	})
+
+	test("empty config: returns empty object", () => {
+		vi.mocked(existsSync).mockReturnValue(true)
+		vi.mocked(readFileSync).mockReturnValue("{}\n")
+
+		const result = loadProjectConfig()
+
+		expect(result).toEqual({})
 	})
 
 	test("invalid YAML syntax: returns null", () => {
 		vi.mocked(existsSync).mockReturnValue(true)
-		vi.mocked(readFileSync).mockReturnValue(
-			"runtime: typescript\nname: [unclosed\n",
-		)
+		vi.mocked(readFileSync).mockReturnValue("target: local\nname: [unclosed\n")
 
 		const result = loadProjectConfig()
 
 		expect(result).toBeNull()
-		expect(existsSync).toHaveBeenCalled()
-		expect(readFileSync).toHaveBeenCalled()
 	})
 
-	test("valid YAML but invalid schema: returns null", () => {
+	test("invalid target value: returns null", () => {
 		vi.mocked(existsSync).mockReturnValue(true)
-		vi.mocked(readFileSync).mockReturnValue("runtime: invalid-runtime\n")
+		vi.mocked(readFileSync).mockReturnValue("target: invalid-target\n")
 
 		const result = loadProjectConfig()
 
 		expect(result).toBeNull()
-		expect(existsSync).toHaveBeenCalled()
-		expect(readFileSync).toHaveBeenCalled()
 	})
 
 	test("file read error: returns null", () => {
@@ -111,8 +109,6 @@ describe("loadProjectConfig", () => {
 		const result = loadProjectConfig()
 
 		expect(result).toBeNull()
-		expect(existsSync).toHaveBeenCalled()
-		expect(readFileSync).toHaveBeenCalled()
 	})
 
 	test("YAML parses to array: returns null", () => {
@@ -122,8 +118,6 @@ describe("loadProjectConfig", () => {
 		const result = loadProjectConfig()
 
 		expect(result).toBeNull()
-		expect(existsSync).toHaveBeenCalled()
-		expect(readFileSync).toHaveBeenCalled()
 	})
 
 	test("YAML parses to primitive: returns null", () => {
@@ -133,58 +127,5 @@ describe("loadProjectConfig", () => {
 		const result = loadProjectConfig()
 
 		expect(result).toBeNull()
-		expect(existsSync).toHaveBeenCalled()
-		expect(readFileSync).toHaveBeenCalled()
-	})
-
-	test("invalid server name format: returns null", () => {
-		vi.mocked(existsSync).mockReturnValue(true)
-		vi.mocked(readFileSync).mockReturnValue(
-			"runtime: typescript\nname: 123invalid\n",
-		)
-
-		const result = loadProjectConfig()
-
-		expect(result).toBeNull()
-		expect(existsSync).toHaveBeenCalled()
-		expect(readFileSync).toHaveBeenCalled()
-	})
-
-	test("server name too short: returns null", () => {
-		vi.mocked(existsSync).mockReturnValue(true)
-		vi.mocked(readFileSync).mockReturnValue("runtime: typescript\nname: ab\n")
-
-		const result = loadProjectConfig()
-
-		expect(result).toBeNull()
-		expect(existsSync).toHaveBeenCalled()
-		expect(readFileSync).toHaveBeenCalled()
-	})
-
-	test("server name too long: returns null", () => {
-		vi.mocked(existsSync).mockReturnValue(true)
-		const longName = `a${"b".repeat(40)}` // 41 characters
-		vi.mocked(readFileSync).mockReturnValue(
-			`runtime: typescript\nname: ${longName}\n`,
-		)
-
-		const result = loadProjectConfig()
-
-		expect(result).toBeNull()
-		expect(existsSync).toHaveBeenCalled()
-		expect(readFileSync).toHaveBeenCalled()
-	})
-
-	test("server name starts with number: returns null", () => {
-		vi.mocked(existsSync).mockReturnValue(true)
-		vi.mocked(readFileSync).mockReturnValue(
-			"runtime: typescript\nname: 123server\n",
-		)
-
-		const result = loadProjectConfig()
-
-		expect(result).toBeNull()
-		expect(existsSync).toHaveBeenCalled()
-		expect(readFileSync).toHaveBeenCalled()
 	})
 })

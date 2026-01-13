@@ -3,11 +3,12 @@ import { Smithery } from "@smithery/api"
 import type {
 	DeploymentDeployParams,
 	DeploymentRetrieveResponse,
+	DeployPayload,
 } from "@smithery/api/resources/servers/deployments"
 import chalk from "chalk"
 import cliSpinners from "cli-spinners"
 import ora from "ora"
-import { buildBundle, type DeployPayload } from "../lib/bundle/index.js"
+import { buildBundle } from "../lib/bundle/index.js"
 import { loadProjectConfig } from "../lib/config-loader.js"
 import { resolveNamespace } from "../lib/namespace.js"
 import { promptForServerNameInput } from "../utils/command-prompts.js"
@@ -70,7 +71,7 @@ export async function deploy(options: DeployOptions = {}) {
 			const configServerName =
 				projectConfig &&
 				projectConfig.runtime === "typescript" &&
-				projectConfig.name
+				typeof projectConfig.name === "string"
 					? projectConfig.name
 					: undefined
 
@@ -80,7 +81,9 @@ export async function deploy(options: DeployOptions = {}) {
 			// If name exists in config, use it directly without prompting
 			if (configServerName) {
 				console.log(
-					chalk.dim(`Using server name "${chalk.cyan(configServerName)}" from smithery.yaml`),
+					chalk.dim(
+						`Using server name "${chalk.cyan(configServerName)}" from smithery.yaml`,
+					),
 				)
 				qualifiedName = namespace
 					? `${namespace}/${configServerName}`

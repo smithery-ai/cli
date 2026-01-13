@@ -11,27 +11,9 @@ export {
 	type StdioBundleResult,
 } from "./stdio.js"
 
+import type { DeployPayload } from "@smithery/api/resources/servers/deployments"
 import { buildShttpBundle } from "./shttp.js"
 import { buildStdioBundle } from "./stdio.js"
-
-// Re-export DeployPayload type - should be available from SDK once regenerated
-// For now, define it locally based on the OpenAPI schema
-export type DeployPayload =
-	| {
-			type: "hosted"
-			stateful?: boolean
-			configSchema?: Record<string, unknown>
-			serverCard?: unknown
-			source?: { commit?: string; branch?: string }
-	  }
-	| { type: "external"; upstreamUrl: string }
-	| {
-			type: "stdio"
-			runtime?: "node"
-			configSchema?: Record<string, unknown>
-			serverCard?: unknown
-			source?: { commit?: string; branch?: string }
-	  }
 
 export interface BundleOptions {
 	entryFile?: string

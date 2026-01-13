@@ -5,9 +5,8 @@ import type { Server } from "@modelcontextprotocol/sdk/server/index.js"
 import type { Prompt, Resource, Tool } from "@modelcontextprotocol/sdk/types.js"
 import type { ServerCard } from "@smithery/api/resources/servers/deployments"
 import type { ServerModule, Session } from "@smithery/sdk"
-import zodToJsonSchema from "zod-to-json-schema"
-
 import { z } from "zod"
+import zodToJsonSchema from "zod-to-json-schema"
 
 interface JsonSchema {
 	type?: string | string[]

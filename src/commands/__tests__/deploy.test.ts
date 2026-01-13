@@ -92,7 +92,7 @@ describe("deploy command", () => {
 		// Setup default buildBundle mock return value
 		vi.mocked(buildBundle).mockResolvedValue({
 			outDir: "/tmp/build",
-			payload: { type: "hosted" },
+			payload: { type: "hosted", stateful: false },
 			moduleFile: "/tmp/build/module.js",
 			sourcemapFile: "/tmp/build/module.js.map",
 		})
@@ -237,7 +237,7 @@ describe("deploy command", () => {
 	test("--transport shttp: respects transport type and builds shttp bundle", async () => {
 		vi.mocked(buildBundle).mockResolvedValue({
 			outDir: "/tmp/build",
-			payload: { type: "hosted" },
+			payload: { type: "hosted", stateful: false },
 			moduleFile: "/tmp/build/module.js",
 			sourcemapFile: "/tmp/build/module.js.map",
 		})

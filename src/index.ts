@@ -226,9 +226,7 @@ program
 		// Warn if -o looks like a file path instead of a directory
 		if (options.out && /\.(js|cjs|mjs)$/.test(options.out)) {
 			console.warn(
-				chalk.yellow(
-					`⚠ Warning: -o now expects a directory, not a file path.`,
-				),
+				chalk.yellow(`⚠ Warning: -o now expects a directory, not a file path.`),
 			)
 			console.warn(
 				chalk.yellow(
