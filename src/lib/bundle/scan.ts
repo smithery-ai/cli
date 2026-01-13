@@ -54,8 +54,9 @@ function zodSchemaToJsonSchema(zodSchema: unknown): JsonSchema {
 		return z.toJSONSchema(zodSchema as z.ZodType) as JsonSchema
 	} catch {
 		// Fall back to zod-to-json-schema for Zod v3 schemas
-		// eslint-disable-next-line @typescript-eslint/no-explicit-any
-		return zodToJsonSchema(zodSchema as any) as JsonSchema
+		return zodToJsonSchema(
+			zodSchema as Parameters<typeof zodToJsonSchema>[0],
+		) as JsonSchema
 	}
 }
 

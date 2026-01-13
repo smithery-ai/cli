@@ -7,9 +7,49 @@ import { Readable } from "node:stream"
 import { beforeEach, describe, expect, test, vi } from "vitest"
 
 // Mock dependencies
-vi.mock("@smithery/api", () => ({
-	Smithery: vi.fn(),
-}))
+vi.mock("@smithery/api", () => {
+	class PermissionDeniedError extends Error {
+		readonly status: number
+		readonly error: { error?: string }
+		readonly headers: Headers
+		constructor(
+			status: number,
+			error: { error?: string },
+			message?: string,
+			headers?: Headers,
+		) {
+			super(message || `403 ${JSON.stringify(error)}`)
+			this.name = "PermissionDeniedError"
+			this.status = status
+			this.error = error
+			this.headers = headers || new Headers()
+		}
+	}
+
+	class NotFoundError extends Error {
+		readonly status: number
+		readonly error: { error?: string }
+		readonly headers: Headers
+		constructor(
+			status: number,
+			error: { error?: string },
+			message?: string,
+			headers?: Headers,
+		) {
+			super(message || `404 ${JSON.stringify(error)}`)
+			this.name = "NotFoundError"
+			this.status = status
+			this.error = error
+			this.headers = headers || new Headers()
+		}
+	}
+
+	return {
+		Smithery: vi.fn(),
+		PermissionDeniedError,
+		NotFoundError,
+	}
+})
 
 vi.mock("../../utils/runtime", () => ({
 	ensureApiKey: vi.fn().mockResolvedValue("test-api-key"),
@@ -57,7 +97,7 @@ vi.mock("node:fs", () => ({
 	existsSync: vi.fn().mockReturnValue(true),
 }))
 
-import { Smithery } from "@smithery/api"
+import { NotFoundError, PermissionDeniedError, Smithery } from "@smithery/api"
 import { buildBundle } from "../../lib/bundle/index"
 import { loadProjectConfig } from "../../lib/config-loader"
 import { resolveNamespace } from "../../lib/namespace"
@@ -357,11 +397,12 @@ describe("deploy command", () => {
 	})
 
 	test("403 error: handles namespace ownership error correctly", async () => {
-		const error = {
-			status: 403,
-			body$: "You don't own the namespace",
-			message: "Forbidden",
-		}
+		const error = new PermissionDeniedError(
+			403,
+			{ error: "You don't own the namespace" },
+			"Forbidden",
+			new Headers(),
+		)
 		mockRegistry.servers.deployments.deploy.mockRejectedValue(error)
 
 		await expect(deploy({ name: "otherorg/myserver" })).rejects.toThrow(
@@ -370,11 +411,12 @@ describe("deploy command", () => {
 	})
 
 	test("403 error: handles server ownership error correctly", async () => {
-		const error = {
-			status: 403,
-			body$: "You don't own the server",
-			message: "Forbidden",
-		}
+		const error = new PermissionDeniedError(
+			403,
+			{ error: "You don't own the server" },
+			"Forbidden",
+			new Headers(),
+		)
 		mockRegistry.servers.deployments.deploy.mockRejectedValue(error)
 
 		await expect(deploy({ name: "myorg/myserver" })).rejects.toThrow(
@@ -383,11 +425,12 @@ describe("deploy command", () => {
 	})
 
 	test("404 error: handles namespace not found error correctly", async () => {
-		const error = {
-			status: 404,
-			body$: "Namespace not found",
-			message: "Not found",
-		}
+		const error = new NotFoundError(
+			404,
+			{ error: "Namespace not found" },
+			"Not found",
+			new Headers(),
+		)
 		mockRegistry.servers.deployments.deploy.mockRejectedValue(error)
 
 		await expect(deploy({ name: "nonexistent/myserver" })).rejects.toThrow(
@@ -396,11 +439,12 @@ describe("deploy command", () => {
 	})
 
 	test("404 error: handles server not found error correctly", async () => {
-		const error = {
-			status: 404,
-			body$: "Server not found",
-			message: "Not found",
-		}
+		const error = new NotFoundError(
+			404,
+			{ error: "Server not found" },
+			"Not found",
+			new Headers(),
+		)
 		mockRegistry.servers.deployments.deploy.mockRejectedValue(error)
 
 		await expect(deploy({ name: "myorg/nonexistent" })).rejects.toThrow(

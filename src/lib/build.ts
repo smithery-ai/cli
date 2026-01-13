@@ -83,7 +83,7 @@ async function esbuildServer(
 	})
 
 	// Common build options
-	const shouldMinify = options.minify ?? true // Default to minified
+	const shouldMinify = options.minify ?? options.production ?? false
 	const bundleMode = options.bundleMode ?? "bootstrap"
 	// Use bootstrap unless explicitly set to user-module mode
 	const useBootstrap = bundleMode === "bootstrap"
