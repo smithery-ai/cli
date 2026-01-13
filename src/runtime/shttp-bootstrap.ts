@@ -1,7 +1,10 @@
 // @ts-expect-error - virtual:user-module is a placeholder replaced at upload time
-import createServer, { stateful } from "virtual:user-module"
+import * as userModule from "virtual:user-module"
 import { WebStandardStreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/webStandardStreamableHttp.js"
 import type { Session, StatelessServerContext } from "@smithery/sdk"
+
+const createServer = userModule.default
+const stateful = userModule.stateful ?? false
 
 interface McpSessionStub {
 	fetch(request: Request): Promise<Response>
