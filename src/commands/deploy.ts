@@ -104,6 +104,11 @@ export async function deploy(options: DeployOptions = {}) {
 		}
 	}
 
+	if (!qualifiedName) {
+		console.error(chalk.red("Error: Server name is required"))
+		process.exit(1)
+	}
+
 	if (options.resume) {
 		console.log(
 			chalk.cyan(`\nResuming latest deployment for ${qualifiedName}...`),
