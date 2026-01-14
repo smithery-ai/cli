@@ -2,6 +2,8 @@ import { existsSync, mkdirSync, rmSync } from "node:fs"
 import net from "node:net"
 import { dirname, join, resolve } from "node:path"
 import { fileURLToPath } from "node:url"
+import { Client } from "@modelcontextprotocol/sdk/client/index.js"
+import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js"
 import * as esbuild from "esbuild"
 import { afterAll, beforeAll, describe, expect, test } from "vitest"
 import { buildServer } from "../build"
@@ -310,6 +312,46 @@ describeE2E("CLI E2E MCP Server", { timeout: 60000 }, () => {
 			// Each session starts fresh
 			expect(valA).toBe(1)
 			expect(valB).toBe(1)
+		})
+	})
+
+	describe("stdio bundle execution", () => {
+		const outFile = join(OUT_DIR, "stdio/index.cjs")
+
+		beforeAll(async () => {
+			// Build stdio bundle with bootstrap mode
+			await buildServer({
+				entryFile: join(FIXTURES, "stateful-server/src/index.ts"),
+				outFile,
+				transport: "stdio",
+				bundleMode: "bootstrap",
+				minify: false,
+			})
+		})
+
+		test("built bundle starts and responds to MCP requests", async () => {
+			// Create transport that spawns the built bundle
+			// Pass config args in dot notation format (parsed by bootstrap's parseCliConfig)
+			const transport = new StdioClientTransport({
+				command: "node",
+				args: [outFile, "sessionTimeout=3600", "maxConnections=100"],
+			})
+
+			// Create MCP client and connect - this handles the initialize handshake
+			const client = new Client({ name: "test-client", version: "1.0.0" })
+			await client.connect(transport)
+
+			// Verify server info from successful connection
+			const serverInfo = client.getServerVersion()
+			expect(serverInfo?.name).toBe("test-stateful-server")
+
+			// Can also verify tools are available
+			const { tools } = await client.listTools()
+			expect(tools).toContainEqual(
+				expect.objectContaining({ name: "increment" }),
+			)
+
+			await client.close()
 		})
 	})
 })

@@ -9,17 +9,38 @@ declare const __SMITHERY_VERSION__: string
 declare const __SHTTP_BOOTSTRAP__: string
 declare const __STDIO_BOOTSTRAP__: string
 
-export interface BuildOptions {
+type BaseBuildOptions = {
 	entryFile?: string
 	outFile?: string
 	watch?: boolean
 	onRebuild?: (success: boolean, outputs: string[]) => void
-	production?: boolean
 	minify?: boolean
-	transport?: "shttp" | "stdio"
-	bundleMode?: "bootstrap" | "user-module"
 	sourceMaps?: boolean
 }
+
+/**
+ * Build options with compile-time validation for bundle mode constraints.
+ *
+ */
+export type BuildOptions =
+	| (BaseBuildOptions & {
+			// shttp transport: uses user-module (no bootstrap wrapper needed)
+			production?: boolean
+			transport?: "shttp"
+			bundleMode?: "user-module"
+	  })
+	| (BaseBuildOptions & {
+			// stdio transport + scanning: allows user-module (imports module for scanning)
+			production: false
+			transport: "stdio"
+			bundleMode?: "bootstrap" | "user-module"
+	  })
+	| (BaseBuildOptions & {
+			// stdio transport + executable: requires bootstrap (handles CLI parsing & transport)
+			production?: true
+			transport: "stdio"
+			bundleMode?: "bootstrap"
+	  })
 
 /**
  * Build MCP server using esbuild
