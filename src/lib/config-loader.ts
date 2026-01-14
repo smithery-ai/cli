@@ -1,8 +1,18 @@
 import { existsSync, readFileSync } from "node:fs"
 import { join, resolve } from "node:path"
-import type { ProjectConfig } from "@smithery/api/resources/servers/servers"
 import * as YAML from "yaml"
 import { z } from "zod"
+
+export interface ProjectConfig {
+	name?: string
+	target?: "local" | "remote"
+	runtime?: string
+	build?: {
+		installCommand?: string
+		buildCommand?: string
+		outputDirectory?: string
+	}
+}
 
 /**
  * Get the entry point from package.json or provided entry point

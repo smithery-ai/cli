@@ -28,7 +28,9 @@ describe("generateMCPConfigArgs", () => {
 		})
 		expect(result).toEqual([
 			`\${__dirname}/${MCPB_ENTRY_POINT}`,
+			// biome-ignore lint/suspicious/noTemplateCurlyInString: Testing literal string output
 			"apiKey=${user_config.apiKey}",
+			// biome-ignore lint/suspicious/noTemplateCurlyInString: Testing literal string output
 			"maxRetries=${user_config.maxRetries}",
 		])
 	})
@@ -47,7 +49,9 @@ describe("generateMCPConfigArgs", () => {
 			},
 		})
 		expect(result).toContain(`\${__dirname}/${MCPB_ENTRY_POINT}`)
+		// biome-ignore lint/suspicious/noTemplateCurlyInString: Testing literal string output
 		expect(result).toContain("auth.apiKey=${user_config.auth.apiKey}")
+		// biome-ignore lint/suspicious/noTemplateCurlyInString: Testing literal string output
 		expect(result).toContain("auth.token=${user_config.auth.token}")
 	})
 })
@@ -240,6 +244,7 @@ describe("createMcpbManifest", () => {
 				name: "greeting",
 				description: "Generate a greeting",
 				arguments: ["name"],
+				// biome-ignore lint/suspicious/noTemplateCurlyInString: Testing literal string output
 				text: "Generate a greeting: ${arguments.name}",
 			},
 		])
@@ -273,6 +278,7 @@ describe("createMcpbManifest", () => {
 			sensitive: true,
 		})
 		expect(manifest.server.mcp_config.args).toContain(
+			// biome-ignore lint/suspicious/noTemplateCurlyInString: Testing literal string output
 			"apiKey=${user_config.apiKey}",
 		)
 	})

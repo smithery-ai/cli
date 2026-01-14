@@ -48,7 +48,7 @@ export async function buildStdioBundle(
 		transport: "stdio",
 		production: options.production ?? true,
 		minify: true,
-		bundleMode: "user-module",
+		bundleMode: "bootstrap",
 		sourceMaps: true,
 	})
 
