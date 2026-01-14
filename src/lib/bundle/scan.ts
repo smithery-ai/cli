@@ -38,8 +38,11 @@ function generateMockFromJsonSchema(schema: JsonSchema): unknown {
 		case "object": {
 			if (!schema.properties) return {}
 			const obj: Record<string, unknown> = {}
+			const required = new Set(schema.required || [])
 			for (const [key, prop] of Object.entries(schema.properties)) {
-				obj[key] = generateMockFromJsonSchema(prop)
+				if (required.has(key)) {
+					obj[key] = generateMockFromJsonSchema(prop)
+				}
 			}
 			return obj
 		}
