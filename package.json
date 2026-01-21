@@ -68,7 +68,7 @@
 		"@types/inquirer": "^8.2.4",
 		"@types/inquirer-autocomplete-prompt": "^3.0.3",
 		"@types/lodash": "^4.17.14",
-		"@types/node": "^20.19.30",
+		"@types/node": "^20.19.27",
 		"dotenv": "^17.2.2",
 		"knip": "^5.80.0",
 		"tsx": "^4.19.2",
