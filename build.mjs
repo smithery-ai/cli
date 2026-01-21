@@ -7,44 +7,53 @@ config({ quiet: true })
 const define = {}
 
 const isDotSafeIdentifier = (str) => {
-  return /^[a-zA-Z_$][a-zA-Z0-9_$]*$/.test(str)
+	return /^[a-zA-Z_$][a-zA-Z0-9_$]*$/.test(str)
 }
 
 for (const k in process.env) {
-  /* Skip environment variables that should be evaluated at runtime */
-  // Keep these dynamic so code isn't tree-shaken based on CI build env
-  if (["HOME", "USER", "XDG_CONFIG_HOME", "SMITHERY_BEARER_AUTH"].includes(k))
-    continue
+	/* Skip environment variables that should be evaluated at runtime */
+	// Keep these dynamic so code isn't tree-shaken based on CI build env
+	if (
+		[
+			"HOME",
+			"USER",
+			"XDG_CONFIG_HOME",
+			"SMITHERY_BEARER_AUTH",
+			"REGISTRY_ENDPOINT",
+			"ANALYTICS_ENDPOINT",
+		].includes(k)
+	)
+		continue
 
-  // Skip variables whose names are not dot-safe identifiers (e.g., those containing hyphens, parentheses, etc.)
-  if (!isDotSafeIdentifier(k)) continue
+	// Skip variables whose names are not dot-safe identifiers (e.g., those containing hyphens, parentheses, etc.)
+	if (!isDotSafeIdentifier(k)) continue
 
-  define[`process.env.${k}`] = JSON.stringify(process.env[k])
+	define[`process.env.${k}`] = JSON.stringify(process.env[k])
 }
 
 // 1. Bundle bootstraps into string constants
 console.log("Compiling bootstraps...")
 
 const shttp = await esbuild.build({
-  entryPoints: ["src/runtime/shttp-bootstrap.ts"],
-  bundle: true,
-  format: "esm",
-  platform: "browser",
-  target: "es2022",
-  write: false,
-  minify: true,
-  external: ["virtual:user-module"],
+	entryPoints: ["src/runtime/shttp-bootstrap.ts"],
+	bundle: true,
+	format: "esm",
+	platform: "browser",
+	target: "es2022",
+	write: false,
+	minify: true,
+	external: ["virtual:user-module"],
 })
 
 const stdio = await esbuild.build({
-  entryPoints: ["src/runtime/stdio-bootstrap.ts"],
-  bundle: true,
-  format: "esm",
-  platform: "node",
-  target: "node20",
-  write: false,
-  minify: true,
-  external: ["virtual:user-module"],
+	entryPoints: ["src/runtime/stdio-bootstrap.ts"],
+	bundle: true,
+	format: "esm",
+	platform: "node",
+	target: "node20",
+	write: false,
+	minify: true,
+	external: ["virtual:user-module"],
 })
 
 define.__SHTTP_BOOTSTRAP__ = JSON.stringify(shttp.outputFiles[0].text)
@@ -67,34 +76,34 @@ console.log("✓ Compiled bootstrap files")
 // - miniflare: has complex native deps (workerd) that must resolve at runtime
 // - cross-spawn: has pnpm symlink resolution issues with path-key
 const nativePackages = [
-  "@ngrok/ngrok",
-  "cross-spawn",
-  "esbuild",
-  "keytar",
-  "miniflare",
+	"@ngrok/ngrok",
+	"cross-spawn",
+	"esbuild",
+	"keytar",
+	"miniflare",
 ]
 
 // Build main CLI entry point
 await esbuild.build({
-  entryPoints: ["src/index.ts"],
-  bundle: true,
-  platform: "node",
-  target: "node20",
-  format: "esm",
-  minify: true,
-  treeShaking: true,
-  outfile: "dist/index.js",
-  external: nativePackages,
-  banner: {
-    js: `import { createRequire } from 'module'; const require = createRequire(import.meta.url);`,
-  },
-  define,
+	entryPoints: ["src/index.ts"],
+	bundle: true,
+	platform: "node",
+	target: "node20",
+	format: "esm",
+	minify: true,
+	treeShaking: true,
+	outfile: "dist/index.js",
+	external: nativePackages,
+	banner: {
+		js: `import { createRequire } from 'module'; const require = createRequire(import.meta.url);`,
+	},
+	define,
 })
 
 // Copy runtime files to dist/runtime/
 const runtimeDir = "dist/runtime"
 if (!existsSync(runtimeDir)) {
-  mkdirSync(runtimeDir, { recursive: true })
+	mkdirSync(runtimeDir, { recursive: true })
 }
 
 console.log("✓ Build complete")
