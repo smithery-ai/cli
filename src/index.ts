@@ -25,7 +25,7 @@ import {
   selectServer,
   validateClient,
 } from "./utils/command-prompts"
-import { ensureApiKey, promptForApiKey } from "./utils/runtime"
+import { ensureApiKey } from "./utils/runtime"
 import { getApiKey, setApiKey } from "./utils/smithery-settings"
 
 // TypeScript declaration for global constant injected at build time
