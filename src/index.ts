@@ -409,7 +409,7 @@ program
 			}
 
 			if (options.full) {
-				console.log(chalk.cyan("API Key:"), apiKey)
+				console.log(`SMITHERY_API_KEY=${apiKey}`)
 			} else {
 				const masked = `${apiKey.slice(0, 8)}...${apiKey.slice(-4)}`
 				console.log(chalk.cyan("API Key:"), masked)
