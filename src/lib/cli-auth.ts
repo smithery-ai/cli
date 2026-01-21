@@ -1,9 +1,9 @@
 import { exec } from "node:child_process"
 import { promisify } from "node:util"
 import chalk from "chalk"
-import ora from "ora"
 import cliSpinners from "cli-spinners"
 import fetch from "cross-fetch"
+import ora from "ora"
 import { verbose } from "./logger.js"
 
 const execAsync = promisify(exec)
@@ -158,12 +158,12 @@ async function pollWithRetry(
 
 			// 404/410 likely means session expired
 			if (response.status === 404 || response.status === 410) {
-				throw new Error(
-					"Session expired. Please run 'smithery login' again.",
-				)
+				throw new Error("Session expired. Please run 'smithery login' again.")
 			}
 
-			throw new Error(`Polling failed: ${response.status} ${response.statusText}`)
+			throw new Error(
+				`Polling failed: ${response.status} ${response.statusText}`,
+			)
 		}
 
 		return (await response.json()) as PollResponse
@@ -249,9 +249,7 @@ export async function pollForApiKey(
 	}
 
 	// Timeout reached
-	throw new Error(
-		"Authentication timed out after 5 minutes. Please try again.",
-	)
+	throw new Error("Authentication timed out after 5 minutes. Please try again.")
 }
 
 /**

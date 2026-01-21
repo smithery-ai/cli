@@ -25,7 +25,7 @@ import {
 	selectServer,
 	validateClient,
 } from "./utils/command-prompts"
-import { ensureApiKey, promptForApiKey } from "./utils/runtime"
+import { ensureApiKey } from "./utils/runtime"
 import { getApiKey, setApiKey } from "./utils/smithery-settings"
 
 // TypeScript declaration for global constant injected at build time
@@ -404,9 +404,7 @@ program
 
 			if (!apiKey) {
 				console.log(chalk.yellow("No API key found"))
-				console.log(
-					chalk.gray("Run 'smithery login' to authenticate"),
-				)
+				console.log(chalk.gray("Run 'smithery login' to authenticate"))
 				process.exit(1)
 			}
 
@@ -415,9 +413,7 @@ program
 			} else {
 				const masked = `${apiKey.slice(0, 8)}...${apiKey.slice(-4)}`
 				console.log(chalk.cyan("API Key:"), masked)
-				console.log(
-					chalk.gray("Use --full to display the complete key"),
-				)
+				console.log(chalk.gray("Use --full to display the complete key"))
 			}
 		} catch (error) {
 			console.error(chalk.red("✗ Failed to retrieve API key"))
