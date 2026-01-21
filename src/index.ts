@@ -13,6 +13,7 @@ import { uninstallServer } from "./commands/uninstall"
 import { VALID_CLIENTS, type ValidClient } from "./config/clients"
 import { DEFAULT_PORT } from "./constants"
 import { buildBundle } from "./lib/bundle"
+import { executeCliAuthFlow } from "./lib/cli-auth"
 import { setDebug, setVerbose } from "./lib/logger"
 import { validateApiKey } from "./lib/registry"
 import type { ServerConfig } from "./types/registry"
@@ -25,7 +26,7 @@ import {
 	validateClient,
 } from "./utils/command-prompts"
 import { ensureApiKey, promptForApiKey } from "./utils/runtime"
-import { setApiKey } from "./utils/smithery-settings"
+import { getApiKey, setApiKey } from "./utils/smithery-settings"
 
 // TypeScript declaration for global constant injected at build time
 declare const __SMITHERY_VERSION__: string
@@ -359,31 +360,67 @@ program
 // Login command
 program
 	.command("login")
-	.description("Login with an API key")
+	.description("Login with Smithery")
 	.action(async () => {
 		console.log(chalk.cyan("Login to Smithery"))
-		console.log(
-			chalk.gray("Get your API key from: https://smithery.ai/account/api-keys"),
-		)
 		console.log()
 
 		try {
-			const apiKey = await promptForApiKey()
+			const registryEndpoint =
+				process.env.REGISTRY_ENDPOINT || "https://smithery.ai"
 
-			// Validate API key before saving
+			// New OAuth flow
+			const apiKey = await executeCliAuthFlow({ registryEndpoint })
+
+			// Keep existing validation and storage
 			await validateApiKey(apiKey)
 
 			const result = await setApiKey(apiKey)
 
 			if (result.success) {
-				console.log(chalk.green("✓ API key saved successfully"))
+				console.log(chalk.green("✓ Successfully logged in"))
 				console.log(chalk.gray("You can now use Smithery CLI commands"))
 			} else {
 				console.error(chalk.red("✗ Failed to save API key"))
-				console.error(chalk.gray("You may need to enter it again next time"))
+				console.error(chalk.gray("You may need to log in again next time"))
 			}
 		} catch (error) {
 			console.error(chalk.red("✗ Login failed"))
+			const errorMessage =
+				error instanceof Error ? error.message : String(error)
+			console.error(chalk.gray(errorMessage))
+			process.exit(1)
+		}
+	})
+
+// Show API key command
+program
+	.command("whoami")
+	.description("Display the currently logged in API key")
+	.option("--full", "Show the full API key instead of masking it")
+	.action(async (options) => {
+		try {
+			const apiKey = await getApiKey()
+
+			if (!apiKey) {
+				console.log(chalk.yellow("No API key found"))
+				console.log(
+					chalk.gray("Run 'smithery login' to authenticate"),
+				)
+				process.exit(1)
+			}
+
+			if (options.full) {
+				console.log(chalk.cyan("API Key:"), apiKey)
+			} else {
+				const masked = `${apiKey.slice(0, 8)}...${apiKey.slice(-4)}`
+				console.log(chalk.cyan("API Key:"), masked)
+				console.log(
+					chalk.gray("Use --full to display the complete key"),
+				)
+			}
+		} catch (error) {
+			console.error(chalk.red("✗ Failed to retrieve API key"))
 			const errorMessage =
 				error instanceof Error ? error.message : String(error)
 			console.error(chalk.gray(errorMessage))
