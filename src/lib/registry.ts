@@ -4,7 +4,7 @@ import {
 	type ClientOptions,
 	Smithery,
 } from "@smithery/api"
-import type { ServerRetrieveResponse } from "@smithery/api/resources/servers/servers"
+import type { ServerGetResponse } from "@smithery/api/resources/servers/servers"
 import fetch from "cross-fetch"
 import { config as dotenvConfig } from "dotenv"
 import { ANALYTICS_ENDPOINT } from "../constants"
@@ -35,10 +35,10 @@ const createSDKOptions = (apiKey?: string): ClientOptions => {
  * @returns Details about the server and the selected connection
  */
 export interface ResolvedServer {
-	server: ServerRetrieveResponse
+	server: ServerGetResponse
 	connection:
-		| ServerRetrieveResponse.StdioConnection
-		| ServerRetrieveResponse.HTTPConnection
+		| ServerGetResponse.StdioConnection
+		| ServerGetResponse.HTTPConnection
 }
 
 export const resolveServer = async (
@@ -82,8 +82,16 @@ export const resolveServer = async (
 		`Resolving package ${serverQualifiedName} using Smithery SDK at ${options.baseURL || "<default>"}`,
 	)
 
+	// Parse qualified name into namespace and server name
+	const normalized = serverQualifiedName.startsWith("@")
+		? serverQualifiedName.slice(1)
+		: serverQualifiedName
+	const parts = normalized.split("/")
+	const serverName = parts.length === 2 ? parts[1] : parts[0]
+	const namespace = parts.length === 2 ? parts[0] : ""
+
 	try {
-		const result = await smithery.servers.retrieve(serverQualifiedName)
+		const result = await smithery.servers.get(serverName, { namespace })
 		verbose("Successfully received server data from Smithery SDK")
 		verbose(`Server data: ${JSON.stringify(result, null, 2)}`)
 

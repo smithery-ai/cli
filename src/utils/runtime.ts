@@ -2,7 +2,7 @@ import { exec } from "node:child_process"
 import { promisify } from "node:util"
 import { getDefaultEnvironment } from "@modelcontextprotocol/sdk/client/stdio.js"
 import { AuthenticationError } from "@smithery/api"
-import type { ServerRetrieveResponse } from "@smithery/api/resources/servers/servers"
+import type { ServerGetResponse } from "@smithery/api/resources/servers/servers"
 import chalk from "chalk"
 import inquirer from "inquirer"
 import ora from "ora"
@@ -11,8 +11,8 @@ import { validateApiKey } from "../lib/registry"
 import { clearApiKey, getApiKey, setApiKey } from "./smithery-settings"
 
 type Connection =
-	| ServerRetrieveResponse.StdioConnection
-	| ServerRetrieveResponse.HTTPConnection
+	| ServerGetResponse.StdioConnection
+	| ServerGetResponse.HTTPConnection
 
 const execAsync = promisify(exec)
 

@@ -2,7 +2,8 @@ import { createReadStream, existsSync } from "node:fs"
 import { NotFoundError, PermissionDeniedError, Smithery } from "@smithery/api"
 import type {
 	DeploymentDeployParams,
-	DeploymentRetrieveResponse,
+	DeploymentGetResponse,
+	DeploymentResumeParams,
 	DeployPayload,
 } from "@smithery/api/resources/servers/deployments"
 import chalk from "chalk"
@@ -119,9 +120,12 @@ export async function deploy(options: DeployOptions = {}) {
 			),
 		)
 
-		const resumeResult = await registry.servers.deployments.resume("latest", {
-			qualifiedName,
-		})
+		const { namespace, serverName: server } = parseQualifiedName(qualifiedName)
+		const resumeParams: DeploymentResumeParams = {
+			namespace,
+			server,
+		}
+		const resumeResult = await registry.servers.deployments.resume("latest", resumeParams)
 
 		await pollDeployment(registry, qualifiedName, resumeResult.deploymentId)
 		return
@@ -192,14 +196,16 @@ export async function deploy(options: DeployOptions = {}) {
 	}).start()
 
 	try {
+		const { namespace, serverName: server } = parseQualifiedName(qualifiedName)
 		const deployParams: DeploymentDeployParams = {
+			namespace,
 			payload: JSON.stringify(payload),
 			module: moduleFile,
 			sourcemap: sourcemapFile,
 			bundle: bundleFile,
 		}
 		const result = await registry.servers.deployments.deploy(
-			qualifiedName,
+			server,
 			deployParams,
 		)
 
@@ -263,9 +269,13 @@ export async function pollDeployment(
 ) {
 	let lastLoggedIndex = 0
 
+	// Parse qualified name into namespace and server name
+	const { namespace, serverName: server } = parseQualifiedName(serverName)
+
 	while (true) {
-		const data = await registry.servers.deployments.retrieve(deploymentId, {
-			qualifiedName: serverName,
+		const data = await registry.servers.deployments.get(deploymentId, {
+			namespace,
+			server,
 		})
 
 		// Log new logs
@@ -307,7 +317,7 @@ export async function pollDeployment(
 			)
 		) {
 			const errorLog = data.logs?.find(
-				(l: DeploymentRetrieveResponse.Log) => l.level === "error",
+				(l: DeploymentGetResponse.Log) => l.level === "error",
 			)
 			const errorMessage = errorLog?.message || "Deployment failed"
 			console.error(chalk.red(`\n✗ Deployment failed: ${errorMessage}`))
