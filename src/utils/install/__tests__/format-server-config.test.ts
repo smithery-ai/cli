@@ -4,7 +4,7 @@
 
 import { beforeEach, describe, expect, test, vi } from "vitest"
 import { Transport } from "../../../config/clients"
-import { formatServerConfig } from "../server-config"
+import { determineConfigType, formatServerConfig } from "../server-config"
 import { optionalOnlyServer } from "./fixtures/servers"
 
 // Mock getClientConfiguration
@@ -108,5 +108,79 @@ describe("formatServerConfig", () => {
 			command: "npx",
 			args: ["-y", "@smithery/cli@latest", "run", qualifiedName],
 		})
+	})
+})
+
+describe("determineConfigType", () => {
+	beforeEach(() => {
+		vi.clearAllMocks()
+	})
+
+	test("should return http-oauth when server has HTTP and client supports OAuth", () => {
+		// ARRANGE
+		const client = "cursor"
+		const server = optionalOnlyServer
+
+		mockGetClientConfiguration.mockReturnValue({
+			label: "Cursor",
+			supportedTransports: [Transport.HTTP, Transport.STDIO],
+			installType: "json",
+			supportsOAuth: true,
+			path: "/tmp/cursor.json",
+		})
+
+		// ACT
+		const result = determineConfigType(client, server)
+
+		// ASSERT
+		expect(result).toBe("http-oauth")
+	})
+
+	test("should return http-no-oauth when server has HTTP but client does not support OAuth", () => {
+		// ARRANGE
+		const client = "claude-desktop"
+		const server = optionalOnlyServer
+
+		mockGetClientConfiguration.mockReturnValue({
+			label: "Claude Desktop",
+			supportedTransports: [Transport.HTTP, Transport.STDIO],
+			installType: "json",
+			supportsOAuth: false,
+			path: "/tmp/claude.json",
+		})
+
+		// ACT
+		const result = determineConfigType(client, server)
+
+		// ASSERT
+		expect(result).toBe("http-no-oauth")
+	})
+
+	test("should return stdio when server only has STDIO connection", () => {
+		// ARRANGE
+		const client = "claude"
+		const server = {
+			qualifiedName: "@test/stdio-server",
+			remote: false,
+			connections: [
+				{
+					type: "stdio",
+					configSchema: {},
+				},
+			],
+		} as typeof optionalOnlyServer
+
+		mockGetClientConfiguration.mockReturnValue({
+			label: "Claude Desktop",
+			supportedTransports: [Transport.STDIO],
+			installType: "json",
+			path: "/tmp/claude.json",
+		})
+
+		// ACT
+		const result = determineConfigType(client, server)
+
+		// ASSERT
+		expect(result).toBe("stdio")
 	})
 })
