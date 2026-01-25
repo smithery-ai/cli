@@ -16,7 +16,10 @@ import type { ServerConfig } from "../types/registry"
 import { checkAnalyticsConsent } from "../utils/analytics"
 import { promptForRestart } from "../utils/client"
 import { getServerName } from "../utils/install/helpers"
-import { formatServerConfig } from "../utils/install/server-config"
+import {
+	determineConfigType,
+	formatServerConfig,
+} from "../utils/install/server-config"
 import { resolveUserConfig } from "../utils/install/user-config"
 import {
 	checkAndNotifyRemoteServer,
@@ -64,19 +67,27 @@ export async function installServer(
 		// Notify user if remote server
 		checkAndNotifyRemoteServer(server)
 
-		/* resolve server configuration */
-		const finalConfig = await resolveUserConfig(
-			connection,
-			qualifiedName,
-			configValues,
-			spinner,
-		)
+		// Determine the config type to decide if we need to collect config
+		const configType = determineConfigType(client, server)
 
-		verbose(`Config values: ${JSON.stringify(finalConfig, null, 2)}`)
+		/* resolve server configuration - skip for OAuth flows since browser handles config */
+		let finalConfig: ServerConfig = {}
+		if (configType !== "http-oauth") {
+			finalConfig = await resolveUserConfig(
+				connection,
+				qualifiedName,
+				configValues,
+				spinner,
+			)
 
-		// Save config to keychain
-		if (Object.keys(finalConfig).length > 0) {
-			await saveConfig(qualifiedName, finalConfig)
+			verbose(`Config values: ${JSON.stringify(finalConfig, null, 2)}`)
+
+			// Save config to keychain
+			if (Object.keys(finalConfig).length > 0) {
+				await saveConfig(qualifiedName, finalConfig)
+			}
+		} else {
+			verbose("Skipping config collection for OAuth flow")
 		}
 
 		/* Install for client */
