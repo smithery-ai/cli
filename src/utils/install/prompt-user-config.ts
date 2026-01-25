@@ -1,8 +1,8 @@
-import type { ServerRetrieveResponse } from "@smithery/api/resources/servers/servers"
+import type { ServerGetResponse } from "@smithery/api/resources/servers/servers"
 
 type Connection =
-	| ServerRetrieveResponse.StdioConnection
-	| ServerRetrieveResponse.HTTPConnection
+	| ServerGetResponse.StdioConnection
+	| ServerGetResponse.HTTPConnection
 
 import chalk from "chalk"
 import inquirer from "inquirer"

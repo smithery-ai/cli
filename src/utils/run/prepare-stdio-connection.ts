@@ -1,7 +1,7 @@
-import type { ServerRetrieveResponse } from "@smithery/api/resources/servers/servers"
+import type { ServerGetResponse } from "@smithery/api/resources/servers/servers"
 
-type Server = ServerRetrieveResponse
-type StdioConnection = ServerRetrieveResponse.StdioConnection
+type Server = ServerGetResponse
+type StdioConnection = ServerGetResponse.StdioConnection
 
 import { logWithTimestamp } from "../../commands/run/utils.js"
 import {

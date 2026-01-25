@@ -113,12 +113,12 @@ describe("deploy command", () => {
 	let mockRegistry: {
 		namespaces: {
 			list: ReturnType<typeof vi.fn>
-			create: ReturnType<typeof vi.fn>
+			set: ReturnType<typeof vi.fn>
 		}
 		servers: {
 			deployments: {
 				deploy: ReturnType<typeof vi.fn>
-				retrieve: ReturnType<typeof vi.fn>
+				get: ReturnType<typeof vi.fn>
 			}
 		}
 	}
@@ -141,14 +141,14 @@ describe("deploy command", () => {
 		mockRegistry = {
 			namespaces: {
 				list: vi.fn(),
-				create: vi.fn().mockResolvedValue(undefined),
+				set: vi.fn().mockResolvedValue(undefined),
 			},
 			servers: {
 				deployments: {
 					deploy: vi.fn().mockResolvedValue({
 						deploymentId: "test-deployment-id",
 					}),
-					retrieve: vi.fn().mockResolvedValue({
+					get: vi.fn().mockResolvedValue({
 						status: "SUCCESS",
 						logs: [],
 						mcpUrl: "mcp://test.example.com",
@@ -167,8 +167,9 @@ describe("deploy command", () => {
 
 		expect(ensureApiKey).toHaveBeenCalledWith(undefined)
 		expect(mockRegistry.servers.deployments.deploy).toHaveBeenCalledWith(
-			"myorg/myserver",
+			"myserver",
 			expect.objectContaining({
+				namespace: "myorg",
 				payload: expect.any(String),
 			}),
 		)
@@ -190,8 +191,10 @@ describe("deploy command", () => {
 		expect(promptForNamespaceCreation).not.toHaveBeenCalled()
 		expect(promptForServerNameInput).toHaveBeenCalledWith("myorg")
 		expect(mockRegistry.servers.deployments.deploy).toHaveBeenCalledWith(
-			"myorg/myserver",
-			expect.any(Object),
+			"myserver",
+			expect.objectContaining({
+				namespace: "myorg",
+			}),
 		)
 	})
 
@@ -208,10 +211,12 @@ describe("deploy command", () => {
 		expect(promptForNamespaceSelection).toHaveBeenCalledWith(["org1", "org2"])
 		expect(promptForServerNameInput).toHaveBeenCalledWith("org2")
 		expect(mockRegistry.servers.deployments.deploy).toHaveBeenCalledWith(
-			"org2/myserver",
-			expect.any(Object),
+			"myserver",
+			expect.objectContaining({
+				namespace: "org2",
+			}),
 		)
-		expect(mockRegistry.namespaces.create).not.toHaveBeenCalled()
+		expect(mockRegistry.namespaces.set).not.toHaveBeenCalled()
 	})
 
 	test("no --name, no namespaces: prompts to create namespace (with claim messaging) and server name", async () => {
@@ -225,13 +230,13 @@ describe("deploy command", () => {
 
 		expect(mockRegistry.namespaces.list).toHaveBeenCalled()
 		expect(promptForNamespaceCreation).toHaveBeenCalled()
-		expect(mockRegistry.namespaces.create).toHaveBeenCalledWith({
-			name: "neworg",
-		})
+		expect(mockRegistry.namespaces.set).toHaveBeenCalledWith("neworg")
 		expect(promptForServerNameInput).toHaveBeenCalledWith("neworg")
 		expect(mockRegistry.servers.deployments.deploy).toHaveBeenCalledWith(
-			"neworg/myserver",
-			expect.any(Object),
+			"myserver",
+			expect.objectContaining({
+				namespace: "neworg",
+			}),
 		)
 	})
 
@@ -240,8 +245,9 @@ describe("deploy command", () => {
 
 		expect(buildBundle).not.toHaveBeenCalled()
 		expect(mockRegistry.servers.deployments.deploy).toHaveBeenCalledWith(
-			"myorg/myserver",
+			"myserver",
 			expect.objectContaining({
+				namespace: "myorg",
 				payload: JSON.stringify({
 					type: "external",
 					upstreamUrl: "https://example.com/mcp",
@@ -266,8 +272,9 @@ describe("deploy command", () => {
 			production: true,
 		})
 		expect(mockRegistry.servers.deployments.deploy).toHaveBeenCalledWith(
-			"myorg/myserver",
+			"myserver",
 			expect.objectContaining({
+				namespace: "myorg",
 				payload: expect.stringContaining('"type":"stdio"'),
 				bundle: expect.any(Readable),
 			}),
@@ -290,8 +297,9 @@ describe("deploy command", () => {
 			production: true,
 		})
 		expect(mockRegistry.servers.deployments.deploy).toHaveBeenCalledWith(
-			"myorg/myserver",
+			"myserver",
 			expect.objectContaining({
+				namespace: "myorg",
 				payload: expect.stringContaining('"type":"hosted"'),
 				module: expect.any(Readable),
 			}),
@@ -312,8 +320,10 @@ describe("deploy command", () => {
 		expect(loadProjectConfig).toHaveBeenCalled()
 		expect(promptForServerNameInput).not.toHaveBeenCalled()
 		expect(mockRegistry.servers.deployments.deploy).toHaveBeenCalledWith(
-			"myorg/my-server-name",
-			expect.any(Object),
+			"my-server-name",
+			expect.objectContaining({
+				namespace: "myorg",
+			}),
 		)
 	})
 
@@ -331,8 +341,10 @@ describe("deploy command", () => {
 		expect(loadProjectConfig).toHaveBeenCalled()
 		expect(promptForServerNameInput).toHaveBeenCalledWith("myorg")
 		expect(mockRegistry.servers.deployments.deploy).toHaveBeenCalledWith(
-			"myorg/myserver",
-			expect.any(Object),
+			"myserver",
+			expect.objectContaining({
+				namespace: "myorg",
+			}),
 		)
 	})
 
@@ -350,8 +362,10 @@ describe("deploy command", () => {
 		expect(loadProjectConfig).toHaveBeenCalled()
 		expect(promptForServerNameInput).toHaveBeenCalledWith("myorg")
 		expect(mockRegistry.servers.deployments.deploy).toHaveBeenCalledWith(
-			"myorg/myserver",
-			expect.any(Object),
+			"myserver",
+			expect.objectContaining({
+				namespace: "myorg",
+			}),
 		)
 	})
 
@@ -367,8 +381,10 @@ describe("deploy command", () => {
 		expect(loadProjectConfig).toHaveBeenCalled()
 		expect(promptForServerNameInput).toHaveBeenCalledWith("myorg")
 		expect(mockRegistry.servers.deployments.deploy).toHaveBeenCalledWith(
-			"myorg/myserver",
-			expect.any(Object),
+			"myserver",
+			expect.objectContaining({
+				namespace: "myorg",
+			}),
 		)
 	})
 
@@ -386,13 +402,13 @@ describe("deploy command", () => {
 
 		expect(loadProjectConfig).toHaveBeenCalled()
 		expect(promptForNamespaceCreation).toHaveBeenCalled()
-		expect(mockRegistry.namespaces.create).toHaveBeenCalledWith({
-			name: "neworg",
-		})
+		expect(mockRegistry.namespaces.set).toHaveBeenCalledWith("neworg")
 		expect(promptForServerNameInput).not.toHaveBeenCalled()
 		expect(mockRegistry.servers.deployments.deploy).toHaveBeenCalledWith(
-			"neworg/my-server-name",
-			expect.any(Object),
+			"my-server-name",
+			expect.objectContaining({
+				namespace: "neworg",
+			}),
 		)
 	})
 
@@ -457,7 +473,7 @@ describe("resolveNamespace", () => {
 	let mockRegistry: {
 		namespaces: {
 			list: ReturnType<typeof vi.fn>
-			create: ReturnType<typeof vi.fn>
+			set: ReturnType<typeof vi.fn>
 		}
 	}
 
@@ -467,7 +483,7 @@ describe("resolveNamespace", () => {
 		mockRegistry = {
 			namespaces: {
 				list: vi.fn(),
-				create: vi.fn().mockResolvedValue(undefined),
+				set: vi.fn().mockResolvedValue(undefined),
 			},
 		}
 
@@ -511,9 +527,7 @@ describe("resolveNamespace", () => {
 
 		expect(result).toBe("neworg")
 		expect(promptForNamespaceCreation).toHaveBeenCalled()
-		expect(mockRegistry.namespaces.create).toHaveBeenCalledWith({
-			name: "neworg",
-		})
+		expect(mockRegistry.namespaces.set).toHaveBeenCalledWith("neworg")
 		expect(promptForNamespaceSelection).not.toHaveBeenCalled()
 	})
 })

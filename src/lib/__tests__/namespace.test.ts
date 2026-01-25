@@ -44,7 +44,7 @@ describe("resolveNamespace", () => {
 	let mockClient: {
 		namespaces: {
 			list: ReturnType<typeof vi.fn>
-			create: ReturnType<typeof vi.fn>
+			set: ReturnType<typeof vi.fn>
 		}
 	}
 
@@ -54,7 +54,7 @@ describe("resolveNamespace", () => {
 		mockClient = {
 			namespaces: {
 				list: vi.fn(),
-				create: vi.fn().mockResolvedValue(undefined),
+				set: vi.fn().mockResolvedValue(undefined),
 			},
 		}
 	})
@@ -70,7 +70,7 @@ describe("resolveNamespace", () => {
 		expect(mockClient.namespaces.list).toHaveBeenCalledOnce()
 		expect(promptForNamespaceSelection).not.toHaveBeenCalled()
 		expect(promptForNamespaceCreation).not.toHaveBeenCalled()
-		expect(mockClient.namespaces.create).not.toHaveBeenCalled()
+		expect(mockClient.namespaces.set).not.toHaveBeenCalled()
 	})
 
 	test("multiple namespaces: prompts to select", async () => {
@@ -84,7 +84,7 @@ describe("resolveNamespace", () => {
 		expect(result).toBe("org2")
 		expect(promptForNamespaceSelection).toHaveBeenCalledWith(["org1", "org2"])
 		expect(promptForNamespaceCreation).not.toHaveBeenCalled()
-		expect(mockClient.namespaces.create).not.toHaveBeenCalled()
+		expect(mockClient.namespaces.set).not.toHaveBeenCalled()
 	})
 
 	test("no namespaces: prompts to create and creates namespace", async () => {
@@ -97,9 +97,7 @@ describe("resolveNamespace", () => {
 
 		expect(result).toBe("neworg")
 		expect(promptForNamespaceCreation).toHaveBeenCalled()
-		expect(mockClient.namespaces.create).toHaveBeenCalledWith({
-			name: "neworg",
-		})
+		expect(mockClient.namespaces.set).toHaveBeenCalledWith("neworg")
 		expect(promptForNamespaceSelection).not.toHaveBeenCalled()
 	})
 
@@ -121,7 +119,7 @@ describe("resolveNamespace", () => {
 		mockClient.namespaces.list.mockResolvedValue({ namespaces: [] })
 		vi.mocked(promptForNamespaceCreation).mockResolvedValue("neworg")
 		const createError_instance = new Error("Permission denied")
-		mockClient.namespaces.create.mockRejectedValue(createError_instance)
+		mockClient.namespaces.set.mockRejectedValue(createError_instance)
 
 		await expect(
 			resolveNamespace(mockClient as unknown as Smithery),
@@ -143,7 +141,7 @@ describe("resolveNamespace", () => {
 			resolveNamespace(mockClient as unknown as Smithery),
 		).rejects.toThrow("User cancelled")
 
-		expect(mockClient.namespaces.create).not.toHaveBeenCalled()
+		expect(mockClient.namespaces.set).not.toHaveBeenCalled()
 	})
 
 	test("handles prompt error on selection", async () => {

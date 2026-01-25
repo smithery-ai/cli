@@ -5,9 +5,9 @@
  * always prompt for keychain if found, regardless of --config
  */
 
-import type { ServerRetrieveResponse } from "@smithery/api/resources/servers/servers"
+import type { ServerGetResponse } from "@smithery/api/resources/servers/servers"
 
-type StdioConnection = ServerRetrieveResponse.StdioConnection
+type StdioConnection = ServerGetResponse.StdioConnection
 
 import { beforeEach, describe, expect, it, vi } from "vitest"
 import { getConfig } from "../../../lib/keychain"

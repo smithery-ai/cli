@@ -25,7 +25,7 @@ async function getUserNamespaces(client: Smithery): Promise<string[]> {
  */
 async function createNamespace(client: Smithery, name: string): Promise<void> {
 	try {
-		await client.namespaces.create({ name })
+		await client.namespaces.set(name)
 	} catch (error) {
 		throw createError(error, "Failed to create namespace")
 	}

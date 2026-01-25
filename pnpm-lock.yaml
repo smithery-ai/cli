@@ -18,8 +18,8 @@ importers:
         specifier: ^1.5.1
         version: 1.7.0
       '@smithery/api':
-        specifier: 0.11.0
-        version: 0.11.0
+        specifier: 0.28.0
+        version: 0.28.0(@modelcontextprotocol/sdk@1.25.1(hono@4.11.1)(zod@4.2.1))
       chalk:
         specifier: ^4.1.2
         version: 4.1.2
@@ -1054,8 +1054,13 @@ packages:
     resolution: {integrity: sha512-P1Cz1dWaFfR4IR+U13mqqiGsLFf1KbayybWwdd2vfctdV6hDpUkgCY0nKOLLTMSoRd/jJNjtbqzf13K8DCCXQw==}
     engines: {node: '>=18'}
 
-  '@smithery/api@0.11.0':
-    resolution: {integrity: sha512-RXevUGFT4AINqKn0uLlg4eRX58nmuVjAbbC64w8TzVBCj3WKQh9OEz5LLbCd4rCMzrbluM5do+Z37j+2PuME1A==}
+  '@smithery/api@0.28.0':
+    resolution: {integrity: sha512-zO6TXNbTne1N+IbMc6kx4PWhrg1kAS9WCfiNF9nqSTvye85iqslO3Wq4xKjvU6NcuUaMyABzK/ynvCF9wLpp4Q==}
+    peerDependencies:
+      '@modelcontextprotocol/sdk': '>=1.0.0'
+    peerDependenciesMeta:
+      '@modelcontextprotocol/sdk':
+        optional: true
 
   '@smithery/sdk@4.0.1':
     resolution: {integrity: sha512-u5lZYSzXLP72AJuOro4WLfcmn9X8exE75zcl9CbUb5Ydi/uIiMUr3vu8qzZ6/hXYI51wpiclQ8J4OYEKKOtYGQ==}
@@ -3128,7 +3133,9 @@ snapshots:
 
   '@sindresorhus/is@7.2.0': {}
 
-  '@smithery/api@0.11.0': {}
+  '@smithery/api@0.28.0(@modelcontextprotocol/sdk@1.25.1(hono@4.11.1)(zod@4.2.1))':
+    optionalDependencies:
+      '@modelcontextprotocol/sdk': 1.25.1(hono@4.11.1)(zod@4.2.1)
 
   '@smithery/sdk@4.0.1(@modelcontextprotocol/sdk@1.25.1(hono@4.11.1)(zod@4.2.1))(zod@4.2.1)':
     dependencies:

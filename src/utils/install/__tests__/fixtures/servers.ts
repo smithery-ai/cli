@@ -1,6 +1,6 @@
-import type { ServerRetrieveResponse } from "@smithery/api/resources/servers/servers"
+import type { ServerGetResponse } from "@smithery/api/resources/servers/servers"
 
-type Server = ServerRetrieveResponse
+type Server = ServerGetResponse
 
 export const noConfigServer: Server = {
 	qualifiedName: "@test/no-config-server",

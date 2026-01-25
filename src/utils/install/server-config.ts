@@ -1,9 +1,9 @@
-import type { ServerRetrieveResponse } from "@smithery/api/resources/servers/servers"
+import type { ServerGetResponse } from "@smithery/api/resources/servers/servers"
 
 type Connection =
-	| ServerRetrieveResponse.StdioConnection
-	| ServerRetrieveResponse.HTTPConnection
-type Server = ServerRetrieveResponse
+	| ServerGetResponse.StdioConnection
+	| ServerGetResponse.HTTPConnection
+type Server = ServerGetResponse
 
 import { getClientConfiguration } from "../../config/clients.js"
 import type {
