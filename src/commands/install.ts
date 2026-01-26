@@ -20,6 +20,7 @@ import {
 	determineConfigType,
 	formatServerConfig,
 } from "../utils/install/server-config"
+import { parseQualifiedName } from "../utils/qualified-name"
 import { resolveUserConfig } from "../utils/install/user-config"
 import {
 	checkAndNotifyRemoteServer,
@@ -53,7 +54,9 @@ export async function installServer(
 	/* resolve server */
 	const spinner = ora(`Resolving ${qualifiedName}...`).start()
 	try {
-		const { server, connection } = await resolveServer(qualifiedName)
+		const { server, connection } = await resolveServer(
+			parseQualifiedName(qualifiedName),
+		)
 		spinner.succeed(
 			chalk.dim(`Successfully resolved ${chalk.cyan(qualifiedName)}`),
 		)

@@ -7,6 +7,7 @@ import { resolveServer } from "../../lib/registry"
 import type { ServerConfig } from "../../types/registry"
 import { resolveUserConfig } from "../../utils/install/user-config"
 import { setupProcessLifecycle } from "../../utils/process-lifecycle"
+import { parseQualifiedName } from "../../utils/qualified-name"
 import { prepareStdioConnection } from "../../utils/run/prepare-stdio-connection"
 import { ensureApiKey } from "../../utils/runtime"
 import { initializeSettings } from "../../utils/smithery-settings.js"
@@ -57,7 +58,9 @@ export async function playground(options: {
 		if (options.server) {
 			const spinner = ora(`Resolving ${options.server}...`).start()
 			try {
-				const { server, connection } = await resolveServer(options.server)
+				const { server, connection } = await resolveServer(
+					parseQualifiedName(options.server),
+				)
 				spinner.succeed(
 					chalk.dim(`Successfully resolved ${chalk.cyan(options.server)}`),
 				)

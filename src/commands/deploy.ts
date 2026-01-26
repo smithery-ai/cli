@@ -13,6 +13,7 @@ import { buildBundle } from "../lib/bundle/index.js"
 import { loadProjectConfig } from "../lib/config-loader.js"
 import { resolveNamespace } from "../lib/namespace.js"
 import { promptForServerNameInput } from "../utils/command-prompts.js"
+import { parseQualifiedName } from "../utils/qualified-name.js"
 import { ensureApiKey } from "../utils/runtime.js"
 
 interface DeployOptions {
@@ -32,28 +33,6 @@ function createRegistry(apiKey: string) {
 		apiKey,
 		baseURL: registryEndpoint || "https://api.smithery.ai",
 	})
-}
-
-/**
- * Parse a qualified name into namespace and server name parts.
- * Handles formats: namespace/serverName, @namespace/serverName, or serverName
- */
-function parseQualifiedName(qualifiedName: string): {
-	namespace: string
-	serverName: string
-} {
-	// Strip @ prefix if present
-	const normalized = qualifiedName.startsWith("@")
-		? qualifiedName.slice(1)
-		: qualifiedName
-
-	const parts = normalized.split("/")
-	// Two-segment: namespace/serverName
-	// Single-segment: treat as namespace with empty serverName (consistent with registry.ts)
-	return {
-		namespace: parts[0],
-		serverName: parts.length === 2 ? parts[1] : "",
-	}
 }
 
 export async function deploy(options: DeployOptions = {}) {
