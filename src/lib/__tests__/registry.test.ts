@@ -52,10 +52,16 @@ describe("resolveServer", () => {
 		)
 	})
 
-	test("calls SDK with namespace and serverName", async () => {
+	test("calls SDK with namespace and serverName for scoped name", async () => {
 		await resolveServer(parseQualifiedName("@foo/bar"))
 
 		expect(mockGet).toHaveBeenCalledWith("bar", { namespace: "foo" })
+	})
+
+	test("calls SDK with empty namespace for simple name", async () => {
+		await resolveServer(parseQualifiedName("linear"))
+
+		expect(mockGet).toHaveBeenCalledWith("linear", { namespace: "" })
 	})
 
 	test("returns server and first connection", async () => {

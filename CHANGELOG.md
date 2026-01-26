@@ -4,10 +4,12 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
-## [3.3.3] - 2025-01-26
+## [3.3.4] - 2025-01-26
 
 ### Fixed
-- Fixed qualified name parsing - simple names like `linear` now consistently resolve with `namespace="linear"` instead of empty namespace
+- Fixed qualified name parsing - simple names like `linear` now correctly resolve with `serverName="linear"` and empty namespace
+
+## [3.3.3] - 2025-01-26
 
 ### Changed
 - Refactored `resolveServer()` to accept `{ namespace, serverName }` instead of qualified name string - callers now use centralized `parseQualifiedName()` utility

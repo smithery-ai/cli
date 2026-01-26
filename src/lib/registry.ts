@@ -9,7 +9,6 @@ import fetch from "cross-fetch"
 import { config as dotenvConfig } from "dotenv"
 import { ANALYTICS_ENDPOINT } from "../constants"
 import { getSessionId } from "../utils/analytics"
-import type { Namespace } from "../utils/qualified-name"
 import { getUserId } from "../utils/smithery-settings"
 import { verbose } from "./logger"
 
@@ -44,7 +43,7 @@ export interface ResolvedServer {
 }
 
 export interface ResolveServerParams {
-	namespace: Namespace
+	namespace: string
 	serverName: string
 }
 

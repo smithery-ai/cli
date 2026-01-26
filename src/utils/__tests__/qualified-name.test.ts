@@ -1,12 +1,11 @@
 import { describe, expect, test } from "vitest"
-import { isValidNamespace, parseQualifiedName } from "../qualified-name"
+import { parseQualifiedName } from "../qualified-name"
 
 describe("parseQualifiedName", () => {
 	test.each([
 		// [input, expectedNamespace, expectedServerName]
-		["linear", "linear", ""],
-		["myorg", "myorg", ""],
-		["@linear", "linear", ""],
+		["linear", "", "linear"],
+		["myorg", "", "myorg"],
 		["@foo/bar", "foo", "bar"],
 		["foo/bar", "foo", "bar"],
 		["@smithery/github", "smithery", "github"],
@@ -18,25 +17,9 @@ describe("parseQualifiedName", () => {
 		expect(result.serverName).toBe(expectedServerName)
 	})
 
-	test.each([
-		"",
-		"@",
-		"@/bar",
-		"/bar",
-	])('throws error for invalid input "%s" with empty namespace', (input) => {
-		expect(() => parseQualifiedName(input)).toThrow(
-			"Invalid qualified name: namespace cannot be empty",
+	test("throws error for empty input", () => {
+		expect(() => parseQualifiedName("")).toThrow(
+			"Invalid qualified name: cannot be empty",
 		)
-	})
-})
-
-describe("isValidNamespace", () => {
-	test("returns true for non-empty strings", () => {
-		expect(isValidNamespace("foo")).toBe(true)
-		expect(isValidNamespace("smithery")).toBe(true)
-	})
-
-	test("returns false for empty string", () => {
-		expect(isValidNamespace("")).toBe(false)
 	})
 })

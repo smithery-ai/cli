@@ -1,29 +1,15 @@
 /**
  * Utilities for parsing qualified server names.
  *
- * Qualified names follow the format: [@]namespace[/serverName]
+ * Qualified names follow the format: [@]namespace/serverName or just serverName
  * Examples:
  *   - "@smithery/github" -> { namespace: "smithery", serverName: "github" }
  *   - "smithery/github"  -> { namespace: "smithery", serverName: "github" }
- *   - "linear"           -> { namespace: "linear", serverName: "" }
- *   - "@linear"          -> { namespace: "linear", serverName: "" }
+ *   - "linear"           -> { namespace: "", serverName: "linear" }
  */
-
-/**
- * Branded type for non-empty namespace strings.
- * Provides compile-time safety that namespace is never empty.
- */
-export type Namespace = string & { readonly __brand: "Namespace" }
-
-/**
- * Type guard to check if a string is a valid non-empty namespace.
- */
-export function isValidNamespace(value: string): value is Namespace {
-	return value.length > 0
-}
 
 export interface ParsedQualifiedName {
-	namespace: Namespace
+	namespace: string
 	serverName: string
 }
 
@@ -32,23 +18,31 @@ export interface ParsedQualifiedName {
  *
  * @param qualifiedName - The qualified name to parse (e.g., "@foo/bar", "linear")
  * @returns Object with namespace and serverName
- * @throws Error if the qualified name is empty or results in an empty namespace
+ * @throws Error if the qualified name is empty
  */
 export function parseQualifiedName(qualifiedName: string): ParsedQualifiedName {
+	if (!qualifiedName) {
+		throw new Error("Invalid qualified name: cannot be empty")
+	}
+
 	// Strip @ prefix if present
 	const normalized = qualifiedName.startsWith("@")
 		? qualifiedName.slice(1)
 		: qualifiedName
 
 	const parts = normalized.split("/")
-	const namespace = parts[0]
 
-	if (!isValidNamespace(namespace)) {
-		throw new Error("Invalid qualified name: namespace cannot be empty")
+	// Two segments: namespace/serverName
+	// Single segment: just serverName (no namespace)
+	if (parts.length === 2) {
+		return {
+			namespace: parts[0],
+			serverName: parts[1],
+		}
 	}
 
 	return {
-		namespace,
-		serverName: parts.length === 2 ? parts[1] : "",
+		namespace: "",
+		serverName: normalized,
 	}
 }
