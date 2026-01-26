@@ -27,6 +27,7 @@ vi.mock("../../utils/smithery-settings", () => ({
 }))
 
 import { Smithery } from "@smithery/api"
+import { parseQualifiedName } from "../../utils/qualified-name"
 import { resolveServer } from "../registry"
 
 describe("resolveServer", () => {
@@ -52,7 +53,7 @@ describe("resolveServer", () => {
 	})
 
 	test("calls SDK with namespace and serverName", async () => {
-		await resolveServer({ namespace: "foo", serverName: "bar" })
+		await resolveServer(parseQualifiedName("@foo/bar"))
 
 		expect(mockGet).toHaveBeenCalledWith("bar", { namespace: "foo" })
 	})
@@ -67,7 +68,7 @@ describe("resolveServer", () => {
 		}
 		mockGet.mockResolvedValue(mockResponse)
 
-		const result = await resolveServer({ namespace: "foo", serverName: "bar" })
+		const result = await resolveServer(parseQualifiedName("@foo/bar"))
 
 		expect(result.server).toEqual(mockResponse)
 		expect(result.connection).toEqual({ type: "stdio", command: "npx foo" })
@@ -80,7 +81,7 @@ describe("resolveServer", () => {
 		})
 
 		await expect(
-			resolveServer({ namespace: "foo", serverName: "bar" }),
+			resolveServer(parseQualifiedName("@foo/bar")),
 		).rejects.toThrow("No connection configuration found for server")
 	})
 })

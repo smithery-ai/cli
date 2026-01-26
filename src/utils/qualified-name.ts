@@ -9,8 +9,21 @@
  *   - "@linear"          -> { namespace: "linear", serverName: "" }
  */
 
+/**
+ * Branded type for non-empty namespace strings.
+ * Provides compile-time safety that namespace is never empty.
+ */
+export type Namespace = string & { readonly __brand: "Namespace" }
+
+/**
+ * Type guard to check if a string is a valid non-empty namespace.
+ */
+export function isValidNamespace(value: string): value is Namespace {
+	return value.length > 0
+}
+
 export interface ParsedQualifiedName {
-	namespace: string
+	namespace: Namespace
 	serverName: string
 }
 
@@ -19,6 +32,7 @@ export interface ParsedQualifiedName {
  *
  * @param qualifiedName - The qualified name to parse (e.g., "@foo/bar", "linear")
  * @returns Object with namespace and serverName
+ * @throws Error if the qualified name is empty or results in an empty namespace
  */
 export function parseQualifiedName(qualifiedName: string): ParsedQualifiedName {
 	// Strip @ prefix if present
@@ -27,9 +41,14 @@ export function parseQualifiedName(qualifiedName: string): ParsedQualifiedName {
 		: qualifiedName
 
 	const parts = normalized.split("/")
+	const namespace = parts[0]
+
+	if (!isValidNamespace(namespace)) {
+		throw new Error("Invalid qualified name: namespace cannot be empty")
+	}
 
 	return {
-		namespace: parts[0],
+		namespace,
 		serverName: parts.length === 2 ? parts[1] : "",
 	}
 }
