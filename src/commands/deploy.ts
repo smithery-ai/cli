@@ -48,11 +48,12 @@ function parseQualifiedName(qualifiedName: string): {
 		: qualifiedName
 
 	const parts = normalized.split("/")
-	if (parts.length === 2) {
-		return { namespace: parts[0], serverName: parts[1] }
+	// Two-segment: namespace/serverName
+	// Single-segment: treat as namespace with empty serverName (consistent with registry.ts)
+	return {
+		namespace: parts[0],
+		serverName: parts.length === 2 ? parts[1] : "",
 	}
-	// Single-segment QN: namespace is empty
-	return { namespace: "", serverName: normalized }
 }
 
 export async function deploy(options: DeployOptions = {}) {

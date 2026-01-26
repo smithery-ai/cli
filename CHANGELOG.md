@@ -7,7 +7,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## [3.3.3] - 2025-01-26
 
 ### Fixed
-- Fixed qualified name parsing in `resolveServer()` - simple names like `linear` now correctly resolve with `namespace="linear"` instead of empty namespace
+- Fixed qualified name parsing in `resolveServer()` and `deploy()` - simple names like `linear` now consistently resolve with `namespace="linear"` instead of empty namespace
 
 ### Added
 - Unit tests for qualified name parsing in registry module
