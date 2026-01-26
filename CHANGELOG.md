@@ -4,7 +4,7 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
-## [Unreleased]
+## [3.3.3] - 2025-01-26
 
 ### Fixed
 - Fixed qualified name parsing in `resolveServer()` - simple names like `linear` now correctly resolve with `namespace="linear"` instead of empty namespace
