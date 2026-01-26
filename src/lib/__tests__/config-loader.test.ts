@@ -58,6 +58,22 @@ describe("loadProjectConfig", () => {
 		})
 	})
 
+	test("valid config with assets: returns parsed config", () => {
+		vi.mocked(existsSync).mockReturnValue(true)
+		vi.mocked(readFileSync).mockReturnValue(
+			"name: my-server\nbuild:\n  assets:\n    - data/**\n    - templates/**\n    - config.json\n",
+		)
+
+		const result = loadProjectConfig()
+
+		expect(result).toEqual({
+			name: "my-server",
+			build: {
+				assets: ["data/**", "templates/**", "config.json"],
+			},
+		})
+	})
+
 	test("passthrough allows unknown fields: returns config with extra fields", () => {
 		vi.mocked(existsSync).mockReturnValue(true)
 		vi.mocked(readFileSync).mockReturnValue(

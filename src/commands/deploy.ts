@@ -135,6 +135,16 @@ export async function deploy(options: DeployOptions = {}) {
 		),
 	)
 
+	// Warn if assets are configured but transport is not stdio
+	const projectConfig = loadProjectConfig()
+	if (projectConfig?.build?.assets?.length && !isStdio) {
+		console.log(
+			chalk.yellow(
+				"\nWarning: build.assets is only supported for stdio transport. Assets will be ignored.",
+			),
+		)
+	}
+
 	let payload: DeployPayload
 	let moduleFile: ReturnType<typeof createReadStream> | undefined
 	let sourcemapFile: ReturnType<typeof createReadStream> | undefined

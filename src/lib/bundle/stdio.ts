@@ -12,6 +12,8 @@ import type { DeployPayload } from "@smithery/api/resources/servers/deployments"
 import chalk from "chalk"
 
 import { buildServer } from "../build.js"
+import { loadProjectConfig } from "../config-loader.js"
+import { copyBundleAssets } from "./copy-assets.js"
 import { createMcpbManifest, MCPB_ENTRY_POINT } from "./mcpb-manifest.js"
 import { type ScanResult, scanModule } from "./scan.js"
 
@@ -112,6 +114,23 @@ export async function buildStdioBundle(
 		configSchema: scanResult.configSchema,
 		serverCard: scanResult.serverCard,
 		source: gitInfo,
+	}
+
+	// Copy assets if configured
+	const projectConfig = loadProjectConfig()
+	if (projectConfig?.build?.assets?.length) {
+		console.log(chalk.cyan("\nCopying assets..."))
+		const { copiedFiles, warnings } = await copyBundleAssets({
+			patterns: projectConfig.build.assets,
+			baseDir: process.cwd(),
+			outDir,
+		})
+		if (copiedFiles.length > 0) {
+			console.log(chalk.dim(`  Copied ${copiedFiles.length} asset(s)`))
+		}
+		for (const warning of warnings) {
+			console.log(chalk.yellow(`  Warning: ${warning}`))
+		}
 	}
 
 	console.log(chalk.cyan("\nPacking MCPB bundle..."))

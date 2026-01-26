@@ -44,6 +44,9 @@ importers:
       express:
         specifier: ^5.1.0
         version: 5.2.1
+      fast-glob:
+        specifier: ^3.3.3
+        version: 3.3.3
       inquirer:
         specifier: ^8.2.4
         version: 8.2.7(@types/node@20.19.27)

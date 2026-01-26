@@ -306,6 +306,48 @@ describe("deploy command", () => {
 		)
 	})
 
+	test("assets configured with non-stdio transport: logs warning", async () => {
+		const consoleSpy = vi.spyOn(console, "log")
+		vi.mocked(loadProjectConfig).mockReturnValue({
+			build: {
+				assets: ["data/**"],
+			},
+		})
+
+		await deploy({ name: "myorg/myserver", transport: "shttp" })
+
+		expect(consoleSpy).toHaveBeenCalledWith(
+			expect.stringContaining(
+				"build.assets is only supported for stdio transport",
+			),
+		)
+		consoleSpy.mockRestore()
+	})
+
+	test("assets configured with stdio transport: no warning", async () => {
+		const consoleSpy = vi.spyOn(console, "log")
+		vi.mocked(loadProjectConfig).mockReturnValue({
+			build: {
+				assets: ["data/**"],
+			},
+		})
+		vi.mocked(buildBundle).mockResolvedValue({
+			outDir: "/tmp/build",
+			payload: { type: "stdio", runtime: "node" },
+			moduleFile: "/tmp/build/module.js",
+			mcpbFile: "/tmp/build/bundle.mcpb",
+		})
+
+		await deploy({ name: "myorg/myserver", transport: "stdio" })
+
+		expect(consoleSpy).not.toHaveBeenCalledWith(
+			expect.stringContaining(
+				"build.assets is only supported for stdio transport",
+			),
+		)
+		consoleSpy.mockRestore()
+	})
+
 	test("no --name, smithery.yaml with typescript runtime and name: uses name without prompting", async () => {
 		mockRegistry.namespaces.list.mockResolvedValue({
 			namespaces: [{ name: "myorg" }],
