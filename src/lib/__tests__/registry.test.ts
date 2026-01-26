@@ -1,6 +1,6 @@
 /**
  * Registry Library Unit Tests
- * Tests the qualified name parsing logic in resolveServer
+ * Tests resolveServer behavior (parsing logic is tested in qualified-name.test.ts)
  */
 
 import { beforeEach, describe, expect, test, vi } from "vitest"
@@ -27,6 +27,7 @@ vi.mock("../../utils/smithery-settings", () => ({
 }))
 
 import { Smithery } from "@smithery/api"
+import { parseQualifiedName } from "../../utils/qualified-name"
 import { resolveServer } from "../registry"
 
 describe("resolveServer", () => {
@@ -51,58 +52,36 @@ describe("resolveServer", () => {
 		)
 	})
 
-	describe("qualified name parsing", () => {
-		test('parses "linear" as namespace="linear", serverName=""', async () => {
-			await resolveServer("linear")
+	test("calls SDK with namespace and serverName", async () => {
+		await resolveServer(parseQualifiedName("@foo/bar"))
 
-			expect(mockGet).toHaveBeenCalledWith("", { namespace: "linear" })
-		})
-
-		test('parses "@foo/bar" as namespace="foo", serverName="bar"', async () => {
-			await resolveServer("@foo/bar")
-
-			expect(mockGet).toHaveBeenCalledWith("bar", { namespace: "foo" })
-		})
-
-		test('parses "@smithery/github" as namespace="smithery", serverName="github"', async () => {
-			await resolveServer("@smithery/github")
-
-			expect(mockGet).toHaveBeenCalledWith("github", { namespace: "smithery" })
-		})
-
-		test('parses "myorg" as namespace="myorg", serverName=""', async () => {
-			await resolveServer("myorg")
-
-			expect(mockGet).toHaveBeenCalledWith("", { namespace: "myorg" })
-		})
+		expect(mockGet).toHaveBeenCalledWith("bar", { namespace: "foo" })
 	})
 
-	describe("resolved server response", () => {
-		test("returns server and first connection", async () => {
-			const mockResponse = {
-				qualifiedName: "@foo/bar",
-				connections: [
-					{ type: "stdio", command: "npx foo" },
-					{ type: "http", url: "https://example.com" },
-				],
-			}
-			mockGet.mockResolvedValue(mockResponse)
+	test("returns server and first connection", async () => {
+		const mockResponse = {
+			qualifiedName: "@foo/bar",
+			connections: [
+				{ type: "stdio", command: "npx foo" },
+				{ type: "http", url: "https://example.com" },
+			],
+		}
+		mockGet.mockResolvedValue(mockResponse)
 
-			const result = await resolveServer("@foo/bar")
+		const result = await resolveServer(parseQualifiedName("@foo/bar"))
 
-			expect(result.server).toEqual(mockResponse)
-			expect(result.connection).toEqual({ type: "stdio", command: "npx foo" })
+		expect(result.server).toEqual(mockResponse)
+		expect(result.connection).toEqual({ type: "stdio", command: "npx foo" })
+	})
+
+	test("throws when no connections available", async () => {
+		mockGet.mockResolvedValue({
+			qualifiedName: "@foo/bar",
+			connections: [],
 		})
 
-		test("throws when no connections available", async () => {
-			mockGet.mockResolvedValue({
-				qualifiedName: "@foo/bar",
-				connections: [],
-			})
-
-			await expect(resolveServer("@foo/bar")).rejects.toThrow(
-				"No connection configuration found for server",
-			)
-		})
+		await expect(resolveServer(parseQualifiedName("@foo/bar"))).rejects.toThrow(
+			"No connection configuration found for server",
+		)
 	})
 })

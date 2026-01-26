@@ -3,6 +3,7 @@ import { APIConnectionTimeoutError } from "@smithery/api"
 import { getConfig } from "../../lib/keychain"
 import { resolveServer } from "../../lib/registry"
 import type { ServerConfig } from "../../types/registry"
+import { parseQualifiedName } from "../../utils/qualified-name"
 import { prepareStdioConnection } from "../../utils/run/prepare-stdio-connection"
 import { getApiKey, initializeSettings } from "../../utils/smithery-settings.js"
 import { createStdioRunner as startSTDIOrunner } from "./stdio-runner.js"
@@ -25,7 +26,9 @@ export async function run(qualifiedName: string, configOverride: ServerConfig) {
 			)
 		}
 
-		const { server, connection } = await resolveServer(qualifiedName)
+		const { server, connection } = await resolveServer(
+			parseQualifiedName(qualifiedName),
+		)
 
 		logWithTimestamp(
 			`[Runner] Connecting to server: ${JSON.stringify({

@@ -9,6 +9,7 @@ import fetch from "cross-fetch"
 import { config as dotenvConfig } from "dotenv"
 import { ANALYTICS_ENDPOINT } from "../constants"
 import { getSessionId } from "../utils/analytics"
+import type { Namespace } from "../utils/qualified-name"
 import { getUserId } from "../utils/smithery-settings"
 import { verbose } from "./logger"
 
@@ -31,7 +32,8 @@ const createSDKOptions = (apiKey?: string): ClientOptions => {
 
 /**
  * Get server details from registry
- * @param qualifiedName The unique name of the server to resolve
+ * @param params.namespace The namespace of the server
+ * @param params.serverName The server name within the namespace (empty string for default server)
  * @returns Details about the server and the selected connection
  */
 export interface ResolvedServer {
@@ -41,9 +43,16 @@ export interface ResolvedServer {
 		| ServerGetResponse.HTTPConnection
 }
 
+export interface ResolveServerParams {
+	namespace: Namespace
+	serverName: string
+}
+
 export const resolveServer = async (
-	serverQualifiedName: string,
+	params: ResolveServerParams,
 ): Promise<ResolvedServer> => {
+	const { namespace, serverName } = params
+
 	// Read API key from environment variable
 	const apiKey = process.env.SMITHERY_API_KEY
 
@@ -61,7 +70,8 @@ export const resolveServer = async (
 					body: JSON.stringify({
 						eventName: "resolve_server",
 						payload: {
-							serverQualifiedName,
+							namespace,
+							serverName,
 							hasApiKey: !!apiKey,
 						},
 						$session_id: sessionId,
@@ -79,16 +89,8 @@ export const resolveServer = async (
 	const options = createSDKOptions(apiKey)
 	const smithery = new Smithery(options)
 	verbose(
-		`Resolving package ${serverQualifiedName} using Smithery SDK at ${options.baseURL || "<default>"}`,
+		`Resolving server namespace="${namespace}" serverName="${serverName}" using Smithery SDK at ${options.baseURL || "<default>"}`,
 	)
-
-	// Parse qualified name into namespace and server name
-	const normalized = serverQualifiedName.startsWith("@")
-		? serverQualifiedName.slice(1)
-		: serverQualifiedName
-	const parts = normalized.split("/")
-	const serverName = parts.length === 2 ? parts[1] : ""
-	const namespace = parts[0]
 
 	try {
 		const result = await smithery.servers.get(serverName, { namespace })
