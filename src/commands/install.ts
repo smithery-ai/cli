@@ -20,8 +20,8 @@ import {
 	determineConfigType,
 	formatServerConfig,
 } from "../utils/install/server-config"
-import { parseQualifiedName } from "../utils/qualified-name"
 import { resolveUserConfig } from "../utils/install/user-config"
+import { parseQualifiedName } from "../utils/qualified-name"
 import {
 	checkAndNotifyRemoteServer,
 	ensureBunInstalled,

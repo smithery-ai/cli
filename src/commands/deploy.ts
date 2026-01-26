@@ -105,7 +105,10 @@ export async function deploy(options: DeployOptions = {}) {
 			namespace,
 			server,
 		}
-		const resumeResult = await registry.servers.deployments.resume("latest", resumeParams)
+		const resumeResult = await registry.servers.deployments.resume(
+			"latest",
+			resumeParams,
+		)
 
 		await pollDeployment(registry, qualifiedName, resumeResult.deploymentId)
 		return

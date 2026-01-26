@@ -220,7 +220,9 @@ export async function inspectServer(
 
 	try {
 		// Fetch server details from registry
-		const { connection } = await resolveServer(parseQualifiedName(qualifiedName))
+		const { connection } = await resolveServer(
+			parseQualifiedName(qualifiedName),
+		)
 		verbose(`Resolved server package: ${qualifiedName}`)
 		spinner.succeed(`Successfully resolved ${qualifiedName}`)
 		verbose(`Selected connection type: ${connection.type}`)

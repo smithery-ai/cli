@@ -11,24 +11,23 @@ describe("parseQualifiedName", () => {
 		["foo/bar", "foo", "bar"],
 		["@smithery/github", "smithery", "github"],
 		["smithery/github", "smithery", "github"],
-	])(
-		'parses "%s" as namespace="%s", serverName="%s"',
-		(input, expectedNamespace, expectedServerName) => {
-			const result = parseQualifiedName(input)
+	])('parses "%s" as namespace="%s", serverName="%s"', (input, expectedNamespace, expectedServerName) => {
+		const result = parseQualifiedName(input)
 
-			expect(result.namespace).toBe(expectedNamespace)
-			expect(result.serverName).toBe(expectedServerName)
-		},
-	)
+		expect(result.namespace).toBe(expectedNamespace)
+		expect(result.serverName).toBe(expectedServerName)
+	})
 
-	test.each(["", "@", "@/bar", "/bar"])(
-		'throws error for invalid input "%s" with empty namespace',
-		(input) => {
-			expect(() => parseQualifiedName(input)).toThrow(
-				"Invalid qualified name: namespace cannot be empty",
-			)
-		},
-	)
+	test.each([
+		"",
+		"@",
+		"@/bar",
+		"/bar",
+	])('throws error for invalid input "%s" with empty namespace', (input) => {
+		expect(() => parseQualifiedName(input)).toThrow(
+			"Invalid qualified name: namespace cannot be empty",
+		)
+	})
 })
 
 describe("isValidNamespace", () => {

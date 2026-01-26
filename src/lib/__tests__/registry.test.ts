@@ -80,8 +80,8 @@ describe("resolveServer", () => {
 			connections: [],
 		})
 
-		await expect(
-			resolveServer(parseQualifiedName("@foo/bar")),
-		).rejects.toThrow("No connection configuration found for server")
+		await expect(resolveServer(parseQualifiedName("@foo/bar"))).rejects.toThrow(
+			"No connection configuration found for server",
+		)
 	})
 })
