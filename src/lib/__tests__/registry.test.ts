@@ -47,7 +47,7 @@ describe("resolveServer", () => {
 					servers: {
 						get: mockGet,
 					},
-				}) as unknown as ReturnType<typeof Smithery>,
+				}) as unknown as InstanceType<typeof Smithery>,
 		)
 	})
 
