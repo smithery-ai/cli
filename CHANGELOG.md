@@ -4,13 +4,17 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
-## [Unreleased]
+## [3.3.3] - 2025-01-26
 
 ### Fixed
-- Fixed qualified name parsing in `resolveServer()` - simple names like `linear` now correctly resolve with `namespace="linear"` instead of empty namespace
+- Fixed qualified name parsing - simple names like `linear` now consistently resolve with `namespace="linear"` instead of empty namespace
+
+### Changed
+- Refactored `resolveServer()` to accept `{ namespace, serverName }` instead of qualified name string - callers now use centralized `parseQualifiedName()` utility
 
 ### Added
-- Unit tests for qualified name parsing in registry module
+- New `parseQualifiedName()` utility in `src/utils/qualified-name.ts` for consistent qualified name parsing across the codebase
+- Unit tests for qualified name parsing
 
 ## [2.0.0] - 2025-12-21
 

@@ -9,6 +9,7 @@ import ora from "ora"
 import { debug, verbose } from "../lib/logger"
 import { resolveServer } from "../lib/registry"
 import { collectConfigValues } from "../utils/install/prompt-user-config"
+import { parseQualifiedName } from "../utils/qualified-name"
 import { getRuntimeEnvironment } from "../utils/runtime.js"
 
 async function createClient() {
@@ -219,7 +220,9 @@ export async function inspectServer(
 
 	try {
 		// Fetch server details from registry
-		const { connection } = await resolveServer(qualifiedName)
+		const { connection } = await resolveServer(
+			parseQualifiedName(qualifiedName),
+		)
 		verbose(`Resolved server package: ${qualifiedName}`)
 		spinner.succeed(`Successfully resolved ${qualifiedName}`)
 		verbose(`Selected connection type: ${connection.type}`)

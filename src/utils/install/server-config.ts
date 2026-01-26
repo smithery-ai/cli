@@ -87,7 +87,10 @@ function createStdioConfig(qualifiedName: string): ConfiguredServer {
  * @param server - Server details
  * @returns The configuration type to use
  */
-export function determineConfigType(client: string, server: Server): ConfigType {
+export function determineConfigType(
+	client: string,
+	server: Server,
+): ConfigType {
 	const clientConfig = getClientConfiguration(client)
 
 	// Check if server supports HTTP
