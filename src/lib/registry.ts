@@ -87,8 +87,8 @@ export const resolveServer = async (
 		? serverQualifiedName.slice(1)
 		: serverQualifiedName
 	const parts = normalized.split("/")
-	const serverName = parts.length === 2 ? parts[1] : parts[0]
-	const namespace = parts.length === 2 ? parts[0] : ""
+	const serverName = parts.length === 2 ? parts[1] : ""
+	const namespace = parts[0]
 
 	try {
 		const result = await smithery.servers.get(serverName, { namespace })
