@@ -2,6 +2,7 @@
 
 import chalk from "chalk"
 import { Command } from "commander"
+import { createServer } from "node:http"
 import { deploy } from "./commands/deploy"
 import { dev } from "./commands/dev"
 import { inspectServer } from "./commands/inspect"
@@ -398,6 +399,7 @@ program
 	.command("whoami")
 	.description("Display the currently logged in API key")
 	.option("--full", "Show the full API key instead of masking it")
+	.option("--server", "Start an HTTP server on localhost:426 that serves the API key")
 	.action(async (options) => {
 		try {
 			const apiKey = await getApiKey()
@@ -406,6 +408,24 @@ program
 				console.log(chalk.yellow("No API key found"))
 				console.log(chalk.gray("Run 'smithery login' to authenticate"))
 				process.exit(1)
+			}
+
+			if (options.server) {
+				const server = createServer((req, res) => {
+					if (req.method === "GET" && req.url === "/whoami") {
+						res.writeHead(200, { "Content-Type": "application/json" })
+						res.end(JSON.stringify({ SMITHERY_API_KEY: apiKey }))
+					} else {
+						res.writeHead(404, { "Content-Type": "application/json" })
+						res.end(JSON.stringify({ error: "Not found" }))
+					}
+				})
+				server.listen(426, "localhost", () => {
+					console.log(chalk.cyan("Server running at http://localhost:426"))
+					console.log(chalk.gray("GET /whoami to retrieve API key"))
+					console.log(chalk.gray("Press Ctrl+C to stop"))
+				})
+				return
 			}
 
 			if (options.full) {
