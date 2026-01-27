@@ -105,7 +105,9 @@ export function showPostInstallHint(client: string): void {
 	const label = cliClients[client]
 	if (label) {
 		console.log(
-			chalk.cyan(`ℹ You may need to restart ${label} for changes to take effect.`),
+			chalk.cyan(
+				`ℹ You may need to restart ${label} for changes to take effect.`,
+			),
 		)
 	}
 }
