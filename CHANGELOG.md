@@ -6,6 +6,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [3.4.0] - 2025-01-27
+
 ### Added
 - Asset bundling support for stdio deploys via `build.assets` field in `smithery.yaml` - allows including non-code files (data files, templates, configs) in MCPB bundles using glob patterns (#524)
 
