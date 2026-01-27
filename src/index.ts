@@ -399,7 +399,7 @@ program
 	.command("whoami")
 	.description("Display the currently logged in API key")
 	.option("--full", "Show the full API key instead of masking it")
-	.option("--server", "Start an HTTP server on localhost:426 that serves the API key")
+	.option("--server", "Start an HTTP server on localhost:4260 that serves the API key")
 	.action(async (options) => {
 		try {
 			const apiKey = await getApiKey()
@@ -412,6 +412,16 @@ program
 
 			if (options.server) {
 				const server = createServer((req, res) => {
+					res.setHeader("Access-Control-Allow-Origin", "*")
+					res.setHeader("Access-Control-Allow-Methods", "GET, OPTIONS")
+					res.setHeader("Access-Control-Allow-Headers", "Content-Type")
+
+					if (req.method === "OPTIONS") {
+						res.writeHead(204)
+						res.end()
+						return
+					}
+
 					if (req.method === "GET" && req.url === "/whoami") {
 						res.writeHead(200, { "Content-Type": "application/json" })
 						res.end(JSON.stringify({ SMITHERY_API_KEY: apiKey }))
@@ -420,8 +430,8 @@ program
 						res.end(JSON.stringify({ error: "Not found" }))
 					}
 				})
-				server.listen(426, "localhost", () => {
-					console.log(chalk.cyan("Server running at http://localhost:426"))
+				server.listen(4260, "localhost", () => {
+					console.log(chalk.cyan("Server running at http://localhost:4260"))
 					console.log(chalk.gray("GET /whoami to retrieve API key"))
 					console.log(chalk.gray("Press Ctrl+C to stop"))
 				})
