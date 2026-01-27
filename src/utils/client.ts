@@ -1,5 +1,6 @@
 import { exec } from "node:child_process"
 import { promisify } from "node:util"
+import chalk from "chalk"
 import inquirer from "inquirer"
 
 const execAsync = promisify(exec)
@@ -92,4 +93,19 @@ export async function promptForRestart(client?: string): Promise<boolean> {
 	}
 
 	return shouldRestart
+}
+
+export function showPostInstallHint(client: string): void {
+	const cliClients: Record<string, string> = {
+		"claude-code": "Claude Code",
+		"gemini-cli": "Gemini CLI",
+		codex: "Codex",
+	}
+
+	const label = cliClients[client]
+	if (label) {
+		console.log(
+			chalk.cyan(`ℹ You may need to restart ${label} for changes to take effect.`),
+		)
+	}
 }
