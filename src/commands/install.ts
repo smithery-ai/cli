@@ -14,7 +14,7 @@ import { verbose } from "../lib/logger"
 import { resolveServer } from "../lib/registry"
 import type { ServerConfig } from "../types/registry"
 import { checkAnalyticsConsent } from "../utils/analytics"
-import { promptForRestart } from "../utils/client"
+import { promptForRestart, showPostInstallHint } from "../utils/client"
 import { getServerName } from "../utils/install/helpers"
 import {
 	determineConfigType,
@@ -129,6 +129,7 @@ export async function installServer(
 		console.log(
 			chalk.green(`✓ ${qualifiedName} successfully installed for ${client}`),
 		)
+		showPostInstallHint(client)
 		await promptForRestart(client)
 		process.exit(0)
 	} catch (error) {
