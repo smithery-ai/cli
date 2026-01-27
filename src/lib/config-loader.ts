@@ -11,6 +11,7 @@ export interface ProjectConfig {
 		installCommand?: string
 		buildCommand?: string
 		outputDirectory?: string
+		assets?: string[]
 	}
 }
 
@@ -77,6 +78,7 @@ const BuildConfigSchema = z
 		installCommand: z.string().optional(),
 		buildCommand: z.string().optional(),
 		outputDirectory: z.string().optional(),
+		assets: z.array(z.string()).optional(),
 	})
 	.optional()
 
