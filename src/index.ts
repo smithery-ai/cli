@@ -1,5 +1,7 @@
 #!/usr/bin/env node
 
+import { createServer } from "node:http"
+import { Smithery } from "@smithery/api/client.js"
 import chalk from "chalk"
 import { Command } from "commander"
 import { deploy } from "./commands/deploy"
@@ -422,19 +424,99 @@ program
 		}
 	})
 
+async function mintApiKey() {
+	const rootApiKey = await getApiKey()
+	const client = new Smithery({ apiKey: rootApiKey })
+	const token = await client.tokens.create({
+		allow: {
+			connections: {
+				actions: ["read", "write"],
+				namespaces: ["*"],
+				metadata: {
+					userId: "root-whoami",
+				},
+			},
+			mcp: {
+				actions: ["read", "write"],
+				namespaces: ["*"],
+				metadata: {
+					userId: "root-whoami",
+				},
+			},
+			namespaces: {
+				actions: ["read", "write"],
+				namespaces: ["*"],
+			},
+			deployments: {
+				actions: ["read", "write"],
+				namespaces: ["*"],
+			},
+			servers: {
+				actions: ["read", "write"],
+				namespaces: ["*"],
+			},
+			tokens: {
+				actions: ["read", "write"],
+				namespaces: ["*"],
+			},
+		},
+		ttlSeconds: 3600,
+	})
+	const apiKey = token.token
+	const expiresAt = new Date(token.expiresAt)
+	return { apiKey, expiresAt }
+}
+
 // Show API key command
 program
 	.command("whoami")
 	.description("Display the currently logged in API key")
 	.option("--full", "Show the full API key instead of masking it")
+	.option(
+		"--server",
+		"Start an HTTP server on localhost:4260 that serves the API key",
+	)
 	.action(async (options) => {
 		try {
-			const apiKey = await getApiKey()
+			let { apiKey, expiresAt } = await mintApiKey()
 
 			if (!apiKey) {
 				console.log(chalk.yellow("No API key found"))
 				console.log(chalk.gray("Run 'smithery login' to authenticate"))
 				process.exit(1)
+			}
+
+			if (options.server) {
+				const server = createServer(async (req, res) => {
+					res.setHeader("Access-Control-Allow-Origin", "*")
+					res.setHeader("Access-Control-Allow-Methods", "GET, OPTIONS")
+					res.setHeader("Access-Control-Allow-Headers", "Content-Type")
+
+					if (req.method === "OPTIONS") {
+						res.writeHead(204)
+						res.end()
+						return
+					}
+
+					if (req.method === "GET" && req.url === "/whoami") {
+						if (expiresAt <= new Date()) {
+							const newToken = await mintApiKey()
+							apiKey = newToken.apiKey
+							expiresAt = newToken.expiresAt
+						}
+						res.writeHead(200, { "Content-Type": "application/json" })
+						res.end(JSON.stringify({ SMITHERY_API_KEY: apiKey, expiresAt }))
+					} else {
+						res.writeHead(404, { "Content-Type": "application/json" })
+						res.end(JSON.stringify({ error: "Not found" }))
+					}
+				})
+				server.listen(4260, "localhost", () => {
+					console.log(chalk.cyan("Server running at http://localhost:4260"))
+					console.log(chalk.gray("GET /whoami to retrieve API key"))
+					console.log(chalk.gray("Press Ctrl+C to stop"))
+				})
+				return
 			}
 
 			if (options.full) {
