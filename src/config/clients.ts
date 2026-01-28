@@ -29,7 +29,7 @@ export interface ClientConfiguration {
 	supportedTransports: Transport[]
 
 	// Installation method
-	installType: "json" | "command" | "yaml"
+	installType: "json" | "command" | "yaml" | "jsonc"
 
 	// File path or command for installation
 	path?: string
@@ -182,9 +182,9 @@ export const CLIENT_CONFIGURATIONS: Record<string, ClientConfiguration> = {
 	opencode: {
 		label: "OpenCode",
 		supportedTransports: [Transport.STDIO, Transport.HTTP],
-		installType: "json",
+		installType: "jsonc",
 		supportsOAuth: true,
-		path: path.join(homeDir, ".config", "opencode", "opencode.json"),
+		path: path.join(homeDir, ".opencode", "opencode.jsonc"),
 	},
 	claude: {
 		label: "Claude Desktop",

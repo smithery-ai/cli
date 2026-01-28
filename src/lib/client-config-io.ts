@@ -1,6 +1,7 @@
 import { execFileSync } from "node:child_process"
 import fs from "node:fs"
 import path from "node:path"
+import { applyEdits, modify, parse as parseJsonc } from "jsonc-parser"
 import * as YAML from "yaml"
 import {
 	type ClientConfiguration,
@@ -264,7 +265,13 @@ export function readConfig(client: string): ClientMCPConfig {
 		const fileContent = fs.readFileSync(configPath, "utf8")
 		let rawConfig: Record<string, unknown> = {}
 
-		if (clientConfig.installType === "yaml") {
+		if (
+			configPath.endsWith(".jsonc") ||
+			clientConfig.installType === "jsonc"
+		) {
+			rawConfig =
+				parseJsonc(fileContent, [], { allowTrailingComma: true }) || {}
+		} else if (clientConfig.installType === "yaml") {
 			const parsed = YAML.parse(fileContent)
 			rawConfig =
 				(parsed &&
@@ -340,7 +347,9 @@ export function writeConfig(config: ClientMCPConfig, client: string): void {
 	}
 
 	const clientConfig = getClientConfiguration(client)
-	if (clientConfig.installType === "yaml") {
+	if (clientConfig.installType === "jsonc") {
+		writeConfigJsonc(config, clientConfig, client)
+	} else if (clientConfig.installType === "yaml") {
 		writeConfigYaml(config, clientConfig, client)
 	} else {
 		writeConfigJson(config, clientConfig, client)
@@ -498,6 +507,49 @@ function writeConfigJson(
 	verbose(`Writing config to file: ${configPath}`)
 	fs.writeFileSync(configPath, JSON.stringify(finalConfig, null, 2))
 	verbose(`Config successfully written`)
+}
+
+function writeConfigJsonc(
+	config: ClientMCPConfig,
+	clientConfig: ClientConfiguration,
+	client: string,
+): void {
+	const configPath = clientConfig.path
+	if (!configPath) {
+		throw new Error(`No path defined for client: ${clientConfig.label}`)
+	}
+
+	const configDir = path.dirname(configPath)
+
+	verbose(`Ensuring config directory exists: ${configDir}`)
+	if (!fs.existsSync(configDir)) {
+		verbose(`Creating directory: ${configDir}`)
+		fs.mkdirSync(configDir, { recursive: true })
+	}
+
+	// Read existing content or start with empty object
+	let content = "{}"
+	if (fs.existsSync(configPath)) {
+		content = fs.readFileSync(configPath, "utf8")
+	}
+
+	const descriptor = getFormatDescriptor(client)
+	const topLevelKey = descriptor.topLevelKey
+
+	// Transform and apply each server config using modify() to preserve comments
+	for (const [serverName, serverConfig] of Object.entries(config.mcpServers)) {
+		const transformed = transformFromStandard(serverConfig, descriptor, serverName)
+		if (transformed !== null) {
+			const edits = modify(content, [topLevelKey, serverName], transformed, {
+				formattingOptions: { tabSize: 2, insertSpaces: true },
+			})
+			content = applyEdits(content, edits)
+		}
+	}
+
+	verbose(`Writing JSONC config to file: ${configPath}`)
+	fs.writeFileSync(configPath, content)
+	verbose(`JSONC config successfully written`)
 }
 
 function writeConfigYaml(
