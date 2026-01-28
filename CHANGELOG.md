@@ -6,6 +6,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [3.5.0] - 2026-01-28
+
 ### Added
 - `--config-schema` flag for `publish` command to specify JSON Schema for external URL servers (inline JSON or path to .json file)
 - Post-publish tip suggesting `--config-schema` for external URL publishes without configuration
