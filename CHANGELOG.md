@@ -6,6 +6,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Added
+- `--config-schema` flag for `publish` command to specify JSON Schema for external URL servers (inline JSON or path to .json file)
+- Post-publish tip suggesting `--config-schema` for external URL publishes without configuration
+
+### Changed
+- Renamed `deploy` command to `publish` (`deploy` remains as deprecated alias with warning)
+- Consolidated CLI utilities into `cli-utils.ts` (qualified-name parsing, config masking, JSON parsing)
+
 ## [3.4.0] - 2025-01-27
 
 ### Added
