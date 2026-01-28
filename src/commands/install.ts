@@ -14,6 +14,7 @@ import { verbose } from "../lib/logger"
 import { resolveServer } from "../lib/registry"
 import type { ServerConfig } from "../types/registry"
 import { checkAnalyticsConsent } from "../utils/analytics"
+import { parseQualifiedName } from "../utils/cli-utils"
 import { promptForRestart, showPostInstallHint } from "../utils/client"
 import { getServerName } from "../utils/install/helpers"
 import {
@@ -21,7 +22,6 @@ import {
 	formatServerConfig,
 } from "../utils/install/server-config"
 import { resolveUserConfig } from "../utils/install/user-config"
-import { parseQualifiedName } from "../utils/qualified-name"
 import {
 	checkAndNotifyRemoteServer,
 	ensureBunInstalled,

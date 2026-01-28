@@ -1,6 +1,6 @@
 import { createRequire } from "node:module"
 import type { ServerConfig } from "../types/registry.js"
-import { maskConfig } from "../utils/mask-config.js"
+import { maskConfig } from "../utils/cli-utils.js"
 import { verbose } from "./logger.js"
 
 const require = createRequire(import.meta.url)

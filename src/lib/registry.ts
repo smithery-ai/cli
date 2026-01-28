@@ -9,7 +9,7 @@ import fetch from "cross-fetch"
 import { config as dotenvConfig } from "dotenv"
 import { ANALYTICS_ENDPOINT } from "../constants"
 import { getSessionId } from "../utils/analytics"
-import type { Namespace } from "../utils/qualified-name"
+import type { Namespace } from "../utils/cli-utils"
 import { getUserId } from "../utils/smithery-settings"
 import { verbose } from "./logger"
 

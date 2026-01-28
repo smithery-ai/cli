@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest"
-import { isValidNamespace, parseQualifiedName } from "../qualified-name"
+import { isValidNamespace, parseQualifiedName } from "../cli-utils"
 
 describe("parseQualifiedName", () => {
 	test.each([

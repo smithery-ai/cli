@@ -27,7 +27,7 @@ vi.mock("../../utils/smithery-settings", () => ({
 }))
 
 import { Smithery } from "@smithery/api"
-import { parseQualifiedName } from "../../utils/qualified-name"
+import { parseQualifiedName } from "../../utils/cli-utils"
 import { resolveServer } from "../registry"
 
 describe("resolveServer", () => {

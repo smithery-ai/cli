@@ -12,8 +12,8 @@ import ora from "ora"
 import { buildBundle } from "../lib/bundle/index.js"
 import { loadProjectConfig } from "../lib/config-loader.js"
 import { resolveNamespace } from "../lib/namespace.js"
+import { parseConfigSchema, parseQualifiedName } from "../utils/cli-utils.js"
 import { promptForServerNameInput } from "../utils/command-prompts.js"
-import { parseQualifiedName } from "../utils/qualified-name.js"
 import { ensureApiKey } from "../utils/runtime.js"
 
 interface DeployOptions {
@@ -23,6 +23,7 @@ interface DeployOptions {
 	url?: string
 	resume?: boolean
 	transport?: "shttp" | "stdio"
+	configSchema?: string // JSON string or path to .json file
 }
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
@@ -128,6 +129,16 @@ export async function deploy(options: DeployOptions = {}) {
 		process.exit(1)
 	}
 
+	// Reject --config-schema without --url (only for external URLs)
+	if (options.configSchema && !isExternal) {
+		console.error(
+			chalk.red(
+				"Error: --config-schema can only be used with --url (external URLs)",
+			),
+		)
+		process.exit(1)
+	}
+
 	const deployType = isExternal ? "external" : isStdio ? "stdio" : "hosted"
 	console.log(
 		chalk.cyan(
@@ -150,9 +161,18 @@ export async function deploy(options: DeployOptions = {}) {
 	let sourcemapFile: ReturnType<typeof createReadStream> | undefined
 	let bundleFile: ReturnType<typeof createReadStream> | undefined
 
+	// Parse config schema if provided
+	const configSchema = options.configSchema
+		? parseConfigSchema(options.configSchema)
+		: undefined
+
 	if (isExternal) {
 		// External deployments don't need a build
-		payload = { type: "external", upstreamUrl: externalUrl }
+		payload = {
+			type: "external",
+			upstreamUrl: externalUrl,
+			...(configSchema && { configSchema }),
+		}
 	} else {
 		// Build the bundle (handles both shttp and stdio)
 		const buildResult = await buildBundle({
