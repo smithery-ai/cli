@@ -8,8 +8,8 @@ import inquirer from "inquirer"
 import ora from "ora"
 import { debug, verbose } from "../lib/logger"
 import { resolveServer } from "../lib/registry"
+import { parseQualifiedName } from "../utils/cli-utils"
 import { collectConfigValues } from "../utils/install/prompt-user-config"
-import { parseQualifiedName } from "../utils/qualified-name"
 import { getRuntimeEnvironment } from "../utils/runtime.js"
 
 async function createClient() {

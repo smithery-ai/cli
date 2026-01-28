@@ -1,8 +1,10 @@
 import chalk from "chalk"
 import { VALID_CLIENTS, type ValidClient } from "../config/clients"
 import { searchServers } from "../lib/registry"
-import type { ServerConfig } from "../types/registry"
 import { ensureApiKey } from "./runtime"
+
+// Re-export parsing utilities from cli-utils for backward compatibility
+export { parseConfigSchema, parseServerConfig } from "./cli-utils.js"
 
 /**
  * Prompts user to select a client if not provided
@@ -55,32 +57,6 @@ export function validateClient(client: string): asserts client is ValidClient {
 				`Invalid client "${client}". Valid options are: ${VALID_CLIENTS.join(", ")}`,
 			),
 		)
-		process.exit(1)
-	}
-}
-
-/**
- * Parses configuration JSON from command line options
- * Handles Windows cmd quirks with single quotes and double JSON parsing
- * @param configOption - Raw config string from CLI
- * @returns Parsed ServerConfig object
- * @throws Process exit if parsing fails
- */
-export function parseConfigOption(configOption: string): ServerConfig {
-	try {
-		let rawConfig = configOption
-		// Windows cmd does not interpret `'`, passes it literally
-		if (rawConfig.startsWith("'") && rawConfig.endsWith("'")) {
-			rawConfig = rawConfig.slice(1, -1)
-		}
-		let parsedConfig = JSON.parse(rawConfig)
-		if (typeof parsedConfig === "string") {
-			parsedConfig = JSON.parse(parsedConfig)
-		}
-		return parsedConfig
-	} catch (error) {
-		const errorMessage = error instanceof Error ? error.message : String(error)
-		console.error(chalk.red(`Error parsing config: ${errorMessage}`))
 		process.exit(1)
 	}
 }

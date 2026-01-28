@@ -65,6 +65,14 @@ vi.mock("../../utils/command-prompts", () => ({
 	promptForServerNameInput: vi.fn(),
 }))
 
+vi.mock("../../utils/cli-utils", async (importOriginal) => {
+	const actual = await importOriginal<typeof import("../../utils/cli-utils")>()
+	return {
+		...actual,
+		parseConfigSchema: vi.fn((input: string) => JSON.parse(input)),
+	}
+})
+
 vi.mock("../../lib/config-loader", () => ({
 	loadProjectConfig: vi.fn(),
 }))
@@ -254,6 +262,46 @@ describe("deploy command", () => {
 				}),
 			}),
 		)
+	})
+
+	test("--config-schema with --url: includes configSchema in external deploy payload", async () => {
+		const configSchema = {
+			type: "object",
+			properties: {
+				apiKey: { type: "string", "x-from": { header: "x-api-key" } },
+			},
+			required: ["apiKey"],
+		}
+
+		await deploy({
+			name: "myorg/myserver",
+			url: "https://example.com/mcp",
+			configSchema: JSON.stringify(configSchema),
+		})
+
+		expect(buildBundle).not.toHaveBeenCalled()
+		expect(mockRegistry.servers.deployments.deploy).toHaveBeenCalledWith(
+			"myserver",
+			expect.objectContaining({
+				namespace: "myorg",
+				payload: JSON.stringify({
+					type: "external",
+					upstreamUrl: "https://example.com/mcp",
+					configSchema,
+				}),
+			}),
+		)
+	})
+
+	test("--config-schema without --url: rejects with error", async () => {
+		await expect(
+			deploy({
+				name: "myorg/myserver",
+				configSchema: '{"type":"object"}',
+			}),
+		).rejects.toThrow("process.exit() was called")
+
+		expect(buildBundle).not.toHaveBeenCalled()
 	})
 
 	test("--transport stdio: respects transport type and builds stdio bundle", async () => {

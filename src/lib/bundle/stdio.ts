@@ -131,6 +131,13 @@ export async function buildStdioBundle(
 		for (const warning of warnings) {
 			console.log(chalk.yellow(`  Warning: ${warning}`))
 		}
+	} else {
+		// todo: add link to docs about assets
+		console.log(
+			chalk.dim(
+				'\nℹ Tip: Add "assets" to smithery.yaml to bundle non-code files (e.g., templates, data)',
+			),
+		)
 	}
 
 	console.log(chalk.cyan("\nPacking MCPB bundle..."))

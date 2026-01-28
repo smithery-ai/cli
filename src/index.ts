@@ -19,7 +19,7 @@ import { validateApiKey } from "./lib/registry"
 import type { ServerConfig } from "./types/registry"
 import {
 	interactiveServerSearch,
-	parseConfigOption,
+	parseServerConfig,
 	selectClient,
 	selectInstalledServer,
 	selectServer,
@@ -81,7 +81,7 @@ program
 
 		// Parse config if provided
 		const config: ServerConfig = options.config
-			? parseConfigOption(options.config)
+			? parseServerConfig(options.config)
 			: {}
 
 		await installServer(selectedServer, selectedClient as ValidClient, config)
@@ -152,7 +152,7 @@ program
 			)
 			// Parse config if provided
 			const config: ServerConfig = options.config
-				? parseConfigOption(options.config)
+				? parseServerConfig(options.config)
 				: {}
 			await playground({
 				server,
@@ -166,7 +166,7 @@ program
 
 		// Parse config if provided
 		const config: ServerConfig = options.config
-			? parseConfigOption(options.config)
+			? parseServerConfig(options.config)
 			: {}
 
 		await run(server, config)
@@ -245,25 +245,41 @@ program
 		})
 	})
 
-// Deploy command
+// Publish command (with 'deploy' as deprecated alias)
 program
-	.command("deploy [entryFile]")
-	.description("Deploy MCP server to Smithery")
+	.command("publish [entryFile]")
+	.alias("deploy")
+	.description("Publish MCP server to Smithery")
 	.option("-n, --name <name>", "Target server qualified name (e.g., @org/name)")
 	.option(
 		"-u, --url <url>",
-		"External MCP server URL (makes this an external deploy)",
+		"External MCP server URL (publishes as external server)",
 	)
 	.option("-k, --key <apikey>", "Smithery API key")
 	.option(
 		"--resume",
-		"Resume the latest paused deployment (e.g., after OAuth authorization)",
+		"Resume the latest paused publish (e.g., after OAuth authorization)",
 	)
 	.option(
 		"-t, --transport <type>",
 		"Transport type: shttp or stdio (default: shttp)",
 		"shttp",
 	)
+	.option(
+		"--config-schema <json-or-path>",
+		"JSON Schema for external URLs (--url). Inline JSON or path to .json file",
+	)
+	.hook("preAction", () => {
+		// Show deprecation warning if invoked as 'deploy'
+		const invokedName = process.argv[2]
+		if (invokedName === "deploy") {
+			console.warn(
+				chalk.yellow(
+					"Warning: 'deploy' is deprecated. Please use 'publish' instead.",
+				),
+			)
+		}
+	})
 	.action(async (entryFile, options) => {
 		// Validate transport option
 		if (options.transport && !["shttp", "stdio"].includes(options.transport)) {
@@ -282,6 +298,7 @@ program
 			url: options.url,
 			resume: options.resume,
 			transport: options.transport as "shttp" | "stdio",
+			configSchema: options.configSchema,
 		})
 	})
 
@@ -315,7 +332,7 @@ program
 
 		// Parse config if provided
 		const configOverride: ServerConfig = options.config
-			? parseConfigOption(options.config)
+			? parseServerConfig(options.config)
 			: {}
 
 		await playground({
@@ -427,12 +444,12 @@ program
 // Parse arguments and run
 program.parseAsync(process.argv).catch((error: unknown) => {
 	if (error instanceof Error) {
-		console.error(chalk.red(`\n❌ ${error.message}`))
+		console.error(chalk.red(`\n✗ ${error.message}`))
 		if (process.argv.includes("--debug") && error.stack) {
 			console.error(chalk.gray(error.stack))
 		}
 	} else {
-		console.error(chalk.red(`\n❌ ${String(error)}`))
+		console.error(chalk.red(`\n✗ ${String(error)}`))
 	}
 	process.exit(1)
 })
