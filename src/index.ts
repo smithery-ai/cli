@@ -301,6 +301,18 @@ program
 			configSchema: options.configSchema,
 		})
 	})
+	.hook("postAction", (thisCommand) => {
+		const options = thisCommand.opts()
+		// Tip for external URL publishes without config schema
+		// TODO: link to docs
+		if (options.url && !options.configSchema) {
+			console.log(
+				chalk.dim(
+					"\nTip: Use --config-schema to define configuration options for your server.",
+				),
+			)
+		}
+	})
 
 // Playground command
 program
