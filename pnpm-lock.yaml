@@ -35,9 +35,6 @@ importers:
       cross-fetch:
         specifier: ^4.1.0
         version: 4.1.0
-      cross-spawn:
-        specifier: ^7.0.6
-        version: 7.0.6
       esbuild:
         specifier: ^0.25.10
         version: 0.25.12
@@ -53,6 +50,9 @@ importers:
       inquirer-autocomplete-prompt:
         specifier: ^2.0.0
         version: 2.0.1(inquirer@8.2.7(@types/node@20.19.27))
+      jsonc-parser:
+        specifier: ^3.3.1
+        version: 3.3.1
       lodash:
         specifier: ^4.17.21
         version: 4.17.21
@@ -1738,6 +1738,9 @@ packages:
 
   json-schema-typed@8.0.2:
     resolution: {integrity: sha512-fQhoXdcvc3V28x7C7BMs4P5+kNlgUURe2jmUT1T//oBRMDrqy1QPelJimwZGo7Hg9VPV3EQV5Bnq4hbFy2vetA==}
+
+  jsonc-parser@3.3.1:
+    resolution: {integrity: sha512-HUgH65KyejrUFPvHFPbqOY0rsFip3Bo5wb4ngvdi1EpCYWUQDC5V+Y7mZws+DLkr4M//zQJoanu1SP+87Dv1oQ==}
 
   jsonfile@6.2.0:
     resolution: {integrity: sha512-FGuPw30AdOIUTRMC2OMRtQV+jkVj2cfPqSeWXv1NEAJ1qZ5zb1X6z1mFhbfOB/iy3ssJCD+3KuZ8r8C3uVFlAg==}
@@ -3875,6 +3878,8 @@ snapshots:
   json-schema-traverse@1.0.0: {}
 
   json-schema-typed@8.0.2: {}
+
+  jsonc-parser@3.3.1: {}
 
   jsonfile@6.2.0:
     dependencies:

@@ -253,16 +253,6 @@ export const standardStdioConfig: ClientMCPConfig = {
 	},
 }
 
-export const standardYamlWithStdioServer = `mcpServers:
-  test-server:
-    command: npx
-    args:
-      - -y
-      - "@smithery/cli@latest"
-      - run
-      - test-server
-`
-
 export const standardYamlWithExistingServer = `mcpServers:
   existing-server:
     command: npx

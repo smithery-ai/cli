@@ -19,36 +19,6 @@ export const noConfigServer: Server = {
 	],
 }
 
-export const optionalOnlyServer: Server = {
-	qualifiedName: "@test/optional-only-server",
-	displayName: "Optional Only Server",
-	description: "A test server with optional only config",
-	iconUrl: null,
-	remote: true,
-	deploymentUrl: "https://server.smithery.ai",
-	security: null,
-	tools: null,
-	connections: [
-		{
-			type: "http",
-			deploymentUrl: "https://server.smithery.ai",
-			configSchema: {
-				type: "object",
-				properties: {
-					debugMode: {
-						type: "boolean",
-						default: false,
-					},
-					maxRetries: {
-						type: "number",
-						default: 3,
-					},
-				},
-			},
-		},
-	],
-}
-
 export const requiredOnlyServer: Server = {
 	qualifiedName: "@test/required-only-server",
 	displayName: "Required Only Server",

@@ -4,7 +4,7 @@ import { searchServers } from "../lib/registry"
 import { ensureApiKey } from "./runtime"
 
 // Re-export parsing utilities from cli-utils for backward compatibility
-export { parseConfigSchema, parseServerConfig } from "./cli-utils.js"
+export { parseServerConfig } from "./cli-utils.js"
 
 /**
  * Prompts user to select a client if not provided
@@ -65,7 +65,7 @@ export function validateClient(client: string): asserts client is ValidClient {
  * Prompts user to choose how they want to specify a server
  * @returns Promise<"search" | "direct"> - The selected input method
  */
-export async function chooseServerInputMethod(): Promise<"search" | "direct"> {
+async function chooseServerInputMethod(): Promise<"search" | "direct"> {
 	const inquirer = (await import("inquirer")).default
 	const { inputMethod } = await inquirer.prompt([
 		{
@@ -86,7 +86,7 @@ export async function chooseServerInputMethod(): Promise<"search" | "direct"> {
  * @param apiKey - API key for search (optional, will prompt if needed)
  * @returns Promise<string> - The selected server's qualified name
  */
-export async function searchAndSelectServer(apiKey?: string): Promise<string> {
+async function searchAndSelectServer(apiKey?: string): Promise<string> {
 	const inquirer = (await import("inquirer")).default
 
 	const { searchTerm } = await inquirer.prompt([
@@ -172,7 +172,7 @@ export async function searchAndSelectServer(apiKey?: string): Promise<string> {
  * Prompts user to enter a server ID directly
  * @returns Promise<string> - The entered server ID (trimmed)
  */
-export async function promptForServerId(): Promise<string> {
+async function promptForServerId(): Promise<string> {
 	const inquirer = (await import("inquirer")).default
 
 	const { serverId } = await inquirer.prompt([
@@ -307,7 +307,7 @@ export async function promptForExistingConfig(): Promise<boolean> {
  * @param providedTerm - Search term provided via CLI argument
  * @returns Promise<string> - The search term
  */
-export async function getSearchTerm(providedTerm?: string): Promise<string> {
+async function getSearchTerm(providedTerm?: string): Promise<string> {
 	if (providedTerm) {
 		return providedTerm
 	}
