@@ -35,9 +35,6 @@ importers:
       cross-fetch:
         specifier: ^4.1.0
         version: 4.1.0
-      cross-spawn:
-        specifier: ^7.0.6
-        version: 7.0.6
       esbuild:
         specifier: ^0.25.10
         version: 0.25.12
