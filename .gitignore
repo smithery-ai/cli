@@ -60,3 +60,5 @@ packages/
 
 # Other
 .todos
+.docs
+.plans

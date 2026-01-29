@@ -14,7 +14,7 @@ import {
  * @param defaultMessage - Default message if error message cannot be extracted
  * @returns A string error message
  */
-export function getErrorMessage(
+function getErrorMessage(
 	error: unknown,
 	defaultMessage = "Unknown error",
 ): string {

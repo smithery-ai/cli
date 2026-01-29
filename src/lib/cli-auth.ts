@@ -65,7 +65,7 @@ function isNetworkError(error: unknown): boolean {
  * @param registryEndpoint Base URL for the registry
  * @returns Session ID and auth URL
  */
-export async function createAuthSession(
+async function createAuthSession(
 	registryEndpoint: string,
 ): Promise<CliAuthSession> {
 	const sessionUrl = `${registryEndpoint}/api/auth/cli/session`
@@ -108,7 +108,7 @@ export async function createAuthSession(
  * Open the user's browser to the auth URL
  * @param authUrl URL for the user to visit
  */
-export async function openBrowserForAuth(authUrl: string): Promise<void> {
+async function openBrowserForAuth(authUrl: string): Promise<void> {
 	try {
 		const platform = process.platform
 		let command: string
@@ -186,7 +186,7 @@ async function pollWithRetry(
  * @param options Polling options
  * @returns API key on success
  */
-export async function pollForApiKey(
+async function pollForApiKey(
 	sessionId: string,
 	registryEndpoint: string,
 	options: CliAuthOptions,

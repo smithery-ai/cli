@@ -1,10 +1,87 @@
-import type { FormatDescriptor } from "../../../../config/format-descriptors"
-import { FORMAT_DESCRIPTORS } from "../../../../config/format-descriptors"
+/**
+ * Fixture data for format transformation tests
+ */
+
+import type { ClientDefinition } from "../../../../config/clients"
+
+/**
+ * Mock client definitions for testing
+ */
+function mockStandardClient(): ClientDefinition {
+	return {
+		label: "Standard",
+		install: { method: "file", format: "json", path: "/tmp/test.json" },
+		transports: { stdio: {} },
+	}
+}
+
+function mockGooseClient(): ClientDefinition {
+	return {
+		label: "Goose",
+		install: { method: "file", format: "yaml", path: "/tmp/goose.yaml" },
+		transports: {
+			stdio: { typeValue: "stdio" },
+			http: { supportsOAuth: true },
+		},
+		format: {
+			topLevelKey: "extensions",
+			fieldMappings: { command: "cmd", env: "envs" },
+		},
+	}
+}
+
+function mockOpencodeClient(): ClientDefinition {
+	return {
+		label: "OpenCode",
+		install: { method: "file", format: "jsonc", path: "/tmp/opencode.jsonc" },
+		transports: {
+			stdio: { typeValue: "local", commandFormat: "array" },
+			http: { typeValue: "remote", supportsOAuth: true },
+		},
+		format: {
+			topLevelKey: "mcp",
+			fieldMappings: { env: "environment" },
+		},
+	}
+}
+
+function mockWindsurfClient(): ClientDefinition {
+	return {
+		label: "Windsurf",
+		install: { method: "file", format: "json", path: "/tmp/windsurf.json" },
+		transports: {
+			stdio: {},
+			http: { supportsOAuth: true },
+		},
+		format: {
+			fieldMappings: { url: "serverUrl" },
+		},
+	}
+}
+
+function mockClineClient(): ClientDefinition {
+	return {
+		label: "Cline",
+		install: { method: "file", format: "json", path: "/tmp/cline.json" },
+		transports: {
+			stdio: {},
+			http: { typeValue: "streamableHttp", supportsOAuth: true },
+		},
+	}
+}
+
+export const MOCK_CLIENTS = {
+	standard: mockStandardClient,
+	goose: mockGooseClient,
+	opencode: mockOpencodeClient,
+	windsurf: mockWindsurfClient,
+	cline: mockClineClient,
+}
 
 /**
  * Standard format examples
  */
-export const standardStdioConfig = {
+const standardStdioConfig = {
 	command: "npx",
 	args: ["-y", "@test/server"],
 	env: {
@@ -12,7 +89,7 @@ export const standardStdioConfig = {
 	},
 }
 
-export const standardHttpConfig = {
+const standardHttpConfig = {
 	type: "http",
 	url: "https://server.example.com/mcp",
 	headers: {
@@ -20,7 +97,7 @@ export const standardHttpConfig = {
 	},
 }
 
-export const standardHttpConfigWithOAuth = {
+const standardHttpConfigWithOAuth = {
 	type: "http",
 	url: "https://server.example.com/mcp",
 	headers: {},
@@ -34,7 +111,7 @@ export const standardHttpConfigWithOAuth = {
  */
 
 // Goose format
-export const gooseStdioConfig = {
+const gooseStdioConfig = {
 	cmd: "npx",
 	args: ["-y", "@test/server"],
 	envs: {
@@ -43,7 +120,7 @@ export const gooseStdioConfig = {
 	type: "stdio",
 }
 
-export const gooseHttpConfig = {
+const gooseHttpConfig = {
 	type: "http",
 	url: "https://server.example.com/mcp",
 	headers: {
@@ -52,7 +129,7 @@ export const gooseHttpConfig = {
 }
 
 // OpenCode format
-export const opencodeStdioConfig = {
+const opencodeStdioConfig = {
 	type: "local",
 	command: ["npx", "-y", "@test/server"],
 	environment: {
@@ -60,7 +137,7 @@ export const opencodeStdioConfig = {
 	},
 }
 
-export const opencodeStdioConfigNoArgs = {
+const opencodeStdioConfigNoArgs = {
 	type: "local",
 	command: ["npx"],
 	environment: {
@@ -68,7 +145,7 @@ export const opencodeStdioConfigNoArgs = {
 	},
 }
 
-export const opencodeHttpConfig = {
+const opencodeHttpConfig = {
 	type: "remote",
 	url: "https://server.example.com/mcp",
 	headers: {
@@ -77,7 +154,7 @@ export const opencodeHttpConfig = {
 }
 
 // Windsurf format
-export const windsurfHttpConfig = {
+const windsurfHttpConfig = {
 	type: "http",
 	serverUrl: "https://server.example.com/mcp",
 	headers: {
@@ -86,7 +163,7 @@ export const windsurfHttpConfig = {
 }
 
 // Cline format
-export const clineHttpConfig = {
+const clineHttpConfig = {
 	type: "streamableHttp",
 	url: "https://server.example.com/mcp",
 	headers: {
@@ -99,41 +176,38 @@ export const clineHttpConfig = {
  */
 export interface TransformationTestCase {
 	name: string
-	// Input can be standard format or client-specific format (e.g., goose with cmd/envs, opencode with type: "local")
 	input: Record<string, unknown> | null
-	// Expected output after transformation
 	expected: Record<string, unknown> | null
-	descriptor: FormatDescriptor
-	serverName?: string
+	client: ClientDefinition
 }
 
 /**
- * Test cases for transformToStandard
+ * Test cases for fromClientFormat (client → standard)
  */
-export const transformToStandardCases: TransformationTestCase[] = [
+export const fromClientFormatCases: TransformationTestCase[] = [
 	{
 		name: "standard format pass-through (no transformation)",
 		input: standardStdioConfig,
 		expected: standardStdioConfig,
-		descriptor: FORMAT_DESCRIPTORS.cline, // Using cline as it has minimal transformations
+		client: mockClineClient(),
 	},
 	{
 		name: "goose STDIO: cmd/envs/type → command/env/no type",
 		input: gooseStdioConfig,
 		expected: standardStdioConfig,
-		descriptor: FORMAT_DESCRIPTORS.goose,
+		client: mockGooseClient(),
 	},
 	{
 		name: "goose HTTP: preserves type and maps fields",
 		input: gooseHttpConfig,
 		expected: standardHttpConfig,
-		descriptor: FORMAT_DESCRIPTORS.goose,
+		client: mockGooseClient(),
 	},
 	{
 		name: "opencode STDIO: environment/local/array → env/no type/string+args",
 		input: opencodeStdioConfig,
 		expected: standardStdioConfig,
-		descriptor: FORMAT_DESCRIPTORS.opencode,
+		client: mockOpencodeClient(),
 	},
 	{
 		name: "opencode STDIO: array command with no args",
@@ -144,37 +218,37 @@ export const transformToStandardCases: TransformationTestCase[] = [
 				KEY: "value",
 			},
 		},
-		descriptor: FORMAT_DESCRIPTORS.opencode,
+		client: mockOpencodeClient(),
 	},
 	{
 		name: "opencode HTTP: remote → http",
 		input: opencodeHttpConfig,
 		expected: standardHttpConfig,
-		descriptor: FORMAT_DESCRIPTORS.opencode,
+		client: mockOpencodeClient(),
 	},
 	{
 		name: "windsurf HTTP: serverUrl → url",
 		input: windsurfHttpConfig,
 		expected: standardHttpConfig,
-		descriptor: FORMAT_DESCRIPTORS.windsurf,
+		client: mockWindsurfClient(),
 	},
 	{
 		name: "cline HTTP: streamableHttp → http",
 		input: clineHttpConfig,
 		expected: standardHttpConfig,
-		descriptor: FORMAT_DESCRIPTORS.cline,
+		client: mockClineClient(),
 	},
 	{
 		name: "empty config returns empty object",
 		input: {},
 		expected: {},
-		descriptor: FORMAT_DESCRIPTORS.goose,
+		client: mockGooseClient(),
 	},
 	{
 		name: "null/undefined config returns as-is",
 		input: null,
 		expected: null,
-		descriptor: FORMAT_DESCRIPTORS.goose,
+		client: mockGooseClient(),
 	},
 	{
 		name: "opencode HTTP with oauth preserves oauth",
@@ -187,43 +261,37 @@ export const transformToStandardCases: TransformationTestCase[] = [
 			},
 		},
 		expected: standardHttpConfigWithOAuth,
-		descriptor: FORMAT_DESCRIPTORS.opencode,
+		client: mockOpencodeClient(),
 	},
 ]
 
 /**
- * Test cases for transformFromStandard
+ * Test cases for toClientFormat (standard → client)
  */
-export const transformFromStandardCases: TransformationTestCase[] = [
+export const toClientFormatCases: TransformationTestCase[] = [
 	{
 		name: "standard format pass-through (no transformation)",
 		input: standardStdioConfig,
 		expected: standardStdioConfig,
-		descriptor: {
-			topLevelKey: "mcpServers",
-		},
-		serverName: "test-server",
+		client: mockStandardClient(),
 	},
 	{
 		name: "goose STDIO: command/env/no type → cmd/envs/type",
 		input: standardStdioConfig,
 		expected: gooseStdioConfig,
-		descriptor: FORMAT_DESCRIPTORS.goose,
-		serverName: "test-server",
+		client: mockGooseClient(),
 	},
 	{
 		name: "goose HTTP: preserves type and maps fields",
 		input: standardHttpConfig,
 		expected: gooseHttpConfig,
-		descriptor: FORMAT_DESCRIPTORS.goose,
-		serverName: "test-server",
+		client: mockGooseClient(),
 	},
 	{
 		name: "opencode STDIO: env/no type/string+args → environment/local/array",
 		input: standardStdioConfig,
 		expected: opencodeStdioConfig,
-		descriptor: FORMAT_DESCRIPTORS.opencode,
-		serverName: "test-server",
+		client: mockOpencodeClient(),
 	},
 	{
 		name: "opencode STDIO: command only (no args) → array with single element",
@@ -234,43 +302,37 @@ export const transformFromStandardCases: TransformationTestCase[] = [
 			},
 		},
 		expected: opencodeStdioConfigNoArgs,
-		descriptor: FORMAT_DESCRIPTORS.opencode,
-		serverName: "test-server",
+		client: mockOpencodeClient(),
 	},
 	{
 		name: "opencode HTTP: http → remote",
 		input: standardHttpConfig,
 		expected: opencodeHttpConfig,
-		descriptor: FORMAT_DESCRIPTORS.opencode,
-		serverName: "test-server",
+		client: mockOpencodeClient(),
 	},
 	{
 		name: "windsurf HTTP: url → serverUrl",
 		input: standardHttpConfig,
 		expected: windsurfHttpConfig,
-		descriptor: FORMAT_DESCRIPTORS.windsurf,
-		serverName: "test-server",
+		client: mockWindsurfClient(),
 	},
 	{
 		name: "cline HTTP: http → streamableHttp",
 		input: standardHttpConfig,
 		expected: clineHttpConfig,
-		descriptor: FORMAT_DESCRIPTORS.cline,
-		serverName: "test-server",
+		client: mockClineClient(),
 	},
 	{
 		name: "empty config returns empty object",
 		input: {},
 		expected: {},
-		descriptor: FORMAT_DESCRIPTORS.goose,
-		serverName: "test-server",
+		client: mockGooseClient(),
 	},
 	{
 		name: "null/undefined config returns as-is",
 		input: null,
 		expected: null,
-		descriptor: FORMAT_DESCRIPTORS.goose,
-		serverName: "test-server",
+		client: mockGooseClient(),
 	},
 	{
 		name: "opencode HTTP with oauth preserves oauth",
@@ -283,8 +345,7 @@ export const transformFromStandardCases: TransformationTestCase[] = [
 				clientId: "test-client",
 			},
 		},
-		descriptor: FORMAT_DESCRIPTORS.opencode,
-		serverName: "test-server",
+		client: mockOpencodeClient(),
 	},
 	{
 		name: "STDIO config without args field",
@@ -301,8 +362,7 @@ export const transformFromStandardCases: TransformationTestCase[] = [
 			},
 			type: "stdio",
 		},
-		descriptor: FORMAT_DESCRIPTORS.goose,
-		serverName: "test-server",
+		client: mockGooseClient(),
 	},
 	{
 		name: "STDIO config without env field",
@@ -315,8 +375,7 @@ export const transformFromStandardCases: TransformationTestCase[] = [
 			args: ["-y", "@test/server"],
 			type: "stdio",
 		},
-		descriptor: FORMAT_DESCRIPTORS.goose,
-		serverName: "test-server",
+		client: mockGooseClient(),
 	},
 	{
 		name: "HTTP config without headers",
@@ -328,7 +387,6 @@ export const transformFromStandardCases: TransformationTestCase[] = [
 			type: "http",
 			url: "https://server.example.com/mcp",
 		},
-		descriptor: FORMAT_DESCRIPTORS.goose,
-		serverName: "test-server",
+		client: mockGooseClient(),
 	},
 ]

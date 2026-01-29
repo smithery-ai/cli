@@ -5,6 +5,7 @@ import ora from "ora"
 import type { ValidClient } from "../config/clients"
 import { getClientConfiguration } from "../config/clients"
 import {
+	formatServerConfig,
 	readConfig,
 	runConfigCommand,
 	writeConfig,
@@ -16,11 +17,7 @@ import type { ServerConfig } from "../types/registry"
 import { checkAnalyticsConsent } from "../utils/analytics"
 import { parseQualifiedName } from "../utils/cli-utils"
 import { promptForRestart, showPostInstallHint } from "../utils/client"
-import { getServerName } from "../utils/install/helpers"
-import {
-	determineConfigType,
-	formatServerConfig,
-} from "../utils/install/server-config"
+import { resolveTransport } from "../utils/install/transport"
 import { resolveUserConfig } from "../utils/install/user-config"
 import {
 	checkAndNotifyRemoteServer,
@@ -61,6 +58,9 @@ export async function installServer(
 			chalk.dim(`Successfully resolved ${chalk.cyan(qualifiedName)}`),
 		)
 
+		// Resolve transport type (single source of truth)
+		const transport = resolveTransport(connection, client)
+
 		// Check for required runtimes and install if needed (only for stdio connections)
 		if (connection.type === "stdio") {
 			await ensureUVInstalled(connection)
@@ -70,12 +70,9 @@ export async function installServer(
 		// Notify user if remote server
 		checkAndNotifyRemoteServer(server)
 
-		// Determine the config type to decide if we need to collect config
-		const configType = determineConfigType(client, server)
-
-		/* resolve server configuration - skip for OAuth flows since browser handles config */
+		/* resolve server configuration - only for STDIO since HTTP uses OAuth (handled by client or mcp-remote) */
 		let finalConfig: ServerConfig = {}
-		if (configType !== "http-oauth") {
+		if (transport.needsUserConfig) {
 			finalConfig = await resolveUserConfig(
 				connection,
 				qualifiedName,
@@ -90,39 +87,31 @@ export async function installServer(
 				await saveConfig(qualifiedName, finalConfig)
 			}
 		} else {
-			verbose("Skipping config collection for OAuth flow")
+			verbose("Skipping config collection - OAuth handled by client or mcp-remote")
 		}
 
 		/* Install for client */
-		const serverConfig = formatServerConfig(
-			qualifiedName,
-			client, // Pass client name to determine transport type
-			server, // Pass server details to check HTTP support
-		)
+		const serverConfig = formatServerConfig(qualifiedName, transport.type)
 
 		verbose(`Formatted server config: ${JSON.stringify(serverConfig, null, 2)}`)
-		const serverName = getServerName(qualifiedName)
+		const serverName = qualifiedName.includes("/")
+			? qualifiedName.substring(qualifiedName.lastIndexOf("/") + 1)
+			: qualifiedName
 
-		switch (clientConfig.installType) {
-			case "command": {
-				// For command-based clients, execute command directly for this server only
-				verbose("Command-based client detected, executing command directly...")
-				const targetServerConfig = {
-					mcpServers: {
-						[serverName]: serverConfig,
-					},
-				}
-				runConfigCommand(targetServerConfig, clientConfig)
-				break
+		if (clientConfig.install.method === "command") {
+			// For command-based clients, execute command directly for this server only
+			verbose("Command-based client detected, executing command directly...")
+			const targetServerConfig = {
+				mcpServers: {
+					[serverName]: serverConfig,
+				},
 			}
-			case "json":
-			case "yaml": {
-				// For file-based clients, read existing config and merge
-				const config = readConfig(client)
-				config.mcpServers[serverName] = serverConfig
-				writeConfig(config, client)
-				break
-			}
+			runConfigCommand(targetServerConfig, clientConfig)
+		} else {
+			// For file-based clients, read existing config and merge
+			const config = readConfig(client)
+			config.mcpServers[serverName] = serverConfig
+			writeConfig(config, client)
 		}
 
 		console.log()

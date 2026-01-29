@@ -14,7 +14,7 @@ export async function uninstallServer(
 	try {
 		/* check if client is command-type */
 		const clientConfig = getClientConfiguration(client)
-		if (clientConfig.installType === "command") {
+		if (clientConfig.install.method === "command") {
 			console.log(
 				chalk.yellow(`Uninstallation is currently not supported for ${client}`),
 			)

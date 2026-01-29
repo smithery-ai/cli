@@ -13,7 +13,7 @@ export interface JSONSchema {
 	default?: unknown
 }
 
-export const JSONSchemaSchema: z.ZodType<JSONSchema> = z.lazy(() =>
+const JSONSchemaSchema: z.ZodType<JSONSchema> = z.lazy(() =>
 	z.object({
 		type: z.string().optional(),
 		properties: z.record(z.string(), JSONSchemaSchema).optional(),
@@ -30,7 +30,7 @@ export interface MCPConfig {
 }
 
 // stdio connection
-export const StdioConnectionSchema = z.object({
+const StdioConnectionSchema = z.object({
 	command: z.string().describe("The executable to run to start the server."),
 	args: z
 		.array(z.string())
@@ -43,12 +43,12 @@ export const StdioConnectionSchema = z.object({
 })
 
 // streamable http deployment connection (for CLI internal use)
-export const StreamableHTTPDeploymentConnectionSchema = z.object({
+const StreamableHTTPDeploymentConnectionSchema = z.object({
 	deploymentUrl: z.string().describe("The URL of the Streamable HTTP server."),
 })
 
 // streamable http connection (for client config files)
-export const StreamableHTTPConnectionSchema = z.object({
+const StreamableHTTPConnectionSchema = z.object({
 	type: z.literal("http").describe("Connection type for HTTP servers."),
 	url: z.string().describe("The direct URL of the HTTP MCP server."),
 	headers: z
@@ -58,7 +58,7 @@ export const StreamableHTTPConnectionSchema = z.object({
 })
 
 export type StdioConnection = z.infer<typeof StdioConnectionSchema>
-export type StreamableHTTPDeploymentConnection = z.infer<
+type StreamableHTTPDeploymentConnection = z.infer<
 	typeof StreamableHTTPDeploymentConnectionSchema
 >
 export type StreamableHTTPConnection = z.infer<
@@ -73,7 +73,7 @@ export interface ServerConfig {
 }
 
 // Validation response from the config validation endpoint
-export interface ValidationResponse {
+interface ValidationResponse {
 	isComplete: boolean
 	hasExistingConfig: boolean
 	missingFields: string[]

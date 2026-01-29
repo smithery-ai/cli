@@ -275,7 +275,7 @@ export async function deploy(options: DeployOptions = {}) {
 	}
 }
 
-export async function pollDeployment(
+async function pollDeployment(
 	registry: Smithery,
 	serverName: string,
 	deploymentId: string,

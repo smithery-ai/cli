@@ -22,7 +22,7 @@ interface CacheMetadata {
 /**
  * Gets the cache directory for a specific server
  */
-export function getServerCacheDir(qualifiedName: string): string {
+function getServerCacheDir(qualifiedName: string): string {
 	return path.join(os.homedir(), ".smithery", "cache", "servers", qualifiedName)
 }
 
@@ -36,14 +36,14 @@ function getCacheMetaPath(qualifiedName: string): string {
 /**
  * Gets the path to the bundle directory
  */
-export function getBundleDir(qualifiedName: string): string {
+function getBundleDir(qualifiedName: string): string {
 	return path.join(getServerCacheDir(qualifiedName), "current")
 }
 
 /**
  * Checks if a bundle is cached locally
  */
-export function isBundleCached(qualifiedName: string): boolean {
+function isBundleCached(qualifiedName: string): boolean {
 	const bundleDir = getBundleDir(qualifiedName)
 	const manifestPath = path.join(bundleDir, "manifest.json")
 	return fs.existsSync(manifestPath)
@@ -150,7 +150,7 @@ async function downloadBundle(
  * @param bundleUrl - URL to download the .mcpb bundle from
  * @returns Path to the extracted bundle directory
  */
-export async function downloadAndExtractBundle(
+async function downloadAndExtractBundle(
 	qualifiedName: string,
 	bundleUrl: string,
 ): Promise<string> {
@@ -289,7 +289,7 @@ export function hydrateBundleCommand(
  * @param bundleDir - Bundle directory for __dirname resolution
  * @returns Resolved string
  */
-export function resolveTemplateString(
+function resolveTemplateString(
 	template: string,
 	userConfig: Record<string, unknown>,
 	bundleDir?: string,
@@ -384,41 +384,6 @@ export function getBundleCommand(bundleDir: string): {
 		args,
 		...(mcpConfig.env && { env: mcpConfig.env }),
 	}
-}
-
-/**
- * Gets the entrypoint path within a bundle based on runtime
- * @param bundleDir - Directory containing the extracted bundle
- * @param runtime - Runtime type (node)
- * @returns Path to the executable file
- */
-export function getBundleEntrypoint(
-	bundleDir: string,
-	_runtime = "node",
-): string {
-	// Read entry point from manifest.json
-	const manifestPath = path.join(bundleDir, "manifest.json")
-	if (!fs.existsSync(manifestPath)) {
-		throw new Error(`Bundle manifest not found: ${manifestPath}`)
-	}
-
-	const manifestContent = fs.readFileSync(manifestPath, "utf-8")
-	if (!manifestContent.trim()) {
-		throw new Error(`Bundle manifest is empty: ${manifestPath}`)
-	}
-	let manifest: { server?: { entry_point?: string } }
-	try {
-		manifest = JSON.parse(manifestContent) as typeof manifest
-	} catch (error) {
-		throw new Error(
-			`Failed to parse bundle manifest at ${manifestPath}: ${error instanceof Error ? error.message : String(error)}`,
-		)
-	}
-	if (!manifest.server?.entry_point) {
-		throw new Error("Bundle manifest missing server.entry_point")
-	}
-
-	return path.join(bundleDir, manifest.server.entry_point)
 }
 
 /**

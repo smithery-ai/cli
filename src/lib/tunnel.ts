@@ -1,7 +1,7 @@
 import chalk from "chalk"
 import { debug } from "./logger"
 
-export async function getTemporaryTunnelToken(apiKey: string): Promise<{
+async function getTemporaryTunnelToken(apiKey: string): Promise<{
 	authtoken: string
 	domain: string
 }> {
@@ -31,27 +31,6 @@ export async function getTemporaryTunnelToken(apiKey: string): Promise<{
 			}`,
 		)
 	}
-}
-
-export function detectPortFromOutput(output: string): string | null {
-	const patterns = [
-		/(?:localhost|127\.0\.0\.1):(\d+)/g,
-		/port\s+(\d+)/gi,
-		/running.*?(\d{4,5})/gi,
-		/server.*?(\d{4,5})/gi,
-		/http:\/\/.*?:(\d+)/gi,
-	]
-
-	for (const pattern of patterns) {
-		const match = pattern.exec(output)
-		if (match?.[1]) {
-			const port = Number.parseInt(match[1], 10)
-			if (port > 1000 && port < 65536) {
-				return match[1]
-			}
-		}
-	}
-	return null
 }
 
 export async function startTunnel(
