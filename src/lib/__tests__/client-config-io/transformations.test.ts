@@ -1,21 +1,22 @@
 import { describe, expect, test } from "vitest"
 import {
-	transformFromStandard,
-	transformToStandard,
+	fromClientFormat,
+	toClientFormat,
 } from "../../../lib/client-config-io"
 import {
-	transformFromStandardCases,
-	transformToStandardCases,
+	fromClientFormatCases,
+	toClientFormatCases,
+	MOCK_CLIENTS,
 } from "./fixtures/format-transformations"
 
-describe("transformToStandard", () => {
-	for (const testCase of transformToStandardCases) {
+describe("fromClientFormat", () => {
+	for (const testCase of fromClientFormatCases) {
 		test(testCase.name, () => {
-			// ARRANGE: Test case is already set up with input and descriptor
-			const { input, expected, descriptor } = testCase
+			// ARRANGE: Test case is already set up with input and client
+			const { input, expected, client } = testCase
 
 			// ACT: Transform client format to standard format
-			const result = transformToStandard(input, descriptor)
+			const result = fromClientFormat(input, client)
 
 			// ASSERT: Result matches expected standard format
 			expect(result).toEqual(expected)
@@ -27,15 +28,10 @@ describe("transformToStandard", () => {
 		const input = {
 			serverUrl: "https://server.example.com/mcp",
 		}
-		const descriptor = {
-			topLevelKey: "mcpServers",
-			fieldMappings: {
-				http: { url: "serverUrl" },
-			},
-		}
+		const client = MOCK_CLIENTS.windsurf()
 
 		// ACT
-		const result = transformToStandard(input, descriptor)
+		const result = fromClientFormat(input, client)
 
 		// ASSERT: Should be detected as HTTP config
 		expect(result).toEqual({
@@ -50,15 +46,10 @@ describe("transformToStandard", () => {
 			cmd: "npx",
 			args: ["test"],
 		}
-		const descriptor = {
-			topLevelKey: "mcpServers",
-			fieldMappings: {
-				stdio: { command: "cmd" },
-			},
-		}
+		const client = MOCK_CLIENTS.goose()
 
 		// ACT
-		const result = transformToStandard(input, descriptor)
+		const result = fromClientFormat(input, client)
 
 		// ASSERT: Should be detected as STDIO config
 		expect(result).toEqual({
@@ -68,19 +59,14 @@ describe("transformToStandard", () => {
 	})
 })
 
-describe("transformFromStandard", () => {
-	for (const testCase of transformFromStandardCases) {
+describe("toClientFormat", () => {
+	for (const testCase of toClientFormatCases) {
 		test(testCase.name, () => {
-			// ARRANGE: Test case is already set up with input, descriptor, and serverName
-			const {
-				input,
-				expected,
-				descriptor,
-				serverName = "test-server",
-			} = testCase
+			// ARRANGE: Test case is already set up with input and client
+			const { input, expected, client } = testCase
 
 			// ACT: Transform standard format to client format
-			const result = transformFromStandard(input, descriptor, serverName)
+			const result = toClientFormat(input, client)
 
 			// ASSERT: Result matches expected client format
 			expect(result).toEqual(expected)
@@ -95,18 +81,10 @@ describe("transformFromStandard", () => {
 				KEY: "value",
 			},
 		}
-		const descriptor = {
-			topLevelKey: "mcpServers",
-			fieldMappings: {
-				stdio: { command: "cmd", env: "envs" },
-			},
-			typeTransformations: {
-				stdio: { typeValue: "stdio" },
-			},
-		}
+		const client = MOCK_CLIENTS.goose()
 
 		// ACT
-		const result = transformFromStandard(input, descriptor, "test-server")
+		const result = toClientFormat(input, client)
 
 		// ASSERT: Should not include args field
 		expect(result).toEqual({
@@ -125,18 +103,10 @@ describe("transformFromStandard", () => {
 			command: "npx",
 			args: ["-y", "@test/server"],
 		}
-		const descriptor = {
-			topLevelKey: "mcpServers",
-			fieldMappings: {
-				stdio: { command: "cmd" },
-			},
-			typeTransformations: {
-				stdio: { typeValue: "stdio" },
-			},
-		}
+		const client = MOCK_CLIENTS.goose()
 
 		// ACT
-		const result = transformFromStandard(input, descriptor, "test-server")
+		const result = toClientFormat(input, client)
 
 		// ASSERT: Should not include env field
 		expect(result).toEqual({
@@ -153,12 +123,10 @@ describe("transformFromStandard", () => {
 			type: "http",
 			url: "https://server.example.com/mcp",
 		}
-		const descriptor = {
-			topLevelKey: "mcpServers",
-		}
+		const client = MOCK_CLIENTS.standard()
 
 		// ACT
-		const result = transformFromStandard(input, descriptor, "test-server")
+		const result = toClientFormat(input, client)
 
 		// ASSERT: Should not include headers field
 		expect(result).toEqual({
@@ -177,21 +145,10 @@ describe("transformFromStandard", () => {
 				KEY: "value",
 			},
 		}
-		const descriptor = {
-			topLevelKey: "mcp",
-			fieldMappings: {
-				stdio: { env: "environment" },
-			},
-			typeTransformations: {
-				stdio: { typeValue: "local" },
-			},
-			structureTransformations: {
-				stdio: { commandFormat: "array" as const },
-			},
-		}
+		const client = MOCK_CLIENTS.opencode()
 
 		// ACT
-		const result = transformFromStandard(input, descriptor, "test-server")
+		const result = toClientFormat(input, client)
 
 		// ASSERT: Should create array with just command (no args)
 		expect(result).toEqual({

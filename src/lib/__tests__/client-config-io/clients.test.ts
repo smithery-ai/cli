@@ -12,7 +12,7 @@ import fs from "node:fs"
 import os from "node:os"
 import path from "node:path"
 import { beforeEach, describe, expect, test, vi } from "vitest"
-import { Transport } from "../../../config/clients"
+import type { ClientDefinition } from "../../../config/clients"
 import { readConfig, writeConfig } from "../../../lib/client-config-io"
 import {
 	clineHttpConfig,
@@ -55,6 +55,57 @@ import { getClientConfiguration } from "../../../config/clients"
 
 const mockGetClientConfiguration = vi.mocked(getClientConfiguration)
 
+// Helper functions to create mock ClientDefinition objects
+function mockGooseClient(configPath: string): ClientDefinition {
+	return {
+		label: "Goose",
+		install: { method: "file", format: "yaml", path: configPath },
+		transports: {
+			stdio: { typeValue: "stdio" },
+			http: { supportsOAuth: true },
+		},
+		format: {
+			topLevelKey: "extensions",
+			fieldMappings: { command: "cmd", env: "envs" },
+		},
+	}
+}
+
+function mockOpencodeClient(configPath: string): ClientDefinition {
+	return {
+		label: "OpenCode",
+		install: { method: "file", format: "json", path: configPath },
+		transports: {
+			stdio: { typeValue: "local", commandFormat: "array" },
+			http: { typeValue: "remote", supportsOAuth: true },
+		},
+		format: {
+			topLevelKey: "mcp",
+			fieldMappings: { env: "environment" },
+		},
+	}
+}
+
+function mockWindsurfClient(configPath: string): ClientDefinition {
+	return {
+		label: "Windsurf",
+		install: { method: "file", format: "json", path: configPath },
+		transports: { stdio: {}, http: { supportsOAuth: true } },
+		format: { fieldMappings: { url: "serverUrl" } },
+	}
+}
+
+function mockClineClient(configPath: string): ClientDefinition {
+	return {
+		label: "Cline",
+		install: { method: "file", format: "json", path: configPath },
+		transports: {
+			stdio: {},
+			http: { typeValue: "streamableHttp", supportsOAuth: true },
+		},
+	}
+}
+
 describe("goose client", () => {
 	let tempDir: string
 
@@ -68,12 +119,7 @@ describe("goose client", () => {
 		const configPath = path.join(tempDir, "goose.yaml")
 		fs.writeFileSync(configPath, gooseYamlWithStdioServer)
 
-		mockGetClientConfiguration.mockReturnValue({
-			label: "Goose",
-			supportedTransports: [Transport.STDIO, Transport.HTTP],
-			installType: "yaml",
-			path: configPath,
-		})
+		mockGetClientConfiguration.mockReturnValue(mockGooseClient(configPath))
 
 		// ACT
 		const result = readConfig("goose")
@@ -99,12 +145,7 @@ describe("goose client", () => {
 		const configPath = path.join(tempDir, "goose.yaml")
 		fs.writeFileSync(configPath, gooseYamlWithHttpServer)
 
-		mockGetClientConfiguration.mockReturnValue({
-			label: "Goose",
-			supportedTransports: [Transport.STDIO, Transport.HTTP],
-			installType: "yaml",
-			path: configPath,
-		})
+		mockGetClientConfiguration.mockReturnValue(mockGooseClient(configPath))
 
 		// ACT
 		const result = readConfig("goose")
@@ -125,12 +166,7 @@ describe("goose client", () => {
 		const configPath = path.join(tempDir, "goose.yaml")
 		const config = gooseStdioConfig
 
-		mockGetClientConfiguration.mockReturnValue({
-			label: "Goose",
-			supportedTransports: [Transport.STDIO, Transport.HTTP],
-			installType: "yaml",
-			path: configPath,
-		})
+		mockGetClientConfiguration.mockReturnValue(mockGooseClient(configPath))
 
 		// ACT
 		writeConfig(config, "goose")
@@ -165,12 +201,7 @@ describe("goose client", () => {
 		const configPath = path.join(tempDir, "goose.yaml")
 		const config = gooseHttpConfig
 
-		mockGetClientConfiguration.mockReturnValue({
-			label: "Goose",
-			supportedTransports: [Transport.STDIO, Transport.HTTP],
-			installType: "yaml",
-			path: configPath,
-		})
+		mockGetClientConfiguration.mockReturnValue(mockGooseClient(configPath))
 
 		// ACT
 		writeConfig(config, "goose")
@@ -201,12 +232,7 @@ describe("goose client", () => {
 		const configPath = path.join(tempDir, "goose.yaml")
 		fs.writeFileSync(configPath, gooseYamlWithExistingServer)
 
-		mockGetClientConfiguration.mockReturnValue({
-			label: "Goose",
-			supportedTransports: [Transport.STDIO, Transport.HTTP],
-			installType: "yaml",
-			path: configPath,
-		})
+		mockGetClientConfiguration.mockReturnValue(mockGooseClient(configPath))
 
 		// ACT: Read, add server, write
 		const config = readConfig("goose")
@@ -237,12 +263,7 @@ describe("goose client", () => {
 		const configPath = path.join(tempDir, "goose.yaml")
 		fs.writeFileSync(configPath, gooseYamlWithOtherTopLevelKeys)
 
-		mockGetClientConfiguration.mockReturnValue({
-			label: "Goose",
-			supportedTransports: [Transport.STDIO, Transport.HTTP],
-			installType: "yaml",
-			path: configPath,
-		})
+		mockGetClientConfiguration.mockReturnValue(mockGooseClient(configPath))
 
 		// ACT: Read, modify, write
 		const config = readConfig("goose")
@@ -274,12 +295,7 @@ describe("opencode client", () => {
 			JSON.stringify(opencodeJsonWithStdioServer, null, 2),
 		)
 
-		mockGetClientConfiguration.mockReturnValue({
-			label: "OpenCode",
-			supportedTransports: [Transport.STDIO, Transport.HTTP],
-			installType: "json",
-			path: configPath,
-		})
+		mockGetClientConfiguration.mockReturnValue(mockOpencodeClient(configPath))
 
 		// ACT
 		const result = readConfig("opencode")
@@ -304,12 +320,7 @@ describe("opencode client", () => {
 			JSON.stringify(opencodeJsonWithHttpServer, null, 2),
 		)
 
-		mockGetClientConfiguration.mockReturnValue({
-			label: "OpenCode",
-			supportedTransports: [Transport.STDIO, Transport.HTTP],
-			installType: "json",
-			path: configPath,
-		})
+		mockGetClientConfiguration.mockReturnValue(mockOpencodeClient(configPath))
 
 		// ACT
 		const result = readConfig("opencode")
@@ -329,12 +340,7 @@ describe("opencode client", () => {
 		const configPath = path.join(tempDir, "opencode.json")
 		const config = opencodeStdioConfig
 
-		mockGetClientConfiguration.mockReturnValue({
-			label: "OpenCode",
-			supportedTransports: [Transport.STDIO, Transport.HTTP],
-			installType: "json",
-			path: configPath,
-		})
+		mockGetClientConfiguration.mockReturnValue(mockOpencodeClient(configPath))
 
 		// ACT
 		writeConfig(config, "opencode")
@@ -358,12 +364,7 @@ describe("opencode client", () => {
 		const configPath = path.join(tempDir, "opencode.json")
 		const config = opencodeHttpConfig
 
-		mockGetClientConfiguration.mockReturnValue({
-			label: "OpenCode",
-			supportedTransports: [Transport.STDIO, Transport.HTTP],
-			installType: "json",
-			path: configPath,
-		})
+		mockGetClientConfiguration.mockReturnValue(mockOpencodeClient(configPath))
 
 		// ACT
 		writeConfig(config, "opencode")
@@ -385,12 +386,7 @@ describe("opencode client", () => {
 		const configPath = path.join(tempDir, "opencode.json")
 		const config = opencodeSimpleStdioConfig
 
-		mockGetClientConfiguration.mockReturnValue({
-			label: "OpenCode",
-			supportedTransports: [Transport.STDIO, Transport.HTTP],
-			installType: "json",
-			path: configPath,
-		})
+		mockGetClientConfiguration.mockReturnValue(mockOpencodeClient(configPath))
 
 		// ACT
 		writeConfig(config, "opencode")
@@ -414,12 +410,7 @@ describe("opencode client", () => {
 			JSON.stringify(opencodeJsonWithExistingServer, null, 2),
 		)
 
-		mockGetClientConfiguration.mockReturnValue({
-			label: "OpenCode",
-			supportedTransports: [Transport.STDIO, Transport.HTTP],
-			installType: "json",
-			path: configPath,
-		})
+		mockGetClientConfiguration.mockReturnValue(mockOpencodeClient(configPath))
 
 		// ACT: Read, add server, write
 		const config = readConfig("opencode")
@@ -444,12 +435,7 @@ describe("opencode client", () => {
 			JSON.stringify(opencodeJsonWithOtherFields, null, 2),
 		)
 
-		mockGetClientConfiguration.mockReturnValue({
-			label: "OpenCode",
-			supportedTransports: [Transport.STDIO, Transport.HTTP],
-			installType: "json",
-			path: configPath,
-		})
+		mockGetClientConfiguration.mockReturnValue(mockOpencodeClient(configPath))
 
 		// ACT: Read, modify, write
 		const config = readConfig("opencode")
@@ -482,12 +468,7 @@ describe("windsurf client", () => {
 			JSON.stringify(windsurfJsonWithServerUrl, null, 2),
 		)
 
-		mockGetClientConfiguration.mockReturnValue({
-			label: "Windsurf",
-			supportedTransports: [Transport.STDIO, Transport.HTTP],
-			installType: "json",
-			path: configPath,
-		})
+		mockGetClientConfiguration.mockReturnValue(mockWindsurfClient(configPath))
 
 		// ACT
 		const result = readConfig("windsurf")
@@ -506,12 +487,7 @@ describe("windsurf client", () => {
 		const configPath = path.join(tempDir, "windsurf.json")
 		const config = windsurfHttpConfig
 
-		mockGetClientConfiguration.mockReturnValue({
-			label: "Windsurf",
-			supportedTransports: [Transport.STDIO, Transport.HTTP],
-			installType: "json",
-			path: configPath,
-		})
+		mockGetClientConfiguration.mockReturnValue(mockWindsurfClient(configPath))
 
 		// ACT
 		writeConfig(config, "windsurf")
@@ -534,12 +510,7 @@ describe("windsurf client", () => {
 			JSON.stringify(windsurfJsonWithExistingServer, null, 2),
 		)
 
-		mockGetClientConfiguration.mockReturnValue({
-			label: "Windsurf",
-			supportedTransports: [Transport.STDIO, Transport.HTTP],
-			installType: "json",
-			path: configPath,
-		})
+		mockGetClientConfiguration.mockReturnValue(mockWindsurfClient(configPath))
 
 		// ACT: Read, modify, write
 		const config = readConfig("windsurf")
@@ -577,12 +548,7 @@ describe("cline client", () => {
 			JSON.stringify(clineJsonWithStreamableHttp, null, 2),
 		)
 
-		mockGetClientConfiguration.mockReturnValue({
-			label: "Cline",
-			supportedTransports: [Transport.STDIO, Transport.HTTP],
-			installType: "json",
-			path: configPath,
-		})
+		mockGetClientConfiguration.mockReturnValue(mockClineClient(configPath))
 
 		// ACT
 		const result = readConfig("cline")
@@ -600,12 +566,7 @@ describe("cline client", () => {
 		const configPath = path.join(tempDir, "cline.json")
 		const config = clineHttpConfig
 
-		mockGetClientConfiguration.mockReturnValue({
-			label: "Cline",
-			supportedTransports: [Transport.STDIO, Transport.HTTP],
-			installType: "json",
-			path: configPath,
-		})
+		mockGetClientConfiguration.mockReturnValue(mockClineClient(configPath))
 
 		// ACT
 		writeConfig(config, "cline")
@@ -628,12 +589,7 @@ describe("cline client", () => {
 			JSON.stringify(clineJsonWithExistingServer, null, 2),
 		)
 
-		mockGetClientConfiguration.mockReturnValue({
-			label: "Cline",
-			supportedTransports: [Transport.STDIO, Transport.HTTP],
-			installType: "json",
-			path: configPath,
-		})
+		mockGetClientConfiguration.mockReturnValue(mockClineClient(configPath))
 
 		// ACT: Read, modify, write
 		const config = readConfig("cline")

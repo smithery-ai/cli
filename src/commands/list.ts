@@ -20,7 +20,7 @@ export async function list(
 		case "servers": {
 			/* check if client is command-type */
 			const configTarget = getClientConfiguration(client)
-			if (configTarget.installType === "command") {
+			if (configTarget.install.method === "command") {
 				console.log(
 					chalk.yellow(
 						`Listing servers is currently not supported for ${client}`,

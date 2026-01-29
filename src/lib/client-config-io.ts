@@ -4,14 +4,15 @@ import path from "node:path"
 import { applyEdits, modify, parse as parseJsonc } from "jsonc-parser"
 import * as YAML from "yaml"
 import {
-	type ClientConfiguration,
+	type ClientDefinition,
 	getClientConfiguration,
 } from "../config/clients.js"
-import {
-	type FormatDescriptor,
-	getFormatDescriptor,
-} from "../config/format-descriptors.js"
-import type { ConfiguredServer, MCPConfig } from "../types/registry.js"
+import type {
+	ConfiguredServer,
+	MCPConfig,
+	StreamableHTTPConnection,
+} from "../types/registry.js"
+import type { TransportType } from "../utils/install/transport.js"
 import { verbose } from "./logger.js"
 
 export interface ClientMCPConfig extends MCPConfig {
@@ -19,33 +20,32 @@ export interface ClientMCPConfig extends MCPConfig {
 }
 
 /**
- * Transforms client-specific format to standard format using format descriptor
- * @param clientConfig - The client-specific server configuration
- * @param descriptor - The format descriptor
- * @returns Standard format server configuration
+ * Convert client-specific server config to standard format.
+ * Works directly with ClientDefinition - no intermediate descriptor needed.
  */
-export function transformToStandard(
-	clientConfig: Record<string, unknown> | null,
-	descriptor: FormatDescriptor,
+export function fromClientFormat(
+	config: Record<string, unknown> | null,
+	client: ClientDefinition,
 ): Record<string, unknown> | null {
-	if (!clientConfig || typeof clientConfig !== "object") {
-		return clientConfig
+	if (!config || typeof config !== "object") {
+		return config
 	}
 
-	const standard: Record<string, unknown> = {}
+	const stdio = client.transports.stdio
+	const http = client.transports.http
+	const mappings = client.format?.fieldMappings
 
-	// Determine if this is an HTTP config
-	const httpTypeValue = descriptor.typeTransformations?.http?.typeValue
-	const stdioTypeValue = descriptor.typeTransformations?.stdio?.typeValue
-	const configType = clientConfig.type
+	// Detect HTTP by type value or known HTTP types
+	const configType = config.type
+	const httpTypeValue = http?.typeValue ?? "http"
+	const stdioTypeValue = stdio?.typeValue
 
-	// Check for known HTTP types
 	let isHTTP = false
 	if (
 		configType === "http" ||
 		configType === "streamableHttp" ||
 		configType === "remote" ||
-		(httpTypeValue && configType === httpTypeValue)
+		configType === httpTypeValue
 	) {
 		isHTTP = true
 	} else if (
@@ -55,188 +55,130 @@ export function transformToStandard(
 	) {
 		isHTTP = false
 	} else {
-		// Fallback: check for URL field presence (HTTP) vs command field (STDIO)
-		const urlKey = descriptor.fieldMappings?.http?.url || "url"
-		const commandKey = descriptor.fieldMappings?.stdio?.command || "command"
-		isHTTP = urlKey in clientConfig && !(commandKey in clientConfig)
+		// Fallback: check for URL field presence
+		const urlKey = mappings?.url ?? "url"
+		const cmdKey = mappings?.command ?? "command"
+		isHTTP = urlKey in config && !(cmdKey in config)
 	}
+
+	const result: Record<string, unknown> = {}
 
 	if (isHTTP) {
-		// HTTP config transformation
-		standard.type = "http"
-
-		// Map URL field
-		const urlKey = descriptor.fieldMappings?.http?.url || "url"
-		if (urlKey in clientConfig) {
-			standard.url = clientConfig[urlKey]
+		result.type = "http"
+		const urlKey = mappings?.url ?? "url"
+		if (urlKey in config) {
+			result.url = config[urlKey]
 		}
-
-		// Map headers field
-		const headersKey = descriptor.fieldMappings?.http?.headers || "headers"
-		if (headersKey in clientConfig && clientConfig[headersKey]) {
-			standard.headers = clientConfig[headersKey]
+		if (config.headers) {
+			result.headers = config.headers
 		}
-
-		// Map oauth field
-		const oauthKey = descriptor.fieldMappings?.http?.oauth || "oauth"
-		if (oauthKey in clientConfig && clientConfig[oauthKey]) {
-			standard.oauth = clientConfig[oauthKey]
+		if (config.oauth) {
+			result.oauth = config.oauth
 		}
 	} else {
-		// STDIO config transformation
-		// Standard format doesn't have a type field for STDIO
+		// STDIO
+		const cmdKey = mappings?.command ?? "command"
+		const envKey = mappings?.env ?? "env"
+		const isArrayFormat = stdio?.commandFormat === "array"
 
-		// Handle command format (string vs array)
-		const commandFormat =
-			descriptor.structureTransformations?.stdio?.commandFormat || "string"
-		const commandKey = descriptor.fieldMappings?.stdio?.command || "command"
-
-		if (commandKey in clientConfig) {
-			if (
-				commandFormat === "array" &&
-				Array.isArray(clientConfig[commandKey])
-			) {
-				// Array format: first element is command, rest are args
-				const commandArray = clientConfig[commandKey]
-				if (commandArray.length > 0) {
-					standard.command = commandArray[0]
-					if (commandArray.length > 1) {
-						standard.args = commandArray.slice(1)
-					}
+		if (cmdKey in config) {
+			if (isArrayFormat && Array.isArray(config[cmdKey])) {
+				const arr = config[cmdKey] as string[]
+				result.command = arr[0]
+				if (arr.length > 1) {
+					result.args = arr.slice(1)
 				}
 			} else {
-				// String format: command is a string
-				standard.command = clientConfig[commandKey]
+				result.command = config[cmdKey]
 			}
 		}
 
-		// Map args field (only if not already set from array format)
-		if (!standard.args) {
-			const argsKey = descriptor.fieldMappings?.stdio?.args || "args"
-			if (argsKey in clientConfig && Array.isArray(clientConfig[argsKey])) {
-				standard.args = clientConfig[argsKey]
-			}
+		// args (only if not set from array format)
+		if (!result.args && Array.isArray(config.args)) {
+			result.args = config.args
 		}
 
-		// Map env field
-		const envKey = descriptor.fieldMappings?.stdio?.env || "env"
-		if (
-			envKey in clientConfig &&
-			clientConfig[envKey] &&
-			Object.keys(clientConfig[envKey]).length > 0
-		) {
-			standard.env = clientConfig[envKey]
+		// env (only include if non-empty)
+		const envValue = config[envKey]
+		if (envValue && typeof envValue === "object" && Object.keys(envValue).length > 0) {
+			result.env = envValue
 		}
 	}
 
-	return standard
+	return result
 }
 
 /**
- * Transforms standard format to client-specific format using format descriptor
- * @param standardConfig - The standard format server configuration
- * @param descriptor - The format descriptor
- * @param serverName - The server name (used for metadata generation)
- * @returns Client-specific format server configuration
+ * Convert standard server config to client-specific format.
+ * Works directly with ClientDefinition - no intermediate descriptor needed.
  */
-export function transformFromStandard(
-	standardConfig: Record<string, unknown> | null,
-	descriptor: FormatDescriptor,
-	_serverName: string,
+export function toClientFormat(
+	config: Record<string, unknown> | null,
+	client: ClientDefinition,
 ): Record<string, unknown> | null {
-	if (!standardConfig || typeof standardConfig !== "object") {
-		return standardConfig
+	if (!config || typeof config !== "object") {
+		return config
 	}
 
-	const client: Record<string, unknown> = {}
+	const stdio = client.transports.stdio
+	const http = client.transports.http
+	const mappings = client.format?.fieldMappings
+	const result: Record<string, unknown> = {}
 
-	// Determine if this is an HTTP config
 	const isHTTP =
-		"type" in standardConfig &&
-		(standardConfig.type === "http" || standardConfig.type === "streamableHttp")
+		"type" in config &&
+		(config.type === "http" || config.type === "streamableHttp")
 
 	if (isHTTP) {
-		// HTTP config transformation
-		const httpTypeValue =
-			descriptor.typeTransformations?.http?.typeValue || "http"
-		client.type = httpTypeValue
-
-		// Map URL field
-		const urlKey = descriptor.fieldMappings?.http?.url || "url"
-		if ("url" in standardConfig) {
-			client[urlKey] = standardConfig.url
+		// HTTP: apply type value and url mapping
+		result.type = http?.typeValue ?? "http"
+		const urlKey = mappings?.url ?? "url"
+		if ("url" in config) {
+			result[urlKey] = config.url
 		}
-
-		// Map headers field
-		const headersKey = descriptor.fieldMappings?.http?.headers || "headers"
-		if ("headers" in standardConfig && standardConfig.headers) {
-			client[headersKey] = standardConfig.headers
+		if (config.headers) {
+			result.headers = config.headers
 		}
-
-		// Map oauth field
-		const oauthKey = descriptor.fieldMappings?.http?.oauth || "oauth"
-		if ("oauth" in standardConfig && standardConfig.oauth) {
-			client[oauthKey] = standardConfig.oauth
+		if (config.oauth) {
+			result.oauth = config.oauth
 		}
 	} else {
-		// STDIO config transformation
-		// Only add type if there are actual STDIO fields
+		// STDIO
 		const hasStdioFields =
-			"command" in standardConfig ||
-			"args" in standardConfig ||
-			"env" in standardConfig
-		const stdioTypeValue = descriptor.typeTransformations?.stdio?.typeValue
-		if (
-			hasStdioFields &&
-			stdioTypeValue !== null &&
-			stdioTypeValue !== undefined
-		) {
-			client.type = stdioTypeValue
+			"command" in config || "args" in config || "env" in config
+
+		// Type value (only if defined and has stdio fields)
+		if (hasStdioFields && stdio?.typeValue !== undefined) {
+			result.type = stdio.typeValue
 		}
 
-		// Handle command format (string vs array)
-		const commandFormat =
-			descriptor.structureTransformations?.stdio?.commandFormat || "string"
-		const commandKey = descriptor.fieldMappings?.stdio?.command || "command"
-
-		if ("command" in standardConfig) {
-			if (commandFormat === "array") {
-				// Array format: combine command and args into single array
-				const commandArray = [standardConfig.command]
-				if (
-					"args" in standardConfig &&
-					Array.isArray(standardConfig.args) &&
-					standardConfig.args.length > 0
-				) {
-					commandArray.push(...standardConfig.args)
+		// Command (string vs array format)
+		const cmdKey = mappings?.command ?? "command"
+		if ("command" in config) {
+			if (stdio?.commandFormat === "array") {
+				const arr = [config.command]
+				if (Array.isArray(config.args) && config.args.length > 0) {
+					arr.push(...config.args)
 				}
-				client[commandKey] = commandArray
+				result[cmdKey] = arr
 			} else {
-				// String format: command is a string
-				client[commandKey] = standardConfig.command
+				result[cmdKey] = config.command
 			}
 		}
 
-		// Map args field (only if not using array format)
-		if (commandFormat !== "array") {
-			const argsKey = descriptor.fieldMappings?.stdio?.args || "args"
-			if (
-				"args" in standardConfig &&
-				Array.isArray(standardConfig.args) &&
-				standardConfig.args.length > 0
-			) {
-				client[argsKey] = standardConfig.args
-			}
+		// Args (only for string format)
+		if (stdio?.commandFormat !== "array" && Array.isArray(config.args) && config.args.length > 0) {
+			result.args = config.args
 		}
 
-		// Map env field
-		const envKey = descriptor.fieldMappings?.stdio?.env || "env"
-		if ("env" in standardConfig && standardConfig.env) {
-			client[envKey] = standardConfig.env
+		// Env (only include if non-empty)
+		const envKey = mappings?.env ?? "env"
+		if (config.env && typeof config.env === "object" && Object.keys(config.env).length > 0) {
+			result[envKey] = config.env
 		}
 	}
 
-	return client
+	return result
 }
 
 export function readConfig(client: string): ClientMCPConfig {
@@ -245,11 +187,11 @@ export function readConfig(client: string): ClientMCPConfig {
 		const clientConfig = getClientConfiguration(client)
 
 		// Command-based installers (i.e. VS Code) do not currently support listing servers
-		if (clientConfig.installType === "command") {
+		if (clientConfig.install.method === "command") {
 			return { mcpServers: {} }
 		}
 
-		const configPath = clientConfig.path
+		const configPath = clientConfig.install.path
 		if (!configPath) {
 			verbose(`No config path defined for client: ${client}`)
 			return { mcpServers: {} }
@@ -265,13 +207,11 @@ export function readConfig(client: string): ClientMCPConfig {
 		const fileContent = fs.readFileSync(configPath, "utf8")
 		let rawConfig: Record<string, unknown> = {}
 
-		if (
-			configPath.endsWith(".jsonc") ||
-			clientConfig.installType === "jsonc"
-		) {
+		const format = clientConfig.install.format
+		if (configPath.endsWith(".jsonc") || format === "jsonc") {
 			rawConfig =
 				parseJsonc(fileContent, [], { allowTrailingComma: true }) || {}
-		} else if (clientConfig.installType === "yaml") {
+		} else if (format === "yaml") {
 			const parsed = YAML.parse(fileContent)
 			rawConfig =
 				(parsed &&
@@ -285,11 +225,8 @@ export function readConfig(client: string): ClientMCPConfig {
 
 		verbose(`Config loaded successfully: ${JSON.stringify(rawConfig, null, 2)}`)
 
-		// Get format descriptor using client name
-		const descriptor = getFormatDescriptor(client)
-
-		// Determine top-level key to use
-		const topLevelKey = descriptor.topLevelKey
+		// Determine top-level key from client format
+		const topLevelKey = clientConfig.format?.topLevelKey ?? "mcpServers"
 
 		// Extract MCP servers from config using the appropriate top-level key
 		let mcpServers: Record<string, ConfiguredServer> =
@@ -297,14 +234,15 @@ export function readConfig(client: string): ClientMCPConfig {
 			(rawConfig.mcpServers as Record<string, ConfiguredServer>) ||
 			{}
 
-		// Transform client-specific format to standard format if needed
-		// (if using custom top-level key or if descriptor has custom mappings)
-		if (
+		// Check if transformation is needed (custom format or non-standard transports)
+		const needsTransform =
 			topLevelKey !== "mcpServers" ||
-			descriptor.fieldMappings ||
-			descriptor.typeTransformations ||
-			descriptor.structureTransformations
-		) {
+			clientConfig.format?.fieldMappings ||
+			clientConfig.transports.stdio?.typeValue !== undefined ||
+			clientConfig.transports.stdio?.commandFormat === "array" ||
+			clientConfig.transports.http?.typeValue !== undefined
+
+		if (needsTransform) {
 			const transformedServers: Record<string, ConfiguredServer> = {}
 			for (const [serverName, serverConfig] of Object.entries(mcpServers)) {
 				if (
@@ -312,9 +250,9 @@ export function readConfig(client: string): ClientMCPConfig {
 					typeof serverConfig === "object" &&
 					!Array.isArray(serverConfig)
 				) {
-					const transformed = transformToStandard(
+					const transformed = fromClientFormat(
 						serverConfig as Record<string, unknown>,
-						descriptor,
+						clientConfig,
 					)
 					if (transformed !== null) {
 						transformedServers[serverName] = transformed as ConfiguredServer
@@ -347,30 +285,30 @@ export function writeConfig(config: ClientMCPConfig, client: string): void {
 	}
 
 	const clientConfig = getClientConfiguration(client)
-	if (clientConfig.installType === "jsonc") {
-		writeConfigJsonc(config, clientConfig, client)
-	} else if (clientConfig.installType === "yaml") {
-		writeConfigYaml(config, clientConfig, client)
+	if (clientConfig.install.method === "command") {
+		throw new Error(`Cannot write config for command-based client: ${client}`)
+	}
+
+	const format = clientConfig.install.format
+	if (format === "jsonc") {
+		writeConfigJsonc(config, clientConfig)
+	} else if (format === "yaml") {
+		writeConfigYaml(config, clientConfig)
 	} else {
-		writeConfigJson(config, clientConfig, client)
+		writeConfigJson(config, clientConfig)
 	}
 }
 
 export function runConfigCommand(
 	config: ClientMCPConfig,
-	clientConfig: ClientConfiguration,
+	clientConfig: ClientDefinition,
 ): void {
-	const command = clientConfig.command
-	if (!command) {
-		throw new Error(`No command defined for client: ${clientConfig.label}`)
+	if (clientConfig.install.method !== "command") {
+		throw new Error(`Client ${clientConfig.label} does not use command-based installation`)
 	}
 
-	const commandConfig = clientConfig.commandConfig
-	if (!commandConfig) {
-		throw new Error(
-			`No command configuration defined for client: ${clientConfig.label}`,
-		)
-	}
+	const command = clientConfig.install.command
+	const templates = clientConfig.install.templates
 
 	// Process each server
 	for (const [name, server] of Object.entries(config.mcpServers)) {
@@ -381,28 +319,25 @@ export function runConfigCommand(
 			"type" in server &&
 			(server.type === "http" || server.type === "streamableHttp")
 
-		if (isHTTPServer && commandConfig.http) {
-			// Extract URL - check for override key first, then fallback to "url"
-			const urlKey = clientConfig.httpUrlKey || "url"
+		if (isHTTPServer && templates.http) {
+			// Extract URL from server config
 			const serverRecord = server as Record<string, unknown>
-			const serverUrl = serverRecord[urlKey] || serverRecord.url
+			const serverUrl = serverRecord.url
 
 			if (serverUrl) {
 				// Use HTTP template function
-				args = commandConfig.http(name, serverUrl as string)
+				args = templates.http(name, serverUrl as string)
 			} else {
-				throw new Error(
-					`HTTP server configuration missing URL (checked keys: ${urlKey}, url)`,
-				)
+				throw new Error(`HTTP server configuration missing URL`)
 			}
-		} else if (!isHTTPServer && "command" in server && commandConfig.stdio) {
+		} else if (!isHTTPServer && "command" in server && templates.stdio) {
 			// Use STDIO template function
 			const serverCommand = server.command as string
 			const serverArgs =
 				"args" in server && Array.isArray(server.args)
 					? (server.args as string[])
 					: []
-			args = commandConfig.stdio(name, serverCommand, serverArgs)
+			args = templates.stdio(name, serverCommand, serverArgs)
 		} else {
 			const transportType = isHTTPServer ? "HTTP" : "STDIO"
 			throw new Error(
@@ -433,13 +368,13 @@ export function runConfigCommand(
 
 function writeConfigJson(
 	config: ClientMCPConfig,
-	clientConfig: ClientConfiguration,
-	client: string,
+	clientConfig: ClientDefinition,
 ): void {
-	const configPath = clientConfig.path
-	if (!configPath) {
-		throw new Error(`No path defined for client: ${clientConfig.label}`)
+	if (clientConfig.install.method !== "file") {
+		throw new Error(`Client ${clientConfig.label} does not use file-based installation`)
 	}
+
+	const configPath = clientConfig.install.path
 
 	const configDir = path.dirname(configPath)
 
@@ -471,11 +406,8 @@ function writeConfigJson(
 		...config,
 	}
 
-	// Get format descriptor using client name
-	const descriptor = getFormatDescriptor(client)
-
-	// Determine top-level key to use
-	const topLevelKey = descriptor.topLevelKey
+	// Determine top-level key from client format
+	const topLevelKey = clientConfig.format?.topLevelKey ?? "mcpServers"
 
 	// Transform standard format to client-specific format
 	const transformedServers: Record<string, Record<string, unknown>> = {}
@@ -483,11 +415,7 @@ function writeConfigJson(
 		for (const [serverName, serverConfig] of Object.entries(
 			mergedConfig.mcpServers,
 		)) {
-			const transformed = transformFromStandard(
-				serverConfig,
-				descriptor,
-				serverName,
-			)
+			const transformed = toClientFormat(serverConfig, clientConfig)
 			if (transformed !== null) {
 				transformedServers[serverName] = transformed
 			}
@@ -511,13 +439,13 @@ function writeConfigJson(
 
 function writeConfigJsonc(
 	config: ClientMCPConfig,
-	clientConfig: ClientConfiguration,
-	client: string,
+	clientConfig: ClientDefinition,
 ): void {
-	const configPath = clientConfig.path
-	if (!configPath) {
-		throw new Error(`No path defined for client: ${clientConfig.label}`)
+	if (clientConfig.install.method !== "file") {
+		throw new Error(`Client ${clientConfig.label} does not use file-based installation`)
 	}
+
+	const configPath = clientConfig.install.path
 
 	const configDir = path.dirname(configPath)
 
@@ -533,13 +461,33 @@ function writeConfigJsonc(
 		content = fs.readFileSync(configPath, "utf8")
 	}
 
-	const descriptor = getFormatDescriptor(client)
-	const topLevelKey = descriptor.topLevelKey
+	const topLevelKey = clientConfig.format?.topLevelKey ?? "mcpServers"
+
+	// Parse existing config to find servers that need to be removed
+	const existingConfig = parseJsonc(content) as Record<string, unknown>
+	const existingServers = existingConfig[topLevelKey] as
+		| Record<string, unknown>
+		| undefined
+	const newServerNames = new Set(Object.keys(config.mcpServers))
+
+	// Remove servers that exist in file but not in new config
+	if (existingServers) {
+		for (const serverName of Object.keys(existingServers)) {
+			if (!newServerNames.has(serverName)) {
+				verbose(`Removing server: ${serverName}`)
+				const edits = modify(content, [topLevelKey, serverName], undefined, {
+					formattingOptions: { tabSize: 2, insertSpaces: true },
+				})
+				content = applyEdits(content, edits)
+			}
+		}
+	}
 
 	// Transform and apply each server config using modify() to preserve comments
 	for (const [serverName, serverConfig] of Object.entries(config.mcpServers)) {
-		const transformed = transformFromStandard(serverConfig, descriptor, serverName)
+		const transformed = toClientFormat(serverConfig, clientConfig)
 		if (transformed !== null) {
+			verbose(`Adding/updating server: ${serverName}`)
 			const edits = modify(content, [topLevelKey, serverName], transformed, {
 				formattingOptions: { tabSize: 2, insertSpaces: true },
 			})
@@ -554,13 +502,13 @@ function writeConfigJsonc(
 
 function writeConfigYaml(
 	config: ClientMCPConfig,
-	clientConfig: ClientConfiguration,
-	client: string,
+	clientConfig: ClientDefinition,
 ): void {
-	const configPath = clientConfig.path
-	if (!configPath) {
-		throw new Error(`No path defined for client: ${clientConfig.label}`)
+	if (clientConfig.install.method !== "file") {
+		throw new Error(`Client ${clientConfig.label} does not use file-based installation`)
 	}
+
+	const configPath = clientConfig.install.path
 
 	const configDir = path.dirname(configPath)
 
@@ -588,11 +536,8 @@ function writeConfigYaml(
 
 	verbose(`Merging YAML configs`)
 
-	// Get format descriptor using client name
-	const descriptor = getFormatDescriptor(client)
-
-	// Determine the YAML key to use from format descriptor
-	const yamlKey = descriptor.topLevelKey
+	// Determine the YAML key from client format
+	const yamlKey = clientConfig.format?.topLevelKey ?? "mcpServers"
 
 	if (originalDoc) {
 		let mcpServersNode = originalDoc.get(yamlKey)
@@ -626,11 +571,7 @@ function writeConfigYaml(
 				verbose(`Adding/updating server: ${serverName}`)
 
 				// Transform standard format to client-specific format
-				const transformedConfig = transformFromStandard(
-					serverConfig,
-					descriptor,
-					serverName,
-				)
+				const transformedConfig = toClientFormat(serverConfig, clientConfig)
 
 				if (transformedConfig === null) {
 					verbose(`Skipping server ${serverName} due to null transformation`)
@@ -661,17 +602,12 @@ function writeConfigYaml(
 		verbose(`YAML config updated`)
 	} else {
 		// Create new file from scratch
-		// Transform standard format to client-specific format
 		const transformedServers: Record<string, Record<string, unknown>> = {}
 		if (config.mcpServers) {
 			for (const [serverName, serverConfig] of Object.entries(
 				config.mcpServers,
 			)) {
-				const transformed = transformFromStandard(
-					serverConfig,
-					descriptor,
-					serverName,
-				)
+				const transformed = toClientFormat(serverConfig, clientConfig)
 				if (transformed !== null) {
 					transformedServers[serverName] = transformed
 				}
@@ -687,4 +623,63 @@ function writeConfigYaml(
 	}
 
 	verbose(`YAML config successfully written`)
+}
+
+// ============================================================================
+// Server Config Creation
+// ============================================================================
+
+/**
+ * Creates HTTP server configuration for clients that support OAuth
+ */
+function createHTTPServerConfig(
+	qualifiedName: string,
+): StreamableHTTPConnection {
+	return {
+		type: "http",
+		url: `https://server.smithery.ai/${qualifiedName}/mcp`,
+		headers: {},
+	}
+}
+
+/**
+ * Creates STDIO configuration using mcp-remote for HTTP servers with non-OAuth clients
+ */
+function createMcpRemoteConfig(qualifiedName: string): ConfiguredServer {
+	const url = `https://server.smithery.ai/${qualifiedName}/mcp`
+	const args = ["-y", "mcp-remote", url]
+
+	if (process.platform === "win32") {
+		return { command: "cmd", args: ["/c", "npx", ...args] }
+	}
+	return { command: "npx", args }
+}
+
+/**
+ * Creates STDIO configuration for standard server execution
+ */
+function createStdioConfig(qualifiedName: string): ConfiguredServer {
+	const npxArgs = ["-y", "@smithery/cli@latest", "run", qualifiedName]
+
+	if (process.platform === "win32") {
+		return { command: "cmd", args: ["/c", "npx", ...npxArgs] }
+	}
+	return { command: "npx", args: npxArgs }
+}
+
+/**
+ * Creates server configuration for the given transport type
+ */
+export function formatServerConfig(
+	qualifiedName: string,
+	transportType: TransportType,
+): ConfiguredServer {
+	switch (transportType) {
+		case "http-oauth":
+			return createHTTPServerConfig(qualifiedName)
+		case "http-proxy":
+			return createMcpRemoteConfig(qualifiedName)
+		case "stdio":
+			return createStdioConfig(qualifiedName)
+	}
 }

@@ -2,45 +2,16 @@
  * Unit tests for formatServerConfig function
  */
 
-import { beforeEach, describe, expect, test, vi } from "vitest"
-import { Transport } from "../../../config/clients"
-import { determineConfigType, formatServerConfig } from "../server-config"
-import { optionalOnlyServer } from "./fixtures/servers"
-
-// Mock getClientConfiguration
-vi.mock("../../../config/clients", async () => {
-	const actual = await vi.importActual("../../../config/clients")
-	return {
-		...actual,
-		getClientConfiguration: vi.fn(),
-	}
-})
-
-import { getClientConfiguration } from "../../../config/clients"
-
-const mockGetClientConfiguration = vi.mocked(getClientConfiguration)
+import { describe, expect, test } from "vitest"
+import { formatServerConfig } from "../../../lib/client-config-io"
 
 describe("formatServerConfig", () => {
-	beforeEach(() => {
-		vi.clearAllMocks()
-	})
-
-	test("should return http-oauth config when server is HTTP and client supports HTTP and OAuth", () => {
+	test("should return http config for http-oauth transport", () => {
 		// ARRANGE
 		const qualifiedName = "@test/http-server"
-		const client = "cursor"
-		const server = optionalOnlyServer
-
-		mockGetClientConfiguration.mockReturnValue({
-			label: "Cursor",
-			supportedTransports: [Transport.HTTP, Transport.STDIO],
-			installType: "json",
-			supportsOAuth: true,
-			path: "/tmp/cursor.json",
-		})
 
 		// ACT
-		const result = formatServerConfig(qualifiedName, client, server)
+		const result = formatServerConfig(qualifiedName, "http-oauth")
 
 		// ASSERT
 		expect(result).toEqual({
@@ -50,22 +21,12 @@ describe("formatServerConfig", () => {
 		})
 	})
 
-	test("should return http-no-oauth config when server is HTTP and client supports HTTP but not OAuth", () => {
+	test("should return mcp-remote config for http-proxy transport", () => {
 		// ARRANGE
 		const qualifiedName = "@test/http-server"
-		const client = "claude"
-		const server = optionalOnlyServer
-
-		mockGetClientConfiguration.mockReturnValue({
-			label: "Claude Desktop",
-			supportedTransports: [Transport.HTTP, Transport.STDIO],
-			installType: "json",
-			supportsOAuth: false,
-			path: "/tmp/claude.json",
-		})
 
 		// ACT
-		const result = formatServerConfig(qualifiedName, client, server)
+		const result = formatServerConfig(qualifiedName, "http-proxy")
 
 		// ASSERT
 		expect(result).toEqual({
@@ -78,109 +39,17 @@ describe("formatServerConfig", () => {
 		})
 	})
 
-	test("should return stdio config when server is STDIO and client supports STDIO", () => {
+	test("should return stdio config for stdio transport", () => {
 		// ARRANGE
 		const qualifiedName = "@test/stdio-server"
-		const client = "claude"
-		const server = {
-			qualifiedName: "@test/stdio-server",
-			remote: false,
-			connections: [
-				{
-					type: "stdio",
-					configSchema: {},
-				},
-			],
-		} as typeof optionalOnlyServer
-
-		mockGetClientConfiguration.mockReturnValue({
-			label: "Claude Desktop",
-			supportedTransports: [Transport.STDIO],
-			installType: "json",
-			path: "/tmp/claude.json",
-		})
 
 		// ACT
-		const result = formatServerConfig(qualifiedName, client, server)
+		const result = formatServerConfig(qualifiedName, "stdio")
 
 		// ASSERT
 		expect(result).toEqual({
 			command: "npx",
 			args: ["-y", "@smithery/cli@latest", "run", qualifiedName],
 		})
-	})
-})
-
-describe("determineConfigType", () => {
-	beforeEach(() => {
-		vi.clearAllMocks()
-	})
-
-	test("should return http-oauth when server has HTTP and client supports OAuth", () => {
-		// ARRANGE
-		const client = "cursor"
-		const server = optionalOnlyServer
-
-		mockGetClientConfiguration.mockReturnValue({
-			label: "Cursor",
-			supportedTransports: [Transport.HTTP, Transport.STDIO],
-			installType: "json",
-			supportsOAuth: true,
-			path: "/tmp/cursor.json",
-		})
-
-		// ACT
-		const result = determineConfigType(client, server)
-
-		// ASSERT
-		expect(result).toBe("http-oauth")
-	})
-
-	test("should return http-no-oauth when server has HTTP but client does not support OAuth", () => {
-		// ARRANGE
-		const client = "claude-desktop"
-		const server = optionalOnlyServer
-
-		mockGetClientConfiguration.mockReturnValue({
-			label: "Claude Desktop",
-			supportedTransports: [Transport.HTTP, Transport.STDIO],
-			installType: "json",
-			supportsOAuth: false,
-			path: "/tmp/claude.json",
-		})
-
-		// ACT
-		const result = determineConfigType(client, server)
-
-		// ASSERT
-		expect(result).toBe("http-no-oauth")
-	})
-
-	test("should return stdio when server only has STDIO connection", () => {
-		// ARRANGE
-		const client = "claude"
-		const server = {
-			qualifiedName: "@test/stdio-server",
-			remote: false,
-			connections: [
-				{
-					type: "stdio",
-					configSchema: {},
-				},
-			],
-		} as typeof optionalOnlyServer
-
-		mockGetClientConfiguration.mockReturnValue({
-			label: "Claude Desktop",
-			supportedTransports: [Transport.STDIO],
-			installType: "json",
-			path: "/tmp/claude.json",
-		})
-
-		// ACT
-		const result = determineConfigType(client, server)
-
-		// ASSERT
-		expect(result).toBe("stdio")
 	})
 })

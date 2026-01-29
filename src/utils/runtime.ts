@@ -16,7 +16,7 @@ type Connection =
 
 const execAsync = promisify(exec)
 
-export async function checkUVInstalled(): Promise<boolean> {
+async function checkUVInstalled(): Promise<boolean> {
 	try {
 		await execAsync("uvx --version")
 		return true
@@ -25,7 +25,7 @@ export async function checkUVInstalled(): Promise<boolean> {
 	}
 }
 
-export async function promptForUVInstall(): Promise<boolean> {
+async function promptForUVInstall(): Promise<boolean> {
 	const { shouldInstall } = await inquirer.prompt<{ shouldInstall: boolean }>([
 		{
 			type: "confirm",
@@ -69,7 +69,7 @@ export async function promptForUVInstall(): Promise<boolean> {
 	}
 }
 
-export function isUVRequired(connection: Connection): boolean {
+function isUVRequired(connection: Connection): boolean {
 	// Check for stdio connection with uvx in stdioFunction
 	if (
 		connection.type === "stdio" &&
@@ -81,7 +81,7 @@ export function isUVRequired(connection: Connection): boolean {
 	return false
 }
 
-export async function checkBunInstalled(): Promise<boolean> {
+async function checkBunInstalled(): Promise<boolean> {
 	try {
 		await execAsync("bun --version")
 		return true
@@ -90,7 +90,7 @@ export async function checkBunInstalled(): Promise<boolean> {
 	}
 }
 
-export async function promptForBunInstall(): Promise<boolean> {
+async function promptForBunInstall(): Promise<boolean> {
 	const { shouldInstall } = await inquirer.prompt<{ shouldInstall: boolean }>([
 		{
 			type: "confirm",
@@ -139,7 +139,7 @@ export async function promptForBunInstall(): Promise<boolean> {
 	}
 }
 
-export function isBunRequired(connection: Connection): boolean {
+function isBunRequired(connection: Connection): boolean {
 	// Check for stdio connection with uvx in stdioFunction
 	if (
 		connection.type === "stdio" &&
@@ -211,7 +211,7 @@ export async function ensureBunInstalled(
  * @param server The server information containing connection details
  * @returns boolean indicating if the server is remote
  */
-export function isRemote(server: {
+function isRemote(server: {
 	connections: Connection[]
 	remote?: boolean
 }): boolean {
@@ -247,7 +247,7 @@ export function checkAndNotifyRemoteServer(server: {
  * Prompts the user for their Smithery API key
  * @returns Promise<string> The entered API key
  */
-export async function promptForApiKey(): Promise<string> {
+async function promptForApiKey(): Promise<string> {
 	const { apiKey } = await inquirer.prompt([
 		{
 			type: "password",
