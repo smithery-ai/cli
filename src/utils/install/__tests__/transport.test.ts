@@ -51,7 +51,11 @@ describe("resolveTransport", () => {
 
 	test("should return http-oauth when connection is HTTP and client supports OAuth", () => {
 		// ARRANGE
-		const connection = { type: "http" as const, configSchema: {}, deploymentUrl: "https://example.com" }
+		const connection = {
+			type: "http" as const,
+			configSchema: {},
+			deploymentUrl: "https://example.com",
+		}
 		const client = "cursor"
 
 		mockGetClientConfiguration.mockReturnValue(mockClientWithOAuth("Cursor"))
@@ -68,10 +72,16 @@ describe("resolveTransport", () => {
 
 	test("should return http-proxy when connection is HTTP but client does not support OAuth", () => {
 		// ARRANGE
-		const connection = { type: "http" as const, configSchema: {}, deploymentUrl: "https://example.com" }
+		const connection = {
+			type: "http" as const,
+			configSchema: {},
+			deploymentUrl: "https://example.com",
+		}
 		const client = "claude"
 
-		mockGetClientConfiguration.mockReturnValue(mockClientWithoutOAuth("Claude Desktop"))
+		mockGetClientConfiguration.mockReturnValue(
+			mockClientWithoutOAuth("Claude Desktop"),
+		)
 
 		// ACT
 		const result = resolveTransport(connection, client)
@@ -88,7 +98,9 @@ describe("resolveTransport", () => {
 		const connection = { type: "stdio" as const, configSchema: {} }
 		const client = "claude"
 
-		mockGetClientConfiguration.mockReturnValue(mockStdioOnlyClient("Claude Desktop"))
+		mockGetClientConfiguration.mockReturnValue(
+			mockStdioOnlyClient("Claude Desktop"),
+		)
 
 		// ACT
 		const result = resolveTransport(connection, client)
@@ -116,7 +128,11 @@ describe("resolveTransport", () => {
 
 	test("http transport should not require user config", () => {
 		// ARRANGE
-		const connection = { type: "http" as const, configSchema: {}, deploymentUrl: "https://example.com" }
+		const connection = {
+			type: "http" as const,
+			configSchema: {},
+			deploymentUrl: "https://example.com",
+		}
 		const client = "cursor"
 
 		mockGetClientConfiguration.mockReturnValue(mockClientWithOAuth("Cursor"))

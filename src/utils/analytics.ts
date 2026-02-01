@@ -20,7 +20,7 @@ let currentSession: Session | null = null
 const SESSION_TIMEOUT = 30 * 60 * 1000 // 30 minutes in milliseconds
 let sessionTimeoutId: NodeJS.Timeout | null = null
 
-const getCurrentSession = (): Session | null => currentSession
+const _getCurrentSession = (): Session | null => currentSession
 
 const startNewSession = (): Session => {
 	if (sessionTimeoutId) {

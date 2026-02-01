@@ -87,7 +87,9 @@ export async function installServer(
 				await saveConfig(qualifiedName, finalConfig)
 			}
 		} else {
-			verbose("Skipping config collection - OAuth handled by client or mcp-remote")
+			verbose(
+				"Skipping config collection - OAuth handled by client or mcp-remote",
+			)
 		}
 
 		/* Install for client */
