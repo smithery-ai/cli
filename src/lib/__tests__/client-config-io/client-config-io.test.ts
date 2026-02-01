@@ -59,7 +59,10 @@ function mockJsonClient(label: string, configPath: string): ClientDefinition {
 	}
 }
 
-function mockJsonClientWithHttp(label: string, configPath: string): ClientDefinition {
+function mockJsonClientWithHttp(
+	label: string,
+	configPath: string,
+): ClientDefinition {
 	return {
 		label,
 		install: { method: "file", format: "json", path: configPath },
@@ -159,7 +162,9 @@ describe("readConfig", () => {
 	test("should return empty config when file does not exist", () => {
 		// ARRANGE: JSON client with non-existent file
 		const configPath = path.join(tempDir, "claude.json")
-		mockGetClientConfiguration.mockReturnValue(mockJsonClient("Claude Desktop", configPath))
+		mockGetClientConfiguration.mockReturnValue(
+			mockJsonClient("Claude Desktop", configPath),
+		)
 
 		// ACT
 		const result = readConfig("claude")
@@ -176,7 +181,9 @@ describe("readConfig", () => {
 			JSON.stringify(standardJsonWithStdioServer, null, 2),
 		)
 
-		mockGetClientConfiguration.mockReturnValue(mockJsonClient("Claude Desktop", configPath))
+		mockGetClientConfiguration.mockReturnValue(
+			mockJsonClient("Claude Desktop", configPath),
+		)
 
 		// ACT
 		const result = readConfig("claude")
@@ -193,7 +200,9 @@ describe("readConfig", () => {
 		const configPath = path.join(tempDir, "invalid.json")
 		fs.writeFileSync(configPath, "{ invalid json }")
 
-		mockGetClientConfiguration.mockReturnValue(mockJsonClient("Claude Desktop", configPath))
+		mockGetClientConfiguration.mockReturnValue(
+			mockJsonClient("Claude Desktop", configPath),
+		)
 
 		// ACT
 		const result = readConfig("claude")
@@ -216,7 +225,9 @@ describe("writeConfig", () => {
 		const configPath = path.join(tempDir, "claude.json")
 		const config: ClientMCPConfig = standardStdioConfig
 
-		mockGetClientConfiguration.mockReturnValue(mockJsonClient("Claude Desktop", configPath))
+		mockGetClientConfiguration.mockReturnValue(
+			mockJsonClient("Claude Desktop", configPath),
+		)
 
 		// ACT
 		writeConfig(config, "claude")
@@ -250,7 +261,9 @@ describe("writeConfig", () => {
 			},
 		}
 
-		mockGetClientConfiguration.mockReturnValue(mockJsonClient("Claude Desktop", configPath))
+		mockGetClientConfiguration.mockReturnValue(
+			mockJsonClient("Claude Desktop", configPath),
+		)
 
 		// ACT
 		writeConfig(newConfig, "claude")
@@ -270,7 +283,9 @@ describe("writeConfig", () => {
 		const configPath = path.join(tempDir, "windsurf.yaml")
 		const config: ClientMCPConfig = standardStdioConfig
 
-		mockGetClientConfiguration.mockReturnValue(mockYamlClient("Windsurf", configPath))
+		mockGetClientConfiguration.mockReturnValue(
+			mockYamlClient("Windsurf", configPath),
+		)
 
 		// ACT
 		writeConfig(config, "windsurf")
@@ -296,7 +311,9 @@ describe("writeConfig", () => {
 			},
 		}
 
-		mockGetClientConfiguration.mockReturnValue(mockJsonClient("Claude Desktop", configPath))
+		mockGetClientConfiguration.mockReturnValue(
+			mockJsonClient("Claude Desktop", configPath),
+		)
 
 		// ACT
 		writeConfig(config, "claude")
@@ -313,7 +330,9 @@ describe("writeConfig", () => {
 			mcpServers: "not an object",
 		} as unknown as ClientMCPConfig
 
-		mockGetClientConfiguration.mockReturnValue(mockJsonClient("Claude Desktop", configPath))
+		mockGetClientConfiguration.mockReturnValue(
+			mockJsonClient("Claude Desktop", configPath),
+		)
 
 		// ACT & ASSERT: Should throw error
 		expect(() => writeConfig(invalidConfig, "claude")).toThrow(
@@ -334,7 +353,9 @@ describe("writeConfig", () => {
 			},
 		}
 
-		mockGetClientConfiguration.mockReturnValue(mockJsonClientWithHttp("Cursor", configPath))
+		mockGetClientConfiguration.mockReturnValue(
+			mockJsonClientWithHttp("Cursor", configPath),
+		)
 
 		// ACT
 		writeConfig(config, "cursor")
@@ -377,7 +398,9 @@ describe("read-modify-write cycle (real-world flow)", () => {
 		}
 		fs.writeFileSync(configPath, JSON.stringify(startState, null, 2))
 
-		mockGetClientConfiguration.mockReturnValue(mockJsonClient("Claude Desktop", configPath))
+		mockGetClientConfiguration.mockReturnValue(
+			mockJsonClient("Claude Desktop", configPath),
+		)
 
 		// ACT: Simulate install flow - read, modify, write
 		const config = readConfig("claude")
@@ -416,7 +439,9 @@ describe("read-modify-write cycle (real-world flow)", () => {
 		}
 		fs.writeFileSync(configPath, JSON.stringify(startState, null, 2))
 
-		mockGetClientConfiguration.mockReturnValue(mockJsonClient("Claude Desktop", configPath))
+		mockGetClientConfiguration.mockReturnValue(
+			mockJsonClient("Claude Desktop", configPath),
+		)
 
 		// ACT: Read, update server, write
 		const config = readConfig("claude")
@@ -437,7 +462,9 @@ describe("read-modify-write cycle (real-world flow)", () => {
 		const configPath = path.join(tempDir, "windsurf.yaml")
 		fs.writeFileSync(configPath, standardYamlWithExistingServer)
 
-		mockGetClientConfiguration.mockReturnValue(mockYamlClient("Windsurf", configPath))
+		mockGetClientConfiguration.mockReturnValue(
+			mockYamlClient("Windsurf", configPath),
+		)
 
 		// ACT: Read, add server, write
 		const config = readConfig("windsurf")
@@ -488,7 +515,9 @@ describe("transformation flow integration", () => {
 			const configContent: ClientMCPConfig = opencodeSimpleStdioConfig
 			fs.writeFileSync(configPath, JSON.stringify(configContent, null, 2))
 
-			mockGetClientConfiguration.mockReturnValue(mockJsonClient("Claude Desktop", configPath))
+			mockGetClientConfiguration.mockReturnValue(
+				mockJsonClient("Claude Desktop", configPath),
+			)
 
 			// ACT
 			const result = readConfig("claude")
@@ -553,7 +582,9 @@ describe("transformation flow integration", () => {
 			const configPath = path.join(tempDir, "claude.json")
 			const config: ClientMCPConfig = opencodeSimpleStdioConfig
 
-			mockGetClientConfiguration.mockReturnValue(mockJsonClient("Claude Desktop", configPath))
+			mockGetClientConfiguration.mockReturnValue(
+				mockJsonClient("Claude Desktop", configPath),
+			)
 
 			// ACT
 			writeConfig(config, "claude")
@@ -646,7 +677,9 @@ describe("transformation flow integration", () => {
 			const configContent: ClientMCPConfig = opencodeSimpleStdioConfig
 			fs.writeFileSync(configPath, JSON.stringify(configContent, null, 2))
 
-			mockGetClientConfiguration.mockReturnValue(mockJsonClient("Claude Desktop", configPath))
+			mockGetClientConfiguration.mockReturnValue(
+				mockJsonClient("Claude Desktop", configPath),
+			)
 
 			// ACT: Read, modify, write
 			const readResult = readConfig("claude")

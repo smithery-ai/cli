@@ -1,12 +1,9 @@
 import { describe, expect, test } from "vitest"
-import {
-	fromClientFormat,
-	toClientFormat,
-} from "../../../lib/client-config-io"
+import { fromClientFormat, toClientFormat } from "../../../lib/client-config-io"
 import {
 	fromClientFormatCases,
-	toClientFormatCases,
 	MOCK_CLIENTS,
+	toClientFormatCases,
 } from "./fixtures/format-transformations"
 
 describe("fromClientFormat", () => {

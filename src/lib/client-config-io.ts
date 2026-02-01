@@ -100,7 +100,11 @@ export function fromClientFormat(
 
 		// env (only include if non-empty)
 		const envValue = config[envKey]
-		if (envValue && typeof envValue === "object" && Object.keys(envValue).length > 0) {
+		if (
+			envValue &&
+			typeof envValue === "object" &&
+			Object.keys(envValue).length > 0
+		) {
 			result.env = envValue
 		}
 	}
@@ -167,13 +171,21 @@ export function toClientFormat(
 		}
 
 		// Args (only for string format)
-		if (stdio?.commandFormat !== "array" && Array.isArray(config.args) && config.args.length > 0) {
+		if (
+			stdio?.commandFormat !== "array" &&
+			Array.isArray(config.args) &&
+			config.args.length > 0
+		) {
 			result.args = config.args
 		}
 
 		// Env (only include if non-empty)
 		const envKey = mappings?.env ?? "env"
-		if (config.env && typeof config.env === "object" && Object.keys(config.env).length > 0) {
+		if (
+			config.env &&
+			typeof config.env === "object" &&
+			Object.keys(config.env).length > 0
+		) {
 			result[envKey] = config.env
 		}
 	}
@@ -304,7 +316,9 @@ export function runConfigCommand(
 	clientConfig: ClientDefinition,
 ): void {
 	if (clientConfig.install.method !== "command") {
-		throw new Error(`Client ${clientConfig.label} does not use command-based installation`)
+		throw new Error(
+			`Client ${clientConfig.label} does not use command-based installation`,
+		)
 	}
 
 	const command = clientConfig.install.command
@@ -371,7 +385,9 @@ function writeConfigJson(
 	clientConfig: ClientDefinition,
 ): void {
 	if (clientConfig.install.method !== "file") {
-		throw new Error(`Client ${clientConfig.label} does not use file-based installation`)
+		throw new Error(
+			`Client ${clientConfig.label} does not use file-based installation`,
+		)
 	}
 
 	const configPath = clientConfig.install.path
@@ -442,7 +458,9 @@ function writeConfigJsonc(
 	clientConfig: ClientDefinition,
 ): void {
 	if (clientConfig.install.method !== "file") {
-		throw new Error(`Client ${clientConfig.label} does not use file-based installation`)
+		throw new Error(
+			`Client ${clientConfig.label} does not use file-based installation`,
+		)
 	}
 
 	const configPath = clientConfig.install.path
@@ -505,7 +523,9 @@ function writeConfigYaml(
 	clientConfig: ClientDefinition,
 ): void {
 	if (clientConfig.install.method !== "file") {
-		throw new Error(`Client ${clientConfig.label} does not use file-based installation`)
+		throw new Error(
+			`Client ${clientConfig.label} does not use file-based installation`,
+		)
 	}
 
 	const configPath = clientConfig.install.path

@@ -436,4 +436,3 @@ export function getClientConfiguration(clientName: string): ClientDefinition {
  */
 export const VALID_CLIENTS = Object.keys(CLIENTS) as string[]
 export type ValidClient = keyof typeof CLIENTS
-

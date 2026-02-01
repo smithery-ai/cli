@@ -17,7 +17,7 @@ import { DEFAULT_PORT } from "./constants"
 import { buildBundle } from "./lib/bundle"
 import { executeCliAuthFlow } from "./lib/cli-auth"
 import { setDebug, setVerbose } from "./lib/logger"
-import { validateApiKey } from "./lib/registry"
+import { searchServers, validateApiKey } from "./lib/registry"
 import type { ServerConfig } from "./types/registry"
 import {
 	interactiveServerSearch,
@@ -122,9 +122,10 @@ program
 program
 	.command("inspect <server>")
 	.description("Inspect server from registry")
-	.option("--key <apikey>", "Provide an API key")
-	.action(async (server, options) => {
-		await inspectServer(server, await ensureApiKey(options.key))
+	.action(async (server) => {
+		// API key is optional - use if available, don't prompt
+		const apiKey = await getApiKey()
+		await inspectServer(server, apiKey)
 	})
 
 // Run command
@@ -382,8 +383,24 @@ program
 program
 	.command("search [term]")
 	.description("Search for servers in the Smithery registry")
-	.action(async (term) => {
-		const apiKey = await ensureApiKey()
+	.option("--json", "Output results as JSON (non-interactive)")
+	.action(async (term, options) => {
+		// API key is optional for search - use if available, don't prompt
+		const apiKey = await getApiKey()
+
+		if (options.json) {
+			// Non-interactive JSON output
+			if (!term) {
+				console.error(
+					chalk.red("Error: Search term is required when using --json"),
+				)
+				process.exit(1)
+			}
+			const servers = await searchServers(term, apiKey)
+			console.log(JSON.stringify({ servers }, null, 2))
+			return
+		}
+
 		await interactiveServerSearch(apiKey, term)
 		// @TODO: add install flow
 	})

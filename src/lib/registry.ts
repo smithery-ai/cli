@@ -132,7 +132,7 @@ export const resolveServer = async (
  */
 export const searchServers = async (
 	searchTerm: string,
-	apiKey: string,
+	apiKey?: string,
 ): Promise<
 	Array<{
 		qualifiedName: string

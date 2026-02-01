@@ -1,7 +1,6 @@
 import chalk from "chalk"
 import { VALID_CLIENTS, type ValidClient } from "../config/clients"
 import { searchServers } from "../lib/registry"
-import { ensureApiKey } from "./runtime"
 
 // Re-export parsing utilities from cli-utils for backward compatibility
 export { parseServerConfig } from "./cli-utils.js"
@@ -100,11 +99,11 @@ async function searchAndSelectServer(apiKey?: string): Promise<string> {
 	])
 
 	try {
-		const finalApiKey = await ensureApiKey(apiKey)
 		const ora = (await import("ora")).default
 		const spinner = ora(`Searching for "${searchTerm}"...`).start()
 
-		const servers = await searchServers(searchTerm, finalApiKey)
+		// API key is optional for search - don't prompt
+		const servers = await searchServers(searchTerm, apiKey)
 
 		if (servers.length === 0) {
 			spinner.fail(`No servers found for "${searchTerm}"`)
@@ -333,7 +332,7 @@ async function getSearchTerm(providedTerm?: string): Promise<string> {
  * @returns Promise<void>
  */
 export async function interactiveServerSearch(
-	apiKey: string,
+	apiKey?: string,
 	initialTerm?: string,
 ): Promise<void> {
 	let searchTerm = await getSearchTerm(initialTerm)
