@@ -1,10 +1,5 @@
 import FlexSearch from "flexsearch"
-import {
-	getCurrentNamespace,
-	listConnections,
-	listToolsForConnection,
-	type ToolInfo,
-} from "./api"
+import { ConnectSession, type ToolInfo } from "./api"
 import { outputJson } from "./output"
 
 interface SearchResult {
@@ -24,10 +19,8 @@ export async function searchTools(
 	query: string,
 	options: { namespace?: string },
 ): Promise<void> {
-	const namespace = options.namespace ?? (await getCurrentNamespace())
-
-	// List all connections
-	const connections = await listConnections(namespace)
+	const session = await ConnectSession.create(options.namespace)
+	const connections = await session.listConnections()
 
 	if (connections.length === 0) {
 		outputJson({
@@ -40,7 +33,7 @@ export async function searchTools(
 	// Fetch tools from each connection in parallel
 	const allTools: ToolInfo[] = []
 	const results = await Promise.allSettled(
-		connections.map((conn) => listToolsForConnection(namespace, conn)),
+		connections.map((conn) => session.listToolsForConnection(conn)),
 	)
 
 	for (const result of results) {

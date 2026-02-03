@@ -1,8 +1,4 @@
-import {
-	getCurrentNamespace,
-	listConnections,
-	listToolsForConnection,
-} from "./api"
+import { ConnectSession } from "./api"
 import { outputJson } from "./output"
 
 interface ServersOutput {
@@ -18,9 +14,8 @@ interface ServersOutput {
 export async function listServers(options: {
 	namespace?: string
 }): Promise<void> {
-	const namespace = options.namespace ?? (await getCurrentNamespace())
-
-	const connections = await listConnections(namespace)
+	const session = await ConnectSession.create(options.namespace)
+	const connections = await session.listConnections()
 
 	if (connections.length === 0) {
 		outputJson({
@@ -32,7 +27,7 @@ export async function listServers(options: {
 
 	const serversWithCounts = await Promise.all(
 		connections.map(async (conn) => {
-			const tools = await listToolsForConnection(namespace, conn)
+			const tools = await session.listToolsForConnection(conn)
 			return {
 				id: conn.connectionId,
 				name: conn.name,

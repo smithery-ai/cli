@@ -1,15 +1,15 @@
 import chalk from "chalk"
-import { deleteConnection, getCurrentNamespace, listConnections } from "./api"
+import { ConnectSession } from "./api"
 import { outputJson } from "./output"
 
 export async function removeServer(
 	serverId: string,
 	options: { namespace?: string },
 ): Promise<void> {
-	const namespace = options.namespace ?? (await getCurrentNamespace())
+	const session = await ConnectSession.create(options.namespace)
+	const connections = await session.listConnections()
 
 	// Find the connection by ID or name
-	const connections = await listConnections(namespace)
 	const targetConnection = connections.find(
 		(c) =>
 			c.connectionId === serverId ||
@@ -27,7 +27,7 @@ export async function removeServer(
 	}
 
 	try {
-		await deleteConnection(namespace, targetConnection.connectionId)
+		await session.deleteConnection(targetConnection.connectionId)
 		outputJson({
 			success: true,
 			removed: targetConnection.connectionId,

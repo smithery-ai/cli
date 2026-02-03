@@ -18,7 +18,111 @@ export interface ToolInfo extends Tool {
 	connectionName: string
 }
 
-export { createSmitheryClient as createSmitheryClient }
+export { createSmitheryClient }
+
+// Use Awaited to get the concrete type from createSmitheryClient
+type SmitheryClient = Awaited<ReturnType<typeof createSmitheryClient>>
+
+/**
+ * Session for Connect operations that reuses clients within a command.
+ * Create one session per command to avoid redundant client creation.
+ */
+export class ConnectSession {
+	private mcpClients = new Map<string, Client>()
+
+	constructor(
+		private smitheryClient: SmitheryClient,
+		private namespace: string,
+	) {}
+
+	static async create(namespace?: string): Promise<ConnectSession> {
+		const client = await createSmitheryClient()
+		const ns = namespace ?? (await getCurrentNamespace())
+		return new ConnectSession(client, ns)
+	}
+
+	async listConnections(): Promise<Connection[]> {
+		const data = await this.smitheryClient.beta.connect.connections.list(
+			this.namespace,
+		)
+		return data.connections
+	}
+
+	private async getMcpClient(connectionId: string): Promise<Client> {
+		const cached = this.mcpClients.get(connectionId)
+		if (cached) {
+			return cached
+		}
+
+		const url = new URL(
+			`/connect/${this.namespace}/${connectionId}/mcp`,
+			this.smitheryClient.baseURL,
+		).href
+
+		const transport = new StreamableHTTPClientTransport(new URL(url), {
+			requestInit: {
+				headers: {
+					Authorization: `Bearer ${this.smitheryClient.apiKey}`,
+				},
+			},
+		})
+
+		const mcpClient = new Client({ name: "smithery-cli", version: "1.0.0" })
+		await mcpClient.connect(transport)
+		this.mcpClients.set(connectionId, mcpClient)
+		return mcpClient
+	}
+
+	async listToolsForConnection(connection: Connection): Promise<ToolInfo[]> {
+		try {
+			const mcpClient = await this.getMcpClient(connection.connectionId)
+			const { tools } = await mcpClient.listTools()
+
+			return (tools ?? []).map((tool) => ({
+				...tool,
+				connectionId: connection.connectionId,
+				connectionName: connection.name,
+			}))
+		} catch {
+			// Connection may be disconnected or not support tools
+			return []
+		}
+	}
+
+	async callTool(
+		connectionId: string,
+		toolName: string,
+		args: Record<string, unknown>,
+	): Promise<unknown> {
+		const mcpClient = await this.getMcpClient(connectionId)
+		return mcpClient.callTool({
+			name: toolName,
+			arguments: args,
+		})
+	}
+
+	async createConnection(
+		mcpUrl: string,
+		options: { name?: string } = {},
+	): Promise<Connection> {
+		return this.smitheryClient.beta.connect.connections.create(this.namespace, {
+			mcpUrl,
+			name: options.name,
+		})
+	}
+
+	async deleteConnection(connectionId: string): Promise<void> {
+		await this.smitheryClient.beta.connect.connections.delete(connectionId, {
+			namespace: this.namespace,
+		})
+	}
+
+	async getConnection(connectionId: string): Promise<Connection> {
+		return this.smitheryClient.beta.connect.connections.get(connectionId, {
+			namespace: this.namespace,
+		})
+	}
+}
 
 export async function getCurrentNamespace(): Promise<string> {
 	// First check stored namespace from settings
@@ -44,54 +148,21 @@ export async function getCurrentNamespace(): Promise<string> {
 	return defaultNamespace
 }
 
+// Legacy functions for backwards compatibility - use ConnectSession for new code
+
 export async function listConnections(
 	namespace: string,
 ): Promise<Connection[]> {
-	const client = await createSmitheryClient()
-	const data = await client.beta.connect.connections.list(namespace)
-	return data.connections
-}
-
-async function getMcpClient(
-	namespace: string,
-	connectionId: string,
-): Promise<Client> {
-	const smitheryClient = await createSmitheryClient()
-	const url = new URL(
-		`/connect/${namespace}/${connectionId}/mcp`,
-		smitheryClient.baseURL,
-	).href
-
-	const transport = new StreamableHTTPClientTransport(new URL(url), {
-		requestInit: {
-			headers: {
-				Authorization: `Bearer ${smitheryClient.apiKey}`,
-			},
-		},
-	})
-
-	const mcpClient = new Client({ name: "smithery-cli", version: "1.0.0" })
-	await mcpClient.connect(transport)
-	return mcpClient
+	const session = await ConnectSession.create(namespace)
+	return session.listConnections()
 }
 
 export async function listToolsForConnection(
 	namespace: string,
 	connection: Connection,
 ): Promise<ToolInfo[]> {
-	try {
-		const mcpClient = await getMcpClient(namespace, connection.connectionId)
-		const { tools } = await mcpClient.listTools()
-
-		return (tools ?? []).map((tool) => ({
-			...tool,
-			connectionId: connection.connectionId,
-			connectionName: connection.name,
-		}))
-	} catch {
-		// Connection may be disconnected or not support tools
-		return []
-	}
+	const session = await ConnectSession.create(namespace)
+	return session.listToolsForConnection(connection)
 }
 
 export async function callTool(
@@ -100,11 +171,8 @@ export async function callTool(
 	toolName: string,
 	args: Record<string, unknown>,
 ): Promise<unknown> {
-	const mcpClient = await getMcpClient(namespace, connectionId)
-	return mcpClient.callTool({
-		name: toolName,
-		arguments: args,
-	})
+	const session = await ConnectSession.create(namespace)
+	return session.callTool(connectionId, toolName, args)
 }
 
 export async function createConnection(
@@ -112,25 +180,22 @@ export async function createConnection(
 	mcpUrl: string,
 	options: { name?: string } = {},
 ): Promise<Connection> {
-	const client = await createSmitheryClient()
-	return client.beta.connect.connections.create(namespace, {
-		mcpUrl,
-		name: options.name,
-	})
+	const session = await ConnectSession.create(namespace)
+	return session.createConnection(mcpUrl, options)
 }
 
 export async function deleteConnection(
 	namespace: string,
 	connectionId: string,
 ): Promise<void> {
-	const client = await createSmitheryClient()
-	await client.beta.connect.connections.delete(connectionId, { namespace })
+	const session = await ConnectSession.create(namespace)
+	return session.deleteConnection(connectionId)
 }
 
 export async function getConnection(
 	namespace: string,
 	connectionId: string,
 ): Promise<Connection> {
-	const client = await createSmitheryClient()
-	return client.beta.connect.connections.get(connectionId, { namespace })
+	const session = await ConnectSession.create(namespace)
+	return session.getConnection(connectionId)
 }

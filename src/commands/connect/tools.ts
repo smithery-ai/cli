@@ -1,8 +1,4 @@
-import {
-	getCurrentNamespace,
-	listConnections,
-	listToolsForConnection,
-} from "./api"
+import { ConnectSession } from "./api"
 import { outputJson } from "./output"
 
 interface ToolsOutput {
@@ -20,9 +16,8 @@ export async function listTools(
 	server: string | undefined,
 	options: { namespace?: string },
 ): Promise<void> {
-	const namespace = options.namespace ?? (await getCurrentNamespace())
-
-	const connections = await listConnections(namespace)
+	const session = await ConnectSession.create(options.namespace)
+	const connections = await session.listConnections()
 
 	if (connections.length === 0) {
 		outputJson({
@@ -50,7 +45,7 @@ export async function listTools(
 			return
 		}
 
-		const tools = await listToolsForConnection(namespace, targetConnection)
+		const tools = await session.listToolsForConnection(targetConnection)
 
 		const output: ToolsOutput = {
 			tools: tools.map((t) => ({
@@ -68,7 +63,7 @@ export async function listTools(
 
 	// List tools from all servers
 	const allTools = await Promise.all(
-		connections.map((conn) => listToolsForConnection(namespace, conn)),
+		connections.map((conn) => session.listToolsForConnection(conn)),
 	)
 
 	const flatTools = allTools.flat()

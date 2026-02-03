@@ -1,15 +1,15 @@
 import chalk from "chalk"
-import { getConnection, getCurrentNamespace, listConnections } from "./api"
+import { ConnectSession } from "./api"
 import { outputJson } from "./output"
 
 export async function authServer(
 	serverId: string,
 	options: { namespace?: string },
 ): Promise<void> {
-	const namespace = options.namespace ?? (await getCurrentNamespace())
+	const session = await ConnectSession.create(options.namespace)
+	const connections = await session.listConnections()
 
 	// Find the connection by ID or name
-	const connections = await listConnections(namespace)
 	const targetConnection = connections.find(
 		(c) =>
 			c.connectionId === serverId ||
@@ -27,10 +27,7 @@ export async function authServer(
 	}
 
 	// Get fresh connection status
-	const connection = await getConnection(
-		namespace,
-		targetConnection.connectionId,
-	)
+	const connection = await session.getConnection(targetConnection.connectionId)
 
 	if (connection.status?.state === "connected") {
 		console.log(chalk.green(`Server "${connection.name}" is already connected.`))

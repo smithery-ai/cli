@@ -1,4 +1,4 @@
-import { callTool as apiCallTool, getCurrentNamespace } from "./api"
+import { ConnectSession } from "./api"
 import { formatToolOutput, outputJson } from "./output"
 
 export async function callTool(
@@ -44,15 +44,9 @@ export async function callTool(
 		}
 	}
 
-	const namespace = options.namespace ?? (await getCurrentNamespace())
-
 	try {
-		const result = await apiCallTool(
-			namespace,
-			connectionId,
-			toolName,
-			parsedArgs,
-		)
+		const session = await ConnectSession.create(options.namespace)
+		const result = await session.callTool(connectionId, toolName, parsedArgs)
 
 		// Format output with three-tier strategy
 		const output = formatToolOutput(result, false)
