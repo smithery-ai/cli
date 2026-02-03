@@ -156,4 +156,3 @@ export async function getCurrentNamespace(): Promise<string> {
 	await setNamespace(defaultNamespace)
 	return defaultNamespace
 }
-

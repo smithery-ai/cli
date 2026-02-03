@@ -39,7 +39,6 @@ smithery namespace show       # Show current namespace
 smithery connect add <url>    # Add MCP server (--name for display name)
 smithery connect list         # List connected servers
 smithery connect remove <id>  # Remove a connection
-smithery connect auth <id>    # Complete OAuth for a server
 
 # Tools
 smithery connect tools [server]     # List tools (all or for specific server)

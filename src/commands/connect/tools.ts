@@ -17,6 +17,35 @@ export async function listTools(
 	options: { namespace?: string },
 ): Promise<void> {
 	const session = await ConnectSession.create(options.namespace)
+
+	// If server specified, fetch only that server's tools (skip listing all)
+	if (server) {
+		try {
+			const connection = await session.getConnection(server)
+			const tools = await session.listToolsForConnection(connection)
+
+			const output: ToolsOutput = {
+				tools: tools.map((t) => ({
+					id: `${t.connectionId}/${t.name}`,
+					name: t.name,
+					server: t.connectionName,
+					description: t.description,
+					inputSchema: t.inputSchema,
+				})),
+				help: "smithery connect call <id> '<args>'",
+			}
+			outputJson(output)
+		} catch {
+			outputJson({
+				tools: [],
+				error: `Server "${server}" not found`,
+				help: "smithery connect list - List all servers",
+			})
+		}
+		return
+	}
+
+	// List tools from all servers
 	const connections = await session.listConnections()
 
 	if (connections.length === 0) {
@@ -26,42 +55,6 @@ export async function listTools(
 		})
 		return
 	}
-
-	// If server specified, only list tools for that server
-	if (server) {
-		const targetConnection = connections.find(
-			(c) =>
-				c.connectionId === server ||
-				c.name.toLowerCase() === server.toLowerCase(),
-		)
-
-		if (!targetConnection) {
-			outputJson({
-				tools: [],
-				error: `Server "${server}" not found`,
-				available: connections.map((c) => c.connectionId),
-				help: "smithery connect list - List all servers",
-			})
-			return
-		}
-
-		const tools = await session.listToolsForConnection(targetConnection)
-
-		const output: ToolsOutput = {
-			tools: tools.map((t) => ({
-				id: `${t.connectionId}/${t.name}`,
-				name: t.name,
-				server: t.connectionName,
-				description: t.description,
-				inputSchema: t.inputSchema,
-			})),
-			help: "smithery connect call <id> '<args>'",
-		}
-		outputJson(output)
-		return
-	}
-
-	// List tools from all servers
 	const allTools = await Promise.all(
 		connections.map((conn) => session.listToolsForConnection(conn)),
 	)

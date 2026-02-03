@@ -13,9 +13,7 @@ import { getApiKey } from "../utils/smithery-settings"
  * 2. SMITHERY_BEARER_AUTH env var
  * 3. Stored API key from settings
  */
-export async function createSmitheryClient(
-	apiKey?: string,
-): Promise<Smithery> {
+export async function createSmitheryClient(apiKey?: string): Promise<Smithery> {
 	const key = apiKey ?? (await getApiKey())
 	if (!key) {
 		throw new Error("No API key found. Run 'smithery login' to authenticate.")

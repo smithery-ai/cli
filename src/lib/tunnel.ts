@@ -1,6 +1,6 @@
 import chalk from "chalk"
-import { createSmitheryClientSync } from "./smithery-client"
 import { debug } from "./logger"
+import { createSmitheryClientSync } from "./smithery-client"
 
 async function getTemporaryTunnelToken(apiKey: string): Promise<{
 	authtoken: string

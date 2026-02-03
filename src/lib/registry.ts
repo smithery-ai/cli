@@ -17,18 +17,13 @@ dotenvConfig({ quiet: true })
 
 /**
  * Creates SDK options with common configuration.
- * Base URL is handled by SDK via SMITHERY_BASE_URL env var.
- * @param apiKey Optional API key for authentication
- * @returns SDK options configured for the registry
+ * Base URL and API key are handled by SDK via env vars.
  */
-const createSDKOptions = (apiKey?: string): ClientOptions => {
-	const options: ClientOptions = {
-		apiKey: apiKey ?? process.env.SMITHERY_API_KEY ?? "",
-		timeout: 5000,
-		maxRetries: 2,
-	}
-	return options
-}
+const createSDKOptions = (apiKey?: string): ClientOptions => ({
+	apiKey,
+	timeout: 5000,
+	maxRetries: 2,
+})
 
 /**
  * Get server details from registry

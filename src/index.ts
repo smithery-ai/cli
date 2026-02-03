@@ -4,28 +4,27 @@ import { createServer } from "node:http"
 import { Smithery } from "@smithery/api/client.js"
 import chalk from "chalk"
 import { Command } from "commander"
-import { deploy } from "./commands/deploy"
-import { dev } from "./commands/dev"
-import { inspectServer } from "./commands/inspect"
-import { installServer } from "./commands/install"
-import { list } from "./commands/list"
-import { playground } from "./commands/playground"
-import { run } from "./commands/run/index"
 import {
 	addServer,
-	authServer,
 	callTool,
 	listServers,
 	listTools,
 	removeServer,
 	searchTools,
 } from "./commands/connect"
+import { deploy } from "./commands/deploy"
+import { dev } from "./commands/dev"
+import { inspectServer } from "./commands/inspect"
+import { installServer } from "./commands/install"
+import { list } from "./commands/list"
 import {
 	createNamespace,
 	listNamespaces,
 	showNamespace,
 	useNamespace,
 } from "./commands/namespace"
+import { playground } from "./commands/playground"
+import { run } from "./commands/run/index"
 import { uninstallServer } from "./commands/uninstall"
 import { VALID_CLIENTS, type ValidClient } from "./config/clients"
 import { DEFAULT_PORT } from "./constants"
@@ -625,14 +624,6 @@ connect
 	.option("--namespace <ns>", "Namespace for the server")
 	.action(async (id, options) => {
 		await removeServer(id, options)
-	})
-
-connect
-	.command("auth <id>")
-	.description("Handle OAuth for a server")
-	.option("--namespace <ns>", "Namespace for the server")
-	.action(async (id, options) => {
-		await authServer(id, options)
 	})
 
 connect
