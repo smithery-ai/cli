@@ -11,6 +11,7 @@ import { installServer } from "./commands/install"
 import { list } from "./commands/list"
 import { playground } from "./commands/playground"
 import { run } from "./commands/run/index"
+import { callTool, listTools, searchTools } from "./commands/tools"
 import { uninstallServer } from "./commands/uninstall"
 import { VALID_CLIENTS, type ValidClient } from "./config/clients"
 import { DEFAULT_PORT } from "./constants"
@@ -550,6 +551,35 @@ program
 			console.error(chalk.gray(errorMessage))
 			process.exit(1)
 		}
+	})
+
+// Tools command - agent-optimized MCP tool discovery and invocation
+const tools = program
+	.command("tools")
+	.description("Search and call MCP tools (agent-optimized)")
+
+tools
+	.command("search <query>")
+	.description("Search tools by intent across all connections")
+	.option("--namespace <ns>", "Namespace to search in")
+	.action(async (query, options) => {
+		await searchTools(query, options)
+	})
+
+tools
+	.command("call <tool-id> [args]")
+	.description("Call a tool directly (format: connection/tool-name)")
+	.option("--namespace <ns>", "Namespace for the tool")
+	.action(async (toolId, args, options) => {
+		await callTool(toolId, args, options)
+	})
+
+tools
+	.command("list [connection]")
+	.description("List connections or tools for a specific connection")
+	.option("--namespace <ns>", "Namespace to list from")
+	.action(async (connection, options) => {
+		await listTools(connection, options)
 	})
 
 // Parse arguments and run
