@@ -2,8 +2,8 @@ name: Release
 
 on:
   push:
-    tags:
-      - v*
+    branches:
+      - main
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -48,11 +48,15 @@ jobs:
     needs: [test, build]
 
     permissions:
-      contents: read
+      contents: write
       id-token: write
 
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
       - uses: pnpm/action-setup@v4
       - uses: actions/setup-node@v4
         with:
@@ -61,7 +65,50 @@ jobs:
           cache: 'pnpm'
 
       - run: pnpm install --frozen-lockfile
-      - run: npm publish --provenance --access public
+
+      - name: Configure git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Check if release commit
+        id: check
+        run: |
+          COMMIT_MSG=$(git log -1 --pretty=%B)
+          if echo "$COMMIT_MSG" | grep -qE "^chore: release v"; then
+            echo "skip=true" >> $GITHUB_OUTPUT
+          else
+            echo "skip=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Bump version
+        if: steps.check.outputs.skip != 'true'
+        id: bump
+        run: |
+          # Determine bump type from commit message
+          COMMIT_MSG=$(git log -1 --pretty=%B)
+          if echo "$COMMIT_MSG" | grep -qE "^feat(\(.+\))?!:|BREAKING CHANGE"; then
+            BUMP="major"
+          elif echo "$COMMIT_MSG" | grep -qE "^feat(\(.+\))?:"; then
+            BUMP="minor"
+          else
+            BUMP="patch"
+          fi
+          echo "Bumping $BUMP version"
+
+          # Bump version and capture new version
+          NEW_VERSION=$(npm version $BUMP --no-git-tag-version)
+          echo "version=$NEW_VERSION" >> $GITHUB_OUTPUT
+
+          # Commit and tag
+          git add package.json
+          git commit -m "chore: release $NEW_VERSION [skip ci]"
+          git tag $NEW_VERSION
+          git push && git push --tags
+
+      - name: Publish to npm
+        if: steps.check.outputs.skip != 'true'
+        run: npm publish --provenance --access public
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
           ANALYTICS_ENDPOINT: ${{ secrets.ANALYTICS_ENDPOINT }}
