@@ -71,45 +71,38 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
-      - name: Check if release commit
+      - name: Check for release
         id: check
-        run: |
-          COMMIT_MSG=$(git log -1 --pretty=%B)
-          if echo "$COMMIT_MSG" | grep -qE "^chore: release v"; then
-            echo "skip=true" >> $GITHUB_OUTPUT
-          else
-            echo "skip=false" >> $GITHUB_OUTPUT
-          fi
-
-      - name: Bump version
-        if: steps.check.outputs.skip != 'true'
-        id: bump
         run: |
           # PR title is the commit message (squash merge uses PR_TITLE)
           COMMIT_MSG=$(git log -1 --pretty=%B)
+          echo "Commit message: $COMMIT_MSG"
 
-          # Check if PR title contains explicit version (e.g., "v3.8.0" or "release v3.8.0")
-          if echo "$COMMIT_MSG" | grep -qoE 'v[0-9]+\.[0-9]+\.[0-9]+'; then
-            EXPLICIT_VERSION=$(echo "$COMMIT_MSG" | grep -oE 'v[0-9]+\.[0-9]+\.[0-9]+' | head -1)
-            echo "Using explicit version from PR title: $EXPLICIT_VERSION"
-            npm version "$EXPLICIT_VERSION" --no-git-tag-version --allow-same-version
-            NEW_VERSION="$EXPLICIT_VERSION"
+          # Only release if PR title starts with "release: X.Y.Z"
+          if echo "$COMMIT_MSG" | grep -qE "^release: [0-9]+\.[0-9]+\.[0-9]+"; then
+            VERSION=$(echo "$COMMIT_MSG" | grep -oE "^release: [0-9]+\.[0-9]+\.[0-9]+" | sed 's/release: //')
+            echo "Release detected: $VERSION"
+            echo "should_release=true" >> $GITHUB_OUTPUT
+            echo "version=$VERSION" >> $GITHUB_OUTPUT
           else
-            # Default to patch bump if no explicit version
-            echo "No explicit version in PR title, defaulting to patch bump"
-            NEW_VERSION=$(npm version patch --no-git-tag-version)
+            echo "Not a release PR, skipping publish"
+            echo "should_release=false" >> $GITHUB_OUTPUT
           fi
 
-          echo "version=$NEW_VERSION" >> $GITHUB_OUTPUT
+      - name: Bump version and tag
+        if: steps.check.outputs.should_release == 'true'
+        run: |
+          VERSION=${{ steps.check.outputs.version }}
+          echo "Setting version to $VERSION"
 
-          # Commit and tag
+          npm version "$VERSION" --no-git-tag-version --allow-same-version
           git add package.json
-          git commit -m "chore: release $NEW_VERSION [skip ci]"
-          git tag $NEW_VERSION
+          git commit -m "chore: release v$VERSION [skip ci]"
+          git tag "v$VERSION"
           git push && git push --tags
 
       - name: Publish to npm
-        if: steps.check.outputs.skip != 'true'
+        if: steps.check.outputs.should_release == 'true'
         run: npm publish --provenance --access public
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
