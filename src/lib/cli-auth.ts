@@ -251,7 +251,8 @@ async function pollForApiKey(
 	throw new Error("Authentication timed out after 5 minutes. Please try again.")
 }
 
-const SMITHERY_URL = process.env.SMITHERY_BASE_URL || "https://smithery.ai"
+// Auth endpoints are on the website, not the API
+const SMITHERY_URL = process.env.SMITHERY_URL || "https://smithery.ai"
 
 /**
  * Execute the complete CLI authentication flow
