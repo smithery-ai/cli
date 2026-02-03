@@ -1,3 +1,5 @@
+import { Client } from "@modelcontextprotocol/sdk/client/index.js"
+import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/streamableHttp.js"
 import type { Tool } from "@modelcontextprotocol/sdk/types.js"
 import type {
 	Connection,
@@ -50,27 +52,27 @@ export async function listConnections(
 	return data.connections
 }
 
-export async function mcpRpc(
+async function getMcpClient(
 	namespace: string,
 	connectionId: string,
-	method: string,
-	params: unknown = {},
-): Promise<unknown> {
-	const client = await createSmitheryClient()
-	const response = await client.beta.connect.mcp.call(
-		connectionId,
-		{ namespace },
-		{
-			body: {
-				jsonrpc: "2.0",
-				id: Math.floor(Math.random() * 1e9),
-				method,
-				params,
+): Promise<Client> {
+	const smitheryClient = await createSmitheryClient()
+	const url = new URL(
+		`/connect/${namespace}/${connectionId}/mcp`,
+		smitheryClient.baseURL,
+	).href
+
+	const transport = new StreamableHTTPClientTransport(new URL(url), {
+		requestInit: {
+			headers: {
+				Authorization: `Bearer ${smitheryClient.apiKey}`,
 			},
 		},
-	)
+	})
 
-	return response.result
+	const mcpClient = new Client({ name: "smithery-cli", version: "1.0.0" })
+	await mcpClient.connect(transport)
+	return mcpClient
 }
 
 export async function listToolsForConnection(
@@ -78,15 +80,10 @@ export async function listToolsForConnection(
 	connection: Connection,
 ): Promise<ToolInfo[]> {
 	try {
-		const result = (await mcpRpc(
-			namespace,
-			connection.connectionId,
-			"tools/list",
-		)) as {
-			tools?: Tool[]
-		}
+		const mcpClient = await getMcpClient(namespace, connection.connectionId)
+		const { tools } = await mcpClient.listTools()
 
-		return (result?.tools ?? []).map((tool) => ({
+		return (tools ?? []).map((tool) => ({
 			...tool,
 			connectionId: connection.connectionId,
 			connectionName: connection.name,
@@ -103,7 +100,8 @@ export async function callTool(
 	toolName: string,
 	args: Record<string, unknown>,
 ): Promise<unknown> {
-	return mcpRpc(namespace, connectionId, "tools/call", {
+	const mcpClient = await getMcpClient(namespace, connectionId)
+	return mcpClient.callTool({
 		name: toolName,
 		arguments: args,
 	})

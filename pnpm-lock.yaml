@@ -12,14 +12,14 @@ importers:
         specifier: ^1.1.1
         version: 1.2.0
       '@modelcontextprotocol/sdk':
-        specifier: ^1.25.1
-        version: 1.25.1(hono@4.11.1)(zod@4.2.1)
+        specifier: ^1.25.3
+        version: 1.25.3(hono@4.11.1)(zod@4.2.1)
       '@ngrok/ngrok':
         specifier: ^1.5.1
         version: 1.7.0
       '@smithery/api':
         specifier: 0.31.0
-        version: 0.31.0(@modelcontextprotocol/sdk@1.25.1(hono@4.11.1)(zod@4.2.1))
+        version: 0.31.0(@modelcontextprotocol/sdk@1.25.3(hono@4.11.1)(zod@4.2.1))
       chalk:
         specifier: ^4.1.2
         version: 4.1.2
@@ -89,7 +89,7 @@ importers:
         version: 2.3.10
       '@smithery/sdk':
         specifier: ^4.0.1
-        version: 4.0.1(@modelcontextprotocol/sdk@1.25.1(hono@4.11.1)(zod@4.2.1))(zod@4.2.1)
+        version: 4.0.1(@modelcontextprotocol/sdk@1.25.3(hono@4.11.1)(zod@4.2.1))(zod@4.2.1)
       '@types/cors':
         specifier: ^2.8.18
         version: 2.8.19
@@ -548,8 +548,8 @@ packages:
     cpu: [x64]
     os: [win32]
 
-  '@hono/node-server@1.19.7':
-    resolution: {integrity: sha512-vUcD0uauS7EU2caukW8z5lJKtoGMokxNbJtBiwHgpqxEXokaHCBkQUmCHhjFB1VUTWdqj25QoMkMKzgjq+uhrw==}
+  '@hono/node-server@1.19.9':
+    resolution: {integrity: sha512-vHL6w3ecZsky+8P5MD+eFfaGTyCeOHUIFYMGpQGbrBTSmNNoxv0if69rEZ5giu36weC5saFuznL411gRX7bJDw==}
     engines: {node: '>=18.14.1'}
     peerDependencies:
       hono: ^4
@@ -734,8 +734,8 @@ packages:
   '@jridgewell/trace-mapping@0.3.9':
     resolution: {integrity: sha512-3Belt6tdc8bPgAtbcmdtNJlirVoTmEb5e2gC94PnkwEW9jI6CAHUeoG85tjWP5WquqfavoMtMwiG4P926ZKKuQ==}
 
-  '@modelcontextprotocol/sdk@1.25.1':
-    resolution: {integrity: sha512-yO28oVFFC7EBoiKdAn+VqRm+plcfv4v0xp6osG/VsCB0NlPZWi87ajbCZZ8f/RvOFLEu7//rSRmuZZ7lMoe3gQ==}
+  '@modelcontextprotocol/sdk@1.25.3':
+    resolution: {integrity: sha512-vsAMBMERybvYgKbg/l4L1rhS7VXV1c0CtyJg72vwxONVX0l4ZfKVAnZEWTQixJGTzKnELjQ59e4NbdFDALRiAQ==}
     engines: {node: '>=18'}
     peerDependencies:
       '@cfworker/json-schema': ^4.1.1
@@ -2719,7 +2719,7 @@ snapshots:
   '@esbuild/win32-x64@0.27.2':
     optional: true
 
-  '@hono/node-server@1.19.7(hono@4.11.1)':
+  '@hono/node-server@1.19.9(hono@4.11.1)':
     dependencies:
       hono: 4.11.1
 
@@ -2910,9 +2910,9 @@ snapshots:
       '@jridgewell/resolve-uri': 3.1.2
       '@jridgewell/sourcemap-codec': 1.5.5
 
-  '@modelcontextprotocol/sdk@1.25.1(hono@4.11.1)(zod@4.2.1)':
+  '@modelcontextprotocol/sdk@1.25.3(hono@4.11.1)(zod@4.2.1)':
     dependencies:
-      '@hono/node-server': 1.19.7(hono@4.11.1)
+      '@hono/node-server': 1.19.9(hono@4.11.1)
       ajv: 8.17.1
       ajv-formats: 3.0.1(ajv@8.17.1)
       content-type: 1.0.5
@@ -3148,13 +3148,13 @@ snapshots:
 
   '@sindresorhus/is@7.2.0': {}
 
-  '@smithery/api@0.31.0(@modelcontextprotocol/sdk@1.25.1(hono@4.11.1)(zod@4.2.1))':
+  '@smithery/api@0.31.0(@modelcontextprotocol/sdk@1.25.3(hono@4.11.1)(zod@4.2.1))':
     optionalDependencies:
-      '@modelcontextprotocol/sdk': 1.25.1(hono@4.11.1)(zod@4.2.1)
+      '@modelcontextprotocol/sdk': 1.25.3(hono@4.11.1)(zod@4.2.1)
 
-  '@smithery/sdk@4.0.1(@modelcontextprotocol/sdk@1.25.1(hono@4.11.1)(zod@4.2.1))(zod@4.2.1)':
+  '@smithery/sdk@4.0.1(@modelcontextprotocol/sdk@1.25.3(hono@4.11.1)(zod@4.2.1))(zod@4.2.1)':
     dependencies:
-      '@modelcontextprotocol/sdk': 1.25.1(hono@4.11.1)(zod@4.2.1)
+      '@modelcontextprotocol/sdk': 1.25.3(hono@4.11.1)(zod@4.2.1)
       zod: 4.2.1
 
   '@speed-highlight/core@1.2.14': {}
