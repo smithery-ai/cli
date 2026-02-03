@@ -29,11 +29,8 @@ interface DeployOptions {
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
 
 function createRegistry(apiKey: string) {
-	const registryEndpoint = process.env.REGISTRY_ENDPOINT
-	return new Smithery({
-		apiKey,
-		baseURL: registryEndpoint || "https://api.smithery.ai",
-	})
+	// Base URL handled by SDK via SMITHERY_BASE_URL env var
+	return new Smithery({ apiKey })
 }
 
 export async function deploy(options: DeployOptions = {}) {

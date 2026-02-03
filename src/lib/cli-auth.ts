@@ -260,7 +260,8 @@ async function pollForApiKey(
 export async function executeCliAuthFlow(
 	options: CliAuthOptions,
 ): Promise<string> {
-	const registryEndpoint = options.registryEndpoint || "https://smithery.ai"
+	const registryEndpoint =
+		options.registryEndpoint || process.env.SMITHERY_BASE_URL || "https://smithery.ai"
 	verbose(`Starting CLI auth flow with endpoint: ${registryEndpoint}`)
 
 	// Step 1: Create session

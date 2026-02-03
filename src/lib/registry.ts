@@ -16,7 +16,8 @@ import { verbose } from "./logger"
 dotenvConfig({ quiet: true })
 
 /**
- * Creates SDK options with common configuration
+ * Creates SDK options with common configuration.
+ * Base URL is handled by SDK via SMITHERY_BASE_URL env var.
  * @param apiKey Optional API key for authentication
  * @returns SDK options configured for the registry
  */
@@ -25,7 +26,6 @@ const createSDKOptions = (apiKey?: string): ClientOptions => {
 		apiKey: apiKey ?? process.env.SMITHERY_API_KEY ?? "",
 		timeout: 5000,
 		maxRetries: 2,
-		baseURL: process.env.REGISTRY_ENDPOINT,
 	}
 	return options
 }

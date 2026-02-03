@@ -41,7 +41,6 @@ jobs:
       - run: pnpm run build
         env:
           ANALYTICS_ENDPOINT: ${{ secrets.ANALYTICS_ENDPOINT }}
-          REGISTRY_ENDPOINT: ${{ secrets.REGISTRY_ENDPOINT }}
       - run: pnpm run check
 
   publish:
@@ -66,4 +65,3 @@ jobs:
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
           ANALYTICS_ENDPOINT: ${{ secrets.ANALYTICS_ENDPOINT }}
-          REGISTRY_ENDPOINT: ${{ secrets.REGISTRY_ENDPOINT }}

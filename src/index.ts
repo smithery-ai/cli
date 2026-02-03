@@ -429,11 +429,8 @@ program
 		console.log()
 
 		try {
-			const registryEndpoint =
-				process.env.REGISTRY_ENDPOINT || "https://smithery.ai"
-
-			// New OAuth flow
-			const apiKey = await executeCliAuthFlow({ registryEndpoint })
+			// OAuth flow - uses SMITHERY_BASE_URL env var or defaults to https://smithery.ai
+			const apiKey = await executeCliAuthFlow({})
 
 			// Keep existing validation and storage
 			await validateApiKey(apiKey)
