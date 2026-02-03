@@ -12,6 +12,7 @@ concurrency:
 
 jobs:
   test:
+    name: Test
     runs-on: ubuntu-latest
 
     steps:
@@ -25,9 +26,40 @@ jobs:
       - run: pnpm install
       - run: pnpm test
 
-  build:
+  typecheck:
+    name: Typecheck
     runs-on: ubuntu-latest
-    needs: test
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'pnpm'
+
+      - run: pnpm install
+      - run: pnpm run typecheck
+
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'pnpm'
+
+      - run: pnpm install
+      - run: pnpm add -D @biomejs/cli-linux-x64  # biome platform binary for linux ci
+      - run: pnpm run check
+
+  build:
+    name: Build
+    runs-on: ubuntu-latest
 
     steps:
       - uses: actions/checkout@v4
@@ -38,6 +70,4 @@ jobs:
           cache: 'pnpm'
 
       - run: pnpm install --frozen-lockfile
-      - run: pnpm add -D @biomejs/cli-linux-x64  # biome platform binary for linux ci
       - run: pnpm run build
-      - run: pnpm run check
