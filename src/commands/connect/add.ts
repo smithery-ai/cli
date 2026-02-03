@@ -13,11 +13,22 @@ export async function addServer(
 			name: options.name,
 		})
 
-		outputJson({
+		const output: Record<string, unknown> = {
 			connectionId: connection.connectionId,
 			name: connection.name,
 			status: connection.status?.state ?? "unknown",
-		})
+		}
+
+		// Include auth URL if authorization is required
+		if (
+			connection.status?.state === "auth_required" &&
+			"authorizationUrl" in connection.status &&
+			connection.status.authorizationUrl
+		) {
+			output.authorizationUrl = connection.status.authorizationUrl
+		}
+
+		outputJson(output)
 	} catch (error) {
 		console.error(
 			chalk.red(
