@@ -1,4 +1,4 @@
-import { callTool as apiCallTool, getPrimaryNamespace } from "./api"
+import { callTool as apiCallTool, getCurrentNamespace } from "./api"
 import { formatToolOutput, outputJson } from "./output"
 
 export async function callTool(
@@ -44,7 +44,7 @@ export async function callTool(
 		}
 	}
 
-	const namespace = options.namespace ?? (await getPrimaryNamespace())
+	const namespace = options.namespace ?? (await getCurrentNamespace())
 
 	try {
 		const result = await apiCallTool(

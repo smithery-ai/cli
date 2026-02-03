@@ -4,7 +4,10 @@ import type {
 	Connection,
 	ConnectionsListResponse,
 } from "@smithery/api/resources/beta/connect/connections.js"
-import { getApiKey } from "../../utils/smithery-settings"
+import {
+	getApiKey,
+	getNamespace as getStoredNamespace,
+} from "../../utils/smithery-settings"
 
 export type { Connection, ConnectionsListResponse }
 
@@ -13,7 +16,7 @@ export interface ToolInfo extends Tool {
 	connectionName: string
 }
 
-async function getClient(): Promise<Smithery> {
+export async function getClient(): Promise<Smithery> {
 	const apiKey = await getApiKey()
 	if (!apiKey) {
 		throw new Error("No API key found. Run 'smithery login' to authenticate.")
@@ -21,12 +24,21 @@ async function getClient(): Promise<Smithery> {
 	return new Smithery({ apiKey })
 }
 
-export async function getPrimaryNamespace(): Promise<string> {
+export async function getCurrentNamespace(): Promise<string> {
+	// First check stored namespace from settings
+	const stored = await getStoredNamespace()
+	if (stored) {
+		return stored
+	}
+
+	// Fall back to first namespace from API
 	const client = await getClient()
 	const { namespaces } = await client.namespaces.list()
 
 	if (namespaces.length === 0) {
-		throw new Error("No namespaces found. Create one at smithery.ai first.")
+		throw new Error(
+			"No namespace set and no namespaces found. Run 'smithery namespace use <name>' or create one at smithery.ai first.",
+		)
 	}
 
 	return namespaces[0].name
@@ -97,4 +109,32 @@ export async function callTool(
 		name: toolName,
 		arguments: args,
 	})
+}
+
+export async function createConnection(
+	namespace: string,
+	mcpUrl: string,
+	options: { name?: string } = {},
+): Promise<Connection> {
+	const client = await getClient()
+	return client.beta.connect.connections.create(namespace, {
+		mcpUrl,
+		name: options.name,
+	})
+}
+
+export async function deleteConnection(
+	namespace: string,
+	connectionId: string,
+): Promise<void> {
+	const client = await getClient()
+	await client.beta.connect.connections.delete(connectionId, { namespace })
+}
+
+export async function getConnection(
+	namespace: string,
+	connectionId: string,
+): Promise<Connection> {
+	const client = await getClient()
+	return client.beta.connect.connections.get(connectionId, { namespace })
 }

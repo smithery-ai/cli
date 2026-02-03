@@ -11,7 +11,21 @@ import { installServer } from "./commands/install"
 import { list } from "./commands/list"
 import { playground } from "./commands/playground"
 import { run } from "./commands/run/index"
-import { callTool, listTools, searchTools } from "./commands/tools"
+import {
+	addServer,
+	authServer,
+	callTool,
+	listServers,
+	listTools,
+	removeServer,
+	searchTools,
+} from "./commands/connect"
+import {
+	createNamespace,
+	listNamespaces,
+	showNamespace,
+	useNamespace,
+} from "./commands/namespace"
 import { uninstallServer } from "./commands/uninstall"
 import { VALID_CLIENTS, type ValidClient } from "./config/clients"
 import { DEFAULT_PORT } from "./constants"
@@ -553,33 +567,99 @@ program
 		}
 	})
 
-// Tools command - agent-optimized MCP tool discovery and invocation
-const tools = program
-	.command("tools")
-	.description("Search and call MCP tools (agent-optimized)")
+// Namespace command - manage namespace context
+const namespace = program
+	.command("namespace")
+	.description("Manage namespace context (like kubectl config)")
 
-tools
+namespace
+	.command("list")
+	.description("List available namespaces")
+	.action(async () => {
+		await listNamespaces()
+	})
+
+namespace
+	.command("use <name>")
+	.description("Set current namespace")
+	.action(async (name) => {
+		await useNamespace(name)
+	})
+
+namespace
+	.command("show")
+	.description("Show current namespace")
+	.action(async () => {
+		await showNamespace()
+	})
+
+namespace
+	.command("create <name>")
+	.description("Create and claim a new namespace")
+	.action(async (name) => {
+		await createNamespace(name)
+	})
+
+// Connect command - manage MCP server connections and tools
+const connect = program
+	.command("connect")
+	.description("Manage MCP server connections (Smithery Connect)")
+
+connect
+	.command("add <mcp-url>")
+	.description("Add an MCP server connection")
+	.option("--name <name>", "Human-readable name for the server")
+	.option("--namespace <ns>", "Target namespace")
+	.action(async (mcpUrl, options) => {
+		await addServer(mcpUrl, options)
+	})
+
+connect
+	.command("list")
+	.description("List connected servers")
+	.option("--namespace <ns>", "Namespace to list from")
+	.action(async (options) => {
+		await listServers(options)
+	})
+
+connect
+	.command("remove <id>")
+	.description("Remove a server connection")
+	.option("--namespace <ns>", "Namespace for the server")
+	.action(async (id, options) => {
+		await removeServer(id, options)
+	})
+
+connect
+	.command("auth <id>")
+	.description("Handle OAuth for a server")
+	.option("--namespace <ns>", "Namespace for the server")
+	.action(async (id, options) => {
+		await authServer(id, options)
+	})
+
+connect
+	.command("tools [server]")
+	.description("List tools (all or for a specific server)")
+	.option("--namespace <ns>", "Namespace to list from")
+	.action(async (server, options) => {
+		await listTools(server, options)
+	})
+
+connect
 	.command("search <query>")
-	.description("Search tools by intent across all connections")
+	.description("Search tools by intent")
 	.option("--namespace <ns>", "Namespace to search in")
 	.action(async (query, options) => {
 		await searchTools(query, options)
 	})
 
-tools
+connect
 	.command("call <tool-id> [args]")
-	.description("Call a tool directly (format: connection/tool-name)")
+	.description("Call a tool (format: server/tool-name)")
 	.option("--namespace <ns>", "Namespace for the tool")
 	.action(async (toolId, args, options) => {
 		await callTool(toolId, args, options)
-	})
-
-tools
-	.command("list [connection]")
-	.description("List connections or tools for a specific connection")
-	.option("--namespace <ns>", "Namespace to list from")
-	.action(async (connection, options) => {
-		await listTools(connection, options)
 	})
 
 // Parse arguments and run

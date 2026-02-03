@@ -10,6 +10,7 @@ interface Settings {
 	analyticsConsent: boolean
 	askedConsent: boolean
 	apiKey?: string
+	namespace?: string
 	cache?: {
 		servers?: Record<
 			string,
@@ -287,4 +288,22 @@ export const clearApiKey = async (): Promise<SettingsResult> => {
 export const hasAskedConsent = async (): Promise<boolean> => {
 	await initializeSettings()
 	return settingsData?.askedConsent || false
+}
+
+export const getNamespace = async (): Promise<string | undefined> => {
+	await initializeSettings()
+	return settingsData?.namespace
+}
+
+export const setNamespace = async (
+	namespace: string,
+): Promise<SettingsResult> => {
+	const initResult = await initializeSettings()
+	if (!initResult.success || !initResult.data) {
+		return initResult
+	}
+
+	settingsData = { ...initResult.data, namespace }
+
+	return await saveSettings(settingsData, getSettingsPath())
 }

@@ -1,6 +1,6 @@
 import FlexSearch from "flexsearch"
 import {
-	getPrimaryNamespace,
+	getCurrentNamespace,
 	listConnections,
 	listToolsForConnection,
 	type ToolInfo,
@@ -24,7 +24,7 @@ export async function searchTools(
 	query: string,
 	options: { namespace?: string },
 ): Promise<void> {
-	const namespace = options.namespace ?? (await getPrimaryNamespace())
+	const namespace = options.namespace ?? (await getCurrentNamespace())
 
 	// List all connections
 	const connections = await listConnections(namespace)
@@ -84,7 +84,7 @@ export async function searchTools(
 				inputSchema: tool.inputSchema,
 			}
 		}),
-		help: "smithery tools call <id> '<args>'",
+		help: "smithery connect call <id> '<args>'",
 	}
 
 	outputJson(output)
