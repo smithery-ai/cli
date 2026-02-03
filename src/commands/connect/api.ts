@@ -100,12 +100,13 @@ export class ConnectSession {
 			).href
 
 			const controller = new AbortController()
-			const timeout = setTimeout(() => controller.abort(), 5000)
+			const timeout = setTimeout(() => controller.abort(), 30000)
 
 			const response = await fetch(url, {
 				method: "POST",
 				headers: {
 					"Content-Type": "application/json",
+					Accept: "application/json, text/event-stream",
 					Authorization: `Bearer ${this.smitheryClient.apiKey}`,
 				},
 				body: JSON.stringify({
