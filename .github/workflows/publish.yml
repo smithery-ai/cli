@@ -85,19 +85,21 @@ jobs:
         if: steps.check.outputs.skip != 'true'
         id: bump
         run: |
-          # Determine bump type from commit message
+          # PR title is the commit message (squash merge uses PR_TITLE)
           COMMIT_MSG=$(git log -1 --pretty=%B)
-          if echo "$COMMIT_MSG" | grep -qE "^feat(\(.+\))?!:|BREAKING CHANGE"; then
-            BUMP="major"
-          elif echo "$COMMIT_MSG" | grep -qE "^feat(\(.+\))?:"; then
-            BUMP="minor"
-          else
-            BUMP="patch"
-          fi
-          echo "Bumping $BUMP version"
 
-          # Bump version and capture new version
-          NEW_VERSION=$(npm version $BUMP --no-git-tag-version)
+          # Check if PR title contains explicit version (e.g., "v3.8.0" or "release v3.8.0")
+          if echo "$COMMIT_MSG" | grep -qoE 'v[0-9]+\.[0-9]+\.[0-9]+'; then
+            EXPLICIT_VERSION=$(echo "$COMMIT_MSG" | grep -oE 'v[0-9]+\.[0-9]+\.[0-9]+' | head -1)
+            echo "Using explicit version from PR title: $EXPLICIT_VERSION"
+            npm version "$EXPLICIT_VERSION" --no-git-tag-version --allow-same-version
+            NEW_VERSION="$EXPLICIT_VERSION"
+          else
+            # Default to patch bump if no explicit version
+            echo "No explicit version in PR title, defaulting to patch bump"
+            NEW_VERSION=$(npm version patch --no-git-tag-version)
+          fi
+
           echo "version=$NEW_VERSION" >> $GITHUB_OUTPUT
 
           # Commit and tag
