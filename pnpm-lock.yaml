@@ -47,6 +47,9 @@ importers:
       fast-glob:
         specifier: ^3.3.3
         version: 3.3.3
+      flexsearch:
+        specifier: ^0.7.43
+        version: 0.7.43
       inquirer:
         specifier: ^8.2.4
         version: 8.2.7(@types/node@20.19.27)
@@ -62,9 +65,6 @@ importers:
       miniflare:
         specifier: ^4.20260103.0
         version: 4.20260103.0
-      minisearch:
-        specifier: ^7.2.0
-        version: 7.2.0
       ora:
         specifier: ^8.2.0
         version: 8.2.0
@@ -1541,6 +1541,9 @@ packages:
     resolution: {integrity: sha512-S8KoZgRZN+a5rNwqTxlZZePjT/4cnm0ROV70LedRHZ0p8u9fRID0hJUZQpkKLzro8LfmC8sx23bY6tVNxv8pQA==}
     engines: {node: '>= 18.0.0'}
 
+  flexsearch@0.7.43:
+    resolution: {integrity: sha512-c5o/+Um8aqCSOXGcZoqZOm+NqtVwNsvVpWv6lfmSclU954O3wvQKxxK8zj74fPaSJbXpSLTs4PRhh+wnoCXnKg==}
+
   flora-colossus@2.0.0:
     resolution: {integrity: sha512-dz4HxH6pOvbUzZpZ/yXhafjbR2I8cenK5xL0KtBFb7U2ADsR+OwXifnxZjij/pZWF775uSCMzWVd+jDik2H2IA==}
     engines: {node: '>= 12'}
@@ -1830,9 +1833,6 @@ packages:
 
   minimist@1.2.8:
     resolution: {integrity: sha512-2yyAR8qBkN3YuheJanUpWC5U3bb5osDywNB8RzDVlDwDHbocAJveqqj1u8+SVD7jkWT4yvsHCpWqqWqAxb0zCA==}
-
-  minisearch@7.2.0:
-    resolution: {integrity: sha512-dqT2XBYUOZOiC5t2HRnwADjhNS2cecp9u+TJRiJ1Qp/f5qjkeT5APcGPjHw+bz89Ms8Jp+cG4AlE+QZ/QnDglg==}
 
   mkdirp-classic@0.5.3:
     resolution: {integrity: sha512-gKLcREMhtuZRwRAfqP3RFW+TK4JqApVBtOIftVgjuABpAtpxhPGaDcfvbhNvD0B8iD1oUr/txX35NjcaY6Ns/A==}
@@ -3696,6 +3696,8 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
+  flexsearch@0.7.43: {}
+
   flora-colossus@2.0.0:
     dependencies:
       debug: 4.4.3
@@ -3984,8 +3986,6 @@ snapshots:
       - utf-8-validate
 
   minimist@1.2.8: {}
-
-  minisearch@7.2.0: {}
 
   mkdirp-classic@0.5.3:
     optional: true

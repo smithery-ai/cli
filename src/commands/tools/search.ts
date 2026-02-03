@@ -1,4 +1,4 @@
-import MiniSearch from "minisearch"
+import FlexSearch from "flexsearch"
 import {
 	getPrimaryNamespace,
 	listConnections,
@@ -57,28 +57,25 @@ export async function searchTools(
 		return
 	}
 
-	// Use MiniSearch for fuzzy search
-	const search = new MiniSearch<ToolInfo & { id: number }>({
-		fields: ["name", "description"],
-		storeFields: [
-			"connectionId",
-			"connectionName",
-			"name",
-			"description",
-			"inputSchema",
-		],
+	// Use FlexSearch for fuzzy search
+	const index = new FlexSearch.Index({
+		tokenize: "forward",
+		resolution: 9,
 	})
 
-	search.addAll(allTools.map((t, i) => ({ id: i, ...t })))
-	const searchResults = search.search(query, {
-		boost: { name: 2 },
-		fuzzy: 0.2,
-		prefix: true,
-	})
+	// Index tools by combining name and description
+	for (let i = 0; i < allTools.length; i++) {
+		const tool = allTools[i]
+		const text = `${tool.name} ${tool.description || ""}`
+		index.add(i, text)
+	}
+
+	// Search and get matching indices
+	const matchingIndices = index.search(query, { limit: 10 }) as number[]
 
 	const output: SearchOutput = {
-		tools: searchResults.slice(0, 10).map((r) => {
-			const tool = allTools[r.id]
+		tools: matchingIndices.map((idx) => {
+			const tool = allTools[idx]
 			return {
 				id: `${tool.connectionId}/${tool.name}`,
 				name: tool.name,
