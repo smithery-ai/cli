@@ -1,17 +1,9 @@
-import { Smithery } from "@smithery/api/client.js"
 import chalk from "chalk"
-import { getApiKey, setNamespace } from "../../utils/smithery-settings"
+import { createSmitheryClient } from "../../lib/smithery-client"
+import { setNamespace } from "../../utils/smithery-settings"
 
 export async function createNamespace(name: string): Promise<void> {
-	const apiKey = await getApiKey()
-	if (!apiKey) {
-		console.error(
-			chalk.red("No API key found. Run 'smithery login' to authenticate."),
-		)
-		process.exit(1)
-	}
-
-	const client = new Smithery({ apiKey })
+	const client = await createSmitheryClient()
 
 	try {
 		await client.namespaces.set(name)

@@ -1,13 +1,10 @@
 import type { Tool } from "@modelcontextprotocol/sdk/types.js"
-import { Smithery } from "@smithery/api/client.js"
 import type {
 	Connection,
 	ConnectionsListResponse,
 } from "@smithery/api/resources/beta/connect/connections.js"
-import {
-	getApiKey,
-	getNamespace as getStoredNamespace,
-} from "../../utils/smithery-settings"
+import { createSmitheryClient } from "../../lib/smithery-client"
+import { getNamespace as getStoredNamespace } from "../../utils/smithery-settings"
 
 export type { Connection, ConnectionsListResponse }
 
@@ -16,13 +13,7 @@ export interface ToolInfo extends Tool {
 	connectionName: string
 }
 
-export async function getClient(): Promise<Smithery> {
-	const apiKey = await getApiKey()
-	if (!apiKey) {
-		throw new Error("No API key found. Run 'smithery login' to authenticate.")
-	}
-	return new Smithery({ apiKey })
-}
+export { createSmitheryClient as createSmitheryClient }
 
 export async function getCurrentNamespace(): Promise<string> {
 	// First check stored namespace from settings
@@ -32,7 +23,7 @@ export async function getCurrentNamespace(): Promise<string> {
 	}
 
 	// Fall back to first namespace from API
-	const client = await getClient()
+	const client = await createSmitheryClient()
 	const { namespaces } = await client.namespaces.list()
 
 	if (namespaces.length === 0) {
@@ -47,7 +38,7 @@ export async function getCurrentNamespace(): Promise<string> {
 export async function listConnections(
 	namespace: string,
 ): Promise<Connection[]> {
-	const client = await getClient()
+	const client = await createSmitheryClient()
 	const data = await client.beta.connect.connections.list(namespace)
 	return data.connections
 }
@@ -58,7 +49,7 @@ export async function mcpRpc(
 	method: string,
 	params: unknown = {},
 ): Promise<unknown> {
-	const client = await getClient()
+	const client = await createSmitheryClient()
 	const response = await client.beta.connect.mcp.call(
 		connectionId,
 		{ namespace },
@@ -116,7 +107,7 @@ export async function createConnection(
 	mcpUrl: string,
 	options: { name?: string } = {},
 ): Promise<Connection> {
-	const client = await getClient()
+	const client = await createSmitheryClient()
 	return client.beta.connect.connections.create(namespace, {
 		mcpUrl,
 		name: options.name,
@@ -127,7 +118,7 @@ export async function deleteConnection(
 	namespace: string,
 	connectionId: string,
 ): Promise<void> {
-	const client = await getClient()
+	const client = await createSmitheryClient()
 	await client.beta.connect.connections.delete(connectionId, { namespace })
 }
 
@@ -135,6 +126,6 @@ export async function getConnection(
 	namespace: string,
 	connectionId: string,
 ): Promise<Connection> {
-	const client = await getClient()
+	const client = await createSmitheryClient()
 	return client.beta.connect.connections.get(connectionId, { namespace })
 }
