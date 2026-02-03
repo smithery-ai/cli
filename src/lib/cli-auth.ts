@@ -33,7 +33,6 @@ interface PollResponse {
  * Options for CLI authentication flow
  */
 export interface CliAuthOptions {
-	registryEndpoint?: string
 	pollInterval?: number
 	timeoutMs?: number
 }
@@ -252,16 +251,18 @@ async function pollForApiKey(
 	throw new Error("Authentication timed out after 5 minutes. Please try again.")
 }
 
+// Auth endpoints are on the website, not the API
+const SMITHERY_URL = process.env.SMITHERY_URL || "https://smithery.ai"
+
 /**
  * Execute the complete CLI authentication flow
  * @param options Authentication options
  * @returns API key on success
  */
 export async function executeCliAuthFlow(
-	options: CliAuthOptions,
+	options: CliAuthOptions = {},
 ): Promise<string> {
-	const registryEndpoint = options.registryEndpoint || "https://smithery.ai"
-	verbose(`Starting CLI auth flow with endpoint: ${registryEndpoint}`)
+	verbose(`Starting CLI auth flow with endpoint: ${SMITHERY_URL}`)
 
 	// Step 1: Create session
 	const sessionSpinner = ora({
@@ -272,7 +273,7 @@ export async function executeCliAuthFlow(
 
 	let session: CliAuthSession
 	try {
-		session = await createAuthSession(registryEndpoint)
+		session = await createAuthSession(SMITHERY_URL)
 		sessionSpinner.succeed("Authentication ready")
 	} catch (error) {
 		sessionSpinner.fail("Failed to start authentication")
@@ -303,11 +304,7 @@ export async function executeCliAuthFlow(
 	}).start()
 
 	try {
-		const apiKey = await pollForApiKey(session.sessionId, registryEndpoint, {
-			registryEndpoint,
-			pollInterval: options.pollInterval,
-			timeoutMs: options.timeoutMs,
-		})
+		const apiKey = await pollForApiKey(session.sessionId, SMITHERY_URL, options)
 		pollSpinner.succeed("Authorization received")
 		return apiKey
 	} catch (error) {

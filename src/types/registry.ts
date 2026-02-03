@@ -42,11 +42,6 @@ const StdioConnectionSchema = z.object({
 		.describe("The environment to use when spawning the process."),
 })
 
-// streamable http deployment connection (for CLI internal use)
-const StreamableHTTPDeploymentConnectionSchema = z.object({
-	deploymentUrl: z.string().describe("The URL of the Streamable HTTP server."),
-})
-
 // streamable http connection (for client config files)
 const StreamableHTTPConnectionSchema = z.object({
 	type: z.literal("http").describe("Connection type for HTTP servers."),
@@ -58,9 +53,6 @@ const StreamableHTTPConnectionSchema = z.object({
 })
 
 export type StdioConnection = z.infer<typeof StdioConnectionSchema>
-type StreamableHTTPDeploymentConnection = z.infer<
-	typeof StreamableHTTPDeploymentConnectionSchema
->
 export type StreamableHTTPConnection = z.infer<
 	typeof StreamableHTTPConnectionSchema
 >
@@ -70,12 +62,4 @@ export type ConfiguredServer = StdioConnection | StreamableHTTPConnection
 // Server Configuration key value pairs
 export interface ServerConfig {
 	[key: string]: unknown
-}
-
-// Validation response from the config validation endpoint
-interface ValidationResponse {
-	isComplete: boolean
-	hasExistingConfig: boolean
-	missingFields: string[]
-	fieldSchemas: Record<string, unknown>
 }

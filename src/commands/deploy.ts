@@ -28,17 +28,9 @@ interface DeployOptions {
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
 
-function createRegistry(apiKey: string) {
-	const registryEndpoint = process.env.REGISTRY_ENDPOINT
-	return new Smithery({
-		apiKey,
-		baseURL: registryEndpoint || "https://api.smithery.ai",
-	})
-}
-
 export async function deploy(options: DeployOptions = {}) {
 	const apiKey = await ensureApiKey(options.key)
-	const registry = createRegistry(apiKey)
+	const registry = new Smithery({ apiKey })
 
 	// Map CLI option 'name' to internal 'qualifiedName' for clarity
 	let qualifiedName = options.name

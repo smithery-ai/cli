@@ -4,11 +4,25 @@ import { createServer } from "node:http"
 import { Smithery } from "@smithery/api/client.js"
 import chalk from "chalk"
 import { Command } from "commander"
+import {
+	addServer,
+	callTool,
+	listServers,
+	listTools,
+	removeServer,
+	searchTools,
+} from "./commands/connect"
 import { deploy } from "./commands/deploy"
 import { dev } from "./commands/dev"
 import { inspectServer } from "./commands/inspect"
 import { installServer } from "./commands/install"
 import { list } from "./commands/list"
+import {
+	createNamespace,
+	listNamespaces,
+	showNamespace,
+	useNamespace,
+} from "./commands/namespace"
 import { playground } from "./commands/playground"
 import { run } from "./commands/run/index"
 import { uninstallServer } from "./commands/uninstall"
@@ -414,11 +428,8 @@ program
 		console.log()
 
 		try {
-			const registryEndpoint =
-				process.env.REGISTRY_ENDPOINT || "https://smithery.ai"
-
-			// New OAuth flow
-			const apiKey = await executeCliAuthFlow({ registryEndpoint })
+			// OAuth flow - uses SMITHERY_BASE_URL env var or defaults to https://smithery.ai
+			const apiKey = await executeCliAuthFlow({})
 
 			// Keep existing validation and storage
 			await validateApiKey(apiKey)
@@ -550,6 +561,93 @@ program
 			console.error(chalk.gray(errorMessage))
 			process.exit(1)
 		}
+	})
+
+// Namespace command - manage namespace context
+const namespace = program
+	.command("namespace")
+	.description("Manage namespace context (like kubectl config)")
+
+namespace
+	.command("list")
+	.description("List available namespaces")
+	.action(async () => {
+		await listNamespaces()
+	})
+
+namespace
+	.command("use <name>")
+	.description("Set current namespace")
+	.action(async (name) => {
+		await useNamespace(name)
+	})
+
+namespace
+	.command("show")
+	.description("Show current namespace")
+	.action(async () => {
+		await showNamespace()
+	})
+
+namespace
+	.command("create <name>")
+	.description("Create and claim a new namespace")
+	.action(async (name) => {
+		await createNamespace(name)
+	})
+
+// Connect command - manage MCP server connections and tools
+const connect = program
+	.command("connect")
+	.description("Manage MCP server connections (Smithery Connect)")
+
+connect
+	.command("add <mcp-url>")
+	.description("Add an MCP server connection")
+	.option("--name <name>", "Human-readable name for the server")
+	.option("--namespace <ns>", "Target namespace")
+	.action(async (mcpUrl, options) => {
+		await addServer(mcpUrl, options)
+	})
+
+connect
+	.command("list")
+	.description("List connected servers")
+	.option("--namespace <ns>", "Namespace to list from")
+	.action(async (options) => {
+		await listServers(options)
+	})
+
+connect
+	.command("remove <id>")
+	.description("Remove a server connection")
+	.option("--namespace <ns>", "Namespace for the server")
+	.action(async (id, options) => {
+		await removeServer(id, options)
+	})
+
+connect
+	.command("tools [server]")
+	.description("List tools (all or for a specific server)")
+	.option("--namespace <ns>", "Namespace to list from")
+	.action(async (server, options) => {
+		await listTools(server, options)
+	})
+
+connect
+	.command("search <query>")
+	.description("Search tools by intent")
+	.option("--namespace <ns>", "Namespace to search in")
+	.action(async (query, options) => {
+		await searchTools(query, options)
+	})
+
+connect
+	.command("call <tool-id> [args]")
+	.description("Call a tool (format: server/tool-name)")
+	.option("--namespace <ns>", "Namespace for the tool")
+	.action(async (toolId, args, options) => {
+		await callTool(toolId, args, options)
 	})
 
 // Parse arguments and run

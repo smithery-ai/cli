@@ -2,8 +2,8 @@ name: Release
 
 on:
   push:
-    tags:
-      - v*
+    branches:
+      - main
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -41,7 +41,6 @@ jobs:
       - run: pnpm run build
         env:
           ANALYTICS_ENDPOINT: ${{ secrets.ANALYTICS_ENDPOINT }}
-          REGISTRY_ENDPOINT: ${{ secrets.REGISTRY_ENDPOINT }}
       - run: pnpm run check
 
   publish:
@@ -49,11 +48,15 @@ jobs:
     needs: [test, build]
 
     permissions:
-      contents: read
+      contents: write
       id-token: write
 
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
       - uses: pnpm/action-setup@v4
       - uses: actions/setup-node@v4
         with:
@@ -62,8 +65,45 @@ jobs:
           cache: 'pnpm'
 
       - run: pnpm install --frozen-lockfile
-      - run: npm publish --provenance --access public
+
+      - name: Configure git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Check for release
+        id: check
+        run: |
+          # PR title is the commit message (squash merge uses PR_TITLE)
+          COMMIT_MSG=$(git log -1 --pretty=%B)
+          echo "Commit message: $COMMIT_MSG"
+
+          # Only release if PR title starts with "release: X.Y.Z"
+          if echo "$COMMIT_MSG" | grep -qE "^release: [0-9]+\.[0-9]+\.[0-9]+"; then
+            VERSION=$(echo "$COMMIT_MSG" | grep -oE "^release: [0-9]+\.[0-9]+\.[0-9]+" | sed 's/release: //')
+            echo "Release detected: $VERSION"
+            echo "should_release=true" >> $GITHUB_OUTPUT
+            echo "version=$VERSION" >> $GITHUB_OUTPUT
+          else
+            echo "Not a release PR, skipping publish"
+            echo "should_release=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Bump version and tag
+        if: steps.check.outputs.should_release == 'true'
+        run: |
+          VERSION=${{ steps.check.outputs.version }}
+          echo "Setting version to $VERSION"
+
+          npm version "$VERSION" --no-git-tag-version --allow-same-version
+          git add package.json
+          git commit -m "chore: release v$VERSION [skip ci]"
+          git tag "v$VERSION"
+          git push && git push --tags
+
+      - name: Publish to npm
+        if: steps.check.outputs.should_release == 'true'
+        run: npm publish --provenance --access public
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
           ANALYTICS_ENDPOINT: ${{ secrets.ANALYTICS_ENDPOINT }}
-          REGISTRY_ENDPOINT: ${{ secrets.REGISTRY_ENDPOINT }}
