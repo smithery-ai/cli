@@ -4,7 +4,10 @@ import type {
 	ConnectionsListResponse,
 } from "@smithery/api/resources/beta/connect/connections.js"
 import { createSmitheryClient } from "../../lib/smithery-client"
-import { getNamespace as getStoredNamespace } from "../../utils/smithery-settings"
+import {
+	getNamespace as getStoredNamespace,
+	setNamespace,
+} from "../../utils/smithery-settings"
 
 export type { Connection, ConnectionsListResponse }
 
@@ -27,12 +30,16 @@ export async function getCurrentNamespace(): Promise<string> {
 	const { namespaces } = await client.namespaces.list()
 
 	if (namespaces.length === 0) {
-		throw new Error(
-			"No namespace set and no namespaces found. Run 'smithery namespace use <name>' or create one at smithery.ai first.",
-		)
+		// Auto-create a default namespace
+		const { name } = await client.namespaces.create()
+		await setNamespace(name)
+		return name
 	}
 
-	return namespaces[0].name
+	// Use the first available namespace and persist it
+	const defaultNamespace = namespaces[0].name
+	await setNamespace(defaultNamespace)
+	return defaultNamespace
 }
 
 export async function listConnections(
