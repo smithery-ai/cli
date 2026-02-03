@@ -47,6 +47,7 @@
 		"commander": "^14.0.0",
 		"cors": "^2.8.5",
 		"cross-fetch": "^4.1.0",
+		"cross-spawn": "^7.0.6",
 		"esbuild": "^0.25.10",
 		"express": "^5.1.0",
 		"fast-glob": "^3.3.3",
