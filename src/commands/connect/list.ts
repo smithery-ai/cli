@@ -6,7 +6,6 @@ interface ServersOutput {
 		id: string
 		name: string
 		status?: string
-		toolCount?: number
 	}>
 	help: string
 }
@@ -25,20 +24,12 @@ export async function listServers(options: {
 		return
 	}
 
-	const serversWithCounts = await Promise.all(
-		connections.map(async (conn) => {
-			const tools = await session.listToolsForConnection(conn)
-			return {
-				id: conn.connectionId,
-				name: conn.name,
-				status: conn.status?.state ?? "unknown",
-				toolCount: tools.length,
-			}
-		}),
-	)
-
 	const output: ServersOutput = {
-		servers: serversWithCounts,
+		servers: connections.map((conn) => ({
+			id: conn.connectionId,
+			name: conn.name,
+			status: conn.status?.state ?? "unknown",
+		})),
 		help: "smithery connect tools <server> - List tools for a specific server",
 	}
 	outputJson(output)

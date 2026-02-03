@@ -42,10 +42,19 @@ export class ConnectSession {
 	}
 
 	async listConnections(): Promise<Connection[]> {
-		const data = await this.smitheryClient.beta.connect.connections.list(
-			this.namespace,
-		)
-		return data.connections
+		const all: Connection[] = []
+		let cursor: string | undefined
+
+		do {
+			const data = await this.smitheryClient.beta.connect.connections.list(
+				this.namespace,
+				{ cursor },
+			)
+			all.push(...data.connections)
+			cursor = data.nextCursor ?? undefined
+		} while (cursor)
+
+		return all
 	}
 
 	private async getMcpClient(connectionId: string): Promise<Client> {
@@ -148,54 +157,3 @@ export async function getCurrentNamespace(): Promise<string> {
 	return defaultNamespace
 }
 
-// Legacy functions for backwards compatibility - use ConnectSession for new code
-
-export async function listConnections(
-	namespace: string,
-): Promise<Connection[]> {
-	const session = await ConnectSession.create(namespace)
-	return session.listConnections()
-}
-
-export async function listToolsForConnection(
-	namespace: string,
-	connection: Connection,
-): Promise<ToolInfo[]> {
-	const session = await ConnectSession.create(namespace)
-	return session.listToolsForConnection(connection)
-}
-
-export async function callTool(
-	namespace: string,
-	connectionId: string,
-	toolName: string,
-	args: Record<string, unknown>,
-): Promise<unknown> {
-	const session = await ConnectSession.create(namespace)
-	return session.callTool(connectionId, toolName, args)
-}
-
-export async function createConnection(
-	namespace: string,
-	mcpUrl: string,
-	options: { name?: string } = {},
-): Promise<Connection> {
-	const session = await ConnectSession.create(namespace)
-	return session.createConnection(mcpUrl, options)
-}
-
-export async function deleteConnection(
-	namespace: string,
-	connectionId: string,
-): Promise<void> {
-	const session = await ConnectSession.create(namespace)
-	return session.deleteConnection(connectionId)
-}
-
-export async function getConnection(
-	namespace: string,
-	connectionId: string,
-): Promise<Connection> {
-	const session = await ConnectSession.create(namespace)
-	return session.getConnection(connectionId)
-}
