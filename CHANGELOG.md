@@ -20,6 +20,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   - `smithery skills review <skill> --delete` - delete your review
   - `smithery skills vote <skill> <review-id> --up|--down` - upvote/downvote a review
   - Options: `--json`, `--limit`, `--page`, `-t/--text`, `-m/--model`
+* add `--page` option to `smithery skills search` for pagination
+* add `--print-link` option to `smithery login` for agent-friendly authentication (prints URL without spinners/browser)
 * add custom ID and metadata support to connect command ([#558](https://github.com/smithery-ai/cli/issues/558)) ([11c1484](https://github.com/smithery-ai/cli/commit/11c1484a6dcec5bc5ae3dbb2d07ade5ac8df748f))
 
 ### Bug Fixes
