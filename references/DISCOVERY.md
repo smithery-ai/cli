@@ -1,8 +1,10 @@
 # Discovery
 
-Find and explore MCP servers and skills from the Smithery registry (100K+ skills, thousands of MCP servers).
+Find and explore MCP servers from the Smithery registry.
 
-## Search the Registry
+> **Looking for skills?** Use `smithery skills search [term]` - see the Skills section in SKILL.md.
+
+## Search MCP Servers
 
 Interactive search:
 ```bash
