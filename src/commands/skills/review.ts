@@ -5,6 +5,35 @@ const API_BASE_URL =
 	process.env.SMITHERY_BASE_URL || "https://api.smithery.ai"
 
 /**
+ * Get a skills-scoped API token
+ */
+async function getSkillsToken(): Promise<string | null> {
+	const rootApiKey = await getApiKey()
+	if (!rootApiKey) return null
+
+	try {
+		const { Smithery } = await import("@smithery/api/client.js")
+		const client = new Smithery({
+			apiKey: rootApiKey,
+			baseURL: API_BASE_URL,
+		})
+		const token = await client.tokens.create({
+			policy: [
+				{
+					resources: ["skills"],
+					operations: ["read", "write"],
+					ttl: 3600,
+				},
+			],
+		})
+		return token.token
+	} catch {
+		// Fall back to root key if minting fails
+		return rootApiKey
+	}
+}
+
+/**
  * Parse a skill identifier into namespace and slug
  */
 function parseSkillIdentifier(identifier: string): {
@@ -106,14 +135,13 @@ export async function listReviews(
 		process.exit(1)
 	}
 
-	// Reviews are public, no auth required
 	try {
 		const url = new URL(
 			`/skills/${encodeURIComponent(namespace)}/${encodeURIComponent(slug)}/reviews`,
 			API_BASE_URL,
 		)
 		url.searchParams.set("page", String(page))
-		url.searchParams.set("pageSize", String(limit))
+		url.searchParams.set("limit", String(limit))
 
 		const response = await fetch(url.toString())
 
@@ -229,7 +257,7 @@ export async function submitReview(
 	}
 
 	// Reviews require authentication
-	const apiKey = await getApiKey()
+	const apiKey = await getSkillsToken()
 	if (!apiKey) {
 		console.error(chalk.red("Error: Not logged in."))
 		console.error(chalk.dim("Run 'smithery login' to authenticate."))
@@ -333,7 +361,7 @@ export async function deleteReview(skillIdentifier: string): Promise<void> {
 	}
 
 	// Requires authentication
-	const apiKey = await getApiKey()
+	const apiKey = await getSkillsToken()
 	if (!apiKey) {
 		console.error(chalk.red("Error: Not logged in."))
 		console.error(chalk.dim("Run 'smithery login' to authenticate."))
@@ -411,7 +439,7 @@ export async function voteReview(
 	}
 
 	// Voting requires authentication
-	const apiKey = await getApiKey()
+	const apiKey = await getSkillsToken()
 	if (!apiKey) {
 		console.error(chalk.red("Error: Not logged in."))
 		console.error(chalk.dim("Run 'smithery login' to authenticate."))
