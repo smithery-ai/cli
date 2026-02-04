@@ -4,6 +4,13 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [3.9.1](https://github.com/smithery-ai/cli/compare/v3.9.0...v3.9.1) (2026-02-05)
+
+### Changed
+
+* refactor skills review commands to use @smithery/api client instead of raw fetch ([#570](https://github.com/smithery-ai/cli/issues/570))
+* update @smithery/api from 0.36.0 to 0.37.0
+
 ## [3.9.0](https://github.com/smithery-ai/cli/compare/v3.8.2...v3.9.0) (2026-02-04)
 
 ### Features
