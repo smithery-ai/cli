@@ -1,6 +1,6 @@
 # Discovery
 
-Find and explore MCP servers from the Smithery registry (100K+ servers).
+Find and explore MCP servers and skills from the Smithery registry (100K+ skills, thousands of MCP servers).
 
 ## Search the Registry
 

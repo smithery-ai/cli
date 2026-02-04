@@ -10,7 +10,7 @@ compatibility: Requires smithery CLI (npm install -g @smithery/cli)
 
 # Smithery
 
-The marketplace for MCP tools and skills. Discover, connect, and use over 100,000 MCP servers.
+The marketplace for MCP tools and skills. Discover, connect, and use over 100K+ skills and thousands of MCP servers.
 
 ## Quick Start
 
