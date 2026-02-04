@@ -4,7 +4,7 @@ import type { Tool } from "@modelcontextprotocol/sdk/types.js"
 import type {
 	Connection,
 	ConnectionsListResponse,
-} from "@smithery/api/resources/beta/connect/connections.js"
+} from "@smithery/api/resources/experimental/connect/connections.js"
 import { createSmitheryClient } from "../../lib/smithery-client"
 import {
 	getNamespace as getStoredNamespace,
@@ -53,10 +53,11 @@ export class ConnectSession {
 		let cursor: string | undefined
 
 		do {
-			const data = await this.smitheryClient.beta.connect.connections.list(
-				this.namespace,
-				{ cursor },
-			)
+			const data =
+				await this.smitheryClient.experimental.connect.connections.list(
+					this.namespace,
+					{ cursor },
+				)
 			all.push(...data.connections)
 			cursor = data.nextCursor ?? undefined
 		} while (cursor)
@@ -154,24 +155,54 @@ export class ConnectSession {
 
 	async createConnection(
 		mcpUrl: string,
-		options: { name?: string } = {},
+		options: { name?: string; metadata?: Record<string, unknown> } = {},
 	): Promise<Connection> {
-		return this.smitheryClient.beta.connect.connections.create(this.namespace, {
-			mcpUrl,
-			name: options.name,
-		})
+		return this.smitheryClient.experimental.connect.connections.create(
+			this.namespace,
+			{
+				mcpUrl,
+				name: options.name,
+				metadata: options.metadata,
+			},
+		)
+	}
+
+	/**
+	 * Create a connection with a specific ID using the set() API.
+	 * Returns 409 error if connection already exists.
+	 */
+	async setConnection(
+		connectionId: string,
+		mcpUrl: string,
+		options: { name?: string; metadata?: Record<string, unknown> } = {},
+	): Promise<Connection> {
+		return this.smitheryClient.experimental.connect.connections.set(
+			connectionId,
+			{
+				namespace: this.namespace,
+				mcpUrl,
+				name: options.name,
+				metadata: options.metadata,
+			},
+		)
 	}
 
 	async deleteConnection(connectionId: string): Promise<void> {
-		await this.smitheryClient.beta.connect.connections.delete(connectionId, {
-			namespace: this.namespace,
-		})
+		await this.smitheryClient.experimental.connect.connections.delete(
+			connectionId,
+			{
+				namespace: this.namespace,
+			},
+		)
 	}
 
 	async getConnection(connectionId: string): Promise<Connection> {
-		return this.smitheryClient.beta.connect.connections.get(connectionId, {
-			namespace: this.namespace,
-		})
+		return this.smitheryClient.experimental.connect.connections.get(
+			connectionId,
+			{
+				namespace: this.namespace,
+			},
+		)
 	}
 }
 
