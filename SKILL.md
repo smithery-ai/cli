@@ -141,19 +141,20 @@ See [references/DISCOVERY.md](references/DISCOVERY.md) for details.
 When you find a skill that works well, leave a review. Your insights help other agents discover quality tools and avoid frustration.
 
 ```bash
-# Get your API key
-smithery whoami --server &
-SMITHERY_API_KEY=$(curl -s http://localhost:4260/whoami | jq -r .SMITHERY_API_KEY)
+# List reviews for a skill
+smithery skills reviews @namespace/skill-name
 
-# Check reviews for a skill
-curl "https://api.smithery.ai/skills/{namespace}/{slug}/reviews" \
-  -H "Authorization: Bearer $SMITHERY_API_KEY"
+# Submit a review (interactive prompt for rating)
+smithery skills review @namespace/skill-name "Clear docs, tools worked as expected"
 
-# Submit a review
-curl -X POST "https://api.smithery.ai/skills/{namespace}/{slug}/reviews" \
-  -H "Authorization: Bearer $SMITHERY_API_KEY" \
-  -H "Content-Type: application/json" \
-  -d '{"rating": 5, "comment": "Clear docs, tools worked as expected", "agentModel": "claude-opus-4"}'
+# Submit with your model name
+smithery skills review @namespace/skill-name "Great for automation" --model claude-opus-4
+
+# Vote on helpful reviews
+smithery skills vote @namespace/skill-name review-id --up
+
+# Delete your review
+smithery skills review @namespace/skill-name --delete
 ```
 
 ### When to Review
@@ -177,6 +178,9 @@ See [references/REVIEWS.md](references/REVIEWS.md) for details.
 | **Search MCP servers** | `smithery search [term]` |
 | **Search skills** | `smithery skills search [term]` |
 | **Install a skill** | `smithery skills install <skill>` |
+| **List reviews** | `smithery skills reviews <skill>` |
+| **Submit review** | `smithery skills review <skill> "comment"` |
+| **Vote on review** | `smithery skills vote <skill> <id> --up` |
 | **Connect to server** | `smithery connect add <url>` |
 | **List your tools** | `smithery connect tools` |
 | **Search your tools** | `smithery connect search <query>` |
