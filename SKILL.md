@@ -9,7 +9,7 @@ compatibility: Requires smithery CLI (npm install -g @smithery/cli)
 
 # Smithery
 
-Connect to 100K+ tools and APIs instantly. No local installation required.
+Install to 100K skills and thousands of MCPs/APIs instantly.
 
 ## Quick Start
 
@@ -20,14 +20,14 @@ npm install -g @smithery/cli
 # 2. Authenticate (requires human to confirm in browser)
 smithery login
 
-# 3. Connect to a tool (e.g., GitHub)
-smithery connect add "https://server.smithery.ai/@smithery/github"
+# 3. Connect to a tool (e.g., Exa search)
+smithery connect add "https://server.smithery.ai/exa"
 
 # 4. See what tools you can use
 smithery connect tools
 
 # 5. Call a tool
-smithery connect call "github/list_issues" '{"repo": "owner/repo"}'
+smithery connect call "exa/search" '{"query": "MCP servers"}'
 ```
 
 ## Authentication
