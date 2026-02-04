@@ -4,6 +4,21 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [3.10.0](https://github.com/smithery-ai/cli/compare/v3.9.0...v3.10.0) (2026-02-04)
+
+
+### Features
+
+* add comprehensive Smithery CLI skill [SMI-1367] ([#562](https://github.com/smithery-ai/cli/issues/562)) ([04ace79](https://github.com/smithery-ai/cli/commit/04ace79f9ceba978015e1882c302055028f90493))
+* add logout command to remove all local credentials ([#574](https://github.com/smithery-ai/cli/issues/574)) ([1d6db88](https://github.com/smithery-ai/cli/commit/1d6db88c2e315a04db44001b97b165f65aaf64ee))
+* add skills review and vote commands ([#568](https://github.com/smithery-ai/cli/issues/568)) ([9251cfd](https://github.com/smithery-ai/cli/commit/9251cfdd4b400667e6193d0ba2b23f12c318ee94))
+* redesign skills review and vote CLI with gh-style commands ([#572](https://github.com/smithery-ai/cli/issues/572)) ([6463e37](https://github.com/smithery-ai/cli/commit/6463e37383b8b8d86d8ee286ca819f1b3b135e8d))
+
+
+### Refactors
+
+* use @smithery/api client for skills reviews ([#570](https://github.com/smithery-ai/cli/issues/570)) ([38957aa](https://github.com/smithery-ai/cli/commit/38957aa44b38e6c62390ffbc8c1aa25540e80bb1))
+
 ## [3.9.1](https://github.com/smithery-ai/cli/compare/v3.9.0...v3.9.1) (2026-02-05)
 
 ### Changed
