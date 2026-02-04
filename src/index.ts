@@ -1,48 +1,13 @@
 #!/usr/bin/env node
 
 import { createServer } from "node:http"
-import { Smithery } from "@smithery/api/client.js"
 import chalk from "chalk"
 import { Command } from "commander"
-import {
-	addServer,
-	callTool,
-	listServers,
-	listTools,
-	removeServer,
-	searchTools,
-	setServer,
-} from "./commands/connect"
-import { deploy } from "./commands/deploy"
-import { dev } from "./commands/dev"
-import { inspectServer } from "./commands/inspect"
-import { installServer } from "./commands/install"
-import { list } from "./commands/list"
-import {
-	createNamespace,
-	listNamespaces,
-	showNamespace,
-	useNamespace,
-} from "./commands/namespace"
-import { playground } from "./commands/playground"
-import { run } from "./commands/run/index"
-import { uninstallServer } from "./commands/uninstall"
 import { VALID_CLIENTS, type ValidClient } from "./config/clients"
 import { DEFAULT_PORT } from "./constants"
-import { buildBundle } from "./lib/bundle"
-import { executeCliAuthFlow } from "./lib/cli-auth"
 import { setDebug, setVerbose } from "./lib/logger"
-import { searchServers, validateApiKey } from "./lib/registry"
 import type { ServerConfig } from "./types/registry"
-import {
-	interactiveServerSearch,
-	parseServerConfig,
-	selectClient,
-	selectInstalledServer,
-	selectServer,
-	validateClient,
-} from "./utils/command-prompts"
-import { ensureApiKey } from "./utils/runtime"
+import { validateClient } from "./utils/command-prompts"
 import { getApiKey, setApiKey } from "./utils/smithery-settings"
 
 // TypeScript declaration for global constant injected at build time
@@ -83,6 +48,11 @@ program
 		"Provide configuration data as JSON (skips prompts)",
 	)
 	.action(async (server, options) => {
+		const { selectClient, selectServer, parseServerConfig } = await import(
+			"./utils/command-prompts"
+		)
+		const { installServer } = await import("./commands/install")
+
 		// Step 1: Select client if not provided
 		const selectedClient = await selectClient(options.client, "Install")
 
@@ -114,6 +84,10 @@ program
 	)
 	.action(async (server, options) => {
 		const { readConfig } = await import("./lib/client-config-io")
+		const { selectClient, selectInstalledServer } = await import(
+			"./utils/command-prompts"
+		)
+		const { uninstallServer } = await import("./commands/uninstall")
 
 		// Step 1: Select client if not provided
 		const selectedClient = await selectClient(options.client, "Uninstall")
@@ -138,6 +112,7 @@ program
 	.command("inspect <server>")
 	.description("Inspect server from registry")
 	.action(async (server) => {
+		const { inspectServer } = await import("./commands/inspect")
 		// API key is optional - use if available, don't prompt
 		const apiKey = await getApiKey()
 		await inspectServer(server, apiKey)
@@ -161,8 +136,12 @@ program
 		"Initial message to start the playground with (when using --playground)",
 	)
 	.action(async (server, options) => {
+		const { parseServerConfig } = await import("./utils/command-prompts")
+
 		// Handle deprecated --playground flag
 		if (options.playground) {
+			const { playground } = await import("./commands/playground")
+			const { ensureApiKey } = await import("./utils/runtime")
 			console.warn(
 				chalk.yellow(
 					"⚠ Warning: --playground flag is deprecated. Use 'smithery playground <server>' instead.",
@@ -182,6 +161,7 @@ program
 			return
 		}
 
+		const { run } = await import("./commands/run/index")
 		// Parse config if provided
 		const config: ServerConfig = options.config
 			? parseServerConfig(options.config)
@@ -207,6 +187,7 @@ program
 		"Build widgets without minification for easier debugging",
 	)
 	.action(async (entryFile, options) => {
+		const { dev } = await import("./commands/dev")
 		await dev({
 			entryFile,
 			port: options.port,
@@ -255,6 +236,7 @@ program
 			console.warn()
 		}
 
+		const { buildBundle } = await import("./lib/bundle")
 		await buildBundle({
 			entryFile,
 			outDir: options.out,
@@ -309,6 +291,7 @@ program
 			process.exit(1)
 		}
 
+		const { deploy } = await import("./commands/deploy")
 		await deploy({
 			entryFile,
 			key: options.key,
@@ -352,6 +335,9 @@ program
 	.allowUnknownOption() // Allow pass-through for command after --
 	.allowExcessArguments() // Allow extra args after -- without error
 	.action(async (server, options) => {
+		const { parseServerConfig } = await import("./utils/command-prompts")
+		const { playground } = await import("./commands/playground")
+
 		// Extract command after -- separator
 		let command: string | undefined
 		const rawArgs = process.argv
@@ -385,6 +371,9 @@ program
 		`Specify the client (${VALID_CLIENTS.join(", ")})`,
 	)
 	.action(async (options) => {
+		const { selectClient } = await import("./utils/command-prompts")
+		const { list } = await import("./commands/list")
+
 		// If no client provided, show interactive selection
 		const selectedClient = await selectClient(options.client, "List")
 
@@ -404,6 +393,7 @@ program
 		const apiKey = await getApiKey()
 
 		if (options.json) {
+			const { searchServers } = await import("./lib/registry")
 			// Non-interactive JSON output
 			if (!term) {
 				console.error(
@@ -416,6 +406,7 @@ program
 			return
 		}
 
+		const { interactiveServerSearch } = await import("./utils/command-prompts")
 		await interactiveServerSearch(apiKey, term)
 		// @TODO: add install flow
 	})
@@ -425,6 +416,9 @@ program
 	.command("login")
 	.description("Login with Smithery")
 	.action(async () => {
+		const { executeCliAuthFlow } = await import("./lib/cli-auth")
+		const { validateApiKey } = await import("./lib/registry")
+
 		console.log(chalk.cyan("Login to Smithery"))
 		console.log()
 
@@ -453,25 +447,6 @@ program
 		}
 	})
 
-async function mintApiKey() {
-	const rootApiKey = await getApiKey()
-	const client = new Smithery({ apiKey: rootApiKey })
-	const token = await client.tokens.create({
-		policy: [
-			{
-				resources: ["connections", "servers", "namespaces", "skills"],
-				operations: ["read", "write", "execute"],
-				namespaces: "*",
-				metadata: { userId: "root-whoami" },
-				ttl: 3600,
-			},
-		],
-	})
-	const apiKey = token.token
-	const expiresAt = new Date(token.expiresAt)
-	return { apiKey, expiresAt }
-}
-
 // Show API key command
 program
 	.command("whoami")
@@ -482,6 +457,27 @@ program
 		"Start an HTTP server on localhost:4260 that serves the API key",
 	)
 	.action(async (options) => {
+		const { Smithery } = await import("@smithery/api/client.js")
+
+		async function mintApiKey() {
+			const rootApiKey = await getApiKey()
+			const client = new Smithery({ apiKey: rootApiKey })
+			const token = await client.tokens.create({
+				policy: [
+					{
+						resources: ["connections", "servers", "namespaces", "skills"],
+						operations: ["read", "write", "execute"],
+						namespaces: "*",
+						metadata: { userId: "root-whoami" },
+						ttl: 3600,
+					},
+				],
+			})
+			const apiKey = token.token
+			const expiresAt = new Date(token.expiresAt)
+			return { apiKey, expiresAt }
+		}
+
 		try {
 			let { apiKey, expiresAt } = await mintApiKey()
 
@@ -549,6 +545,7 @@ namespace
 	.command("list")
 	.description("List available namespaces")
 	.action(async () => {
+		const { listNamespaces } = await import("./commands/namespace")
 		await listNamespaces()
 	})
 
@@ -556,6 +553,7 @@ namespace
 	.command("use <name>")
 	.description("Set current namespace")
 	.action(async (name) => {
+		const { useNamespace } = await import("./commands/namespace")
 		await useNamespace(name)
 	})
 
@@ -563,6 +561,7 @@ namespace
 	.command("show")
 	.description("Show current namespace")
 	.action(async () => {
+		const { showNamespace } = await import("./commands/namespace")
 		await showNamespace()
 	})
 
@@ -570,6 +569,7 @@ namespace
 	.command("create <name>")
 	.description("Create and claim a new namespace")
 	.action(async (name) => {
+		const { createNamespace } = await import("./commands/namespace")
 		await createNamespace(name)
 	})
 
@@ -589,6 +589,7 @@ connect
 	.option("--metadata <json>", "Custom metadata as JSON object")
 	.option("--namespace <ns>", "Target namespace")
 	.action(async (mcpUrl, options) => {
+		const { addServer } = await import("./commands/connect")
 		await addServer(mcpUrl, options)
 	})
 
@@ -597,6 +598,7 @@ connect
 	.description("List connected servers")
 	.option("--namespace <ns>", "Namespace to list from")
 	.action(async (options) => {
+		const { listServers } = await import("./commands/connect")
 		await listServers(options)
 	})
 
@@ -605,6 +607,7 @@ connect
 	.description("Remove a server connection")
 	.option("--namespace <ns>", "Namespace for the server")
 	.action(async (id, options) => {
+		const { removeServer } = await import("./commands/connect")
 		await removeServer(id, options)
 	})
 
@@ -616,6 +619,7 @@ connect
 	.option("--metadata <json>", "Metadata as JSON object")
 	.option("--namespace <ns>", "Namespace for the server")
 	.action(async (mcpUrl, options) => {
+		const { setServer } = await import("./commands/connect")
 		await setServer(mcpUrl, options)
 	})
 
@@ -624,6 +628,7 @@ connect
 	.description("List tools (all or for a specific server)")
 	.option("--namespace <ns>", "Namespace to list from")
 	.action(async (server, options) => {
+		const { listTools } = await import("./commands/connect")
 		await listTools(server, options)
 	})
 
@@ -632,6 +637,7 @@ connect
 	.description("Search tools by intent")
 	.option("--namespace <ns>", "Namespace to search in")
 	.action(async (query, options) => {
+		const { searchTools } = await import("./commands/connect")
 		await searchTools(query, options)
 	})
 
@@ -640,6 +646,7 @@ connect
 	.description("Call a tool (format: server/tool-name)")
 	.option("--namespace <ns>", "Namespace for the tool")
 	.action(async (toolId, args, options) => {
+		const { callTool } = await import("./commands/connect")
 		await callTool(toolId, args, options)
 	})
 
