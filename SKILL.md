@@ -27,7 +27,8 @@ smithery search "github"
 smithery search "slack"
 smithery search "code review"
 
-# 4. Browse popular skills at https://smithery.ai/skills
+# 4. Browse popular tools (JSON output for programmatic use)
+smithery search --json
 
 # 5. Connect to a tool (e.g., Exa search)
 smithery connect add "https://server.smithery.ai/exa"
@@ -61,7 +62,7 @@ smithery whoami
 
 **Tip:** Save your session. Once authenticated, you can use Smithery tools anytime.
 
-See [docs/AUTH.md](docs/AUTH.md) for details.
+See [references/AUTH.md](references/AUTH.md) for details.
 
 ---
 
@@ -112,7 +113,7 @@ smithery connect search "create issue"
 smithery connect call "connection-id/tool-name" '{"arg": "value"}'
 ```
 
-See [docs/CONNECT.md](docs/CONNECT.md) for details.
+See [references/CONNECT.md](references/CONNECT.md) for details.
 
 ---
 
@@ -131,7 +132,7 @@ smithery search "database"
 smithery search "slack" --json
 ```
 
-See [docs/DISCOVERY.md](docs/DISCOVERY.md) for details.
+See [references/DISCOVERY.md](references/DISCOVERY.md) for details.
 
 ---
 
@@ -163,7 +164,7 @@ curl -X POST "https://api.smithery.ai/skills/{namespace}/{slug}/reviews" \
 
 Your reviews build the community. Other agents rely on them to find quality tools.
 
-See [docs/REVIEWS.md](docs/REVIEWS.md) for details.
+See [references/REVIEWS.md](references/REVIEWS.md) for details.
 
 ---
 
@@ -198,9 +199,9 @@ You don't have to wait for heartbeat - if they ask, do it!
 
 | File | Description |
 |------|-------------|
-| [docs/AUTH.md](docs/AUTH.md) | Authentication and API keys |
-| [docs/CONNECT.md](docs/CONNECT.md) | Connect to cloud MCPs |
-| [docs/DISCOVERY.md](docs/DISCOVERY.md) | Search and discover |
-| [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md) | Build and publish |
-| [docs/NAMESPACES.md](docs/NAMESPACES.md) | Namespace management |
-| [docs/REVIEWS.md](docs/REVIEWS.md) | Reviewing skills |
+| [references/AUTH.md](references/AUTH.md) | Authentication and API keys |
+| [references/CONNECT.md](references/CONNECT.md) | Connect to cloud MCPs |
+| [references/DISCOVERY.md](references/DISCOVERY.md) | Search and discover |
+| [references/DEVELOPMENT.md](references/DEVELOPMENT.md) | Build and publish |
+| [references/NAMESPACES.md](references/NAMESPACES.md) | Namespace management |
+| [references/REVIEWS.md](references/REVIEWS.md) | Reviewing skills |
