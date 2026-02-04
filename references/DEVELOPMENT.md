@@ -1,6 +1,6 @@
 # Development
 
-Build and publish MCP servers to Smithery.
+Build and test MCP servers locally, then publish to Smithery.
 
 ## Development Server
 
@@ -44,33 +44,18 @@ smithery build src/index.ts -o dist
 
 ## Publish to Smithery
 
-Publish your MCP server to the registry:
-
-```bash
-smithery publish
-```
-
-Options:
-- `-n, --name <name>` - Target server name (e.g., @org/name)
-- `-k, --key <apikey>` - Smithery API key
-- `-t, --transport <type>` - Transport type (default: shttp)
-- `--resume` - Resume paused publish (after OAuth)
-
-With entry file:
-```bash
-smithery publish src/index.ts -n @myorg/my-server
-```
-
-### Publish External URL
-
-Publish an external MCP server URL:
+Publish an external MCP server URL to the registry:
 
 ```bash
 smithery publish --url "https://my-mcp-server.com" -n @myorg/my-server
 ```
 
-Options for external URLs:
+Options:
+- `-n, --name <name>` - Target server name (e.g., @org/name)
+- `-u, --url <url>` - Your MCP server URL
+- `-k, --key <apikey>` - Smithery API key
 - `--config-schema <json-or-path>` - JSON Schema for configuration
+- `--resume` - Resume paused publish (after OAuth)
 
 ## Playground
 
@@ -100,9 +85,8 @@ smithery dev src/index.ts
 
 # 2. Test in playground (automatic)
 
-# 3. Build for production
-smithery build src/index.ts -t shttp
+# 3. Build and deploy to your infrastructure
 
-# 4. Publish
-smithery publish src/index.ts -n @myorg/my-server
+# 4. Publish your URL to Smithery
+smithery publish --url "https://my-mcp-server.com" -n @myorg/my-server
 ```
