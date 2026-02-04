@@ -1,23 +1,19 @@
+import { Smithery } from "@smithery/api/client.js"
+import type { ReviewItem } from "@smithery/api/resources/skills/reviews.js"
 import chalk from "chalk"
 import { getApiKey } from "../../utils/smithery-settings"
 
-const API_BASE_URL =
-	process.env.SMITHERY_BASE_URL || "https://api.smithery.ai"
-
 /**
- * Get a skills-scoped API token
+ * Creates an authenticated Smithery client with skills permissions
  */
-async function getSkillsToken(): Promise<string | null> {
+async function createClient(): Promise<Smithery | null> {
 	const rootApiKey = await getApiKey()
 	if (!rootApiKey) return null
 
+	// Mint a scoped token with skills permissions
 	try {
-		const { Smithery } = await import("@smithery/api/client.js")
-		const client = new Smithery({
-			apiKey: rootApiKey,
-			baseURL: API_BASE_URL,
-		})
-		const token = await client.tokens.create({
+		const rootClient = new Smithery({ apiKey: rootApiKey })
+		const token = await rootClient.tokens.create({
 			policy: [
 				{
 					resources: ["skills"],
@@ -26,10 +22,10 @@ async function getSkillsToken(): Promise<string | null> {
 				},
 			],
 		})
-		return token.token
+		return new Smithery({ apiKey: token.token })
 	} catch {
 		// Fall back to root key if minting fails
-		return rootApiKey
+		return new Smithery({ apiKey: rootApiKey })
 	}
 }
 
@@ -47,32 +43,6 @@ function parseSkillIdentifier(identifier: string): {
 		)
 	}
 	return { namespace: match[1], slug: match[2] }
-}
-
-/**
- * Review item from API
- */
-interface ReviewItem {
-	id: string
-	review: string
-	agentModel: string | null
-	agentClient: string | null
-	upvotes: number
-	downvotes: number
-	createdAt: string
-}
-
-/**
- * Reviews list response from API
- */
-interface ReviewsListResponse {
-	data: ReviewItem[]
-	pagination: {
-		currentPage: number
-		pageSize: number
-		totalCount: number
-		totalPages: number
-	}
 }
 
 /**
@@ -136,23 +106,15 @@ export async function listReviews(
 	}
 
 	try {
-		const url = new URL(
-			`/skills/${encodeURIComponent(namespace)}/${encodeURIComponent(slug)}/reviews`,
-			API_BASE_URL,
-		)
-		url.searchParams.set("page", String(page))
-		url.searchParams.set("limit", String(limit))
+		const client = new Smithery({ apiKey: "" })
+		const reviewsPage = await client.skills.reviews.list(slug, {
+			namespace,
+			page,
+			limit,
+		})
 
-		const response = await fetch(url.toString())
-
-		if (!response.ok) {
-			const errorText = await response.text()
-			throw new Error(`API error: ${response.status} - ${errorText}`)
-		}
-
-		const result = (await response.json()) as ReviewsListResponse
-		const reviews = result.data
-		const pagination = result.pagination
+		const reviews = reviewsPage.reviews
+		const pagination = reviewsPage.pagination
 
 		if (json) {
 			console.log(
@@ -185,10 +147,12 @@ export async function listReviews(
 			return
 		}
 
+		const totalCount = pagination.totalCount ?? reviews.length
+
 		// Show header
 		console.log(
 			chalk.bold(
-				`Reviews for ${chalk.cyan(skillIdentifier)} (${pagination.totalCount} review${pagination.totalCount === 1 ? "" : "s"})`,
+				`Reviews for ${chalk.cyan(skillIdentifier)} (${totalCount} review${totalCount === 1 ? "" : "s"})`,
 			),
 		)
 		console.log()
@@ -200,16 +164,16 @@ export async function listReviews(
 		}
 
 		// Pagination info
-		if (pagination.totalPages > 1) {
+		const totalPages = pagination.totalPages ?? 1
+		const currentPage = pagination.currentPage ?? page
+		if (totalPages > 1) {
 			console.log(
-				chalk.dim(
-					`Page ${pagination.currentPage} of ${pagination.totalPages} (${pagination.totalCount} total)`,
-				),
+				chalk.dim(`Page ${currentPage} of ${totalPages} (${totalCount} total)`),
 			)
-			if (pagination.currentPage < pagination.totalPages) {
+			if (currentPage < totalPages) {
 				console.log(
 					chalk.dim(
-						`View more: smithery skills reviews ${skillIdentifier} --page ${pagination.currentPage + 1}`,
+						`View more: smithery skills reviews ${skillIdentifier} --page ${currentPage + 1}`,
 					),
 				)
 			}
@@ -257,8 +221,8 @@ export async function submitReview(
 	}
 
 	// Reviews require authentication
-	const apiKey = await getSkillsToken()
-	if (!apiKey) {
+	const client = await createClient()
+	if (!client) {
 		console.error(chalk.red("Error: Not logged in."))
 		console.error(chalk.dim("Run 'smithery login' to authenticate."))
 		process.exit(1)
@@ -286,33 +250,11 @@ export async function submitReview(
 	const spinner = ora("Submitting review...").start()
 
 	try {
-		const url = new URL(
-			`/skills/${encodeURIComponent(namespace)}/${encodeURIComponent(slug)}/reviews`,
-			API_BASE_URL,
-		)
-
-		const body: { review: string; agentModel?: string } = {
+		const result = await client.skills.reviews.create(slug, {
+			namespace,
 			review: reviewText,
-		}
-		if (options.model) {
-			body.agentModel = options.model
-		}
-
-		const response = await fetch(url.toString(), {
-			method: "POST",
-			headers: {
-				"Content-Type": "application/json",
-				Authorization: `Bearer ${apiKey}`,
-			},
-			body: JSON.stringify(body),
+			agentModel: options.model,
 		})
-
-		if (!response.ok) {
-			const errorText = await response.text()
-			throw new Error(`API error: ${response.status} - ${errorText}`)
-		}
-
-		const result = (await response.json()) as ReviewItem
 
 		spinner.succeed("Review submitted!")
 		console.log()
@@ -361,8 +303,8 @@ export async function deleteReview(skillIdentifier: string): Promise<void> {
 	}
 
 	// Requires authentication
-	const apiKey = await getSkillsToken()
-	if (!apiKey) {
+	const client = await createClient()
+	if (!client) {
 		console.error(chalk.red("Error: Not logged in."))
 		console.error(chalk.dim("Run 'smithery login' to authenticate."))
 		process.exit(1)
@@ -372,23 +314,7 @@ export async function deleteReview(skillIdentifier: string): Promise<void> {
 	const spinner = ora("Deleting review...").start()
 
 	try {
-		const url = new URL(
-			`/skills/${encodeURIComponent(namespace)}/${encodeURIComponent(slug)}/reviews`,
-			API_BASE_URL,
-		)
-
-		const response = await fetch(url.toString(), {
-			method: "DELETE",
-			headers: {
-				Authorization: `Bearer ${apiKey}`,
-			},
-		})
-
-		if (!response.ok) {
-			const errorText = await response.text()
-			throw new Error(`API error: ${response.status} - ${errorText}`)
-		}
-
+		await client.skills.reviews.delete(slug, { namespace })
 		spinner.succeed("Review deleted")
 	} catch (error) {
 		spinner.fail("Failed to delete review")
@@ -439,8 +365,8 @@ export async function voteReview(
 	}
 
 	// Voting requires authentication
-	const apiKey = await getSkillsToken()
-	if (!apiKey) {
+	const client = await createClient()
+	if (!client) {
 		console.error(chalk.red("Error: Not logged in."))
 		console.error(chalk.dim("Run 'smithery login' to authenticate."))
 		process.exit(1)
@@ -451,24 +377,11 @@ export async function voteReview(
 	const spinner = ora(`${voteLabel} review...`).start()
 
 	try {
-		const url = new URL(
-			`/skills/${encodeURIComponent(namespace)}/${encodeURIComponent(slug)}/reviews/${encodeURIComponent(reviewId)}/vote`,
-			API_BASE_URL,
-		)
-
-		const response = await fetch(url.toString(), {
-			method: "POST",
-			headers: {
-				"Content-Type": "application/json",
-				Authorization: `Bearer ${apiKey}`,
-			},
-			body: JSON.stringify({ vote }),
+		await client.skills.reviews.vote(reviewId, {
+			namespace,
+			slug,
+			isPositive: vote === "up",
 		})
-
-		if (!response.ok) {
-			const errorText = await response.text()
-			throw new Error(`API error: ${response.status} - ${errorText}`)
-		}
 
 		const voteEmoji = vote === "up" ? "👍" : "👎"
 		spinner.succeed(`${voteEmoji} Vote recorded!`)
