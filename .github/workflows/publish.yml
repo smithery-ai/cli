@@ -36,6 +36,7 @@ jobs:
           ANALYTICS_ENDPOINT: ${{ secrets.ANALYTICS_ENDPOINT }}
 
       - name: Publish to npm
-        run: npm publish --provenance --access public
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: |
+          # Use npm 11.6.2+ for OIDC provenance support
+          npm install -g npm@11.6.2
+          npm publish --provenance --access public
