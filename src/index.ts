@@ -734,8 +734,30 @@ skills
 		await installSkill(skill, options.agent, { global: options.global })
 	})
 
+// Skill voting (verbs instead of flags)
 skills
-	.command("reviews <skill>")
+	.command("upvote <skill>")
+	.description("Upvote a skill")
+	.action(async (skill) => {
+		const { voteSkill } = await import("./commands/skills")
+		await voteSkill(skill, "up")
+	})
+
+skills
+	.command("downvote <skill>")
+	.description("Downvote a skill")
+	.action(async (skill) => {
+		const { voteSkill } = await import("./commands/skills")
+		await voteSkill(skill, "down")
+	})
+
+// skills review subcommand
+const skillsReview = skills
+	.command("review")
+	.description("Manage skill reviews")
+
+skillsReview
+	.command("list <skill>")
 	.description("List reviews for a skill")
 	.option("--json", "Output as JSON")
 	.option("--limit <number>", "Number of reviews to show", "10")
@@ -749,30 +771,13 @@ skills
 		})
 	})
 
-skills
-	.command("review <skill> [text]")
-	.description("Submit or delete a review for a skill (requires login)")
+skillsReview
+	.command("add <skill> <text>")
+	.description("Add a review for a skill (includes vote)")
 	.option("-m, --model <name>", "Agent model used (e.g., claude-3.5-sonnet)")
-	.option("--delete", "Delete your review instead of submitting")
+	.option("--up", "Upvote the skill")
+	.option("--down", "Downvote the skill")
 	.action(async (skill, text, options) => {
-		if (options.delete) {
-			const { deleteReview } = await import("./commands/skills")
-			await deleteReview(skill)
-		} else {
-			const { submitReview } = await import("./commands/skills")
-			await submitReview(skill, {
-				review: text,
-				model: options.model,
-			})
-		}
-	})
-
-skills
-	.command("vote <skill> <review-id>")
-	.description("Upvote or downvote a review (requires login)")
-	.option("--up", "Upvote the review")
-	.option("--down", "Downvote the review")
-	.action(async (skill, reviewId, options) => {
 		if (!options.up && !options.down) {
 			console.error(chalk.red("Error: Must specify --up or --down"))
 			process.exit(1)
@@ -781,8 +786,36 @@ skills
 			console.error(chalk.red("Error: Cannot specify both --up and --down"))
 			process.exit(1)
 		}
+		const { submitReview } = await import("./commands/skills")
+		await submitReview(skill, {
+			review: text,
+			model: options.model,
+			vote: options.up ? "up" : "down",
+		})
+	})
+
+skillsReview
+	.command("remove <skill>")
+	.description("Remove your review for a skill")
+	.action(async (skill) => {
+		const { deleteReview } = await import("./commands/skills")
+		await deleteReview(skill)
+	})
+
+skillsReview
+	.command("upvote <skill> <review-id>")
+	.description("Upvote a review")
+	.action(async (skill, reviewId) => {
 		const { voteReview } = await import("./commands/skills")
-		await voteReview(skill, reviewId, options.up ? "up" : "down")
+		await voteReview(skill, reviewId, "up")
+	})
+
+skillsReview
+	.command("downvote <skill> <review-id>")
+	.description("Downvote a review")
+	.action(async (skill, reviewId) => {
+		const { voteReview } = await import("./commands/skills")
+		await voteReview(skill, reviewId, "down")
 	})
 
 // Parse arguments and run

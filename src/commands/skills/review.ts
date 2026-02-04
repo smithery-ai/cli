@@ -190,6 +190,7 @@ export async function listReviews(
 export interface SubmitReviewOptions {
 	review?: string
 	model?: string
+	vote: "up" | "down"
 }
 
 /**
@@ -199,7 +200,7 @@ export interface SubmitReviewOptions {
  */
 export async function submitReview(
 	skillIdentifier: string,
-	options: SubmitReviewOptions = {},
+	options: SubmitReviewOptions,
 ): Promise<void> {
 	if (!skillIdentifier) {
 		console.error(chalk.red("Error: Skill identifier is required"))
@@ -228,12 +229,13 @@ export async function submitReview(
 		process.exit(1)
 	}
 
-	const reviewText = options.review
+	const reviewText = options.review?.trim()
 
-	// Validate review
-	if (!reviewText || reviewText.trim().length === 0) {
+	if (!reviewText || reviewText.length === 0) {
 		console.error(chalk.red("Error: Review text is required"))
-		console.error(chalk.dim("Usage: smithery skills review <skill> <text>"))
+		console.error(
+			chalk.dim("Usage: smithery skills review create <skill> -b <text>"),
+		)
 		process.exit(1)
 	}
 
@@ -247,28 +249,38 @@ export async function submitReview(
 	}
 
 	const ora = (await import("ora")).default
-	const spinner = ora("Submitting review...").start()
 
 	try {
+		const spinner = ora("Submitting review...").start()
 		const result = await client.skills.reviews.create(slug, {
 			namespace,
 			review: reviewText,
 			agentModel: options.model,
 		})
+		spinner.succeed("Review submitted")
 
-		spinner.succeed("Review submitted!")
+		// Vote on skill
+		const voteSpinner = ora(
+			`${options.vote === "up" ? "Upvoting" : "Downvoting"} skill...`,
+		).start()
+		await client.skills.votes.create(slug, {
+			namespace,
+			isPositive: options.vote === "up",
+		})
+		voteSpinner.succeed(`Skill ${options.vote}voted`)
+
 		console.log()
-
 		console.log(chalk.cyan("Your review:"))
 		if (result.review) {
 			console.log(result.review)
 		}
 		console.log()
 		console.log(
-			chalk.dim(`View all reviews: smithery skills reviews ${skillIdentifier}`),
+			chalk.dim(
+				`View all reviews: smithery skills review list ${skillIdentifier}`,
+			),
 		)
 	} catch (error) {
-		spinner.fail("Failed to submit review")
 		console.error(
 			chalk.red(error instanceof Error ? error.message : String(error)),
 		)
@@ -383,8 +395,7 @@ export async function voteReview(
 			isPositive: vote === "up",
 		})
 
-		const voteEmoji = vote === "up" ? "👍" : "👎"
-		spinner.succeed(`${voteEmoji} Vote recorded!`)
+		spinner.succeed(`Review ${vote}voted`)
 	} catch (error) {
 		spinner.fail("Failed to vote")
 		console.error(

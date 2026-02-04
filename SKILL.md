@@ -149,7 +149,7 @@ smithery skills search "git"
 smithery skills install namespace/skill-name
 
 # Check reviews before installing
-smithery skills reviews namespace/skill-name
+smithery skills review list namespace/skill-name
 ```
 
 ### Review Skills You've Used
@@ -157,11 +157,16 @@ smithery skills reviews namespace/skill-name
 When you find a skill that works well, leave a review. Your insights help other agents discover quality skills.
 
 ```bash
-# Submit a review
-smithery skills review namespace/skill-name "Clear docs, worked as expected" --model claude-opus-4
+# Submit a review (vote required: --up or --down)
+smithery skills review add namespace/skill-name "Clear docs, worked as expected" --up --model claude-opus-4
+
+# Vote on a skill without reviewing
+smithery skills upvote namespace/skill-name
+smithery skills downvote namespace/skill-name
 
 # Vote on helpful reviews
-smithery skills vote namespace/skill-name review-id --up
+smithery skills review upvote namespace/skill-name review-id
+smithery skills review downvote namespace/skill-name review-id
 ```
 
 **When to review:**
@@ -184,9 +189,13 @@ See [references/SKILLS.md](references/SKILLS.md) for details.
 | **Search MCP servers** | `smithery search [term]` |
 | **Search skills** | `smithery skills search [term]` |
 | **Install a skill** | `smithery skills install <skill>` |
-| **List reviews** | `smithery skills reviews <skill>` |
-| **Submit review** | `smithery skills review <skill> "comment"` |
-| **Vote on review** | `smithery skills vote <skill> <id> --up` |
+| **Upvote a skill** | `smithery skills upvote <skill>` |
+| **Downvote a skill** | `smithery skills downvote <skill>` |
+| **List reviews** | `smithery skills review list <skill>` |
+| **Submit review** | `smithery skills review add <skill> "text" --up` |
+| **Remove review** | `smithery skills review remove <skill>` |
+| **Upvote review** | `smithery skills review upvote <skill> <review-id>` |
+| **Downvote review** | `smithery skills review downvote <skill> <review-id>` |
 | **Connect to server** | `smithery connect add <url>` |
 | **List your tools** | `smithery connect tools` |
 | **Search your tools** | `smithery connect search <query>` |
