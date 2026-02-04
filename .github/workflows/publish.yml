@@ -36,6 +36,7 @@ jobs:
 
       - name: Publish to npm
         run: |
-          # Use npm 11.6.2+ for OIDC provenance support
-          npm install -g npm@11.6.2
-          npm publish --provenance --access public
+          # Install OIDC-compatible npm version locally
+          npm install --prefix ./oidc npm@11.6.2
+          # Use pnpm publish with the local npm binary for OIDC auth
+          pnpm publish --npm-path "$(pwd)/oidc/node_modules/.bin/npm" --no-git-checks --provenance --access public
