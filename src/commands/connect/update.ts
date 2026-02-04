@@ -2,15 +2,24 @@ import chalk from "chalk"
 import { ConnectSession } from "./api"
 import { outputJson } from "./output"
 
-export async function addServer(
-	mcpUrl: string,
+export async function updateServer(
+	connectionId: string,
 	options: {
 		name?: string
-		namespace?: string
-		id?: string
 		metadata?: string
+		namespace?: string
 	},
 ): Promise<void> {
+	// Validate at least one update field is provided
+	if (!options.name && !options.metadata) {
+		console.error(
+			chalk.red(
+				"At least one of --name or --metadata must be provided for update",
+			),
+		)
+		process.exit(1)
+	}
+
 	try {
 		// Parse metadata if provided
 		let parsedMetadata: Record<string, unknown> | undefined
@@ -36,25 +45,16 @@ export async function addServer(
 
 		const session = await ConnectSession.create(options.namespace)
 
-		let connection
-		if (options.id) {
-			// Use set() API for custom ID
-			connection = await session.setConnection(options.id, mcpUrl, {
-				name: options.name,
-				metadata: parsedMetadata,
-			})
-		} else {
-			// Use create() API for auto-generated ID
-			connection = await session.createConnection(mcpUrl, {
-				name: options.name,
-				metadata: parsedMetadata,
-			})
-		}
+		const connection = await session.updateConnection(connectionId, {
+			name: options.name,
+			metadata: parsedMetadata,
+		})
 
 		const output: Record<string, unknown> = {
 			connectionId: connection.connectionId,
 			name: connection.name,
 			status: connection.status?.state ?? "unknown",
+			updated: true,
 		}
 
 		// Include metadata in output if present
@@ -62,31 +62,18 @@ export async function addServer(
 			output.metadata = connection.metadata
 		}
 
-		// Include auth URL if authorization is required
-		if (
-			connection.status?.state === "auth_required" &&
-			"authorizationUrl" in connection.status &&
-			connection.status.authorizationUrl
-		) {
-			output.authorizationUrl = connection.status.authorizationUrl
-		}
-
 		outputJson(output)
 	} catch (error) {
 		const errorMessage = error instanceof Error ? error.message : String(error)
 
-		// Handle 409 conflict for duplicate ID
+		// Handle not found
 		if (
-			errorMessage.includes("409") ||
-			errorMessage.toLowerCase().includes("already exists")
+			errorMessage.includes("404") ||
+			errorMessage.toLowerCase().includes("not found")
 		) {
-			console.error(
-				chalk.red(
-					`Connection with ID "${options.id}" already exists. Use 'smithery connect update' to modify it, or 'smithery connect remove' to delete it first.`,
-				),
-			)
+			console.error(chalk.red(`Connection "${connectionId}" not found`))
 		} else {
-			console.error(chalk.red(`Failed to add server: ${errorMessage}`))
+			console.error(chalk.red(`Failed to update server: ${errorMessage}`))
 		}
 		process.exit(1)
 	}

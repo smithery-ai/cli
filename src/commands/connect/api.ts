@@ -154,11 +154,54 @@ export class ConnectSession {
 
 	async createConnection(
 		mcpUrl: string,
-		options: { name?: string } = {},
+		options: { name?: string; metadata?: Record<string, unknown> } = {},
 	): Promise<Connection> {
 		return this.smitheryClient.beta.connect.connections.create(this.namespace, {
 			mcpUrl,
 			name: options.name,
+			metadata: options.metadata,
+		})
+	}
+
+	/**
+	 * Create a connection with a specific ID using the set() API.
+	 * Returns 409 error if connection already exists.
+	 */
+	async setConnection(
+		connectionId: string,
+		mcpUrl: string,
+		options: { name?: string; metadata?: Record<string, unknown> } = {},
+	): Promise<Connection> {
+		return this.smitheryClient.beta.connect.connections.set(connectionId, {
+			namespace: this.namespace,
+			mcpUrl,
+			name: options.name,
+			metadata: options.metadata,
+		})
+	}
+
+	/**
+	 * Update an existing connection's name and/or metadata.
+	 * Since API has no PATCH, this does: get -> delete -> set (preserving mcpUrl).
+	 * Metadata is merged: existing keys preserved, new keys added/updated.
+	 */
+	async updateConnection(
+		connectionId: string,
+		updates: { name?: string; metadata?: Record<string, unknown> },
+	): Promise<Connection> {
+		const existing = await this.getConnection(connectionId)
+		await this.deleteConnection(connectionId)
+
+		// Merge metadata: existing keys preserved, new keys added/updated
+		const mergedMetadata = updates.metadata
+			? { ...(existing.metadata ?? {}), ...updates.metadata }
+			: existing.metadata ?? undefined
+
+		return this.smitheryClient.beta.connect.connections.set(connectionId, {
+			namespace: this.namespace,
+			mcpUrl: existing.mcpUrl,
+			name: updates.name ?? existing.name,
+			metadata: mergedMetadata,
 		})
 	}
 
