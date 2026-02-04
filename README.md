@@ -88,8 +88,8 @@ smithery skills search --namespace anthropics --json  # Filter by namespace
 smithery skills install anthropics/frontend-design --agent claude-code
 
 # Review skills
-smithery skills reviews anthropics/frontend-design   # View reviews
-smithery skills review anthropics/frontend-design "Great skill for building UIs!"
+smithery skills reviews anthropics/frontend-design   # View reviews for a skill
+smithery skills review anthropics/frontend-design "Handles responsive layouts and accessibility well. Saved hours on component scaffolding."
 smithery skills vote anthropics/frontend-design 550e8400-e29b-41d4-a716-446655440000 --up
 
 # Discover namespaces
