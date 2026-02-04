@@ -11,7 +11,7 @@ import {
 	listTools,
 	removeServer,
 	searchTools,
-	updateServer,
+	setServer,
 } from "./commands/connect"
 import { deploy } from "./commands/deploy"
 import { dev } from "./commands/dev"
@@ -457,39 +457,15 @@ async function mintApiKey() {
 	const rootApiKey = await getApiKey()
 	const client = new Smithery({ apiKey: rootApiKey })
 	const token = await client.tokens.create({
-		allow: {
-			connections: {
-				actions: ["read", "write"],
-				namespaces: ["*"],
-				metadata: {
-					userId: "root-whoami",
-				},
+		policy: [
+			{
+				resources: ["connections", "servers", "namespaces", "skills"],
+				operations: ["read", "write", "execute"],
+				namespaces: "*",
+				metadata: { userId: "root-whoami" },
+				ttl: 3600,
 			},
-			mcp: {
-				actions: ["read", "write"],
-				namespaces: ["*"],
-				metadata: {
-					userId: "root-whoami",
-				},
-			},
-			namespaces: {
-				actions: ["read", "write"],
-				namespaces: ["*"],
-			},
-			deployments: {
-				actions: ["read", "write"],
-				namespaces: ["*"],
-			},
-			servers: {
-				actions: ["read", "write"],
-				namespaces: ["*"],
-			},
-			tokens: {
-				actions: ["read", "write"],
-				namespaces: ["*"],
-			},
-		},
-		ttlSeconds: 3600,
+		],
 	})
 	const apiKey = token.token
 	const expiresAt = new Date(token.expiresAt)
@@ -604,8 +580,7 @@ const connect = program
 
 connect
 	.command("add <mcp-url>")
-	.description("Add an MCP server connection")
-	.option("--id <id>", "Custom connection ID (semantically memorable)")
+	.description("Add an MCP server connection (auto-generates ID)")
 	.option("--name <name>", "Human-readable name for the server")
 	.option("--metadata <json>", "Custom metadata as JSON object")
 	.option("--namespace <ns>", "Target namespace")
@@ -630,16 +605,14 @@ connect
 	})
 
 connect
-	.command("update <id>")
-	.description("Update a server connection's name or metadata")
-	.option("--name <name>", "New human-readable name")
-	.option(
-		"--metadata <json>",
-		"New metadata as JSON object (merged with existing)",
-	)
+	.command("set <id>")
+	.description("Create or update a connection with a specific ID")
+	.option("--url <mcp-url>", "MCP server URL (required for new connections)")
+	.option("--name <name>", "Human-readable name")
+	.option("--metadata <json>", "Metadata as JSON object (merged on update)")
 	.option("--namespace <ns>", "Namespace for the server")
 	.action(async (id, options) => {
-		await updateServer(id, options)
+		await setServer(id, options)
 	})
 
 connect

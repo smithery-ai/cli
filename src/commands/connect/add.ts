@@ -1,5 +1,5 @@
 import chalk from "chalk"
-import { type Connection, ConnectSession } from "./api"
+import { ConnectSession } from "./api"
 import { outputJson } from "./output"
 
 export async function addServer(
@@ -7,7 +7,6 @@ export async function addServer(
 	options: {
 		name?: string
 		namespace?: string
-		id?: string
 		metadata?: string
 	},
 ): Promise<void> {
@@ -35,21 +34,10 @@ export async function addServer(
 		}
 
 		const session = await ConnectSession.create(options.namespace)
-
-		let connection: Connection
-		if (options.id) {
-			// Use set() API for custom ID
-			connection = await session.setConnection(options.id, mcpUrl, {
-				name: options.name,
-				metadata: parsedMetadata,
-			})
-		} else {
-			// Use create() API for auto-generated ID
-			connection = await session.createConnection(mcpUrl, {
-				name: options.name,
-				metadata: parsedMetadata,
-			})
-		}
+		const connection = await session.createConnection(mcpUrl, {
+			name: options.name,
+			metadata: parsedMetadata,
+		})
 
 		const output: Record<string, unknown> = {
 			connectionId: connection.connectionId,
@@ -73,21 +61,11 @@ export async function addServer(
 
 		outputJson(output)
 	} catch (error) {
-		const errorMessage = error instanceof Error ? error.message : String(error)
-
-		// Handle 409 conflict for duplicate ID
-		if (
-			errorMessage.includes("409") ||
-			errorMessage.toLowerCase().includes("already exists")
-		) {
-			console.error(
-				chalk.red(
-					`Connection with ID "${options.id}" already exists. Use 'smithery connect update' to modify it, or 'smithery connect remove' to delete it first.`,
-				),
-			)
-		} else {
-			console.error(chalk.red(`Failed to add server: ${errorMessage}`))
-		}
+		console.error(
+			chalk.red(
+				`Failed to add server: ${error instanceof Error ? error.message : String(error)}`,
+			),
+		)
 		process.exit(1)
 	}
 }

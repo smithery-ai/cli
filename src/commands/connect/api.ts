@@ -4,7 +4,7 @@ import type { Tool } from "@modelcontextprotocol/sdk/types.js"
 import type {
 	Connection,
 	ConnectionsListResponse,
-} from "@smithery/api/resources/beta/connect/connections.js"
+} from "@smithery/api/resources/experimental/connect/connections.js"
 import { createSmitheryClient } from "../../lib/smithery-client"
 import {
 	getNamespace as getStoredNamespace,
@@ -53,10 +53,11 @@ export class ConnectSession {
 		let cursor: string | undefined
 
 		do {
-			const data = await this.smitheryClient.beta.connect.connections.list(
-				this.namespace,
-				{ cursor },
-			)
+			const data =
+				await this.smitheryClient.experimental.connect.connections.list(
+					this.namespace,
+					{ cursor },
+				)
 			all.push(...data.connections)
 			cursor = data.nextCursor ?? undefined
 		} while (cursor)
@@ -156,11 +157,14 @@ export class ConnectSession {
 		mcpUrl: string,
 		options: { name?: string; metadata?: Record<string, unknown> } = {},
 	): Promise<Connection> {
-		return this.smitheryClient.beta.connect.connections.create(this.namespace, {
-			mcpUrl,
-			name: options.name,
-			metadata: options.metadata,
-		})
+		return this.smitheryClient.experimental.connect.connections.create(
+			this.namespace,
+			{
+				mcpUrl,
+				name: options.name,
+				metadata: options.metadata,
+			},
+		)
 	}
 
 	/**
@@ -172,17 +176,20 @@ export class ConnectSession {
 		mcpUrl: string,
 		options: { name?: string; metadata?: Record<string, unknown> } = {},
 	): Promise<Connection> {
-		return this.smitheryClient.beta.connect.connections.set(connectionId, {
-			namespace: this.namespace,
-			mcpUrl,
-			name: options.name,
-			metadata: options.metadata,
-		})
+		return this.smitheryClient.experimental.connect.connections.set(
+			connectionId,
+			{
+				namespace: this.namespace,
+				mcpUrl,
+				name: options.name,
+				metadata: options.metadata,
+			},
+		)
 	}
 
 	/**
 	 * Update an existing connection's name and/or metadata.
-	 * Since API has no PATCH, this does: get -> delete -> set (preserving mcpUrl).
+	 * Uses set() which updates if mcpUrl matches existing connection.
 	 * Metadata is merged: existing keys preserved, new keys added/updated.
 	 */
 	async updateConnection(
@@ -190,31 +197,39 @@ export class ConnectSession {
 		updates: { name?: string; metadata?: Record<string, unknown> },
 	): Promise<Connection> {
 		const existing = await this.getConnection(connectionId)
-		await this.deleteConnection(connectionId)
 
 		// Merge metadata: existing keys preserved, new keys added/updated
 		const mergedMetadata = updates.metadata
 			? { ...(existing.metadata ?? {}), ...updates.metadata }
 			: (existing.metadata ?? undefined)
 
-		return this.smitheryClient.beta.connect.connections.set(connectionId, {
-			namespace: this.namespace,
-			mcpUrl: existing.mcpUrl,
-			name: updates.name ?? existing.name,
-			metadata: mergedMetadata,
-		})
+		return this.smitheryClient.experimental.connect.connections.set(
+			connectionId,
+			{
+				namespace: this.namespace,
+				mcpUrl: existing.mcpUrl,
+				name: updates.name ?? existing.name,
+				metadata: mergedMetadata,
+			},
+		)
 	}
 
 	async deleteConnection(connectionId: string): Promise<void> {
-		await this.smitheryClient.beta.connect.connections.delete(connectionId, {
-			namespace: this.namespace,
-		})
+		await this.smitheryClient.experimental.connect.connections.delete(
+			connectionId,
+			{
+				namespace: this.namespace,
+			},
+		)
 	}
 
 	async getConnection(connectionId: string): Promise<Connection> {
-		return this.smitheryClient.beta.connect.connections.get(connectionId, {
-			namespace: this.namespace,
-		})
+		return this.smitheryClient.experimental.connect.connections.get(
+			connectionId,
+			{
+				namespace: this.namespace,
+			},
+		)
 	}
 }
 
