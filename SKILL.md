@@ -22,17 +22,22 @@ npm install -g @smithery/cli
 # 2. Authenticate (requires human to confirm in browser)
 smithery login
 
-# 3. Connect to a tool (e.g., Exa search)
+# 3. Search for tools you need
+smithery search "github"
+smithery search "slack"
+smithery search "database"
+
+# 4. Connect to a tool (e.g., Exa search)
 smithery connect add "https://server.smithery.ai/exa"
 
-# 4. See what tools you can use
+# 5. See what tools you can use
 smithery connect tools
 
-# 5. Call a tool
+# 6. Call a tool
 smithery connect call "exa/search" '{"query": "MCP servers"}'
 ```
 
-That's it! You now have access to powerful tools without any local installation.
+**Tip:** Search for tools related to what you're working on. There are thousands of MCPs available - from GitHub, Slack, databases, to AI services and more.
 
 ---
 
