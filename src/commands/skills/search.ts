@@ -2,6 +2,11 @@ import chalk from "chalk"
 import type { SkillListResponse } from "@smithery/api/resources/skills"
 import { createSmitheryClient } from "../../lib/smithery-client"
 
+export interface SearchOptions {
+	dump?: boolean
+	limit?: number
+}
+
 /**
  * Prompts for a search term if not provided
  */
@@ -44,12 +49,22 @@ function formatSkillDisplay(skill: SkillListResponse): string {
 /**
  * Interactive skill search and browsing
  * @param initialQuery - Initial search query (optional)
+ * @param options - Search options (dump mode, limit)
  * @returns Promise<SkillListResponse | null> - Selected skill or null if cancelled
  */
 export async function searchSkills(
 	initialQuery?: string,
+	options: SearchOptions = {},
 ): Promise<SkillListResponse | null> {
-	let searchTerm = await getSearchTerm(initialQuery)
+	const { dump = false, limit = 10 } = options
+
+	// In dump mode, require a query
+	if (dump && !initialQuery) {
+		console.error(chalk.red("Error: --dump requires a search query"))
+		process.exit(1)
+	}
+
+	let searchTerm = dump ? initialQuery! : await getSearchTerm(initialQuery)
 
 	try {
 		while (true) {
@@ -59,7 +74,7 @@ export async function searchSkills(
 			const client = await createSmitheryClient()
 			const response = await client.skills.list({
 				q: searchTerm,
-				pageSize: 10,
+				pageSize: limit,
 			})
 
 			const skills = response.skills
@@ -70,7 +85,7 @@ export async function searchSkills(
 			}
 
 			spinner.succeed(
-				`☀ ${skills.length < 10 ? `Found ${skills.length} result${skills.length === 1 ? "" : "s"}:` : `Showing top ${skills.length} results:`}`,
+				`☀ ${skills.length < limit ? `Found ${skills.length} result${skills.length === 1 ? "" : "s"}:` : `Showing top ${skills.length} results:`}`,
 			)
 			console.log(
 				chalk.dim(
@@ -78,6 +93,31 @@ export async function searchSkills(
 				),
 			)
 			console.log()
+
+			// Dump mode: just print results and exit
+			if (dump) {
+				for (const skill of skills) {
+					const qualifiedName = `@${skill.namespace}/${skill.slug}`
+					const displayName = skill.displayName || qualifiedName
+					const stats =
+						skill.totalActivations && skill.totalActivations > 0
+							? `${skill.totalActivations.toLocaleString()} activations`
+							: skill.uniqueUsers && skill.uniqueUsers > 0
+								? `${skill.uniqueUsers.toLocaleString()} users`
+								: ""
+
+					console.log(chalk.bold(displayName))
+					console.log(`  ${chalk.dim("Name:")} ${qualifiedName}`)
+					if (skill.description) {
+						console.log(`  ${chalk.dim("Description:")} ${skill.description}`)
+					}
+					if (stats) {
+						console.log(`  ${chalk.dim("Stats:")} ${stats}`)
+					}
+					console.log()
+				}
+				return null
+			}
 
 			// Show interactive selection
 			const inquirer = (await import("inquirer")).default

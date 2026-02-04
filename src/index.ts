@@ -658,8 +658,17 @@ const skills = program
 skills
 	.command("search [query]")
 	.description("Search for skills in the Smithery registry")
-	.action(async (query) => {
-		await searchSkills(query)
+	.option("--dump", "Print search results without interactive selection")
+	.option("--limit <number>", "Maximum number of results to show", "10")
+	.action(async (query, options) => {
+		const selectedSkill = await searchSkills(query, {
+			dump: options.dump,
+			limit: Number.parseInt(options.limit, 10),
+		})
+		if (selectedSkill) {
+			// User selected "Install this skill"
+			await installSkill(`@${selectedSkill.namespace}/${selectedSkill.slug}`)
+		}
 	})
 
 skills
