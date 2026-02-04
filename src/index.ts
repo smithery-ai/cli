@@ -580,7 +580,11 @@ const connect = program
 
 connect
 	.command("add <mcp-url>")
-	.description("Add an MCP server connection (auto-generates ID)")
+	.description("Add an MCP server connection")
+	.option(
+		"--id <id>",
+		"Custom connection ID (defaults name to ID if name not set)",
+	)
 	.option("--name <name>", "Human-readable name for the server")
 	.option("--metadata <json>", "Custom metadata as JSON object")
 	.option("--namespace <ns>", "Target namespace")

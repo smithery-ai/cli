@@ -3,11 +3,13 @@ import { setServer } from "./set"
 export async function addServer(
 	mcpUrl: string,
 	options: {
+		id?: string
 		name?: string
 		namespace?: string
 		metadata?: string
 	},
 ): Promise<void> {
-	// Forward to set without an ID (auto-generates)
-	return setServer(mcpUrl, options)
+	// If id is set but name is not, default name to id
+	const name = options.name ?? options.id
+	return setServer(mcpUrl, { ...options, name })
 }
