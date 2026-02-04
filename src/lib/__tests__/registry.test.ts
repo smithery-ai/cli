@@ -83,4 +83,92 @@ describe("resolveServer", () => {
 			"No connection configuration found for server",
 		)
 	})
+
+	test("creates Smithery client with empty API key when env var not set", async () => {
+		delete process.env.SMITHERY_API_KEY
+
+		await resolveServer(parseQualifiedName("@foo/bar"))
+
+		// Verify Smithery was instantiated with empty string API key
+		expect(Smithery).toHaveBeenCalledWith(
+			expect.objectContaining({ apiKey: "" }),
+		)
+	})
+
+	test("creates Smithery client with API key from env when available", async () => {
+		process.env.SMITHERY_API_KEY = "test-api-key"
+
+		await resolveServer(parseQualifiedName("@foo/bar"))
+
+		expect(Smithery).toHaveBeenCalledWith(
+			expect.objectContaining({ apiKey: "test-api-key" }),
+		)
+
+		delete process.env.SMITHERY_API_KEY
+	})
+})
+
+describe("searchServers", () => {
+	let mockList: ReturnType<typeof vi.fn>
+
+	beforeEach(() => {
+		vi.clearAllMocks()
+
+		mockList = vi.fn().mockResolvedValue({
+			servers: [
+				{
+					qualifiedName: "test/server",
+					displayName: "Test Server",
+					description: "A test server",
+					useCount: 100,
+					verified: true,
+				},
+			],
+		})
+
+		vi.mocked(Smithery).mockImplementation(
+			() =>
+				({
+					servers: {
+						get: vi.fn(),
+						list: mockList,
+					},
+				}) as unknown as InstanceType<typeof Smithery>,
+		)
+	})
+
+	test("creates Smithery client with empty API key when not provided", async () => {
+		const { searchServers } = await import("../registry")
+
+		await searchServers("test")
+
+		expect(Smithery).toHaveBeenCalledWith(
+			expect.objectContaining({ apiKey: "" }),
+		)
+	})
+
+	test("creates Smithery client with provided API key", async () => {
+		const { searchServers } = await import("../registry")
+
+		await searchServers("test", "custom-api-key")
+
+		expect(Smithery).toHaveBeenCalledWith(
+			expect.objectContaining({ apiKey: "custom-api-key" }),
+		)
+	})
+
+	test("returns formatted server results", async () => {
+		const { searchServers } = await import("../registry")
+
+		const results = await searchServers("test")
+
+		expect(results).toHaveLength(1)
+		expect(results[0]).toEqual({
+			qualifiedName: "test/server",
+			displayName: "Test Server",
+			description: "A test server",
+			useCount: 100,
+			verified: true,
+		})
+	})
 })
