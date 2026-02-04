@@ -1,10 +1,8 @@
-# Discovery
+# MCP Servers
 
-Find and explore MCP servers from the Smithery registry.
+Find, explore, and install MCP servers from the Smithery registry.
 
-> **Looking for skills?** Use `smithery skills search [term]` - see the Skills section in SKILL.md.
-
-## Search MCP Servers
+## Search Servers
 
 Interactive search:
 ```bash
@@ -26,7 +24,7 @@ Output:
 {
   "servers": [
     {
-      "qualifiedName": "@smithery/github",
+      "qualifiedName": "smithery/github",
       "displayName": "GitHub MCP Server",
       "description": "Interact with GitHub repositories"
     }
@@ -39,7 +37,7 @@ Output:
 View detailed information about a server:
 
 ```bash
-smithery inspect @namespace/server-name
+smithery inspect namespace/server-name
 ```
 
 This shows:
@@ -53,7 +51,7 @@ This shows:
 Install a server for use with a specific client:
 
 ```bash
-smithery install @namespace/server-name
+smithery install namespace/server-name
 ```
 
 Options:
@@ -62,7 +60,7 @@ Options:
 
 Example with config:
 ```bash
-smithery install @smithery/github -c claude --config '{"token": "ghp_..."}'
+smithery install smithery/github -c claude --config '{"token": "ghp_..."}'
 ```
 
 Supported clients:
@@ -97,7 +95,7 @@ Options:
 Run a server without installing:
 
 ```bash
-smithery run @namespace/server-name
+smithery run namespace/server-name
 ```
 
 Options:
@@ -110,10 +108,10 @@ Options:
 smithery search "slack"
 
 # 2. Inspect to learn more
-smithery inspect @smithery/slack
+smithery inspect smithery/slack
 
 # 3. Install for your client
-smithery install @smithery/slack -c claude
+smithery install smithery/slack -c claude
 
 # 4. Verify installation
 smithery list -c claude

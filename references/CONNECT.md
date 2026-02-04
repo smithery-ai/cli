@@ -5,7 +5,7 @@ Use MCP servers in the cloud without local installation. Connect to any server a
 ## Add a Connection
 
 ```bash
-smithery connect add "https://server.smithery.ai/@namespace/server-name"
+smithery connect add "https://server.smithery.ai/namespace/server-name"
 ```
 
 Options:
@@ -16,7 +16,7 @@ Options:
 
 Example with options:
 ```bash
-smithery connect add "https://server.smithery.ai/@example/github" \
+smithery connect add "https://server.smithery.ai/example/github" \
   --id "my-github" \
   --name "GitHub Tools" \
   --metadata '{"env": "production"}'
@@ -54,7 +54,7 @@ Options:
 Use `set` to create or update a connection with a specific ID:
 
 ```bash
-smithery connect set "https://server.smithery.ai/@example/server" --id "my-server"
+smithery connect set "https://server.smithery.ai/example/server" --id "my-server"
 ```
 
 This is idempotent - safe to run multiple times.
@@ -139,7 +139,7 @@ If `auth_required`, tell your human to visit the authorization URL.
 
 ```bash
 # 1. Add a connection
-smithery connect add "https://server.smithery.ai/@smithery/github"
+smithery connect add "https://server.smithery.ai/smithery/github"
 
 # 2. List available tools
 smithery connect tools

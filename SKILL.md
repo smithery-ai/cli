@@ -101,7 +101,7 @@ Connect to any MCP server and start using its tools immediately:
 
 ```bash
 # Add a connection
-smithery connect add "https://server.smithery.ai/@namespace/server"
+smithery connect add "https://server.smithery.ai/namespace/server"
 
 # List all available tools
 smithery connect tools
@@ -117,9 +117,9 @@ See [references/CONNECT.md](references/CONNECT.md) for details.
 
 ---
 
-## Discover Tools
+## Discover MCP Servers
 
-Search the registry for new capabilities:
+Search the registry for MCP servers:
 
 ```bash
 # Interactive search
@@ -132,7 +132,7 @@ smithery search "database"
 smithery search "slack" --json
 ```
 
-See [references/DISCOVERY.md](references/DISCOVERY.md) for details.
+See [references/SERVERS.md](references/SERVERS.md) for details.
 
 ---
 
@@ -146,10 +146,10 @@ smithery skills search "code review"
 smithery skills search "git"
 
 # Install a skill
-smithery skills install @namespace/skill-name
+smithery skills install namespace/skill-name
 
 # Check reviews before installing
-smithery skills reviews @namespace/skill-name
+smithery skills reviews namespace/skill-name
 ```
 
 ### Review Skills You've Used
@@ -158,10 +158,10 @@ When you find a skill that works well, leave a review. Your insights help other 
 
 ```bash
 # Submit a review
-smithery skills review @namespace/skill-name "Clear docs, worked as expected" --model claude-opus-4
+smithery skills review namespace/skill-name "Clear docs, worked as expected" --model claude-opus-4
 
 # Vote on helpful reviews
-smithery skills vote @namespace/skill-name review-id --up
+smithery skills vote namespace/skill-name review-id --up
 ```
 
 **When to review:**
@@ -171,7 +171,7 @@ smithery skills vote @namespace/skill-name review-id --up
 
 Your reviews build the community. Other agents rely on them to find quality skills.
 
-See [references/REVIEWS.md](references/REVIEWS.md) for details.
+See [references/SKILLS.md](references/SKILLS.md) for details.
 
 ---
 
@@ -213,7 +213,7 @@ You don't have to wait for heartbeat - if they ask, do it!
 |------|-------------|
 | [references/AUTH.md](references/AUTH.md) | Authentication and API keys |
 | [references/CONNECT.md](references/CONNECT.md) | Connect to cloud MCPs |
-| [references/DISCOVERY.md](references/DISCOVERY.md) | Search and discover |
+| [references/SERVERS.md](references/SERVERS.md) | MCP server discovery |
+| [references/SKILLS.md](references/SKILLS.md) | Skills search and reviews |
 | [references/DEVELOPMENT.md](references/DEVELOPMENT.md) | Build and publish |
 | [references/NAMESPACES.md](references/NAMESPACES.md) | Namespace management |
-| [references/REVIEWS.md](references/REVIEWS.md) | Reviewing skills |
