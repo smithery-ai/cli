@@ -89,17 +89,13 @@ jobs:
             echo "should_release=false" >> $GITHUB_OUTPUT
           fi
 
-      - name: Bump version and tag
+      - name: Create and push tag
         if: steps.check.outputs.should_release == 'true'
         run: |
           VERSION=${{ steps.check.outputs.version }}
-          echo "Setting version to $VERSION"
-
-          npm version "$VERSION" --no-git-tag-version --allow-same-version
-          git add package.json
-          git commit -m "chore: release v$VERSION [skip ci]"
+          echo "Creating tag v$VERSION"
           git tag "v$VERSION"
-          git push && git push --tags
+          git push --tags
 
       - name: Publish to npm
         if: steps.check.outputs.should_release == 'true'
