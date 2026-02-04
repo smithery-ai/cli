@@ -12,7 +12,6 @@ concurrency:
 
 jobs:
   test:
-    name: Test
     runs-on: ubuntu-latest
 
     steps:
@@ -27,7 +26,6 @@ jobs:
       - run: pnpm test
 
   typecheck:
-    name: Typecheck
     runs-on: ubuntu-latest
 
     steps:
@@ -42,7 +40,6 @@ jobs:
       - run: pnpm run typecheck
 
   lint:
-    name: Lint
     runs-on: ubuntu-latest
 
     steps:
@@ -58,7 +55,6 @@ jobs:
       - run: pnpm run check
 
   build:
-    name: Build
     runs-on: ubuntu-latest
 
     steps:
