@@ -45,19 +45,13 @@ See [references/AUTH.md](references/AUTH.md) for details.
 ```bash
 # Search the registry
 smithery search "database"
-
-# Get server details
-smithery inspect @namespace/server-name
-
-# Install locally
-smithery install @namespace/server-name
 ```
 
 See [references/DISCOVERY.md](references/DISCOVERY.md) for details.
 
-### Use Cloud Tools (Smithery Connect)
+### Connect to Tools
 
-Connect to MCP servers in the cloud without local installation:
+Connect to MCP servers and APIs in the cloud:
 
 ```bash
 # Add a connection
