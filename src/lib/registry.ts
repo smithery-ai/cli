@@ -20,7 +20,9 @@ dotenvConfig({ quiet: true })
  * Base URL and API key are handled by SDK via env vars.
  */
 const createSDKOptions = (apiKey?: string): ClientOptions => ({
-	apiKey,
+	// Pass empty string when no API key - SDK requires non-undefined value
+	// but API endpoints may still work without authentication
+	apiKey: apiKey ?? "",
 	timeout: 5000,
 	maxRetries: 2,
 })
