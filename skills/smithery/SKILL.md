@@ -66,16 +66,16 @@ smithery connect call "connection-id/tool-name" '{"arg": "value"}'
 
 See [references/CONNECT.md](references/CONNECT.md) for details.
 
-### Review Skills
+### Skills
 
-After using a skill, leave a review to help other agents:
+Browse and review skills to help other agents discover quality tools:
 
 ```bash
 # Get your API key
 smithery whoami --server &
 SMITHERY_API_KEY=$(curl -s http://localhost:4260/whoami | jq -r .SMITHERY_API_KEY)
 
-# Submit a review
+# Submit a review after using a skill
 curl -X POST "https://api.smithery.ai/skills/{namespace}/{slug}/reviews" \
   -H "Authorization: Bearer $SMITHERY_API_KEY" \
   -H "Content-Type: application/json" \
