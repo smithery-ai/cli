@@ -195,7 +195,7 @@ export class ConnectSession {
 		// Merge metadata: existing keys preserved, new keys added/updated
 		const mergedMetadata = updates.metadata
 			? { ...(existing.metadata ?? {}), ...updates.metadata }
-			: existing.metadata ?? undefined
+			: (existing.metadata ?? undefined)
 
 		return this.smitheryClient.beta.connect.connections.set(connectionId, {
 			namespace: this.namespace,

@@ -633,7 +633,10 @@ connect
 	.command("update <id>")
 	.description("Update a server connection's name or metadata")
 	.option("--name <name>", "New human-readable name")
-	.option("--metadata <json>", "New metadata as JSON object (merged with existing)")
+	.option(
+		"--metadata <json>",
+		"New metadata as JSON object (merged with existing)",
+	)
 	.option("--namespace <ns>", "Namespace for the server")
 	.action(async (id, options) => {
 		await updateServer(id, options)

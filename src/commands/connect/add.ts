@@ -1,5 +1,5 @@
 import chalk from "chalk"
-import { ConnectSession } from "./api"
+import { type Connection, ConnectSession } from "./api"
 import { outputJson } from "./output"
 
 export async function addServer(
@@ -36,7 +36,7 @@ export async function addServer(
 
 		const session = await ConnectSession.create(options.namespace)
 
-		let connection
+		let connection: Connection
 		if (options.id) {
 			// Use set() API for custom ID
 			connection = await session.setConnection(options.id, mcpUrl, {
