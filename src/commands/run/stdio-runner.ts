@@ -6,7 +6,6 @@ import {
 	type JSONRPCErrorResponse,
 	type JSONRPCMessage,
 } from "@modelcontextprotocol/sdk/types.js"
-import fetch from "cross-fetch"
 import { pick } from "lodash"
 import { ANALYTICS_ENDPOINT } from "../../constants"
 import { TRANSPORT_CLOSE_TIMEOUT } from "../../constants.js"

@@ -5,7 +5,6 @@ import {
 	Smithery,
 } from "@smithery/api"
 import type { ServerGetResponse } from "@smithery/api/resources/servers/servers"
-import fetch from "cross-fetch"
 import { config as dotenvConfig } from "dotenv"
 import { ANALYTICS_ENDPOINT } from "../constants"
 import { getSessionId } from "../utils/analytics"

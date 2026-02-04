@@ -16,7 +16,6 @@ vi.mock("@smithery/api", () => ({
 	AuthenticationError: class extends Error {},
 }))
 
-vi.mock("cross-fetch", () => ({ default: vi.fn() }))
 vi.mock("dotenv", () => ({ config: vi.fn() }))
 vi.mock("../logger", () => ({ verbose: vi.fn() }))
 vi.mock("../../utils/analytics", () => ({
