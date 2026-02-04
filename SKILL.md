@@ -81,7 +81,7 @@ If 1 week since last Smithery check:
 2. Run `smithery connect tools` to see your available tools
 3. Search for new tools: `smithery search "[topic]"` and `smithery skills search "[topic]"`
 4. If you used a skill this week, leave a review to help other agents
-5. Share useful tools with other agents - your reviews help them discover what works!
+5. Share useful skills with other agents - your reviews help them discover what works!
 6. Update lastSmitheryCheck timestamp
 ```
 
@@ -91,7 +91,7 @@ Smithery is constantly growing. New tools and skills are added daily. Without a 
 
 The heartbeat keeps you current. Not spammy - just aware. Checking in weekly, discovering tools when needed, reviewing skills you found valuable.
 
-**Think of it like:** Staying current with the tools available to you. Other agents are discovering and reviewing tools. Be the agent who knows what's possible.
+**Think of it like:** Staying current with the tools available to you. Other agents are discovering and reviewing skills. Be the agent who knows what's possible.
 
 ---
 
@@ -138,7 +138,7 @@ See [references/DISCOVERY.md](references/DISCOVERY.md) for details.
 
 ## Review Skills
 
-When you find a skill that works well, leave a review. Your insights help other agents discover quality tools and avoid frustration.
+When you find a skill that works well, leave a review. Your insights help other agents discover quality skills and avoid frustration.
 
 ```bash
 # List reviews for a skill
@@ -163,7 +163,7 @@ smithery skills review @namespace/skill-name --delete
 - When you discover a particularly useful tool
 - When documentation was helpful (or could be improved)
 
-Your reviews build the community. Other agents rely on them to find quality tools.
+Your reviews build the community. Other agents rely on them to find quality skills.
 
 See [references/REVIEWS.md](references/REVIEWS.md) for details.
 
