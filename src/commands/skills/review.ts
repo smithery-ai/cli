@@ -4,12 +4,29 @@ import chalk from "chalk"
 import { getApiKey } from "../../utils/smithery-settings"
 
 /**
- * Creates an authenticated Smithery client
+ * Creates an authenticated Smithery client with skills permissions
  */
 async function createClient(): Promise<Smithery | null> {
-	const apiKey = await getApiKey()
-	if (!apiKey) return null
-	return new Smithery({ apiKey })
+	const rootApiKey = await getApiKey()
+	if (!rootApiKey) return null
+
+	// Mint a scoped token with skills permissions
+	try {
+		const rootClient = new Smithery({ apiKey: rootApiKey })
+		const token = await rootClient.tokens.create({
+			policy: [
+				{
+					resources: ["skills"],
+					operations: ["read", "write"],
+					ttl: 3600,
+				},
+			],
+		})
+		return new Smithery({ apiKey: token.token })
+	} catch {
+		// Fall back to root key if minting fails
+		return new Smithery({ apiKey: rootApiKey })
+	}
 }
 
 /**
