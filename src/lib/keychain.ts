@@ -134,3 +134,35 @@ export async function deleteConfig(qualifiedName: string): Promise<void> {
 		)
 	}
 }
+
+/**
+ * Clear all server configurations from OS keychain
+ */
+export async function clearAllConfigs(): Promise<void> {
+	const kt = getKeytar()
+	if (!kt) {
+		verbose("Keychain not available, skipping clear all configs")
+		return
+	}
+
+	verbose("Clearing all configs from keychain")
+	try {
+		// keytar v7.9+ has findCredentials
+		const credentials = await (
+			kt as Keytar & {
+				findCredentials(
+					service: string,
+				): Promise<Array<{ account: string; password: string }>>
+			}
+		).findCredentials(SERVICE_NAME)
+		for (const cred of credentials) {
+			await kt.deletePassword(SERVICE_NAME, cred.account)
+			verbose(`Deleted keychain entry: ${cred.account}`)
+		}
+		verbose(`Cleared ${credentials.length} keychain entries`)
+	} catch (error) {
+		verbose(
+			`Failed to clear keychain configs: ${error instanceof Error ? error.message : String(error)}`,
+		)
+	}
+}

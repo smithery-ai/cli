@@ -18,6 +18,19 @@ This will:
 
 The CLI will wait up to 5 minutes for confirmation.
 
+## Logout
+
+To remove all local credentials:
+
+```bash
+smithery logout
+```
+
+This removes:
+- API key from local settings
+- Namespace configuration
+- All server configurations from keychain
+
 ## Check Auth Status
 
 ```bash
