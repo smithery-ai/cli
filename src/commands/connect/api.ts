@@ -1,10 +1,13 @@
 import { Client } from "@modelcontextprotocol/sdk/client/index.js"
-import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/streamableHttp.js"
 import type { Tool } from "@modelcontextprotocol/sdk/types.js"
 import type {
 	Connection,
 	ConnectionsListResponse,
 } from "@smithery/api/resources/experimental/connect/connections.js"
+import {
+	createConnection as createSmitheryConnection,
+	type CreateConnectionOptions,
+} from "@smithery/api/mcp"
 import { createSmitheryClient } from "../../lib/smithery-client"
 import {
 	getNamespace as getStoredNamespace,
@@ -71,17 +74,12 @@ export class ConnectSession {
 			return cached
 		}
 
-		const url = new URL(
-			`/connect/${this.namespace}/${connectionId}/mcp`,
-			this.smitheryClient.baseURL,
-		).href
-
-		const transport = new StreamableHTTPClientTransport(new URL(url), {
-			requestInit: {
-				headers: {
-					Authorization: `Bearer ${this.smitheryClient.apiKey}`,
-				},
-			},
+		// Use createConnection from @smithery/api/mcp - skips handshake for faster connections
+		// Cast client to work around TypeScript CJS/ESM type incompatibility
+		const { transport } = await createSmitheryConnection({
+			client: this.smitheryClient as unknown as CreateConnectionOptions["client"],
+			namespace: this.namespace,
+			connectionId,
 		})
 
 		const mcpClient = new Client({ name: "smithery-cli", version: "1.0.0" })
