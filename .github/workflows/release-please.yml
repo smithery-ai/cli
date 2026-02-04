@@ -8,11 +8,44 @@ on:
 permissions:
   contents: write
   pull-requests: write
+  id-token: write
 
 jobs:
   release-please:
     runs-on: ubuntu-latest
     steps:
       - uses: googleapis/release-please-action@v4
+        id: release
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
+
+      - uses: actions/checkout@v4
+        if: ${{ steps.release.outputs.release_created }}
+
+      - uses: pnpm/action-setup@v4
+        if: ${{ steps.release.outputs.release_created }}
+
+      - uses: actions/setup-node@v4
+        if: ${{ steps.release.outputs.release_created }}
+        with:
+          node-version: 20
+          cache: 'pnpm'
+
+      - run: pnpm install --frozen-lockfile
+        if: ${{ steps.release.outputs.release_created }}
+
+      - run: pnpm add -D @biomejs/cli-linux-x64
+        if: ${{ steps.release.outputs.release_created }}
+
+      - run: pnpm run build
+        if: ${{ steps.release.outputs.release_created }}
+        env:
+          ANALYTICS_ENDPOINT: ${{ secrets.ANALYTICS_ENDPOINT }}
+
+      - name: Publish to npm
+        if: ${{ steps.release.outputs.release_created }}
+        run: |
+          rm -f "$NPM_CONFIG_USERCONFIG"
+          unset NPM_CONFIG_USERCONFIG
+          npm install --prefix ./oidc npm@11.6.2
+          pnpm publish --npm-path "$(pwd)/oidc/node_modules/.bin/npm" --no-git-checks --provenance --access public

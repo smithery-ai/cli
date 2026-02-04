@@ -1,12 +1,9 @@
-# This workflow is triggered when a GitHub release is created by Release Please.
-# It can also be run manually to re-publish to npm in case it failed.
+# Manual workflow to re-publish to npm in case the automated release failed.
+# Note: Automated publishing is handled by release-please.yml
 name: Publish NPM
 
 on:
   workflow_dispatch:
-
-  release:
-    types: [published]
 
 jobs:
   publish:
