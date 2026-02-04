@@ -4,31 +4,31 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
-## [3.9.0](https://github.com/smithery-ai/cli/compare/v3.8.1...v3.9.0) (2026-02-04)
-
+## [Unreleased]
 
 ### Features
 
+* add skills search and install commands ([#550](https://github.com/smithery-ai/cli/issues/550)) ([2b1c2db](https://github.com/smithery-ai/cli/commit/2b1c2db))
+  - `smithery skills search [query]` - interactive skill search and browsing
+  - `smithery skills install <skill> --agent <name>` - install skills via Vercel Labs skills CLI
+  - `smithery skills agents` - list available agents for installation
+  - `smithery namespace search [query]` - search public namespaces
+  - Options: `--json`, `--limit`, `--namespace`, `-g/--global`
 * add custom ID and metadata support to connect command ([#558](https://github.com/smithery-ai/cli/issues/558)) ([11c1484](https://github.com/smithery-ai/cli/commit/11c1484a6dcec5bc5ae3dbb2d07ade5ac8df748f))
-
 
 ### Bug Fixes
 
 * use MCP client for listing tools instead of raw HTTP; ref SMI-1260 ([#563](https://github.com/smithery-ai/cli/issues/563)) ([79cb44d](https://github.com/smithery-ai/cli/commit/79cb44d9d66a3fdd01aef827c54a6072d5ab3145))
-
+* upgrade @smithery/api and use new createConnection API ([#561](https://github.com/smithery-ai/cli/issues/561)) ([9241b59](https://github.com/smithery-ai/cli/commit/9241b59))
+* allow SDK client to work without API key ([#556](https://github.com/smithery-ai/cli/issues/556)) ([d883dbe](https://github.com/smithery-ai/cli/commit/d883dbe7a6f8b6b9326ea7e6d2d55eeb989388ea))
 
 ### Performance Improvements
 
 * lazy load command implementations to improve CLI startup ([#560](https://github.com/smithery-ai/cli/issues/560)) ([1f4a0e4](https://github.com/smithery-ai/cli/commit/1f4a0e49a4c665d360cd2e03d4887bf3f359f072))
 
-## [3.8.1](https://github.com/smithery-ai/cli/compare/v3.8.0...v3.8.1) (2026-02-04)
+### Tests
 
-
-### Bug Fixes
-
-* allow SDK client to work without API key ([#556](https://github.com/smithery-ai/cli/issues/556)) ([d883dbe](https://github.com/smithery-ai/cli/commit/d883dbe7a6f8b6b9326ea7e6d2d55eeb989388ea))
-
-## [Unreleased]
+* add tests for public API patterns (skills and registry) ([#566](https://github.com/smithery-ai/cli/issues/566))
 
 ## [3.5.0] - 2026-01-28
 
