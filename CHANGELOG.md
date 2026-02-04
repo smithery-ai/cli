@@ -4,6 +4,13 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [3.8.1](https://github.com/smithery-ai/cli/compare/v3.8.0...v3.8.1) (2026-02-04)
+
+
+### Bug Fixes
+
+* allow SDK client to work without API key ([#556](https://github.com/smithery-ai/cli/issues/556)) ([d883dbe](https://github.com/smithery-ai/cli/commit/d883dbe7a6f8b6b9326ea7e6d2d55eeb989388ea))
+
 ## [Unreleased]
 
 ## [3.5.0] - 2026-01-28
