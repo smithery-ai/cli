@@ -1,10 +1,11 @@
-import chalk from "chalk"
+import { Smithery } from "@smithery/api/client.js"
 import type { SkillListResponse } from "@smithery/api/resources/skills"
-import { createSmitheryClient } from "../../lib/smithery-client"
+import chalk from "chalk"
 
 export interface SearchOptions {
-	dump?: boolean
+	json?: boolean
 	limit?: number
+	namespace?: string
 }
 
 /**
@@ -30,17 +31,22 @@ async function getSearchTerm(providedTerm?: string): Promise<string> {
 }
 
 /**
+ * Construct the Smithery URL for a skill
+ */
+function getSkillUrl(namespace: string, slug: string): string {
+	return `https://smithery.ai/skills/${namespace}/${slug}`
+}
+
+/**
  * Format skill for display in autocomplete list
  */
 function formatSkillDisplay(skill: SkillListResponse): string {
 	const displayName = skill.displayName || `${skill.namespace}/${skill.slug}`
 	const stats =
-		skill.totalActivations && skill.totalActivations > 0
-			? `${skill.totalActivations.toLocaleString()} activations`
-			: skill.uniqueUsers && skill.uniqueUsers > 0
-				? `${skill.uniqueUsers.toLocaleString()} users`
-				: ""
-	const qualifiedName = `@${skill.namespace}/${skill.slug}`
+		skill.externalStars && skill.externalStars > 0
+			? `★ ${skill.externalStars.toLocaleString()}`
+			: ""
+	const qualifiedName = `${skill.namespace}/${skill.slug}`
 	const statsDisplay = stats ? ` • ${stats}` : ""
 
 	return `${displayName}${statsDisplay} • ${chalk.dim(qualifiedName)}`
@@ -56,26 +62,72 @@ export async function searchSkills(
 	initialQuery?: string,
 	options: SearchOptions = {},
 ): Promise<SkillListResponse | null> {
-	const { dump = false, limit = 10 } = options
+	const { json = false, limit = 10, namespace } = options
 
-	// In dump mode, require a query
-	if (dump && !initialQuery) {
-		console.error(chalk.red("Error: --dump requires a search query"))
+	// In json mode, require a query (unless filtering by namespace)
+	if (json && !initialQuery && !namespace) {
+		console.error(
+			chalk.red("Error: --json requires a search query or --namespace filter"),
+		)
 		process.exit(1)
 	}
 
-	let searchTerm = dump ? initialQuery! : await getSearchTerm(initialQuery)
+	let searchTerm =
+		json || namespace ? (initialQuery ?? "") : await getSearchTerm(initialQuery)
 
 	try {
 		while (true) {
-			const ora = (await import("ora")).default
-			const spinner = ora(`Searching for "${searchTerm}"...`).start()
+			// Skills search is a public endpoint, no authentication required
+			const client = new Smithery({ apiKey: "" })
 
-			const client = await createSmitheryClient()
-			const response = await client.skills.list({
-				q: searchTerm,
-				pageSize: limit,
-			})
+			// Build query params
+			const queryParams: { q?: string; pageSize: number; namespace?: string } =
+				{
+					pageSize: limit,
+				}
+			if (searchTerm) {
+				queryParams.q = searchTerm
+			}
+			if (namespace) {
+				queryParams.namespace = namespace
+			}
+
+			// JSON mode: fetch and output JSON without spinners
+			if (json) {
+				const response = await client.skills.list(queryParams)
+				// Filter out internal fields from JSON output
+				const cleanedSkills = response.skills.map((skill) => {
+					const {
+						vector,
+						$dist,
+						score,
+						gitUrl,
+						totalActivations,
+						uniqueUsers,
+						externalStars,
+						...rest
+					} = skill as SkillListResponse & {
+						vector?: unknown
+						$dist?: unknown
+						score?: unknown
+					}
+					return {
+						...rest,
+						stars: externalStars,
+						url: getSkillUrl(skill.namespace, skill.slug),
+					}
+				})
+				console.log(JSON.stringify(cleanedSkills, null, 2))
+				return null
+			}
+
+			const ora = (await import("ora")).default
+			const searchMsg = namespace
+				? `Searching in ${namespace}${searchTerm ? ` for "${searchTerm}"` : ""}...`
+				: `Searching for "${searchTerm}"...`
+			const spinner = ora(searchMsg).start()
+
+			const response = await client.skills.list(queryParams)
 
 			const skills = response.skills
 
@@ -93,31 +145,6 @@ export async function searchSkills(
 				),
 			)
 			console.log()
-
-			// Dump mode: just print results and exit
-			if (dump) {
-				for (const skill of skills) {
-					const qualifiedName = `@${skill.namespace}/${skill.slug}`
-					const displayName = skill.displayName || qualifiedName
-					const stats =
-						skill.totalActivations && skill.totalActivations > 0
-							? `${skill.totalActivations.toLocaleString()} activations`
-							: skill.uniqueUsers && skill.uniqueUsers > 0
-								? `${skill.uniqueUsers.toLocaleString()} users`
-								: ""
-
-					console.log(chalk.bold(displayName))
-					console.log(`  ${chalk.dim("Name:")} ${qualifiedName}`)
-					if (skill.description) {
-						console.log(`  ${chalk.dim("Description:")} ${skill.description}`)
-					}
-					if (stats) {
-						console.log(`  ${chalk.dim("Stats:")} ${stats}`)
-					}
-					console.log()
-				}
-				return null
-			}
 
 			// Show interactive selection
 			const inquirer = (await import("inquirer")).default
@@ -172,34 +199,38 @@ export async function searchSkills(
 					`${selectedSkillData.namespace}/${selectedSkillData.slug}`
 				console.log(`${chalk.bold.cyan(displayName)}`)
 				console.log(
-					`${chalk.dim("Qualified name:")} @${selectedSkillData.namespace}/${selectedSkillData.slug}`,
+					`${chalk.dim("Qualified name:")} ${selectedSkillData.namespace}/${selectedSkillData.slug}`,
 				)
 				if (selectedSkillData.description) {
 					console.log(
 						`${chalk.dim("Description:")} ${selectedSkillData.description}`,
 					)
 				}
-				if (selectedSkillData.categories && selectedSkillData.categories.length > 0) {
+				if (
+					selectedSkillData.categories &&
+					selectedSkillData.categories.length > 0
+				) {
 					console.log(
 						`${chalk.dim("Categories:")} ${selectedSkillData.categories.join(", ")}`,
 					)
 				}
-				if (selectedSkillData.totalActivations) {
+				if (selectedSkillData.externalStars) {
 					console.log(
-						`${chalk.dim("Activations:")} ${selectedSkillData.totalActivations.toLocaleString()}`,
-					)
-				}
-				if (selectedSkillData.uniqueUsers) {
-					console.log(
-						`${chalk.dim("Users:")} ${selectedSkillData.uniqueUsers.toLocaleString()}`,
+						`${chalk.dim("Stars:")} ${selectedSkillData.externalStars.toLocaleString()}`,
 					)
 				}
 				console.log()
-				console.log(
-					chalk.dim(
-						`Use 'smithery skills install @${selectedSkillData.namespace}/${selectedSkillData.slug}' to install`,
-					),
+
+				// Show install command using Vercel Labs skills CLI
+				// https://github.com/vercel-labs/skills
+				const installUrl = getSkillUrl(
+					selectedSkillData.namespace,
+					selectedSkillData.slug,
 				)
+				console.log(chalk.bold("To install this skill, run:"))
+				console.log()
+				console.log(chalk.cyan(`  npx skills add ${installUrl}`))
+				console.log()
 
 				// Ask what to do next
 				const { action } = await inquirer.prompt([
@@ -208,7 +239,7 @@ export async function searchSkills(
 						name: "action",
 						message: "What would you like to do?",
 						choices: [
-							{ name: "Install this skill", value: "install" },
+							{ name: "↓ Install", value: "install" },
 							{ name: "← Back to skill list", value: "back" },
 							{ name: "← Search again", value: "search" },
 							{ name: "Exit", value: "exit" },
@@ -217,7 +248,12 @@ export async function searchSkills(
 				])
 
 				if (action === "install") {
-					return selectedSkillData
+					console.log()
+					console.log(chalk.cyan(`Running: npx skills add ${installUrl}`))
+					console.log()
+					const { execSync } = await import("node:child_process")
+					execSync(`npx skills add ${installUrl}`, { stdio: "inherit" })
+					return null
 				} else if (action === "back") {
 					console.log()
 				} else if (action === "search") {

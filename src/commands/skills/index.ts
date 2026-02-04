@@ -1,2 +1,2 @@
-export { searchSkills } from "./search"
 export { installSkill } from "./install"
+export { searchSkills } from "./search"

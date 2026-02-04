@@ -1,121 +1,99 @@
-import { spawn } from "node:child_process"
+import { Smithery } from "@smithery/api/client.js"
 import chalk from "chalk"
-import { createSmitheryClient } from "../../lib/smithery-client"
-import { searchSkills } from "./search"
+
+/**
+ * Construct the Smithery URL for a skill
+ */
+function getSkillUrl(namespace: string, slug: string): string {
+	return `https://smithery.ai/skills/${namespace}/${slug}`
+}
 
 /**
  * Resolve a skill identifier to a URL for installation
- * @param identifier - Skill identifier (URL or @namespace/slug format)
+ * @param identifier - Skill identifier (URL or namespace/slug format)
  * @returns Promise<string> - The skill URL
  */
 async function resolveSkillUrl(identifier: string): Promise<string> {
-  // If already a URL, use directly
-  if (identifier.startsWith("http")) {
-    return identifier
-  }
+	// If already a URL, use directly
+	if (identifier.startsWith("http")) {
+		return identifier
+	}
 
-  // Parse @namespace/slug format
-  const match = identifier.match(/^@?([^/]+)\/(.+)$/)
-  if (!match) {
-    throw new Error(
-      `Invalid skill identifier: ${identifier}. Use format @namespace/slug or a URL.`,
-    )
-  }
+	// Parse namespace/slug format
+	const match = identifier.match(/^([^/]+)\/(.+)$/)
+	if (!match) {
+		throw new Error(
+			`Invalid skill identifier: ${identifier}. Use format namespace/slug or a URL.`,
+		)
+	}
 
-  const [, namespace, slug] = match
+	const [, namespace, slug] = match
 
-  // Look up the skill to get its gitUrl
-  const client = await createSmitheryClient()
-  const response = await client.skills.list({
-    namespace,
-    slug,
-    pageSize: 1,
-  })
+	// Skills lookup is a public endpoint, no authentication required
+	const client = new Smithery({ apiKey: "" })
+	try {
+		await client.skills.get(slug, { namespace })
+		return getSkillUrl(namespace, slug)
+	} catch {
+		throw new Error(`Skill not found: ${identifier}`)
+	}
+}
 
-  if (response.skills.length === 0) {
-    throw new Error(`Skill not found: ${identifier}`)
-  }
-
-  const skill = response.skills[0]
-
-  // Use gitUrl if available, otherwise construct smithery URL
-  if (skill.gitUrl) {
-    return skill.gitUrl
-  }
-
-  return `https://smithery.ai/skill/@${namespace}/${slug}`
+export interface InstallOptions {
+	global?: boolean
 }
 
 /**
- * Execute npx skills add to install a skill
- * Hands off to the skills CLI (skills.sh) for interactive input and logging
- * @param skillUrl - The skill URL to install
+ * Install a skill using the Vercel Labs skills CLI
+ * https://github.com/vercel-labs/skills
+ * @param skillIdentifier - Skill identifier (namespace/slug or URL) - required
+ * @param agent - Target agent for installation - required
+ * @param options - Install options (global flag)
  */
-async function executeSkillInstall(skillUrl: string): Promise<void> {
-  console.log(
-    chalk.cyan("*"),
-    `Using skills CLI (skills.sh) to install from ${chalk.bold(skillUrl)}`,
-  )
-  console.log()
+export async function installSkill(
+	skillIdentifier: string,
+	agent: string,
+	options: InstallOptions = {},
+): Promise<void> {
+	if (!skillIdentifier) {
+		console.error(chalk.red("Error: Skill identifier is required"))
+		console.error(
+			chalk.dim(
+				"Usage: smithery skills install <namespace/slug> --agent <agent>",
+			),
+		)
+		console.error(
+			chalk.dim("       smithery skills install <url> --agent <agent>"),
+		)
+		process.exit(1)
+	}
 
-  return new Promise((resolve, reject) => {
-    const child = spawn("npx", ["skills@latest", "add", skillUrl], {
-      stdio: "inherit",
-      env: { ...process.env },
-    })
+	if (!agent) {
+		console.error(chalk.red("Error: Agent is required"))
+		console.error(
+			chalk.dim("Usage: smithery skills install <skill> --agent <agent>"),
+		)
+		process.exit(1)
+	}
 
-    child.on("close", (code) => {
-      if (code === 0) {
-        resolve()
-      } else {
-        reject(new Error(`skills CLI exited with code ${code}`))
-      }
-    })
+	let skillUrl: string
 
-    child.on("error", (error) => {
-      console.error(chalk.red(`Failed to run skills CLI: ${error.message}`))
-      reject(error)
-    })
-  })
-}
+	try {
+		skillUrl = await resolveSkillUrl(skillIdentifier)
+	} catch (error) {
+		console.error(
+			chalk.red(error instanceof Error ? error.message : String(error)),
+		)
+		process.exit(1)
+	}
 
-/**
- * Install a skill by running npx skills add
- * @param skillIdentifier - Optional skill identifier (@namespace/slug or URL)
- */
-export async function installSkill(skillIdentifier?: string): Promise<void> {
-  let skillUrl: string
+	const globalFlag = options.global ? " -g" : ""
+	const command = `npx skills add ${skillUrl} --agent ${agent}${globalFlag} -y`
 
-  if (skillIdentifier) {
-    // Direct identifier provided - resolve and install
-    try {
-      skillUrl = await resolveSkillUrl(skillIdentifier)
-    } catch (error) {
-      console.error(
-        chalk.red(error instanceof Error ? error.message : String(error)),
-      )
-      process.exit(1)
-    }
-  } else {
-    // No identifier - use interactive search
-    console.log(chalk.cyan("*"), "No skill specified, starting search...")
-    console.log()
+	console.log()
+	console.log(chalk.cyan(`Running: ${command}`))
+	console.log()
 
-    const selectedSkill = await searchSkills()
-
-    if (!selectedSkill) {
-      console.log(chalk.dim("Installation cancelled."))
-      return
-    }
-
-    // Get the URL from the selected skill
-    if (selectedSkill.gitUrl) {
-      skillUrl = selectedSkill.gitUrl
-    } else {
-      skillUrl = `https://smithery.ai/skill/@${selectedSkill.namespace}/${selectedSkill.slug}`
-    }
-  }
-
-  console.log()
-  await executeSkillInstall(skillUrl)
+	const { execSync } = await import("node:child_process")
+	execSync(command, { stdio: "inherit" })
 }
