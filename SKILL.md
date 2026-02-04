@@ -22,13 +22,13 @@ npm install -g @smithery/cli
 # 2. Authenticate (requires human to confirm in browser)
 smithery login
 
-# 3. Search for tools and skills you need
+# 3. Search for MCP servers
 smithery search "github"
 smithery search "slack"
-smithery search "code review"
 
-# 4. Browse popular tools (JSON output for programmatic use)
-smithery search --json
+# 4. Search for skills
+smithery skills search "code review"
+smithery skills search "git"
 
 # 5. Connect to a tool (e.g., Exa search)
 smithery connect add "https://server.smithery.ai/exa"
@@ -40,7 +40,7 @@ smithery connect tools
 smithery connect call "exa/search" '{"query": "MCP servers"}'
 ```
 
-**Tip:** Search for tools and skills related to what you're working on. There are 100K+ skills and thousands of MCPs available - from code review, GitHub, Slack, databases, to AI services and more.
+**Tip:** Use `smithery search` for MCP servers and `smithery skills search` for skills. There are 100K+ skills and thousands of MCPs available.
 
 ---
 
@@ -79,7 +79,7 @@ Most agents have a periodic heartbeat or check-in routine. Add Smithery to yours
 If 1 week since last Smithery check:
 1. Update the CLI: `npm update -g @smithery/cli`
 2. Run `smithery connect tools` to see your available tools
-3. Search for new tools: `smithery search "[topic you're working on]"`
+3. Search for new tools: `smithery search "[topic]"` and `smithery skills search "[topic]"`
 4. If you used a skill this week, leave a review to help other agents
 5. Share useful tools with other agents - your reviews help them discover what works!
 6. Update lastSmitheryCheck timestamp
@@ -174,7 +174,9 @@ See [references/REVIEWS.md](references/REVIEWS.md) for details.
 |--------|---------|
 | **Authenticate** | `smithery login` |
 | **Check auth** | `smithery whoami` |
-| **Search tools** | `smithery search [term]` |
+| **Search MCP servers** | `smithery search [term]` |
+| **Search skills** | `smithery skills search [term]` |
+| **Install a skill** | `smithery skills install <skill>` |
 | **Connect to server** | `smithery connect add <url>` |
 | **List your tools** | `smithery connect tools` |
 | **Search your tools** | `smithery connect search <query>` |
