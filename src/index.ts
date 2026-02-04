@@ -3,6 +3,7 @@
 import { createServer } from "node:http"
 import chalk from "chalk"
 import { Command } from "commander"
+import { SKILL_AGENTS } from "./config/agents"
 import { VALID_CLIENTS, type ValidClient } from "./config/clients"
 import { DEFAULT_PORT } from "./constants"
 import { setDebug, setVerbose } from "./lib/logger"
@@ -573,6 +574,21 @@ namespace
 		await createNamespace(name)
 	})
 
+namespace
+	.command("search [query]")
+	.description("Search public namespaces (requires login)")
+	.option("--limit <number>", "Maximum number of results to show", "20")
+	.option("--has-skills", "Only show namespaces with skills")
+	.option("--has-servers", "Only show namespaces with servers")
+	.action(async (query, options) => {
+		const { searchPublicNamespaces } = await import("./commands/namespace")
+		await searchPublicNamespaces(query, {
+			limit: Number.parseInt(options.limit, 10),
+			hasSkills: options.hasSkills,
+			hasServers: options.hasServers,
+		})
+	})
+
 // Connect command - manage MCP server connections and tools
 const connect = program
 	.command("connect")
@@ -648,6 +664,61 @@ connect
 	.action(async (toolId, args, options) => {
 		const { callTool } = await import("./commands/connect")
 		await callTool(toolId, args, options)
+	})
+
+// Skills command - search and install skills
+const skills = program
+	.command("skills")
+	.description("Search and install Smithery skills")
+
+skills
+	.command("agents")
+	.description("List available agents for skill installation")
+	.action(() => {
+		console.log(chalk.bold("Available agents:"))
+		console.log()
+		for (const agent of SKILL_AGENTS) {
+			console.log(`  ${agent}`)
+		}
+		console.log()
+		console.log(
+			chalk.dim("See https://github.com/vercel-labs/skills for more info"),
+		)
+	})
+
+skills
+	.command("search [query]")
+	.description("Search for skills in the Smithery registry")
+	.option(
+		"--json",
+		"Print search results as JSON without interactive selection",
+	)
+	.option("--limit <number>", "Maximum number of results to show", "10")
+	.option("--namespace <namespace>", "Filter by namespace")
+	.action(async (query, options) => {
+		const { searchSkills } = await import("./commands/skills")
+		await searchSkills(query, {
+			json: options.json,
+			limit: Number.parseInt(options.limit, 10),
+			namespace: options.namespace,
+		})
+	})
+
+// Uses the Vercel Labs skills CLI: https://github.com/vercel-labs/skills
+skills
+	.command("install <skill>")
+	.description("Install a skill (via github.com/vercel-labs/skills)")
+	.requiredOption(
+		"-a, --agent <name>",
+		`Target agent (${SKILL_AGENTS.slice(0, 5).join(", ")}, ...)`,
+	)
+	.option(
+		"-g, --global",
+		"Install globally (user-level) instead of project-level",
+	)
+	.action(async (skill, options) => {
+		const { installSkill } = await import("./commands/skills")
+		await installSkill(skill, options.agent, { global: options.global })
 	})
 
 // Parse arguments and run

@@ -1,13 +1,13 @@
 import { Client } from "@modelcontextprotocol/sdk/client/index.js"
 import type { Tool } from "@modelcontextprotocol/sdk/types.js"
+import {
+	type CreateConnectionOptions,
+	createConnection as createSmitheryConnection,
+} from "@smithery/api/mcp"
 import type {
 	Connection,
 	ConnectionsListResponse,
 } from "@smithery/api/resources/experimental/connect/connections.js"
-import {
-	createConnection as createSmitheryConnection,
-	type CreateConnectionOptions,
-} from "@smithery/api/mcp"
 import { createSmitheryClient } from "../../lib/smithery-client"
 import {
 	getNamespace as getStoredNamespace,
@@ -70,7 +70,8 @@ export class ConnectSession {
 		// Use createConnection from @smithery/api/mcp - skips handshake for faster connections
 		// Cast client to work around TypeScript CJS/ESM type incompatibility
 		const { transport } = await createSmitheryConnection({
-			client: this.smitheryClient as unknown as CreateConnectionOptions["client"],
+			client: this
+				.smitheryClient as unknown as CreateConnectionOptions["client"],
 			namespace: this.namespace,
 			connectionId,
 		})
