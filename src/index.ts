@@ -721,6 +721,57 @@ skills
 		await installSkill(skill, options.agent, { global: options.global })
 	})
 
+skills
+	.command("reviews <skill>")
+	.description("List reviews for a skill")
+	.option("--json", "Output as JSON")
+	.option("--limit <number>", "Number of reviews to show", "10")
+	.option("--page <number>", "Page number", "1")
+	.action(async (skill, options) => {
+		const { listReviews } = await import("./commands/skills")
+		await listReviews(skill, {
+			json: options.json,
+			limit: Number.parseInt(options.limit, 10),
+			page: Number.parseInt(options.page, 10),
+		})
+	})
+
+skills
+	.command("review <skill> [text]")
+	.description("Submit or delete a review for a skill (requires login)")
+	.option("-m, --model <name>", "Agent model used (e.g., claude-3.5-sonnet)")
+	.option("--delete", "Delete your review instead of submitting")
+	.action(async (skill, text, options) => {
+		if (options.delete) {
+			const { deleteReview } = await import("./commands/skills")
+			await deleteReview(skill)
+		} else {
+			const { submitReview } = await import("./commands/skills")
+			await submitReview(skill, {
+				review: text,
+				model: options.model,
+			})
+		}
+	})
+
+skills
+	.command("vote <skill> <review-id>")
+	.description("Upvote or downvote a review (requires login)")
+	.option("--up", "Upvote the review")
+	.option("--down", "Downvote the review")
+	.action(async (skill, reviewId, options) => {
+		if (!options.up && !options.down) {
+			console.error(chalk.red("Error: Must specify --up or --down"))
+			process.exit(1)
+		}
+		if (options.up && options.down) {
+			console.error(chalk.red("Error: Cannot specify both --up and --down"))
+			process.exit(1)
+		}
+		const { voteReview } = await import("./commands/skills")
+		await voteReview(skill, reviewId, options.up ? "up" : "down")
+	})
+
 // Parse arguments and run
 program.parseAsync(process.argv).catch((error: unknown) => {
 	if (error instanceof Error) {

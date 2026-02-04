@@ -14,6 +14,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   - `smithery skills agents` - list available agents for installation
   - `smithery namespace search [query]` - search public namespaces
   - Options: `--json`, `--limit`, `--namespace`, `-g/--global`
+* add skills review commands
+  - `smithery skills reviews <skill>` - list reviews for a skill
+  - `smithery skills review <skill>` - submit a text review (requires login)
+  - `smithery skills review <skill> --delete` - delete your review
+  - `smithery skills vote <skill> <review-id> --up|--down` - upvote/downvote a review
+  - Options: `--json`, `--limit`, `--page`, `-t/--text`, `-m/--model`
 * add custom ID and metadata support to connect command ([#558](https://github.com/smithery-ai/cli/issues/558)) ([11c1484](https://github.com/smithery-ai/cli/commit/11c1484a6dcec5bc5ae3dbb2d07ade5ac8df748f))
 
 ### Bug Fixes

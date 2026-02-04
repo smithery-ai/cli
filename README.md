@@ -7,7 +7,6 @@ CLI for installing MCP servers and managing cloud connections via [Smithery](htt
 ```bash
 npm install -g @smithery/cli
 ```
-
 Requires Node.js 20+.
 
 ## Commands
@@ -27,16 +26,15 @@ Options: `--client <name>` to skip client selection, `--config <json>` to provid
 
 ### Skills
 
-Browse and install reusable prompt-based skills from the [Smithery Skills Registry](https://smithery.ai/skills). Installation uses the [Vercel Labs skills CLI](https://github.com/vercel-labs/skills).
+Browse and install reusable prompt-based skills from the [Smithery Skills Registry](https://smithery.ai/skills).
 
 ```bash
-smithery skills search [query]           # Interactive skill search and browsing
-smithery skills install <namespace/slug> --agent <name> # Install a skill
-smithery skills install <skill> --agent <name> --global # Install globally
-smithery skills agents                   # List available agents
+smithery skills search [query]           # Search skills
+smithery skills install <skill> --agent <name>  # Install a skill
+smithery skills reviews <skill>          # View reviews
+smithery skills review <skill> "Handles edge cases well, good error messages"
+smithery skills vote <skill> <id> --up   # Vote on a review
 ```
-
-Options for `search`: `--json` for JSON output, `--limit <n>` for max results, `--namespace <ns>` to filter.
 
 ### Namespaces
 
@@ -88,6 +86,11 @@ smithery install exa --client cursor
 smithery skills search "frontend" --json
 smithery skills search --namespace anthropics --json  # Filter by namespace
 smithery skills install anthropics/frontend-design --agent claude-code
+
+# Review skills
+smithery skills reviews anthropics/frontend-design   # View reviews
+smithery skills review anthropics/frontend-design "Great skill for building UIs!"
+smithery skills vote anthropics/frontend-design 550e8400-e29b-41d4-a716-446655440000 --up
 
 # Discover namespaces
 smithery namespace search --has-skills  # Find namespaces with skills
