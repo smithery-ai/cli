@@ -650,6 +650,25 @@ connect
 		await callTool(toolId, args, options)
 	})
 
+// Skills command - search and install skills
+const skills = program
+	.command("skills")
+	.description("Search and install Smithery skills")
+
+skills
+	.command("search [query]")
+	.description("Search for skills in the Smithery registry")
+	.action(async (query) => {
+		await searchSkills(query)
+	})
+
+skills
+	.command("install [skill]")
+	.description("Install a skill (runs npx skills add)")
+	.action(async (skill) => {
+		await installSkill(skill)
+	})
+
 // Parse arguments and run
 program.parseAsync(process.argv).catch((error: unknown) => {
 	if (error instanceof Error) {
