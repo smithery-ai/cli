@@ -416,16 +416,27 @@ program
 program
 	.command("login")
 	.description("Login with Smithery")
-	.action(async () => {
+	.option(
+		"--print-link",
+		"Print auth URL without spinners or browser (agent-friendly)",
+	)
+	.action(async (options) => {
 		const { executeCliAuthFlow } = await import("./lib/cli-auth")
 		const { validateApiKey } = await import("./lib/registry")
 
-		console.log(chalk.cyan("Login to Smithery"))
-		console.log()
+		if (!options.printLink) {
+			console.log(chalk.cyan("Login to Smithery"))
+			console.log()
+		}
 
 		try {
 			// OAuth flow - uses SMITHERY_BASE_URL env var or defaults to https://smithery.ai
-			const apiKey = await executeCliAuthFlow({})
+			const apiKey = await executeCliAuthFlow({ printLink: options.printLink })
+
+			// --print-link just prints URL and exits (no API key returned)
+			if (options.printLink) {
+				return
+			}
 
 			// Keep existing validation and storage
 			await validateApiKey(apiKey)
@@ -694,12 +705,14 @@ skills
 		"Print search results as JSON without interactive selection",
 	)
 	.option("--limit <number>", "Maximum number of results to show", "10")
+	.option("--page <number>", "Page number", "1")
 	.option("--namespace <namespace>", "Filter by namespace")
 	.action(async (query, options) => {
 		const { searchSkills } = await import("./commands/skills")
 		await searchSkills(query, {
 			json: options.json,
 			limit: Number.parseInt(options.limit, 10),
+			page: Number.parseInt(options.page, 10),
 			namespace: options.namespace,
 		})
 	})
@@ -719,6 +732,57 @@ skills
 	.action(async (skill, options) => {
 		const { installSkill } = await import("./commands/skills")
 		await installSkill(skill, options.agent, { global: options.global })
+	})
+
+skills
+	.command("reviews <skill>")
+	.description("List reviews for a skill")
+	.option("--json", "Output as JSON")
+	.option("--limit <number>", "Number of reviews to show", "10")
+	.option("--page <number>", "Page number", "1")
+	.action(async (skill, options) => {
+		const { listReviews } = await import("./commands/skills")
+		await listReviews(skill, {
+			json: options.json,
+			limit: Number.parseInt(options.limit, 10),
+			page: Number.parseInt(options.page, 10),
+		})
+	})
+
+skills
+	.command("review <skill> [text]")
+	.description("Submit or delete a review for a skill (requires login)")
+	.option("-m, --model <name>", "Agent model used (e.g., claude-3.5-sonnet)")
+	.option("--delete", "Delete your review instead of submitting")
+	.action(async (skill, text, options) => {
+		if (options.delete) {
+			const { deleteReview } = await import("./commands/skills")
+			await deleteReview(skill)
+		} else {
+			const { submitReview } = await import("./commands/skills")
+			await submitReview(skill, {
+				review: text,
+				model: options.model,
+			})
+		}
+	})
+
+skills
+	.command("vote <skill> <review-id>")
+	.description("Upvote or downvote a review (requires login)")
+	.option("--up", "Upvote the review")
+	.option("--down", "Downvote the review")
+	.action(async (skill, reviewId, options) => {
+		if (!options.up && !options.down) {
+			console.error(chalk.red("Error: Must specify --up or --down"))
+			process.exit(1)
+		}
+		if (options.up && options.down) {
+			console.error(chalk.red("Error: Cannot specify both --up and --down"))
+			process.exit(1)
+		}
+		const { voteReview } = await import("./commands/skills")
+		await voteReview(skill, reviewId, options.up ? "up" : "down")
 	})
 
 // Parse arguments and run

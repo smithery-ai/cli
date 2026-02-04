@@ -34,6 +34,8 @@ interface PollResponse {
 export interface CliAuthOptions {
 	pollInterval?: number
 	timeoutMs?: number
+	/** Skip browser opening and spinners - just print URL and poll silently */
+	printLink?: boolean
 }
 
 /**
@@ -263,23 +265,35 @@ export async function executeCliAuthFlow(
 ): Promise<string> {
 	verbose(`Starting CLI auth flow with endpoint: ${SMITHERY_URL}`)
 
+	const printLink = options.printLink ?? false
+
 	// Step 1: Create session
-	const sessionSpinner = ora({
-		text: "Preparing authentication...",
-		spinner: cliSpinners.dots,
-		color: "cyan",
-	}).start()
+	let sessionSpinner: ReturnType<typeof ora> | null = null
+	if (!printLink) {
+		sessionSpinner = ora({
+			text: "Preparing authentication...",
+			spinner: cliSpinners.dots,
+			color: "cyan",
+		}).start()
+	}
 
 	let session: CliAuthSession
 	try {
 		session = await createAuthSession(SMITHERY_URL)
-		sessionSpinner.succeed("Authentication ready")
+		sessionSpinner?.succeed("Authentication ready")
 	} catch (error) {
-		sessionSpinner.fail("Failed to start authentication")
+		sessionSpinner?.fail("Failed to start authentication")
 		throw error
 	}
 
-	// Step 2: Display URL and open browser
+	// Step 2: Display URL and optionally open browser
+	if (printLink) {
+		// Agent-friendly: just print the URL and exit (no polling)
+		console.log(session.authUrl)
+		// Return empty string - caller should handle this case
+		return ""
+	}
+
 	console.log()
 	console.log(chalk.cyan("Opening browser for authentication..."))
 	console.log()

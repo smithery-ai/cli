@@ -5,6 +5,7 @@ import chalk from "chalk"
 export interface SearchOptions {
 	json?: boolean
 	limit?: number
+	page?: number
 	namespace?: string
 }
 
@@ -62,7 +63,7 @@ export async function searchSkills(
 	initialQuery?: string,
 	options: SearchOptions = {},
 ): Promise<SkillListResponse | null> {
-	const { json = false, limit = 10, namespace } = options
+	const { json = false, limit = 10, page = 1, namespace } = options
 
 	// In json mode, require a query (unless filtering by namespace)
 	if (json && !initialQuery && !namespace) {
@@ -81,10 +82,15 @@ export async function searchSkills(
 			const client = new Smithery({ apiKey: "" })
 
 			// Build query params
-			const queryParams: { q?: string; pageSize: number; namespace?: string } =
-				{
-					pageSize: limit,
-				}
+			const queryParams: {
+				q?: string
+				pageSize: number
+				page?: number
+				namespace?: string
+			} = {
+				pageSize: limit,
+				page,
+			}
 			if (searchTerm) {
 				queryParams.q = searchTerm
 			}
