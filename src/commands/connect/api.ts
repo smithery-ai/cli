@@ -26,13 +26,6 @@ export { createSmitheryClient }
 // Use Awaited to get the concrete type from createSmitheryClient
 type SmitheryClient = Awaited<ReturnType<typeof createSmitheryClient>>
 
-interface JsonRpcResponse {
-	jsonrpc: "2.0"
-	id: string | number
-	result?: { tools?: Tool[] }
-	error?: { code: number; message: string }
-}
-
 /**
  * Session for Connect operations that reuses clients within a command.
  * Create one session per command to avoid redundant client creation.
@@ -88,47 +81,11 @@ export class ConnectSession {
 		return mcpClient
 	}
 
-	/**
-	 * List tools using direct HTTP request (faster than MCP SDK handshake)
-	 */
 	async listToolsForConnection(connection: Connection): Promise<ToolInfo[]> {
 		try {
-			const url = new URL(
-				`/connect/${this.namespace}/${connection.connectionId}/mcp`,
-				this.smitheryClient.baseURL,
-			).href
-
-			const controller = new AbortController()
-			const timeout = setTimeout(() => controller.abort(), 30000)
-
-			const response = await fetch(url, {
-				method: "POST",
-				headers: {
-					"Content-Type": "application/json",
-					Accept: "application/json, text/event-stream",
-					Authorization: `Bearer ${this.smitheryClient.apiKey}`,
-				},
-				body: JSON.stringify({
-					jsonrpc: "2.0",
-					id: 1,
-					method: "tools/list",
-					params: {},
-				}),
-				signal: controller.signal,
-			})
-
-			clearTimeout(timeout)
-
-			if (!response.ok) {
-				return []
-			}
-
-			const data = (await response.json()) as JsonRpcResponse
-			if (data.error || !data.result?.tools) {
-				return []
-			}
-
-			return data.result.tools.map((tool) => ({
+			const mcpClient = await this.getMcpClient(connection.connectionId)
+			const result = await mcpClient.listTools()
+			return result.tools.map((tool) => ({
 				...tool,
 				connectionId: connection.connectionId,
 				connectionName: connection.name,
