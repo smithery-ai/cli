@@ -459,6 +459,31 @@ program
 		}
 	})
 
+// Logout command
+program
+	.command("logout")
+	.description("Log out and remove all local credentials")
+	.action(async () => {
+		const { clearApiKey, clearNamespace } = await import(
+			"./utils/smithery-settings"
+		)
+		const { clearAllConfigs } = await import("./lib/keychain.js")
+
+		console.log(chalk.cyan("Logging out of Smithery..."))
+
+		// Clear API key
+		await clearApiKey()
+
+		// Clear namespace
+		await clearNamespace()
+
+		// Clear keychain entries
+		await clearAllConfigs()
+
+		console.log(chalk.green("✓ Successfully logged out"))
+		console.log(chalk.gray("All local credentials have been removed"))
+	})
+
 // Show API key command
 program
 	.command("whoami")
@@ -539,11 +564,9 @@ program
 				console.log(chalk.cyan("API Key:"), masked)
 				console.log(chalk.gray("Use --full to display the complete key"))
 			}
-		} catch (error) {
-			console.error(chalk.red("✗ Failed to retrieve API key"))
-			const errorMessage =
-				error instanceof Error ? error.message : String(error)
-			console.error(chalk.gray(errorMessage))
+		} catch (_error) {
+			console.log(chalk.yellow("Not logged in"))
+			console.log(chalk.gray("Run 'smithery login' to authenticate"))
 			process.exit(1)
 		}
 	})

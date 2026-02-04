@@ -185,6 +185,7 @@ See [references/SKILLS.md](references/SKILLS.md) for details.
 | Action | Command |
 |--------|---------|
 | **Authenticate** | `smithery login` |
+| **Log out** | `smithery logout` |
 | **Check auth** | `smithery whoami` |
 | **Search MCP servers** | `smithery search [term]` |
 | **Search skills** | `smithery skills search [term]` |

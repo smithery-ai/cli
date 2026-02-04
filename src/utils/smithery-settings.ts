@@ -285,6 +285,19 @@ export const clearApiKey = async (): Promise<SettingsResult> => {
 	return await saveSettings(settingsData, getSettingsPath())
 }
 
+export const clearNamespace = async (): Promise<SettingsResult> => {
+	const initResult = await initializeSettings()
+	if (!initResult.success || !initResult.data) {
+		return initResult
+	}
+
+	// Remove namespace from settings
+	const { namespace: _removed, ...settingsWithoutNamespace } = initResult.data
+	settingsData = settingsWithoutNamespace as Settings
+
+	return await saveSettings(settingsData, getSettingsPath())
+}
+
 export const hasAskedConsent = async (): Promise<boolean> => {
 	await initializeSettings()
 	return settingsData?.askedConsent || false
