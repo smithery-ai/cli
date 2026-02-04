@@ -2,7 +2,6 @@ import { exec } from "node:child_process"
 import { promisify } from "node:util"
 import chalk from "chalk"
 import cliSpinners from "cli-spinners"
-import fetch from "cross-fetch"
 import ora from "ora"
 import { verbose } from "./logger.js"
 

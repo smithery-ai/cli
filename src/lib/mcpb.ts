@@ -5,7 +5,6 @@ import {
 	type McpbUserConfigurationOption,
 	unpackExtension,
 } from "@anthropic-ai/mcpb"
-import fetch from "cross-fetch"
 import type { JSONSchema } from "../types/registry.js"
 import { verbose } from "./logger.js"
 
