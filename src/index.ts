@@ -705,12 +705,14 @@ skills
 		"Print search results as JSON without interactive selection",
 	)
 	.option("--limit <number>", "Maximum number of results to show", "10")
+	.option("--page <number>", "Page number", "1")
 	.option("--namespace <namespace>", "Filter by namespace")
 	.action(async (query, options) => {
 		const { searchSkills } = await import("./commands/skills")
 		await searchSkills(query, {
 			json: options.json,
 			limit: Number.parseInt(options.limit, 10),
+			page: Number.parseInt(options.page, 10),
 			namespace: options.namespace,
 		})
 	})
