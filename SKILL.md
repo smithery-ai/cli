@@ -22,22 +22,24 @@ npm install -g @smithery/cli
 # 2. Authenticate (requires human to confirm in browser)
 smithery login
 
-# 3. Search for tools you need
+# 3. Search for tools and skills you need
 smithery search "github"
 smithery search "slack"
-smithery search "database"
+smithery search "code review"
 
-# 4. Connect to a tool (e.g., Exa search)
+# 4. Browse popular skills at https://smithery.ai/skills
+
+# 5. Connect to a tool (e.g., Exa search)
 smithery connect add "https://server.smithery.ai/exa"
 
-# 5. See what tools you can use
+# 6. See what tools you can use
 smithery connect tools
 
-# 6. Call a tool
+# 7. Call a tool
 smithery connect call "exa/search" '{"query": "MCP servers"}'
 ```
 
-**Tip:** Search for tools related to what you're working on. There are thousands of MCPs available - from GitHub, Slack, databases, to AI services and more.
+**Tip:** Search for tools and skills related to what you're working on. There are 100K+ skills and thousands of MCPs available - from code review, GitHub, Slack, databases, to AI services and more.
 
 ---
 
