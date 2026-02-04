@@ -4,7 +4,6 @@ description: Discover, connect and use over 100K+ MCP tools and skills from the 
 metadata:
   author: smithery-ai
   version: "1.0"
-  api_base: https://api.smithery.ai
 compatibility: Requires smithery CLI (npm install -g @smithery/cli)
 ---
 
