@@ -187,33 +187,6 @@ export class ConnectSession {
 		)
 	}
 
-	/**
-	 * Update an existing connection's name and/or metadata.
-	 * Uses set() which updates if mcpUrl matches existing connection.
-	 * Metadata is merged: existing keys preserved, new keys added/updated.
-	 */
-	async updateConnection(
-		connectionId: string,
-		updates: { name?: string; metadata?: Record<string, unknown> },
-	): Promise<Connection> {
-		const existing = await this.getConnection(connectionId)
-
-		// Merge metadata: existing keys preserved, new keys added/updated
-		const mergedMetadata = updates.metadata
-			? { ...(existing.metadata ?? {}), ...updates.metadata }
-			: (existing.metadata ?? undefined)
-
-		return this.smitheryClient.experimental.connect.connections.set(
-			connectionId,
-			{
-				namespace: this.namespace,
-				mcpUrl: existing.mcpUrl,
-				name: updates.name ?? existing.name,
-				metadata: mergedMetadata,
-			},
-		)
-	}
-
 	async deleteConnection(connectionId: string): Promise<void> {
 		await this.smitheryClient.experimental.connect.connections.delete(
 			connectionId,

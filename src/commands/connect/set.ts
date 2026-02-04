@@ -3,9 +3,9 @@ import { type Connection, ConnectSession } from "./api"
 import { outputJson } from "./output"
 
 export async function setServer(
-	connectionId: string,
+	mcpUrl: string,
 	options: {
-		url?: string
+		id?: string
 		name?: string
 		metadata?: string
 		namespace?: string
@@ -37,23 +37,15 @@ export async function setServer(
 		const session = await ConnectSession.create(options.namespace)
 
 		let connection: Connection
-		if (options.url) {
-			// Create new connection with specified ID
-			connection = await session.setConnection(connectionId, options.url, {
+		if (options.id) {
+			// Use set() API for custom ID
+			connection = await session.setConnection(options.id, mcpUrl, {
 				name: options.name,
 				metadata: parsedMetadata,
 			})
 		} else {
-			// Update existing connection
-			if (!options.name && !parsedMetadata) {
-				console.error(
-					chalk.red(
-						"Either --url (to create) or --name/--metadata (to update) must be provided",
-					),
-				)
-				process.exit(1)
-			}
-			connection = await session.updateConnection(connectionId, {
+			// Use create() API for auto-generated ID
+			connection = await session.createConnection(mcpUrl, {
 				name: options.name,
 				metadata: parsedMetadata,
 			})
@@ -83,25 +75,25 @@ export async function setServer(
 	} catch (error) {
 		const errorMessage = error instanceof Error ? error.message : String(error)
 
-		// Handle 409 conflict for duplicate ID
+		// Handle 409 conflict for duplicate ID/URL
 		if (
 			errorMessage.includes("409") ||
-			errorMessage.toLowerCase().includes("already exists")
+			errorMessage.toLowerCase().includes("already exists") ||
+			errorMessage.toLowerCase().includes("conflict")
 		) {
-			console.error(
-				chalk.red(
-					`Connection "${connectionId}" already exists. Omit --url to update it, or use 'smithery connect remove' to delete it first.`,
-				),
-			)
-		} else if (
-			errorMessage.includes("404") ||
-			errorMessage.toLowerCase().includes("not found")
-		) {
-			console.error(
-				chalk.red(
-					`Connection "${connectionId}" not found. Use --url to create a new connection.`,
-				),
-			)
+			if (options.id) {
+				console.error(
+					chalk.red(
+						`Connection "${options.id}" already exists with a different URL. Use 'smithery connect remove' to delete it first.`,
+					),
+				)
+			} else {
+				console.error(
+					chalk.red(
+						`A connection with this URL already exists. Use --id to specify a custom ID.`,
+					),
+				)
+			}
 		} else {
 			console.error(chalk.red(`Failed to set connection: ${errorMessage}`))
 		}

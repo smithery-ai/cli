@@ -605,14 +605,14 @@ connect
 	})
 
 connect
-	.command("set <id>")
-	.description("Create or update a connection with a specific ID")
-	.option("--url <mcp-url>", "MCP server URL (required for new connections)")
+	.command("set <mcp-url>")
+	.description("Create or update a connection (use --id for custom ID)")
+	.option("--id <id>", "Custom connection ID (auto-generated if omitted)")
 	.option("--name <name>", "Human-readable name")
-	.option("--metadata <json>", "Metadata as JSON object (merged on update)")
+	.option("--metadata <json>", "Metadata as JSON object")
 	.option("--namespace <ns>", "Namespace for the server")
-	.action(async (id, options) => {
-		await setServer(id, options)
+	.action(async (mcpUrl, options) => {
+		await setServer(mcpUrl, options)
 	})
 
 connect
