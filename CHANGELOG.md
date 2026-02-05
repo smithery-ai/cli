@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 
+## [3.12.1](https://github.com/smithery-ai/cli/compare/v3.12.0...v3.12.1) (2026-02-05)
+
+
+### Bug Fixes
+
+* update skills commands for @smithery/api 0.38.0 ([#585](https://github.com/smithery-ai/cli/issues/585)) ([a049fa0](https://github.com/smithery-ai/cli/commit/a049fa01b803cf026830017691fd807ef8433f20))
+
 ## [3.12.0](https://github.com/smithery-ai/cli/compare/v3.11.0...v3.12.0) (2026-02-05)
 
 
