@@ -234,7 +234,9 @@ export async function searchSkills(
 				console.log(chalk.bold("To install this skill, run:"))
 				console.log()
 				console.log(
-					chalk.cyan(`  smithery skills install ${skillIdentifier} --agent <agent-name>`),
+					chalk.cyan(
+						`  smithery skills install ${skillIdentifier} --agent <agent-name>`,
+					),
 				)
 				console.log()
 
