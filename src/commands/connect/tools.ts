@@ -27,7 +27,10 @@ function formatConnectionStatus(
 
 	if (connection.status.state === "auth_required") {
 		const status: Record<string, unknown> = { state: "auth_required" }
-		if ("authorizationUrl" in connection.status && connection.status.authorizationUrl) {
+		if (
+			"authorizationUrl" in connection.status &&
+			connection.status.authorizationUrl
+		) {
 			status.authorizationUrl = connection.status.authorizationUrl
 		}
 		return {
@@ -91,7 +94,8 @@ export async function listTools(
 				})
 			} else {
 				// Unknown error (timeout, network issue, etc.)
-				const errorMessage = error instanceof Error ? error.message : String(error)
+				const errorMessage =
+					error instanceof Error ? error.message : String(error)
 				outputJson({
 					tools: [],
 					error: errorMessage,
@@ -115,7 +119,11 @@ export async function listTools(
 
 	// Try to list tools for all connections, collecting errors
 	const allTools: ToolInfo[] = []
-	const issues: Array<{ server: string; error: string; status?: Record<string, unknown> }> = []
+	const issues: Array<{
+		server: string
+		error: string
+		status?: Record<string, unknown>
+	}> = []
 
 	await Promise.all(
 		connections.map(async (conn) => {
@@ -127,7 +135,8 @@ export async function listTools(
 				if (issue) {
 					issues.push({ server: conn.name, ...issue })
 				} else {
-					const errorMessage = error instanceof Error ? error.message : String(error)
+					const errorMessage =
+						error instanceof Error ? error.message : String(error)
 					issues.push({ server: conn.name, error: errorMessage })
 				}
 			}

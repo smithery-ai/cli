@@ -4,7 +4,9 @@ import type { Connection } from "./api"
  * Format a Connection object for output, including all relevant fields.
  * Used by add, set, and get commands for consistent output.
  */
-export function formatConnectionOutput(connection: Connection): Record<string, unknown> {
+export function formatConnectionOutput(
+	connection: Connection,
+): Record<string, unknown> {
 	const output: Record<string, unknown> = {
 		connectionId: connection.connectionId,
 		name: connection.name,
