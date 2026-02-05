@@ -643,12 +643,12 @@ connect
 	})
 
 connect
-	.command("remove <id>")
-	.description("Remove a server connection")
+	.command("remove <ids...>")
+	.description("Remove one or more server connections")
 	.option("--namespace <ns>", "Namespace for the server")
-	.action(async (id, options) => {
+	.action(async (ids, options) => {
 		const { removeServer } = await import("./commands/connect")
-		await removeServer(id, options)
+		await removeServer(ids, options)
 	})
 
 connect
