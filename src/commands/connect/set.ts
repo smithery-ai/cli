@@ -2,37 +2,50 @@ import chalk from "chalk"
 import { type Connection, ConnectSession } from "./api"
 import { outputJson } from "./output"
 
+function parseJsonObject<T extends Record<string, unknown>>(
+	json: string | undefined,
+	name: string,
+	validateStringValues = false,
+): T | undefined {
+	if (!json) return undefined
+	try {
+		const parsed = JSON.parse(json)
+		if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed)) {
+			throw new Error(`${name} must be a JSON object`)
+		}
+		if (validateStringValues) {
+			for (const [key, value] of Object.entries(parsed)) {
+				if (typeof value !== "string") {
+					throw new Error(`${name} value for "${key}" must be a string`)
+				}
+			}
+		}
+		return parsed as T
+	} catch (e) {
+		console.error(
+			chalk.red(`Invalid ${name.toLowerCase()} JSON: ${e instanceof Error ? e.message : String(e)}`),
+		)
+		process.exit(1)
+	}
+}
+
 export async function setServer(
 	mcpUrl: string,
 	options: {
 		id?: string
 		name?: string
 		metadata?: string
+		headers?: string
 		namespace?: string
 	},
 ): Promise<void> {
 	try {
-		// Parse metadata if provided
-		let parsedMetadata: Record<string, unknown> | undefined
-		if (options.metadata) {
-			try {
-				parsedMetadata = JSON.parse(options.metadata)
-				if (
-					typeof parsedMetadata !== "object" ||
-					parsedMetadata === null ||
-					Array.isArray(parsedMetadata)
-				) {
-					throw new Error("Metadata must be a JSON object")
-				}
-			} catch (e) {
-				console.error(
-					chalk.red(
-						`Invalid metadata JSON: ${e instanceof Error ? e.message : String(e)}`,
-					),
-				)
-				process.exit(1)
-			}
-		}
+		const parsedMetadata = parseJsonObject(options.metadata, "Metadata")
+		const parsedHeaders = parseJsonObject<Record<string, string>>(
+			options.headers,
+			"Headers",
+			true,
+		)
 
 		const session = await ConnectSession.create(options.namespace)
 
@@ -42,12 +55,14 @@ export async function setServer(
 			connection = await session.setConnection(options.id, mcpUrl, {
 				name: options.name,
 				metadata: parsedMetadata,
+				headers: parsedHeaders,
 			})
 		} else {
 			// Use create() API for auto-generated ID
 			connection = await session.createConnection(mcpUrl, {
 				name: options.name,
 				metadata: parsedMetadata,
+				headers: parsedHeaders,
 			})
 		}
 

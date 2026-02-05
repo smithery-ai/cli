@@ -626,6 +626,7 @@ connect
 	)
 	.option("--name <name>", "Human-readable name for the server")
 	.option("--metadata <json>", "Custom metadata as JSON object")
+	.option("--headers <json>", "Custom headers as JSON object (stored securely)")
 	.option("--namespace <ns>", "Target namespace")
 	.action(async (mcpUrl, options) => {
 		const { addServer } = await import("./commands/connect")
@@ -656,6 +657,7 @@ connect
 	.option("--id <id>", "Custom connection ID (auto-generated if omitted)")
 	.option("--name <name>", "Human-readable name")
 	.option("--metadata <json>", "Metadata as JSON object")
+	.option("--headers <json>", "Custom headers as JSON object (stored securely)")
 	.option("--namespace <ns>", "Namespace for the server")
 	.action(async (mcpUrl, options) => {
 		const { setServer } = await import("./commands/connect")

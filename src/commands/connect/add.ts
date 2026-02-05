@@ -7,6 +7,7 @@ export async function addServer(
 		name?: string
 		namespace?: string
 		metadata?: string
+		headers?: string
 	},
 ): Promise<void> {
 	// If id is set but name is not, default name to id
