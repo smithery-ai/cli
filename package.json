@@ -11,6 +11,7 @@
 	"description": "An NPX command to install and list Model Context Protocols from Smithery",
 	"main": "dist/index.js",
 	"scripts": {
+		"postinstall": "node scripts/postinstall.js",
 		"build": "tsc && node build.mjs && shx chmod +x dist/index.js",
 		"start": "node dist/index.js",
 		"test:list": "tsx src/index.ts list",
@@ -86,7 +87,8 @@
 	"files": [
 		"dist",
 		"README.md",
-		"package.json"
+		"package.json",
+		"scripts"
 	],
 	"exports": {
 		".": {
