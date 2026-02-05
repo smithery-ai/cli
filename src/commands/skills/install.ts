@@ -88,7 +88,7 @@ export async function installSkill(
 	}
 
 	const globalFlag = options.global ? " -g" : ""
-	const command = `npx skills add ${skillUrl} --agent ${agent}${globalFlag} -y`
+	const command = `npx -y skills add ${skillUrl} --agent ${agent}${globalFlag} -y`
 
 	console.log()
 	console.log(chalk.cyan(`Running: ${command}`))

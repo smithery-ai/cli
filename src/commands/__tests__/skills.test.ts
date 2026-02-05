@@ -67,7 +67,7 @@ describe("skills commands use public API", () => {
 
 		// Verify the install command was executed
 		expect(execSync).toHaveBeenCalledWith(
-			expect.stringContaining("npx skills add"),
+			expect.stringContaining("npx -y skills add"),
 			expect.any(Object),
 		)
 	})
