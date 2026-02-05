@@ -1,5 +1,6 @@
 import chalk from "chalk"
 import { ConnectSession } from "./api"
+import { formatConnectionOutput } from "./format-connection"
 import { outputJson } from "./output"
 import { parseJsonObject } from "./parse-json"
 
@@ -27,26 +28,7 @@ export async function addServer(
 			headers: parsedHeaders,
 		})
 
-		const output: Record<string, unknown> = {
-			connectionId: connection.connectionId,
-			name: connection.name,
-			status: connection.status?.state ?? "unknown",
-		}
-
-		// Include metadata in output if present
-		if (connection.metadata && Object.keys(connection.metadata).length > 0) {
-			output.metadata = connection.metadata
-		}
-
-		// Include auth URL if authorization is required
-		if (
-			connection.status?.state === "auth_required" &&
-			"authorizationUrl" in connection.status &&
-			connection.status.authorizationUrl
-		) {
-			output.authorizationUrl = connection.status.authorizationUrl
-		}
-
+		const output = formatConnectionOutput(connection)
 		outputJson(output)
 	} catch (error) {
 		const errorMessage = error instanceof Error ? error.message : String(error)

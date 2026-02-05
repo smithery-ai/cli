@@ -643,6 +643,15 @@ connect
 	})
 
 connect
+	.command("get <id>")
+	.description("Get details for a connection")
+	.option("--namespace <ns>", "Namespace for the connection")
+	.action(async (id, options) => {
+		const { getServer } = await import("./commands/connect")
+		await getServer(id, options)
+	})
+
+connect
 	.command("remove <ids...>")
 	.description("Remove one or more server connections")
 	.option("--namespace <ns>", "Namespace for the server")
