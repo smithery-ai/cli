@@ -76,8 +76,7 @@ smithery connect call <id> [args]   # Call a tool (format: server/tool-name)
 ### Development
 
 ```bash
-smithery login                # Set API key
-smithery login --print-link   # Print auth URL only (agent-friendly)
+smithery login                # Login with Smithery (OAuth)
 smithery dev [entry]          # Dev server with hot-reload and tunnel
 smithery build [entry]        # Build for production
 smithery playground           # Open interactive testing UI
