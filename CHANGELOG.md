@@ -5,6 +5,24 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 
+## [3.13.0](https://github.com/smithery-ai/cli/compare/v3.12.1...v3.13.0) (2026-02-05)
+
+
+### Features
+
+* enhance connect commands with get, pagination, error handling, and shorthand URLs ([#589](https://github.com/smithery-ai/cli/issues/589)) ([04293a7](https://github.com/smithery-ai/cli/commit/04293a719f663f8f81c47c131c63121b4d0659ea))
+
+
+### Bug Fixes
+
+* read SMITHERY_BASE_URL at runtime instead of bake-in at build ([#587](https://github.com/smithery-ai/cli/issues/587)) ([b618c33](https://github.com/smithery-ai/cli/commit/b618c33ad0fba917dd11a02d761d0318fe4ddf44))
+
+
+### Documentation
+
+* add value prop about connecting agents to Smithery registry ([#591](https://github.com/smithery-ai/cli/issues/591)) ([090f299](https://github.com/smithery-ai/cli/commit/090f299916a1045d3f45e678f7432d38d0a4596a))
+* improve README clarity and accuracy ([#590](https://github.com/smithery-ai/cli/issues/590)) ([d41e65c](https://github.com/smithery-ai/cli/commit/d41e65cf6fc81d2a65d99de38d97c6f28b1f46da))
+
 ## [3.12.1](https://github.com/smithery-ai/cli/compare/v3.12.0...v3.12.1) (2026-02-05)
 
 
