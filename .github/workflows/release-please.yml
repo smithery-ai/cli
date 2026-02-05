@@ -30,6 +30,28 @@ jobs:
   publish:
     needs: release-please
     if: ${{ needs.release-please.outputs.release_created == 'true' }}
-    uses: ./.github/workflows/publish.yml
-    secrets: inherit
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'pnpm'
+
+      - run: pnpm install --frozen-lockfile
+
+      - run: pnpm add -D @biomejs/cli-linux-x64
+
+      - run: pnpm run build
+        env:
+          ANALYTICS_ENDPOINT: ${{ secrets.ANALYTICS_ENDPOINT }}
+
+      - name: Publish to npm
+        run: npm publish --provenance --access public
 
