@@ -637,6 +637,8 @@ connect
 	.command("list")
 	.description("List connected servers")
 	.option("--namespace <ns>", "Namespace to list from")
+	.option("--limit <n>", "Maximum number of results (default: all)")
+	.option("--cursor <cursor>", "Pagination cursor from previous response")
 	.action(async (options) => {
 		const { listServers } = await import("./commands/connect")
 		await listServers(options)

@@ -94,7 +94,7 @@ export async function listTools(
 	}
 
 	// List tools from all servers
-	const connections = await session.listConnections()
+	const { connections } = await session.listConnections()
 
 	if (connections.length === 0) {
 		outputJson({

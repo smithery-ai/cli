@@ -1,20 +1,17 @@
 import { ConnectSession } from "./api"
 import { outputJson } from "./output"
 
-interface ServersOutput {
-	servers: Array<{
-		id: string
-		name: string
-		status?: string
-	}>
-	help: string
-}
-
 export async function listServers(options: {
 	namespace?: string
+	limit?: string
+	cursor?: string
 }): Promise<void> {
 	const session = await ConnectSession.create(options.namespace)
-	const connections = await session.listConnections()
+	const limit = options.limit ? Number.parseInt(options.limit, 10) : undefined
+	const { connections, nextCursor } = await session.listConnections({
+		limit,
+		cursor: options.cursor,
+	})
 
 	if (connections.length === 0) {
 		outputJson({
@@ -24,7 +21,7 @@ export async function listServers(options: {
 		return
 	}
 
-	const output: ServersOutput = {
+	const output: Record<string, unknown> = {
 		servers: connections.map((conn) => ({
 			id: conn.connectionId,
 			name: conn.name,
@@ -32,5 +29,10 @@ export async function listServers(options: {
 		})),
 		help: "smithery connect tools <server> - List tools for a specific server",
 	}
+
+	if (nextCursor) {
+		output.nextCursor = nextCursor
+	}
+
 	outputJson(output)
 }

@@ -20,7 +20,7 @@ export async function searchTools(
 	options: { namespace?: string },
 ): Promise<void> {
 	const session = await ConnectSession.create(options.namespace)
-	const connections = await session.listConnections()
+	const { connections } = await session.listConnections()
 
 	if (connections.length === 0) {
 		outputJson({
