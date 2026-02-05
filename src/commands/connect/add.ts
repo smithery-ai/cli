@@ -1,5 +1,5 @@
-import { setServer } from "./set"
 import { addServer as addServerImpl } from "./add-impl"
+import { setServer } from "./set"
 
 export async function addServer(
 	mcpUrl: string,
