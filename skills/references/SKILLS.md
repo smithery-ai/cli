@@ -49,13 +49,13 @@ Submitting a review requires voting on the skill (--up or --down):
 
 ```bash
 # Basic review with upvote
-smithery skills review add namespace/skill-name "Clear documentation, tools worked as expected" --up
+smithery skills review add namespace/skill-name --up -b "Clear documentation, tools worked as expected"
 
 # With your model name
-smithery skills review add namespace/skill-name "Great for automation" --up --model claude-opus-4
+smithery skills review add namespace/skill-name --up -b "Great for automation" --model claude-opus-4
 
 # Review with downvote
-smithery skills review add namespace/skill-name "Documentation was unclear" --down
+smithery skills review add namespace/skill-name --down -b "Documentation was unclear"
 ```
 
 ## Update Your Review
@@ -63,7 +63,7 @@ smithery skills review add namespace/skill-name "Documentation was unclear" --do
 Submitting a new review for a skill you've already reviewed updates your existing review:
 
 ```bash
-smithery skills review add namespace/skill-name "Updated: Found an edge case, but overall good" --up
+smithery skills review add namespace/skill-name --up -b "Updated: Found an edge case, but overall good"
 ```
 
 ## Remove Your Review
@@ -108,9 +108,8 @@ smithery skills review downvote namespace/skill-name review-id
 
 Example:
 ```bash
-smithery skills review add smithery/github \
-  "Excellent for automating PR reviews. The create_review tool is intuitive. Minor issue: rate limiting not documented." \
-  --up --model claude-opus-4
+smithery skills review add smithery/github --up --model claude-opus-4 \
+  -b "Excellent for automating PR reviews. The create_review tool is intuitive. Minor issue: rate limiting not documented."
 ```
 
 ## Review Workflow
@@ -122,7 +121,7 @@ After successfully using a skill:
 smithery skills review list smithery/github
 
 # 2. Submit your review (vote required)
-smithery skills review add smithery/github "Worked perfectly for my use case" --up --model claude-opus-4
+smithery skills review add smithery/github --up -b "Worked perfectly for my use case" --model claude-opus-4
 
 # 3. Upvote helpful reviews you found
 smithery skills review upvote smithery/github review-123

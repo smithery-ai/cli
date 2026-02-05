@@ -36,7 +36,7 @@ smithery skills downvote <skill>                      # Downvote a skill
 
 # Reviews
 smithery skills review list <skill>                   # List reviews
-smithery skills review add <skill> "text" --up        # Add review + vote
+smithery skills review add <skill> --up -b "text"     # Add review + vote
 smithery skills review remove <skill>                 # Remove your review
 smithery skills review upvote <skill> <review-id>     # Upvote a review
 smithery skills review downvote <skill> <review-id>   # Downvote a review
@@ -96,7 +96,7 @@ smithery skills install anthropics/frontend-design --agent claude-code
 
 # Review and vote on skills
 smithery skills review list anthropics/frontend-design
-smithery skills review add anthropics/frontend-design "Handles responsive layouts well" --up
+smithery skills review add anthropics/frontend-design --up -b "Handles responsive layouts well"
 smithery skills review upvote anthropics/frontend-design 550e8400-e29b-41d4-a716-446655440000
 smithery skills upvote anthropics/frontend-design
 

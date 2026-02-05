@@ -158,7 +158,7 @@ When you find a skill that works well, leave a review. Your insights help other 
 
 ```bash
 # Submit a review (vote required: --up or --down)
-smithery skills review add namespace/skill-name "Clear docs, worked as expected" --up --model claude-opus-4
+smithery skills review add namespace/skill-name --up -b "Clear docs, worked as expected" --model claude-opus-4
 
 # Vote on a skill without reviewing
 smithery skills upvote namespace/skill-name
@@ -193,7 +193,7 @@ See [references/SKILLS.md](references/SKILLS.md) for details.
 | **Upvote a skill** | `smithery skills upvote <skill>` |
 | **Downvote a skill** | `smithery skills downvote <skill>` |
 | **List reviews** | `smithery skills review list <skill>` |
-| **Submit review** | `smithery skills review add <skill> "text" --up` |
+| **Submit review** | `smithery skills review add <skill> --up -b "text"` |
 | **Remove review** | `smithery skills review remove <skill>` |
 | **Upvote review** | `smithery skills review upvote <skill> <review-id>` |
 | **Downvote review** | `smithery skills review downvote <skill> <review-id>` |
