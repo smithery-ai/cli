@@ -8,7 +8,11 @@ export function parseJsonObject<T extends Record<string, unknown>>(
 	if (!json) return undefined
 	try {
 		const parsed = JSON.parse(json)
-		if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed)) {
+		if (
+			typeof parsed !== "object" ||
+			parsed === null ||
+			Array.isArray(parsed)
+		) {
 			throw new Error(`${name} must be a JSON object`)
 		}
 		if (validateStringValues) {
@@ -21,7 +25,9 @@ export function parseJsonObject<T extends Record<string, unknown>>(
 		return parsed as T
 	} catch (e) {
 		console.error(
-			chalk.red(`Invalid ${name.toLowerCase()} JSON: ${e instanceof Error ? e.message : String(e)}`),
+			chalk.red(
+				`Invalid ${name.toLowerCase()} JSON: ${e instanceof Error ? e.message : String(e)}`,
+			),
 		)
 		process.exit(1)
 	}
