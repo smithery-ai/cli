@@ -4,11 +4,13 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+
 ## [3.11.0](https://github.com/smithery-ai/cli/compare/v3.10.1...v3.11.0) (2026-02-05)
 
 ### Features
 
-* improve review add UX with GitHub-style syntax ([#580](https://github.com/smithery-ai/cli/issues/580)) ([52aeb1d](https://github.com/smithery-ai/cli/commit/52aeb1d))
+* improve review add UX with GitHub-style syntax ([#580](https://github.com/smithery-ai/cli/issues/580)) ([52aeb1d](https://github.com/smithery-ai/cli/commit/52aeb1df451167854ae2c0a346b37d9b1dec656f))
+
 
 ## [3.10.0](https://github.com/smithery-ai/cli/compare/v3.9.0...v3.10.0) (2026-02-04)
 
