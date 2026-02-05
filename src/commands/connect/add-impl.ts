@@ -3,8 +3,7 @@ import { ConnectSession } from "./api"
 import { outputJson } from "./output"
 import { parseJsonObject } from "./parse-json"
 
-export async function setServer(
-	id: string,
+export async function addServer(
 	mcpUrl: string,
 	options: {
 		name?: string
@@ -22,7 +21,7 @@ export async function setServer(
 		)
 
 		const session = await ConnectSession.create(options.namespace)
-		const connection = await session.setConnection(id, mcpUrl, {
+		const connection = await session.createConnection(mcpUrl, {
 			name: options.name,
 			metadata: parsedMetadata,
 			headers: parsedHeaders,
@@ -51,7 +50,7 @@ export async function setServer(
 		outputJson(output)
 	} catch (error) {
 		const errorMessage = error instanceof Error ? error.message : String(error)
-		console.error(chalk.red(`Failed to set connection: ${errorMessage}`))
+		console.error(chalk.red(`Failed to add connection: ${errorMessage}`))
 		process.exit(1)
 	}
 }
