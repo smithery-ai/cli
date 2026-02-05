@@ -678,6 +678,8 @@ connect
 	.command("tools [server]")
 	.description("List tools (all or for a specific server)")
 	.option("--namespace <ns>", "Namespace to list from")
+	.option("--limit <n>", "Maximum number of tools to return (default: 10)")
+	.option("--cursor <cursor>", "Pagination cursor from previous response")
 	.action(async (server, options) => {
 		const { listTools } = await import("./commands/connect")
 		await listTools(server, options)
