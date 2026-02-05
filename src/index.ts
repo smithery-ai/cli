@@ -795,14 +795,29 @@ skillsReview
 	})
 
 skillsReview
-	.command("add <skill> <text>")
-	.description("Add a review for a skill (includes vote)")
+	.command("add <skill>")
+	.description("Add a review for a skill")
+	.option("-b, --body <text>", "Review text (required)")
 	.option("-m, --model <name>", "Agent model used (e.g., claude-3.5-sonnet)")
 	.option("--up", "Upvote the skill")
 	.option("--down", "Downvote the skill")
-	.action(async (skill, text, options) => {
+	.action(async (skill, options) => {
+		if (!options.body) {
+			console.error(chalk.red("Error: --body is required"))
+			console.error(
+				chalk.dim(
+					'Usage: smithery skills review add <skill> --up|--down -b "review text"',
+				),
+			)
+			process.exit(1)
+		}
 		if (!options.up && !options.down) {
-			console.error(chalk.red("Error: Must specify --up or --down"))
+			console.error(chalk.red("Error: --up or --down is required"))
+			console.error(
+				chalk.dim(
+					'Usage: smithery skills review add <skill> --up|--down -b "review text"',
+				),
+			)
 			process.exit(1)
 		}
 		if (options.up && options.down) {
@@ -811,7 +826,7 @@ skillsReview
 		}
 		const { submitReview } = await import("./commands/skills")
 		await submitReview(skill, {
-			review: text,
+			review: options.body,
 			model: options.model,
 			vote: options.up ? "up" : "down",
 		})
