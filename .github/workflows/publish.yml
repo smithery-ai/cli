@@ -1,9 +1,10 @@
-# Manual workflow to re-publish to npm in case the automated release failed.
-# Note: Automated publishing is handled by release-please.yml
+# Publishes to npm. Called automatically by release-please when a release is created,
+# or can be triggered manually if needed.
 name: Publish NPM
 
 on:
   workflow_dispatch:
+  workflow_call:
 
 jobs:
   publish:
