@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 
+## [3.13.2](https://github.com/smithery-ai/cli/compare/v3.13.1...v3.13.2) (2026-02-05)
+
+
+### Bug Fixes
+
+* add explicit permissions for publish workflow OIDC ([a0962ec](https://github.com/smithery-ai/cli/commit/a0962ec5ab017d7017a6da17894ae017480eaa63))
+
 ## [3.13.1](https://github.com/smithery-ai/cli/compare/v3.13.0...v3.13.1) (2026-02-05)
 
 
