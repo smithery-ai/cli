@@ -235,7 +235,7 @@ export async function searchSkills(
 				)
 				console.log(chalk.bold("To install this skill, run:"))
 				console.log()
-				console.log(chalk.cyan(`  npx skills add ${installUrl}`))
+				console.log(chalk.cyan(`  npx -y skills add ${installUrl}`))
 				console.log()
 
 				// Ask what to do next
@@ -255,10 +255,10 @@ export async function searchSkills(
 
 				if (action === "install") {
 					console.log()
-					console.log(chalk.cyan(`Running: npx skills add ${installUrl}`))
+					console.log(chalk.cyan(`Running: npx -y skills add ${installUrl}`))
 					console.log()
 					const { execSync } = await import("node:child_process")
-					execSync(`npx skills add ${installUrl}`, { stdio: "inherit" })
+					execSync(`npx -y skills add ${installUrl}`, { stdio: "inherit" })
 					return null
 				} else if (action === "back") {
 					console.log()
