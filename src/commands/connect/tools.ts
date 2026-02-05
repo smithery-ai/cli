@@ -1,4 +1,4 @@
-import type { Connection } from "./api"
+import type { Connection, ToolInfo } from "./api"
 import { ConnectSession } from "./api"
 import { outputJson } from "./output"
 
@@ -16,10 +16,9 @@ interface ToolsOutput {
 }
 
 /**
- * Check if a connection has an issue that would prevent listing tools.
- * Returns an error object if there's an issue, null otherwise.
+ * Format connection status for error output.
  */
-function getConnectionIssue(
+function formatConnectionStatus(
 	connection: Connection,
 ): { error: string; status: Record<string, unknown> } | null {
 	if (!connection.status) {
@@ -53,25 +52,22 @@ export async function listTools(
 ): Promise<void> {
 	const session = await ConnectSession.create(options.namespace)
 
-	// If server specified, fetch only that server's tools (skip listing all)
+	// If server specified, fetch only that server's tools
 	if (server) {
+		let connection: Connection
 		try {
-			const connection = await session.getConnection(server)
+			connection = await session.getConnection(server)
+		} catch {
+			outputJson({
+				tools: [],
+				error: `Server "${server}" not found`,
+				help: "smithery connect list - List all servers",
+			})
+			return
+		}
 
-			// Check for connection issues before trying to list tools
-			const issue = getConnectionIssue(connection)
-			if (issue) {
-				outputJson({
-					tools: [],
-					error: issue.error,
-					status: issue.status,
-					help: "smithery connect get <id> - Get connection details",
-				})
-				return
-			}
-
+		try {
 			const tools = await session.listToolsForConnection(connection)
-
 			const output: ToolsOutput = {
 				tools: tools.map((t) => ({
 					id: `${t.connectionId}/${t.name}`,
@@ -83,12 +79,25 @@ export async function listTools(
 				help: "smithery connect call <id> '<args>'",
 			}
 			outputJson(output)
-		} catch {
-			outputJson({
-				tools: [],
-				error: `Server "${server}" not found`,
-				help: "smithery connect list - List all servers",
-			})
+		} catch (error) {
+			// Listing tools failed - check connection status for known issues
+			const issue = formatConnectionStatus(connection)
+			if (issue) {
+				outputJson({
+					tools: [],
+					error: issue.error,
+					status: issue.status,
+					help: "smithery connect get <id> - Get connection details",
+				})
+			} else {
+				// Unknown error (timeout, network issue, etc.)
+				const errorMessage = error instanceof Error ? error.message : String(error)
+				outputJson({
+					tools: [],
+					error: errorMessage,
+					help: "smithery connect get <id> - Get connection details",
+				})
+			}
 		}
 		return
 	}
@@ -104,35 +113,37 @@ export async function listTools(
 		return
 	}
 
-	// Check for any connection issues and collect them
-	const issues: Array<{ server: string; error: string; status: Record<string, unknown> }> = []
-	const healthyConnections: Connection[] = []
+	// Try to list tools for all connections, collecting errors
+	const allTools: ToolInfo[] = []
+	const issues: Array<{ server: string; error: string; status?: Record<string, unknown> }> = []
 
-	for (const conn of connections) {
-		const issue = getConnectionIssue(conn)
-		if (issue) {
-			issues.push({ server: conn.name, ...issue })
-		} else {
-			healthyConnections.push(conn)
-		}
-	}
-
-	const allTools = await Promise.all(
-		healthyConnections.map((conn) => session.listToolsForConnection(conn)),
+	await Promise.all(
+		connections.map(async (conn) => {
+			try {
+				const tools = await session.listToolsForConnection(conn)
+				allTools.push(...tools)
+			} catch (error) {
+				const issue = formatConnectionStatus(conn)
+				if (issue) {
+					issues.push({ server: conn.name, ...issue })
+				} else {
+					const errorMessage = error instanceof Error ? error.message : String(error)
+					issues.push({ server: conn.name, error: errorMessage })
+				}
+			}
+		}),
 	)
 
-	const flatTools = allTools.flat()
-
-	if (flatTools.length === 0 && issues.length === 0) {
+	if (allTools.length === 0 && issues.length === 0) {
 		outputJson({
 			tools: [],
-			help: "No tools found. Your servers may not have any tools, or may be disconnected.",
+			help: "No tools found. Your servers may not have any tools.",
 		})
 		return
 	}
 
 	const output: Record<string, unknown> = {
-		tools: flatTools.map((t) => ({
+		tools: allTools.map((t) => ({
 			id: `${t.connectionId}/${t.name}`,
 			name: t.name,
 			server: t.connectionName,
@@ -142,7 +153,6 @@ export async function listTools(
 		help: "smithery connect call <id> '<args>'",
 	}
 
-	// Include issues if any connections had problems
 	if (issues.length > 0) {
 		output.connectionIssues = issues
 	}

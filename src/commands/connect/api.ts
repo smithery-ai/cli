@@ -97,18 +97,13 @@ export class ConnectSession {
 	}
 
 	async listToolsForConnection(connection: Connection): Promise<ToolInfo[]> {
-		try {
-			const mcpClient = await this.getMcpClient(connection.connectionId)
-			const result = await mcpClient.listTools()
-			return result.tools.map((tool) => ({
-				...tool,
-				connectionId: connection.connectionId,
-				connectionName: connection.name,
-			}))
-		} catch {
-			// Connection may be disconnected, timeout, or not support tools
-			return []
-		}
+		const mcpClient = await this.getMcpClient(connection.connectionId)
+		const result = await mcpClient.listTools()
+		return result.tools.map((tool) => ({
+			...tool,
+			connectionId: connection.connectionId,
+			connectionName: connection.name,
+		}))
 	}
 
 	async callTool(
