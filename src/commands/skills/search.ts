@@ -1,6 +1,8 @@
 import { Smithery } from "@smithery/api/client.js"
 import type { SkillListResponse } from "@smithery/api/resources/skills"
 import chalk from "chalk"
+import { SKILL_AGENTS } from "../../config/agents.js"
+import { installSkill } from "./install.js"
 
 export interface SearchOptions {
 	json?: boolean
@@ -227,15 +229,13 @@ export async function searchSkills(
 				}
 				console.log()
 
-				// Show install command using Vercel Labs skills CLI
-				// https://github.com/vercel-labs/skills
-				const installUrl = getSkillUrl(
-					selectedSkillData.namespace,
-					selectedSkillData.slug,
-				)
+				// Show install command
+				const skillIdentifier = `${selectedSkillData.namespace}/${selectedSkillData.slug}`
 				console.log(chalk.bold("To install this skill, run:"))
 				console.log()
-				console.log(chalk.cyan(`  npx -y skills add ${installUrl}`))
+				console.log(
+					chalk.cyan(`  smithery skills install ${skillIdentifier} --agent <agent-name>`),
+				)
 				console.log()
 
 				// Ask what to do next
@@ -254,11 +254,17 @@ export async function searchSkills(
 				])
 
 				if (action === "install") {
-					console.log()
-					console.log(chalk.cyan(`Running: npx -y skills add ${installUrl}`))
-					console.log()
-					const { execSync } = await import("node:child_process")
-					execSync(`npx -y skills add ${installUrl}`, { stdio: "inherit" })
+					// Prompt for agent selection
+					const { agent } = await inquirer.prompt([
+						{
+							type: "list",
+							name: "agent",
+							message: "Select the agent to install to:",
+							choices: SKILL_AGENTS.map((a) => ({ name: a, value: a })),
+						},
+					])
+
+					await installSkill(skillIdentifier, agent)
 					return null
 				} else if (action === "back") {
 					console.log()
