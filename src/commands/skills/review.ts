@@ -256,18 +256,9 @@ export async function submitReview(
 			namespace,
 			review: reviewText,
 			agentModel: options.model,
+			vote: options.vote,
 		})
-		spinner.succeed("Review submitted")
-
-		// Vote on skill
-		const voteSpinner = ora(
-			`${options.vote === "up" ? "Upvoting" : "Downvoting"} skill...`,
-		).start()
-		await client.skills.votes.create(slug, {
-			namespace,
-			isPositive: options.vote === "up",
-		})
-		voteSpinner.succeed(`Skill ${options.vote}voted`)
+		spinner.succeed(`Review submitted and skill ${options.vote}voted`)
 
 		console.log()
 		console.log(chalk.cyan("Your review:"))
@@ -392,7 +383,7 @@ export async function voteReview(
 		await client.skills.reviews.vote(reviewId, {
 			namespace,
 			slug,
-			isPositive: vote === "up",
+			vote,
 		})
 
 		spinner.succeed(`Review ${vote}voted`)

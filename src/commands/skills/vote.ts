@@ -89,7 +89,7 @@ export async function voteSkill(
 	try {
 		await client.skills.votes.create(slug, {
 			namespace,
-			isPositive: vote === "up",
+			vote,
 		})
 
 		spinner.succeed(`Skill ${vote}voted`)
