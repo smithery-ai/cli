@@ -1,11 +1,11 @@
 # Smithery CLI [![NPM Version](https://img.shields.io/npm/v/%40smithery%2Fcli)](https://www.npmjs.com/package/@smithery/cli) [![NPM Downloads](https://img.shields.io/npm/dt/%40smithery%2Fcli)](https://www.npmjs.com/package/@smithery/cli)
 
-CLI for installing MCP servers and managing cloud connections via [Smithery](https://smithery.ai).
+CLI for discovering, installing, and using MCP servers and skills via [Smithery](https://smithery.ai).
 
 ## Installation
 
 ```bash
-npm install -g @smithery/cli
+npm install -g @smithery/cli@latest
 ```
 Requires Node.js 20+.
 
@@ -19,14 +19,14 @@ smithery uninstall <server>   # Remove a server
 smithery list                 # List installed servers
 smithery search [term]        # Search the Smithery registry
 smithery inspect <server>     # Interactive server testing
-smithery run <server>         # Run a server locally
+smithery run <server>         # Run an MCP bundle locally
 ```
 
 Options: `--client <name>` to skip client selection, `--config <json>` to provide configuration.
 
 ### Skills
 
-Browse and install reusable prompt-based skills from the [Smithery Skills Registry](https://smithery.ai/skills).
+Browse and install skills from the [Smithery Skills Registry](https://smithery.ai/skills).
 
 ```bash
 smithery skills search [query]                        # Search skills
@@ -95,15 +95,15 @@ smithery skills install anthropics/frontend-design --agent claude-code
 
 # Review and vote on skills
 smithery skills review list anthropics/frontend-design
-smithery skills review add anthropics/frontend-design --up -b "Handles responsive layouts well"
+smithery skills review add anthropics/frontend-design --up -b "Great for Tailwind components, follows accessibility best practices"
 smithery skills review upvote anthropics/frontend-design 550e8400-e29b-41d4-a716-446655440000
 smithery skills upvote anthropics/frontend-design
 
 # Discover namespaces
 smithery namespace search --has-skills  # Find namespaces with skills
 
-# Cloud MCP workflow
-smithery connect add https://server.smithery.ai/github
+# Cloud MCP workflow (works with any MCP server URL)
+smithery connect add https://server.smithery.ai/github  # Or any MCP server
 smithery connect search "create issue"
 smithery connect call github/create_issue '{"title":"Bug fix","body":"..."}'
 
