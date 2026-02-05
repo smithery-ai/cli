@@ -5,6 +5,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 
+## [3.12.0](https://github.com/smithery-ai/cli/compare/v3.11.0...v3.12.0) (2026-02-05)
+
+
+### Features
+
+* add --headers option to connect add/set commands ([#581](https://github.com/smithery-ai/cli/issues/581)) ([da2856d](https://github.com/smithery-ai/cli/commit/da2856d77f766d72655e668d3063381d30c793e2))
+
+
+### Bug Fixes
+
+* remove unused --print-link option from login command ([#583](https://github.com/smithery-ai/cli/issues/583)) ([9a5b830](https://github.com/smithery-ai/cli/commit/9a5b830fcfc55e855c97a4c2e881c1beadb19753))
+
 ## [3.11.0](https://github.com/smithery-ai/cli/compare/v3.10.1...v3.11.0) (2026-02-05)
 
 ### Features
