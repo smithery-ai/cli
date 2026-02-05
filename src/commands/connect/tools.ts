@@ -4,24 +4,6 @@ import { outputJson } from "./output"
 
 const DEFAULT_LIMIT = 10
 
-interface PaginationCursor {
-	connectionIndex: number
-	toolOffset: number
-}
-
-function encodeCursor(cursor: PaginationCursor): string {
-	return Buffer.from(JSON.stringify(cursor)).toString("base64")
-}
-
-function decodeCursor(cursor: string): PaginationCursor | null {
-	try {
-		const decoded = Buffer.from(cursor, "base64").toString("utf-8")
-		return JSON.parse(decoded) as PaginationCursor
-	} catch {
-		return null
-	}
-}
-
 /**
  * Format connection status for error output.
  */
@@ -58,12 +40,14 @@ function formatConnectionStatus(
 
 export async function listTools(
 	server: string | undefined,
-	options: { namespace?: string; limit?: string; cursor?: string },
+	options: { namespace?: string; limit?: string; page?: string },
 ): Promise<void> {
 	const session = await ConnectSession.create(options.namespace)
 	const limit = options.limit
 		? Number.parseInt(options.limit, 10)
 		: DEFAULT_LIMIT
+	const page = options.page ? Number.parseInt(options.page, 10) : 1
+	const offset = (page - 1) * limit
 
 	// If server specified, fetch only that server's tools (with pagination)
 	if (server) {
@@ -83,9 +67,6 @@ export async function listTools(
 			const tools = await session.listToolsForConnection(connection)
 
 			// Apply pagination for single server
-			const offset = options.cursor
-				? (decodeCursor(options.cursor)?.toolOffset ?? 0)
-				: 0
 			const paginatedTools = tools.slice(offset, offset + limit)
 			const hasMore = offset + limit < tools.length
 
@@ -97,14 +78,9 @@ export async function listTools(
 					description: t.description,
 					inputSchema: t.inputSchema,
 				})),
+				page,
+				hasMore,
 				help: "smithery connect call <id> '<args>'",
-			}
-
-			if (hasMore) {
-				output.nextCursor = encodeCursor({
-					connectionIndex: 0,
-					toolOffset: offset + limit,
-				})
 			}
 
 			outputJson(output)
@@ -143,53 +119,19 @@ export async function listTools(
 		return
 	}
 
-	// Parse cursor to determine starting position
-	const startCursor = options.cursor ? decodeCursor(options.cursor) : null
-	const startConnectionIndex = startCursor?.connectionIndex ?? 0
-	const startToolOffset = startCursor?.toolOffset ?? 0
-
-	const collectedTools: ToolInfo[] = []
+	// Collect all tools from all connections first, then paginate
+	const allTools: ToolInfo[] = []
 	const issues: Array<{
 		server: string
 		error: string
 		status?: Record<string, unknown>
 	}> = []
-	let nextCursor: PaginationCursor | null = null
 
-	// Process connections sequentially starting from cursor position
-	for (let i = startConnectionIndex; i < connections.length; i++) {
-		if (collectedTools.length >= limit) {
-			break
-		}
-
-		const conn = connections[i]
+	// Process connections sequentially to maintain consistent ordering
+	for (const conn of connections) {
 		try {
 			const tools = await session.listToolsForConnection(conn)
-
-			// Apply offset only for the first connection when resuming
-			const offset = i === startConnectionIndex ? startToolOffset : 0
-			const remaining = limit - collectedTools.length
-
-			for (
-				let j = offset;
-				j < tools.length && collectedTools.length < limit;
-				j++
-			) {
-				collectedTools.push(tools[j])
-			}
-
-			// Check if there are more tools in this connection or more connections
-			if (collectedTools.length >= limit) {
-				const nextToolOffset = offset + remaining
-
-				if (nextToolOffset < tools.length) {
-					// More tools in current connection
-					nextCursor = { connectionIndex: i, toolOffset: nextToolOffset }
-				} else if (i + 1 < connections.length) {
-					// Move to next connection
-					nextCursor = { connectionIndex: i + 1, toolOffset: 0 }
-				}
-			}
+			allTools.push(...tools)
 		} catch (error) {
 			const issue = formatConnectionStatus(conn)
 			if (issue) {
@@ -202,7 +144,7 @@ export async function listTools(
 		}
 	}
 
-	if (collectedTools.length === 0 && issues.length === 0) {
+	if (allTools.length === 0 && issues.length === 0) {
 		outputJson({
 			tools: [],
 			help: "No tools found. Your servers may not have any tools.",
@@ -210,19 +152,21 @@ export async function listTools(
 		return
 	}
 
+	// Apply pagination to collected tools
+	const paginatedTools = allTools.slice(offset, offset + limit)
+	const hasMore = offset + limit < allTools.length
+
 	const output: Record<string, unknown> = {
-		tools: collectedTools.map((t) => ({
+		tools: paginatedTools.map((t) => ({
 			id: `${t.connectionId}/${t.name}`,
 			name: t.name,
 			server: t.connectionName,
 			description: t.description,
 			inputSchema: t.inputSchema,
 		})),
+		page,
+		hasMore,
 		help: "smithery connect call <id> '<args>'",
-	}
-
-	if (nextCursor) {
-		output.nextCursor = encodeCursor(nextCursor)
 	}
 
 	if (issues.length > 0) {
