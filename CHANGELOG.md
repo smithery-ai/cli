@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 
+## [3.16.0](https://github.com/smithery-ai/cli/compare/v3.15.1...v3.16.0) (2026-02-05)
+
+
+### Features
+
+* show welcome message when CLI runs without arguments ([e2a7cc6](https://github.com/smithery-ai/cli/commit/e2a7cc6b7f7d1a2d0fd4c5b000b48eaaf5f5ae63))
+
 ## [3.15.1](https://github.com/smithery-ai/cli/compare/v3.15.0...v3.15.1) (2026-02-05)
 
 
