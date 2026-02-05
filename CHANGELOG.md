@@ -5,6 +5,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 
+## [3.15.0](https://github.com/smithery-ai/cli/compare/v3.14.0...v3.15.0) (2026-02-05)
+
+
+### Features
+
+* improve postinstall message for agents ([#601](https://github.com/smithery-ai/cli/issues/601)) ([92726b5](https://github.com/smithery-ai/cli/commit/92726b5231062136e650f271b15709d74273c310))
+
+
+### Bug Fixes
+
+* inline npm publish into release-please workflow ([#599](https://github.com/smithery-ai/cli/issues/599)) ([d4c64ef](https://github.com/smithery-ai/cli/commit/d4c64ef25a1ca57d14c9ca718c471e2fe5f81761))
+
 ## [3.14.0](https://github.com/smithery-ai/cli/compare/v3.13.2...v3.14.0) (2026-02-05)
 
 
