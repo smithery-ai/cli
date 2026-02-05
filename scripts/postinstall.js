@@ -7,7 +7,8 @@ if (process.env.CI || process.env.SMITHERY_SUPPRESS_POSTINSTALL) {
 
 const line = "=".repeat(60)
 
-console.log(`
+// Use stderr because npm suppresses stdout from postinstall scripts
+process.stderr.write(`
 ${line}
   Smithery CLI installed!
 ${line}
