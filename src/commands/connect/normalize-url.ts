@@ -1,4 +1,4 @@
-const SMITHERY_SERVER_BASE = "https://server.smithery.ai/"
+const SMITHERY_GATEWAY_BASE = "https://server.smithery.ai/"
 
 /**
  * Normalize an MCP URL. If the input doesn't start with https://,
@@ -13,5 +13,5 @@ export function normalizeMcpUrl(url: string): string {
 	if (url.startsWith("https://") || url.startsWith("http://")) {
 		return url
 	}
-	return `${SMITHERY_SERVER_BASE}${url}`
+	return `${SMITHERY_GATEWAY_BASE}${url}`
 }
