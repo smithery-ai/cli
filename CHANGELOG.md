@@ -5,6 +5,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 
+## [3.15.1](https://github.com/smithery-ai/cli/compare/v3.15.0...v3.15.1) (2026-02-05)
+
+
+### Bug Fixes
+
+* add registry-url to setup-node for npm OIDC auth ([7855d98](https://github.com/smithery-ai/cli/commit/7855d9894279aef79caade19c2743c50a4cd6747))
+* add workflow_dispatch to allow manual publish trigger ([bcc31c1](https://github.com/smithery-ai/cli/commit/bcc31c1d163535566ccbd285d6c44cfd73156d48))
+* use Node 24 for npm OIDC publishing support ([7d7b4e2](https://github.com/smithery-ai/cli/commit/7d7b4e2b80f68c348cefce2c9dbcdf509aa9b7ab))
+* use stderr for postinstall message to bypass npm suppression ([df5f6c4](https://github.com/smithery-ai/cli/commit/df5f6c450e7bb2938d0726894907adbf386e17e2))
+
 ## [3.15.0](https://github.com/smithery-ai/cli/compare/v3.14.0...v3.15.0) (2026-02-05)
 
 
