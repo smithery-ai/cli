@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 
+## [3.14.0](https://github.com/smithery-ai/cli/compare/v3.13.2...v3.14.0) (2026-02-05)
+
+
+### Features
+
+* add post-install message and servers search command ([#598](https://github.com/smithery-ai/cli/issues/598)) ([874d8c2](https://github.com/smithery-ai/cli/commit/874d8c2534eb6412e57eb9fee379b4c7cb18e153))
+
 ## [3.13.2](https://github.com/smithery-ai/cli/compare/v3.13.1...v3.13.2) (2026-02-05)
 
 
