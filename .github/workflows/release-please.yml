@@ -4,6 +4,12 @@ on:
   push:
     branches:
       - main
+  workflow_dispatch:
+    inputs:
+      publish_only:
+        description: 'Skip release-please and only run publish'
+        type: boolean
+        default: false
 
 permissions:
   contents: write
@@ -29,7 +35,7 @@ jobs:
 
   publish:
     needs: release-please
-    if: ${{ needs.release-please.outputs.release_created == 'true' }}
+    if: ${{ needs.release-please.outputs.release_created == 'true' || inputs.publish_only == true }}
     runs-on: ubuntu-latest
     permissions:
       contents: read
