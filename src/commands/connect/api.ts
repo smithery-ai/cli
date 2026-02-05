@@ -111,7 +111,11 @@ export class ConnectSession {
 
 	async createConnection(
 		mcpUrl: string,
-		options: { name?: string; metadata?: Record<string, unknown> } = {},
+		options: {
+			name?: string
+			metadata?: Record<string, unknown>
+			headers?: Record<string, string>
+		} = {},
 	): Promise<Connection> {
 		return this.smitheryClient.experimental.connect.connections.create(
 			this.namespace,
@@ -119,6 +123,7 @@ export class ConnectSession {
 				mcpUrl,
 				name: options.name,
 				metadata: options.metadata,
+				headers: options.headers,
 			},
 		)
 	}
@@ -130,7 +135,11 @@ export class ConnectSession {
 	async setConnection(
 		connectionId: string,
 		mcpUrl: string,
-		options: { name?: string; metadata?: Record<string, unknown> } = {},
+		options: {
+			name?: string
+			metadata?: Record<string, unknown>
+			headers?: Record<string, string>
+		} = {},
 	): Promise<Connection> {
 		return this.smitheryClient.experimental.connect.connections.set(
 			connectionId,
@@ -139,6 +148,7 @@ export class ConnectSession {
 				mcpUrl,
 				name: options.name,
 				metadata: options.metadata,
+				headers: options.headers,
 			},
 		)
 	}

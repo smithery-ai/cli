@@ -626,6 +626,7 @@ connect
 	)
 	.option("--name <name>", "Human-readable name for the server")
 	.option("--metadata <json>", "Custom metadata as JSON object")
+	.option("--headers <json>", "Custom headers as JSON object (stored securely)")
 	.option("--namespace <ns>", "Target namespace")
 	.action(async (mcpUrl, options) => {
 		const { addServer } = await import("./commands/connect")
@@ -642,24 +643,24 @@ connect
 	})
 
 connect
-	.command("remove <id>")
-	.description("Remove a server connection")
+	.command("remove <ids...>")
+	.description("Remove one or more server connections")
 	.option("--namespace <ns>", "Namespace for the server")
-	.action(async (id, options) => {
+	.action(async (ids, options) => {
 		const { removeServer } = await import("./commands/connect")
-		await removeServer(id, options)
+		await removeServer(ids, options)
 	})
 
 connect
-	.command("set <mcp-url>")
-	.description("Create or update a connection (use --id for custom ID)")
-	.option("--id <id>", "Custom connection ID (auto-generated if omitted)")
+	.command("set <id> <mcp-url>")
+	.description("Create or update a connection by ID")
 	.option("--name <name>", "Human-readable name")
 	.option("--metadata <json>", "Metadata as JSON object")
+	.option("--headers <json>", "Custom headers as JSON object (stored securely)")
 	.option("--namespace <ns>", "Namespace for the server")
-	.action(async (mcpUrl, options) => {
+	.action(async (id, mcpUrl, options) => {
 		const { setServer } = await import("./commands/connect")
-		await setServer(mcpUrl, options)
+		await setServer(id, mcpUrl, options)
 	})
 
 connect
