@@ -5,6 +5,20 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 
+## [3.13.1](https://github.com/smithery-ai/cli/compare/v3.13.0...v3.13.1) (2026-02-05)
+
+
+### Bug Fixes
+
+* add id-token permission for npm publish OIDC ([#593](https://github.com/smithery-ai/cli/issues/593)) ([3f61a2d](https://github.com/smithery-ai/cli/commit/3f61a2d2281e5b40654363639a6098842b7dbb0b))
+* use GitHub App token for release-please to trigger CI ([#592](https://github.com/smithery-ai/cli/issues/592)) ([832fe51](https://github.com/smithery-ai/cli/commit/832fe512a36e8251cd8e17ff0a98b0881839cb99))
+
+
+### Chores
+
+* trigger release-please workflow ([cfa5be4](https://github.com/smithery-ai/cli/commit/cfa5be42421543df1ca821e739e9141a58dce612))
+* verify release-please workflow ([0b1c416](https://github.com/smithery-ai/cli/commit/0b1c416674a0df5a65c7cea6814b97459717ea9c))
+
 ## [3.13.0](https://github.com/smithery-ai/cli/compare/v3.12.1...v3.13.0) (2026-02-05)
 
 
