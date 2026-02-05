@@ -637,9 +637,20 @@ connect
 	.command("list")
 	.description("List connected servers")
 	.option("--namespace <ns>", "Namespace to list from")
+	.option("--limit <n>", "Maximum number of results (default: all)")
+	.option("--cursor <cursor>", "Pagination cursor from previous response")
 	.action(async (options) => {
 		const { listServers } = await import("./commands/connect")
 		await listServers(options)
+	})
+
+connect
+	.command("get <id>")
+	.description("Get details for a connection")
+	.option("--namespace <ns>", "Namespace for the connection")
+	.action(async (id, options) => {
+		const { getServer } = await import("./commands/connect")
+		await getServer(id, options)
 	})
 
 connect
@@ -667,6 +678,8 @@ connect
 	.command("tools [server]")
 	.description("List tools (all or for a specific server)")
 	.option("--namespace <ns>", "Namespace to list from")
+	.option("--limit <n>", "Maximum number of tools to return (default: 10)")
+	.option("--page <n>", "Page number (default: 1)")
 	.action(async (server, options) => {
 		const { listTools } = await import("./commands/connect")
 		await listTools(server, options)

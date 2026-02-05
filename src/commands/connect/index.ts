@@ -1,5 +1,6 @@
 export { addServer } from "./add"
 export { callTool } from "./call"
+export { getServer } from "./get"
 export { listServers } from "./list"
 export { removeServer } from "./remove"
 export { searchTools } from "./search"

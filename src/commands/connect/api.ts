@@ -44,7 +44,21 @@ export class ConnectSession {
 		return new ConnectSession(client, ns)
 	}
 
-	async listConnections(): Promise<Connection[]> {
+	async listConnections(options?: {
+		limit?: number
+		cursor?: string
+	}): Promise<{ connections: Connection[]; nextCursor: string | null }> {
+		// If limit/cursor specified, return a single page
+		if (options?.limit || options?.cursor) {
+			const data =
+				await this.smitheryClient.experimental.connect.connections.list(
+					this.namespace,
+					{ limit: options.limit, cursor: options.cursor },
+				)
+			return { connections: data.connections, nextCursor: data.nextCursor }
+		}
+
+		// Otherwise fetch all pages
 		const all: Connection[] = []
 		let cursor: string | undefined
 
@@ -58,7 +72,7 @@ export class ConnectSession {
 			cursor = data.nextCursor ?? undefined
 		} while (cursor)
 
-		return all
+		return { connections: all, nextCursor: null }
 	}
 
 	private async getMcpClient(connectionId: string): Promise<Client> {
@@ -83,18 +97,13 @@ export class ConnectSession {
 	}
 
 	async listToolsForConnection(connection: Connection): Promise<ToolInfo[]> {
-		try {
-			const mcpClient = await this.getMcpClient(connection.connectionId)
-			const result = await mcpClient.listTools()
-			return result.tools.map((tool) => ({
-				...tool,
-				connectionId: connection.connectionId,
-				connectionName: connection.name,
-			}))
-		} catch {
-			// Connection may be disconnected, timeout, or not support tools
-			return []
-		}
+		const mcpClient = await this.getMcpClient(connection.connectionId)
+		const result = await mcpClient.listTools()
+		return result.tools.map((tool) => ({
+			...tool,
+			connectionId: connection.connectionId,
+			connectionName: connection.name,
+		}))
 	}
 
 	async callTool(
