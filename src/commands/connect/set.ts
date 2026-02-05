@@ -1,6 +1,7 @@
 import chalk from "chalk"
 import { ConnectSession } from "./api"
 import { formatConnectionOutput } from "./format-connection"
+import { normalizeMcpUrl } from "./normalize-url"
 import { outputJson } from "./output"
 import { parseJsonObject } from "./parse-json"
 
@@ -22,8 +23,9 @@ export async function setServer(
 			true,
 		)
 
+		const normalizedUrl = normalizeMcpUrl(mcpUrl)
 		const session = await ConnectSession.create(options.namespace)
-		const connection = await session.setConnection(id, mcpUrl, {
+		const connection = await session.setConnection(id, normalizedUrl, {
 			name: options.name,
 			metadata: parsedMetadata,
 			headers: parsedHeaders,
