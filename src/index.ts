@@ -890,6 +890,28 @@ skillsReview
 		await voteReview(skill, reviewId, "down")
 	})
 
+// Show welcome message if no command provided
+if (process.argv.length <= 2) {
+	const line = "=".repeat(60)
+	console.log(`
+${line}
+  ${chalk.bold.hex("#ea580c")("Smithery CLI")} ${chalk.dim(`v${__SMITHERY_VERSION__}`)}
+${line}
+
+Get started:
+  smithery --help            Show all commands
+  smithery servers search    Browse MCP servers
+  smithery skills search     Browse skills
+
+For agents: install the Smithery skill to learn how to use this CLI:
+  smithery skills install smithery-ai/cli --agent <agent-name>
+
+Explore 100K+ tools and skills at ${chalk.cyan("https://smithery.ai")}
+${line}
+`)
+	process.exit(0)
+}
+
 // Parse arguments and run
 program.parseAsync(process.argv).catch((error: unknown) => {
 	if (error instanceof Error) {
