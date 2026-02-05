@@ -416,27 +416,16 @@ program
 program
 	.command("login")
 	.description("Login with Smithery")
-	.option(
-		"--print-link",
-		"Print auth URL without spinners or browser (agent-friendly)",
-	)
-	.action(async (options) => {
+	.action(async () => {
 		const { executeCliAuthFlow } = await import("./lib/cli-auth")
 		const { validateApiKey } = await import("./lib/registry")
 
-		if (!options.printLink) {
-			console.log(chalk.cyan("Login to Smithery"))
-			console.log()
-		}
+		console.log(chalk.cyan("Login to Smithery"))
+		console.log()
 
 		try {
 			// OAuth flow - uses SMITHERY_BASE_URL env var or defaults to https://smithery.ai
-			const apiKey = await executeCliAuthFlow({ printLink: options.printLink })
-
-			// --print-link just prints URL and exits (no API key returned)
-			if (options.printLink) {
-				return
-			}
+			const apiKey = await executeCliAuthFlow()
 
 			// Keep existing validation and storage
 			await validateApiKey(apiKey)
