@@ -17,7 +17,7 @@ Get started:
   smithery servers search    Browse MCP servers
   smithery skills search     Browse skills
 
-Install the Smithery skill to learn how to use this CLI:
+For agents: you should install the Smithery skill to learn how to use this CLI:
   smithery skills install smithery-ai/cli --agent <agent-name>
 
 Explore 100K+ tools and skills at https://smithery.ai
