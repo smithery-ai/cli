@@ -21,7 +21,7 @@ program
 	.name("smithery")
 	.version(__SMITHERY_VERSION__)
 	.description(
-		`${chalk.bold.italic.hex("#ea580c")("SMITHERY CLI")} ${chalk.bold.italic.hex("#ea580c")(`v${__SMITHERY_VERSION__}`)} - Manage and run MCP servers`,
+		`${chalk.bold.italic.hex("#ea580c")("SMITHERY CLI")} ${chalk.bold.italic.hex("#ea580c")(`v${__SMITHERY_VERSION__}`)} - The marketplace for Agent Skills and MCPs`,
 	)
 	.option("--verbose", "Show detailed logs")
 	.option("--debug", "Show debug logs")
@@ -701,6 +701,37 @@ connect
 	.action(async (toolId, args, options) => {
 		const { callTool } = await import("./commands/connect")
 		await callTool(toolId, args, options)
+	})
+
+// Servers command - search for MCP servers
+const servers = program
+	.command("servers")
+	.description("Search and browse MCP servers")
+
+servers
+	.command("search [term]")
+	.description("Search for servers in the Smithery registry")
+	.option("--json", "Output results as JSON (non-interactive)")
+	.action(async (term, options) => {
+		// API key is optional for search - use if available, don't prompt
+		const apiKey = await getApiKey()
+
+		if (options.json) {
+			const { searchServers } = await import("./lib/registry")
+			// Non-interactive JSON output
+			if (!term) {
+				console.error(
+					chalk.red("Error: Search term is required when using --json"),
+				)
+				process.exit(1)
+			}
+			const servers = await searchServers(term, apiKey)
+			console.log(JSON.stringify({ servers }, null, 2))
+			return
+		}
+
+		const { interactiveServerSearch } = await import("./utils/command-prompts")
+		await interactiveServerSearch(apiKey, term)
 	})
 
 // Skills command - search and install skills
