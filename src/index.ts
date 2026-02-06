@@ -386,30 +386,55 @@ program
 
 // Search command
 program
-	.command("search [term]")
+	.command("search <term>")
 	.description("Search for servers in the Smithery registry")
-	.option("--json", "Output results as JSON (non-interactive)")
+	.option("--json", "Output results as JSON")
+	.option("-i, --interactive", "Interactive search mode")
 	.action(async (term, options) => {
 		// API key is optional for search - use if available, don't prompt
 		const apiKey = await getApiKey()
 
-		if (options.json) {
-			const { searchServers } = await import("./lib/registry")
-			// Non-interactive JSON output
-			if (!term) {
-				console.error(
-					chalk.red("Error: Search term is required when using --json"),
-				)
-				process.exit(1)
-			}
-			const servers = await searchServers(term, apiKey)
-			console.log(JSON.stringify({ servers }, null, 2))
+		if (options.interactive) {
+			const { interactiveServerSearch } = await import(
+				"./utils/command-prompts"
+			)
+			await interactiveServerSearch(apiKey, term)
 			return
 		}
 
-		const { interactiveServerSearch } = await import("./utils/command-prompts")
-		await interactiveServerSearch(apiKey, term)
-		// @TODO: add install flow
+		const { searchServers } = await import("./lib/registry")
+		const servers = await searchServers(term, apiKey)
+
+		if (options.json) {
+			const serversWithUrl = servers.map((server) => ({
+				...server,
+				connectionUrl: `https://server.smithery.ai/${server.qualifiedName}/mcp`,
+			}))
+			console.log(JSON.stringify({ servers: serversWithUrl }, null, 2))
+			return
+		}
+
+		if (servers.length === 0) {
+			console.log(chalk.yellow("No servers found."))
+			return
+		}
+
+		const yaml = (await import("yaml")).default
+		const output = servers.map((server) => ({
+			name: server.displayName || server.qualifiedName,
+			qualifiedName: server.qualifiedName,
+			...(server.description && { description: server.description }),
+			...(server.verified && { verified: true }),
+			useCount: server.useCount,
+			connectionUrl: `https://server.smithery.ai/${server.qualifiedName}/mcp`,
+		}))
+		console.log(yaml.stringify(output).replace(/\n\n/g, "\n").trimEnd())
+		console.log()
+		console.log(
+			chalk.dim(
+				"Tip: Use --json for machine-readable output. Use smithery connect add <connectionUrl> to connect a server.",
+			),
+		)
 	})
 
 // Login command
@@ -755,12 +780,10 @@ skills
 	})
 
 skills
-	.command("search [query]")
+	.command("search <query>")
 	.description("Search for skills in the Smithery registry")
-	.option(
-		"--json",
-		"Print search results as JSON without interactive selection",
-	)
+	.option("--json", "Output results as JSON")
+	.option("-i, --interactive", "Interactive search mode")
 	.option("--limit <number>", "Maximum number of results to show", "10")
 	.option("--page <number>", "Page number", "1")
 	.option("--namespace <namespace>", "Filter by namespace")
@@ -768,6 +791,7 @@ skills
 		const { searchSkills } = await import("./commands/skills")
 		await searchSkills(query, {
 			json: options.json,
+			interactive: options.interactive,
 			limit: Number.parseInt(options.limit, 10),
 			page: Number.parseInt(options.page, 10),
 			namespace: options.namespace,

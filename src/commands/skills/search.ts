@@ -6,6 +6,7 @@ import { installSkill } from "./install.js"
 
 export interface SearchOptions {
 	json?: boolean
+	interactive?: boolean
 	limit?: number
 	page?: number
 	namespace?: string
@@ -65,223 +66,254 @@ export async function searchSkills(
 	initialQuery?: string,
 	options: SearchOptions = {},
 ): Promise<SkillListResponse | null> {
-	const { json = false, limit = 10, page = 1, namespace } = options
+	const {
+		json = false,
+		interactive = false,
+		limit = 10,
+		page = 1,
+		namespace,
+	} = options
 
-	// In json mode, require a query (unless filtering by namespace)
-	if (json && !initialQuery && !namespace) {
-		console.error(
-			chalk.red("Error: --json requires a search query or --namespace filter"),
-		)
-		process.exit(1)
-	}
-
-	let searchTerm =
-		json || namespace ? (initialQuery ?? "") : await getSearchTerm(initialQuery)
+	const searchTerm = interactive
+		? await getSearchTerm(initialQuery)
+		: (initialQuery ?? "")
 
 	try {
-		while (true) {
-			// Skills search is a public endpoint, no authentication required
-			const client = new Smithery({ apiKey: "" })
+		// Skills search is a public endpoint, no authentication required
+		const client = new Smithery({ apiKey: "" })
 
-			// Build query params
-			const queryParams: {
-				q?: string
-				pageSize: number
-				page?: number
-				namespace?: string
-			} = {
-				pageSize: limit,
-				page,
-			}
-			if (searchTerm) {
-				queryParams.q = searchTerm
-			}
-			if (namespace) {
-				queryParams.namespace = namespace
-			}
-
-			// JSON mode: fetch and output JSON without spinners
-			if (json) {
-				const response = await client.skills.list(queryParams)
-				// Filter out internal fields from JSON output
-				const cleanedSkills = response.skills.map((skill) => {
-					const {
-						vector,
-						$dist,
-						score,
-						gitUrl,
-						totalActivations,
-						uniqueUsers,
-						externalStars,
-						...rest
-					} = skill as SkillListResponse & {
-						vector?: unknown
-						$dist?: unknown
-						score?: unknown
-					}
-					return {
-						...rest,
-						stars: externalStars,
-						url: getSkillUrl(skill.namespace, skill.slug),
-					}
-				})
-				console.log(JSON.stringify(cleanedSkills, null, 2))
-				return null
-			}
-
-			const ora = (await import("ora")).default
-			const searchMsg = namespace
-				? `Searching in ${namespace}${searchTerm ? ` for "${searchTerm}"` : ""}...`
-				: `Searching for "${searchTerm}"...`
-			const spinner = ora(searchMsg).start()
-
-			const response = await client.skills.list(queryParams)
-
-			const skills = response.skills
-
-			if (skills.length === 0) {
-				spinner.fail(`No skills found for "${searchTerm}"`)
-				return null
-			}
-
-			spinner.succeed(
-				`☀ ${skills.length < limit ? `Found ${skills.length} result${skills.length === 1 ? "" : "s"}:` : `Showing top ${skills.length} results:`}`,
-			)
-			console.log(
-				chalk.dim(
-					`${chalk.cyan("→ View more")} at smithery.ai/skills?q=${searchTerm.replace(/\s+/g, "+")}`,
-				),
-			)
-			console.log()
-
-			// Show interactive selection
-			const inquirer = (await import("inquirer")).default
-			const autocompletePrompt = (await import("inquirer-autocomplete-prompt"))
-				.default
-			inquirer.registerPrompt("autocomplete", autocompletePrompt)
-
-			const { selectedSkill } = await inquirer.prompt([
-				{
-					type: "autocomplete",
-					name: "selectedSkill",
-					message: "Select skill for details (or search again):",
-					source: (_: unknown, input: string) => {
-						const options = [
-							{ name: chalk.dim("← Search again"), value: "__SEARCH_AGAIN__" },
-							{ name: chalk.dim("Exit"), value: "__EXIT__" },
-						]
-
-						const filtered = skills
-							.filter((s) => {
-								const searchStr = (input || "").toLowerCase()
-								return (
-									s.displayName?.toLowerCase().includes(searchStr) ||
-									s.slug.toLowerCase().includes(searchStr) ||
-									s.namespace.toLowerCase().includes(searchStr) ||
-									s.description?.toLowerCase().includes(searchStr)
-								)
-							})
-							.map((s) => ({
-								name: formatSkillDisplay(s),
-								value: s.id,
-							}))
-
-						return Promise.resolve([...options, ...filtered])
-					},
-				},
-			])
-
-			if (selectedSkill === "__EXIT__") {
-				return null
-			} else if (selectedSkill === "__SEARCH_AGAIN__") {
-				searchTerm = await getSearchTerm()
-				continue
-			}
-
-			// Show detailed view of selected skill
-			console.log()
-			const selectedSkillData = skills.find((s) => s.id === selectedSkill)
-			if (selectedSkillData) {
-				const displayName =
-					selectedSkillData.displayName ||
-					`${selectedSkillData.namespace}/${selectedSkillData.slug}`
-				console.log(`${chalk.bold.cyan(displayName)}`)
-				console.log(
-					`${chalk.dim("Qualified name:")} ${selectedSkillData.namespace}/${selectedSkillData.slug}`,
-				)
-				if (selectedSkillData.description) {
-					console.log(
-						`${chalk.dim("Description:")} ${selectedSkillData.description}`,
-					)
-				}
-				if (
-					selectedSkillData.categories &&
-					selectedSkillData.categories.length > 0
-				) {
-					console.log(
-						`${chalk.dim("Categories:")} ${selectedSkillData.categories.join(", ")}`,
-					)
-				}
-				if (selectedSkillData.externalStars) {
-					console.log(
-						`${chalk.dim("Stars:")} ${selectedSkillData.externalStars.toLocaleString()}`,
-					)
-				}
-				console.log()
-
-				// Show install command
-				const skillIdentifier = `${selectedSkillData.namespace}/${selectedSkillData.slug}`
-				console.log(chalk.bold("To install this skill, run:"))
-				console.log()
-				console.log(
-					chalk.cyan(
-						`  smithery skills install ${skillIdentifier} --agent <agent-name>`,
-					),
-				)
-				console.log()
-
-				// Ask what to do next
-				const { action } = await inquirer.prompt([
-					{
-						type: "list",
-						name: "action",
-						message: "What would you like to do?",
-						choices: [
-							{ name: "↓ Install", value: "install" },
-							{ name: "← Back to skill list", value: "back" },
-							{ name: "← Search again", value: "search" },
-							{ name: "Exit", value: "exit" },
-						],
-					},
-				])
-
-				if (action === "install") {
-					// Prompt for agent selection
-					const { agent } = await inquirer.prompt([
-						{
-							type: "list",
-							name: "agent",
-							message: "Select the agent to install to:",
-							choices: SKILL_AGENTS.map((a) => ({ name: a, value: a })),
-						},
-					])
-
-					await installSkill(skillIdentifier, agent)
-					return null
-				} else if (action === "back") {
-					console.log()
-				} else if (action === "search") {
-					searchTerm = await getSearchTerm()
-				} else {
-					return null // Exit
-				}
-			}
+		// Build query params
+		const queryParams: {
+			q?: string
+			pageSize: number
+			page?: number
+			namespace?: string
+		} = {
+			pageSize: limit,
+			page,
 		}
+		if (searchTerm) {
+			queryParams.q = searchTerm
+		}
+		if (namespace) {
+			queryParams.namespace = namespace
+		}
+
+		if (interactive) {
+			return interactiveSearch(client, queryParams, limit, searchTerm)
+		}
+
+		const response = await client.skills.list(queryParams)
+		const skills = response.skills
+
+		if (json) {
+			const cleanedSkills = skills.map((skill) => {
+				const {
+					vector,
+					$dist,
+					score,
+					gitUrl,
+					totalActivations,
+					uniqueUsers,
+					externalStars,
+					...rest
+				} = skill as SkillListResponse & {
+					vector?: unknown
+					$dist?: unknown
+					score?: unknown
+				}
+				return {
+					...rest,
+					stars: externalStars,
+					url: getSkillUrl(skill.namespace, skill.slug),
+				}
+			})
+			console.log(JSON.stringify(cleanedSkills, null, 2))
+			return null
+		}
+
+		if (skills.length === 0) {
+			console.log(chalk.yellow("No skills found."))
+			return null
+		}
+
+		const yaml = (await import("yaml")).default
+		const output = skills.map((skill) => ({
+			name: skill.displayName || `${skill.namespace}/${skill.slug}`,
+			qualifiedName: `${skill.namespace}/${skill.slug}`,
+			...(skill.description && { description: skill.description }),
+			...(skill.externalStars && { stars: skill.externalStars }),
+			...(skill.categories &&
+				skill.categories.length > 0 && { categories: skill.categories }),
+		}))
+		console.log(yaml.stringify(output).replace(/\n\n/g, "\n").trimEnd())
+		console.log()
+		console.log(
+			chalk.dim("Tip: Use --json for machine-readable output"),
+		)
+		return null
 	} catch (error) {
 		console.error(
 			chalk.red("Error searching skills:"),
 			error instanceof Error ? error.message : String(error),
 		)
 		process.exit(1)
+	}
+}
+
+async function interactiveSearch(
+	client: Smithery,
+	queryParams: { q?: string; pageSize: number; page?: number; namespace?: string },
+	limit: number,
+	initialSearchTerm: string,
+): Promise<SkillListResponse | null> {
+	let searchTerm = initialSearchTerm
+
+	while (true) {
+		if (searchTerm) {
+			queryParams.q = searchTerm
+		}
+
+		const ora = (await import("ora")).default
+		const searchMsg = queryParams.namespace
+			? `Searching in ${queryParams.namespace}${searchTerm ? ` for "${searchTerm}"` : ""}...`
+			: `Searching for "${searchTerm}"...`
+		const spinner = ora(searchMsg).start()
+
+		const response = await client.skills.list(queryParams)
+		const skills = response.skills
+
+		if (skills.length === 0) {
+			spinner.fail(`No skills found for "${searchTerm}"`)
+			return null
+		}
+
+		spinner.succeed(
+			`☀ ${skills.length < limit ? `Found ${skills.length} result${skills.length === 1 ? "" : "s"}:` : `Showing top ${skills.length} results:`}`,
+		)
+		console.log(
+			chalk.dim(
+				`${chalk.cyan("→ View more")} at smithery.ai/skills?q=${searchTerm.replace(/\s+/g, "+")}`,
+			),
+		)
+		console.log()
+
+		const inquirer = (await import("inquirer")).default
+		const autocompletePrompt = (await import("inquirer-autocomplete-prompt"))
+			.default
+		inquirer.registerPrompt("autocomplete", autocompletePrompt)
+
+		const { selectedSkill } = await inquirer.prompt([
+			{
+				type: "autocomplete",
+				name: "selectedSkill",
+				message: "Select skill for details (or search again):",
+				source: (_: unknown, input: string) => {
+					const options = [
+						{ name: chalk.dim("← Search again"), value: "__SEARCH_AGAIN__" },
+						{ name: chalk.dim("Exit"), value: "__EXIT__" },
+					]
+
+					const filtered = skills
+						.filter((s) => {
+							const searchStr = (input || "").toLowerCase()
+							return (
+								s.displayName?.toLowerCase().includes(searchStr) ||
+								s.slug.toLowerCase().includes(searchStr) ||
+								s.namespace.toLowerCase().includes(searchStr) ||
+								s.description?.toLowerCase().includes(searchStr)
+							)
+						})
+						.map((s) => ({
+							name: formatSkillDisplay(s),
+							value: s.id,
+						}))
+
+					return Promise.resolve([...options, ...filtered])
+				},
+			},
+		])
+
+		if (selectedSkill === "__EXIT__") {
+			return null
+		} else if (selectedSkill === "__SEARCH_AGAIN__") {
+			searchTerm = await getSearchTerm()
+			continue
+		}
+
+		console.log()
+		const selectedSkillData = skills.find((s) => s.id === selectedSkill)
+		if (selectedSkillData) {
+			const displayName =
+				selectedSkillData.displayName ||
+				`${selectedSkillData.namespace}/${selectedSkillData.slug}`
+			console.log(`${chalk.bold.cyan(displayName)}`)
+			console.log(
+				`${chalk.dim("Qualified name:")} ${selectedSkillData.namespace}/${selectedSkillData.slug}`,
+			)
+			if (selectedSkillData.description) {
+				console.log(
+					`${chalk.dim("Description:")} ${selectedSkillData.description}`,
+				)
+			}
+			if (
+				selectedSkillData.categories &&
+				selectedSkillData.categories.length > 0
+			) {
+				console.log(
+					`${chalk.dim("Categories:")} ${selectedSkillData.categories.join(", ")}`,
+				)
+			}
+			if (selectedSkillData.externalStars) {
+				console.log(
+					`${chalk.dim("Stars:")} ${selectedSkillData.externalStars.toLocaleString()}`,
+				)
+			}
+			console.log()
+
+			const skillIdentifier = `${selectedSkillData.namespace}/${selectedSkillData.slug}`
+			console.log(chalk.bold("To install this skill, run:"))
+			console.log()
+			console.log(
+				chalk.cyan(
+					`  smithery skills install ${skillIdentifier} --agent <agent-name>`,
+				),
+			)
+			console.log()
+
+			const { action } = await inquirer.prompt([
+				{
+					type: "list",
+					name: "action",
+					message: "What would you like to do?",
+					choices: [
+						{ name: "↓ Install", value: "install" },
+						{ name: "← Back to skill list", value: "back" },
+						{ name: "← Search again", value: "search" },
+						{ name: "Exit", value: "exit" },
+					],
+				},
+			])
+
+			if (action === "install") {
+				const { agent } = await inquirer.prompt([
+					{
+						type: "list",
+						name: "agent",
+						message: "Select the agent to install to:",
+						choices: SKILL_AGENTS.map((a) => ({ name: a, value: a })),
+					},
+				])
+
+				await installSkill(skillIdentifier, agent)
+				return null
+			} else if (action === "back") {
+				console.log()
+			} else if (action === "search") {
+				searchTerm = await getSearchTerm()
+			} else {
+				return null
+			}
+		}
 	}
 }
