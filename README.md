@@ -1,6 +1,6 @@
 # Smithery CLI [![NPM Version](https://img.shields.io/npm/v/%40smithery%2Fcli)](https://www.npmjs.com/package/@smithery/cli) [![NPM Downloads](https://img.shields.io/npm/dt/%40smithery%2Fcli)](https://www.npmjs.com/package/@smithery/cli)
 
-CLI for discovering, installing, and using MCP servers and skills via [Smithery](https://smithery.ai). Connect your agents to thousands of skills and MCP servers from the Smithery registry.
+Connect your agents to thousands of skills and MCP servers in the [Smithery](https://smithery.ai) registry through a single CLI, with tool search and authentication.
 
 ## Installation
 
@@ -8,6 +8,12 @@ CLI for discovering, installing, and using MCP servers and skills via [Smithery]
 npm install -g @smithery/cli@latest
 ```
 Requires Node.js 20+.
+
+### As a skill for your agent
+
+```bash
+npx skills install smithery-ai/cli
+```
 
 ## Commands
 
