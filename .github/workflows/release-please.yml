@@ -4,6 +4,12 @@ on:
   push:
     branches:
       - main
+  workflow_dispatch:
+    inputs:
+      publish_only:
+        description: 'Skip release-please and only run publish'
+        type: boolean
+        default: false
 
 permissions:
   contents: write
@@ -13,39 +19,46 @@ permissions:
 jobs:
   release-please:
     runs-on: ubuntu-latest
+    outputs:
+      release_created: ${{ steps.release.outputs.release_created }}
     steps:
+      - uses: actions/create-github-app-token@v2
+        id: app-token
+        with:
+          app-id: ${{ vars.RELEASE_APP_ID }}
+          private-key: ${{ secrets.RELEASE_APP_PRIVATE_KEY }}
+
       - uses: googleapis/release-please-action@v4
         id: release
         with:
-          token: ${{ secrets.GITHUB_TOKEN }}
+          token: ${{ steps.app-token.outputs.token }}
 
+  publish:
+    needs: release-please
+    if: ${{ needs.release-please.outputs.release_created == 'true' || inputs.publish_only == true }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    steps:
       - uses: actions/checkout@v4
-        if: ${{ steps.release.outputs.release_created }}
 
       - uses: pnpm/action-setup@v4
-        if: ${{ steps.release.outputs.release_created }}
 
       - uses: actions/setup-node@v4
-        if: ${{ steps.release.outputs.release_created }}
         with:
-          node-version: 20
+          node-version: 24
           cache: 'pnpm'
+          registry-url: 'https://registry.npmjs.org'
 
       - run: pnpm install --frozen-lockfile
-        if: ${{ steps.release.outputs.release_created }}
 
       - run: pnpm add -D @biomejs/cli-linux-x64
-        if: ${{ steps.release.outputs.release_created }}
 
       - run: pnpm run build
-        if: ${{ steps.release.outputs.release_created }}
         env:
           ANALYTICS_ENDPOINT: ${{ secrets.ANALYTICS_ENDPOINT }}
 
       - name: Publish to npm
-        if: ${{ steps.release.outputs.release_created }}
-        run: |
-          rm -f "$NPM_CONFIG_USERCONFIG"
-          unset NPM_CONFIG_USERCONFIG
-          npm install --prefix ./oidc npm@11.6.2
-          pnpm publish --npm-path "$(pwd)/oidc/node_modules/.bin/npm" --no-git-checks --provenance --access public
+        run: npm publish --provenance --access public
+

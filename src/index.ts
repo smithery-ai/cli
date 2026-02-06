@@ -21,7 +21,7 @@ program
 	.name("smithery")
 	.version(__SMITHERY_VERSION__)
 	.description(
-		`${chalk.bold.italic.hex("#ea580c")("SMITHERY CLI")} ${chalk.bold.italic.hex("#ea580c")(`v${__SMITHERY_VERSION__}`)} - Manage and run MCP servers`,
+		`${chalk.bold.italic.hex("#ea580c")("SMITHERY CLI")} ${chalk.bold.italic.hex("#ea580c")(`v${__SMITHERY_VERSION__}`)} - The marketplace for Agent Skills and MCPs`,
 	)
 	.option("--verbose", "Show detailed logs")
 	.option("--debug", "Show debug logs")
@@ -637,9 +637,20 @@ connect
 	.command("list")
 	.description("List connected servers")
 	.option("--namespace <ns>", "Namespace to list from")
+	.option("--limit <n>", "Maximum number of results (default: all)")
+	.option("--cursor <cursor>", "Pagination cursor from previous response")
 	.action(async (options) => {
 		const { listServers } = await import("./commands/connect")
 		await listServers(options)
+	})
+
+connect
+	.command("get <id>")
+	.description("Get details for a connection")
+	.option("--namespace <ns>", "Namespace for the connection")
+	.action(async (id, options) => {
+		const { getServer } = await import("./commands/connect")
+		await getServer(id, options)
 	})
 
 connect
@@ -667,6 +678,8 @@ connect
 	.command("tools [server]")
 	.description("List tools (all or for a specific server)")
 	.option("--namespace <ns>", "Namespace to list from")
+	.option("--limit <n>", "Maximum number of tools to return (default: 10)")
+	.option("--page <n>", "Page number (default: 1)")
 	.action(async (server, options) => {
 		const { listTools } = await import("./commands/connect")
 		await listTools(server, options)
@@ -688,6 +701,37 @@ connect
 	.action(async (toolId, args, options) => {
 		const { callTool } = await import("./commands/connect")
 		await callTool(toolId, args, options)
+	})
+
+// Servers command - search for MCP servers
+const servers = program
+	.command("servers")
+	.description("Search and browse MCP servers")
+
+servers
+	.command("search [term]")
+	.description("Search for servers in the Smithery registry")
+	.option("--json", "Output results as JSON (non-interactive)")
+	.action(async (term, options) => {
+		// API key is optional for search - use if available, don't prompt
+		const apiKey = await getApiKey()
+
+		if (options.json) {
+			const { searchServers } = await import("./lib/registry")
+			// Non-interactive JSON output
+			if (!term) {
+				console.error(
+					chalk.red("Error: Search term is required when using --json"),
+				)
+				process.exit(1)
+			}
+			const servers = await searchServers(term, apiKey)
+			console.log(JSON.stringify({ servers }, null, 2))
+			return
+		}
+
+		const { interactiveServerSearch } = await import("./utils/command-prompts")
+		await interactiveServerSearch(apiKey, term)
 	})
 
 // Skills command - search and install skills
@@ -845,6 +889,28 @@ skillsReview
 		const { voteReview } = await import("./commands/skills")
 		await voteReview(skill, reviewId, "down")
 	})
+
+// Show welcome message if no command provided
+if (process.argv.length <= 2) {
+	const line = "=".repeat(60)
+	console.log(`
+${line}
+  ${chalk.bold.hex("#ea580c")("Smithery CLI")} ${chalk.dim(`v${__SMITHERY_VERSION__}`)}
+${line}
+
+Get started:
+  smithery --help            Show all commands
+  smithery servers search    Browse MCP servers
+  smithery skills search     Browse skills
+
+For agents: install the Smithery skill to learn how to use this CLI:
+  smithery skills install smithery-ai/cli --agent <agent-name>
+
+Explore 100K+ tools and skills at ${chalk.cyan("https://smithery.ai")}
+${line}
+`)
+	process.exit(0)
+}
 
 // Parse arguments and run
 program.parseAsync(process.argv).catch((error: unknown) => {

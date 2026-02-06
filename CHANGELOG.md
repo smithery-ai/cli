@@ -5,6 +5,82 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 
+## [3.16.0](https://github.com/smithery-ai/cli/compare/v3.15.1...v3.16.0) (2026-02-05)
+
+
+### Features
+
+* show welcome message when CLI runs without arguments ([e2a7cc6](https://github.com/smithery-ai/cli/commit/e2a7cc6b7f7d1a2d0fd4c5b000b48eaaf5f5ae63))
+
+## [3.15.1](https://github.com/smithery-ai/cli/compare/v3.15.0...v3.15.1) (2026-02-05)
+
+
+### Bug Fixes
+
+* add registry-url to setup-node for npm OIDC auth ([7855d98](https://github.com/smithery-ai/cli/commit/7855d9894279aef79caade19c2743c50a4cd6747))
+* add workflow_dispatch to allow manual publish trigger ([bcc31c1](https://github.com/smithery-ai/cli/commit/bcc31c1d163535566ccbd285d6c44cfd73156d48))
+* use Node 24 for npm OIDC publishing support ([7d7b4e2](https://github.com/smithery-ai/cli/commit/7d7b4e2b80f68c348cefce2c9dbcdf509aa9b7ab))
+* use stderr for postinstall message to bypass npm suppression ([df5f6c4](https://github.com/smithery-ai/cli/commit/df5f6c450e7bb2938d0726894907adbf386e17e2))
+
+## [3.15.0](https://github.com/smithery-ai/cli/compare/v3.14.0...v3.15.0) (2026-02-05)
+
+
+### Features
+
+* improve postinstall message for agents ([#601](https://github.com/smithery-ai/cli/issues/601)) ([92726b5](https://github.com/smithery-ai/cli/commit/92726b5231062136e650f271b15709d74273c310))
+
+
+### Bug Fixes
+
+* inline npm publish into release-please workflow ([#599](https://github.com/smithery-ai/cli/issues/599)) ([d4c64ef](https://github.com/smithery-ai/cli/commit/d4c64ef25a1ca57d14c9ca718c471e2fe5f81761))
+
+## [3.14.0](https://github.com/smithery-ai/cli/compare/v3.13.2...v3.14.0) (2026-02-05)
+
+
+### Features
+
+* add post-install message and servers search command ([#598](https://github.com/smithery-ai/cli/issues/598)) ([874d8c2](https://github.com/smithery-ai/cli/commit/874d8c2534eb6412e57eb9fee379b4c7cb18e153))
+
+## [3.13.2](https://github.com/smithery-ai/cli/compare/v3.13.1...v3.13.2) (2026-02-05)
+
+
+### Bug Fixes
+
+* add explicit permissions for publish workflow OIDC ([a0962ec](https://github.com/smithery-ai/cli/commit/a0962ec5ab017d7017a6da17894ae017480eaa63))
+* move OIDC permissions to workflow-level in publish.yml ([b9056f3](https://github.com/smithery-ai/cli/commit/b9056f3b3f58cdca3b3d1cad0daa28aaa1980d08))
+
+## [3.13.1](https://github.com/smithery-ai/cli/compare/v3.13.0...v3.13.1) (2026-02-05)
+
+
+### Bug Fixes
+
+* add id-token permission for npm publish OIDC ([#593](https://github.com/smithery-ai/cli/issues/593)) ([3f61a2d](https://github.com/smithery-ai/cli/commit/3f61a2d2281e5b40654363639a6098842b7dbb0b))
+* use GitHub App token for release-please to trigger CI ([#592](https://github.com/smithery-ai/cli/issues/592)) ([832fe51](https://github.com/smithery-ai/cli/commit/832fe512a36e8251cd8e17ff0a98b0881839cb99))
+
+
+### Chores
+
+* trigger release-please workflow ([cfa5be4](https://github.com/smithery-ai/cli/commit/cfa5be42421543df1ca821e739e9141a58dce612))
+* verify release-please workflow ([0b1c416](https://github.com/smithery-ai/cli/commit/0b1c416674a0df5a65c7cea6814b97459717ea9c))
+
+## [3.13.0](https://github.com/smithery-ai/cli/compare/v3.12.1...v3.13.0) (2026-02-05)
+
+
+### Features
+
+* enhance connect commands with get, pagination, error handling, and shorthand URLs ([#589](https://github.com/smithery-ai/cli/issues/589)) ([04293a7](https://github.com/smithery-ai/cli/commit/04293a719f663f8f81c47c131c63121b4d0659ea))
+
+
+### Bug Fixes
+
+* read SMITHERY_BASE_URL at runtime instead of bake-in at build ([#587](https://github.com/smithery-ai/cli/issues/587)) ([b618c33](https://github.com/smithery-ai/cli/commit/b618c33ad0fba917dd11a02d761d0318fe4ddf44))
+
+
+### Documentation
+
+* add value prop about connecting agents to Smithery registry ([#591](https://github.com/smithery-ai/cli/issues/591)) ([090f299](https://github.com/smithery-ai/cli/commit/090f299916a1045d3f45e678f7432d38d0a4596a))
+* improve README clarity and accuracy ([#590](https://github.com/smithery-ai/cli/issues/590)) ([d41e65c](https://github.com/smithery-ai/cli/commit/d41e65cf6fc81d2a65d99de38d97c6f28b1f46da))
+
 ## [3.12.1](https://github.com/smithery-ai/cli/compare/v3.12.0...v3.12.1) (2026-02-05)
 
 

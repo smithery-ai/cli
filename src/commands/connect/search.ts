@@ -20,7 +20,7 @@ export async function searchTools(
 	options: { namespace?: string },
 ): Promise<void> {
 	const session = await ConnectSession.create(options.namespace)
-	const connections = await session.listConnections()
+	const { connections } = await session.listConnections()
 
 	if (connections.length === 0) {
 		outputJson({
@@ -30,7 +30,7 @@ export async function searchTools(
 		return
 	}
 
-	// Fetch tools from each connection in parallel
+	// Fetch tools from each connection in parallel (ignore failures)
 	const allTools: ToolInfo[] = []
 	const results = await Promise.allSettled(
 		connections.map((conn) => session.listToolsForConnection(conn)),
@@ -40,6 +40,7 @@ export async function searchTools(
 		if (result.status === "fulfilled") {
 			allTools.push(...result.value)
 		}
+		// Silently skip connections that fail (auth required, errors, etc.)
 	}
 
 	if (allTools.length === 0) {
