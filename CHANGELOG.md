@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 
+## [3.17.0](https://github.com/smithery-ai/cli/compare/v3.16.0...v3.17.0) (2026-02-06)
+
+
+### Features
+
+* improve search and connect UX for agents ([#605](https://github.com/smithery-ai/cli/issues/605)) ([11c8ef7](https://github.com/smithery-ai/cli/commit/11c8ef7d25c148d2e845ded0e7a6878a64290785))
+
 ## [3.16.0](https://github.com/smithery-ai/cli/compare/v3.15.1...v3.16.0) (2026-02-05)
 
 
