@@ -44,6 +44,17 @@ export class ConnectSession {
 		return new ConnectSession(client, ns)
 	}
 
+	async listConnectionsByUrl(
+		mcpUrl: string,
+	): Promise<{ connections: Connection[] }> {
+		const data =
+			await this.smitheryClient.experimental.connect.connections.list(
+				this.namespace,
+				{ mcpUrl },
+			)
+		return { connections: data.connections }
+	}
+
 	async listConnections(options?: {
 		limit?: number
 		cursor?: string
