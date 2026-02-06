@@ -129,6 +129,7 @@ export const resolveServer = async (
 export const searchServers = async (
 	searchTerm: string,
 	apiKey?: string,
+	filters?: { verified?: boolean; pageSize?: number; page?: number },
 ): Promise<
 	Array<{
 		qualifiedName: string
@@ -145,7 +146,9 @@ export const searchServers = async (
 	try {
 		const response = await smithery.servers.list({
 			q: searchTerm,
-			pageSize: 10,
+			pageSize: filters?.pageSize ?? 10,
+			page: filters?.page,
+			...(filters?.verified && { verified: "true" }),
 		})
 
 		const servers = (response.servers || []).map((server) => ({

@@ -25,6 +25,7 @@ export async function listServers(options: {
 		servers: connections.map((conn) => ({
 			id: conn.connectionId,
 			name: conn.name,
+			mcpUrl: conn.mcpUrl,
 			status: conn.status?.state ?? "unknown",
 		})),
 		help: "smithery connect tools <server> - List tools for a specific server",
