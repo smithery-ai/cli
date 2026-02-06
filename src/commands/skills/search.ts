@@ -148,9 +148,7 @@ export async function searchSkills(
 		}))
 		console.log(yaml.stringify(output).replace(/\n\n/g, "\n").trimEnd())
 		console.log()
-		console.log(
-			chalk.dim("Tip: Use --json for machine-readable output"),
-		)
+		console.log(chalk.dim("Tip: Use --json for machine-readable output"))
 		return null
 	} catch (error) {
 		console.error(
@@ -163,7 +161,12 @@ export async function searchSkills(
 
 async function interactiveSearch(
 	client: Smithery,
-	queryParams: { q?: string; pageSize: number; page?: number; namespace?: string },
+	queryParams: {
+		q?: string
+		pageSize: number
+		page?: number
+		namespace?: string
+	},
 	limit: number,
 	initialSearchTerm: string,
 ): Promise<SkillListResponse | null> {

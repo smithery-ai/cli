@@ -386,10 +386,13 @@ program
 
 // Search command
 program
-	.command("search <term>")
+	.command("search [term]")
 	.description("Search for servers in the Smithery registry")
 	.option("--json", "Output results as JSON")
 	.option("-i, --interactive", "Interactive search mode")
+	.option("--verified", "Only show verified servers")
+	.option("--limit <number>", "Max results per page", "10")
+	.option("--page <number>", "Page number", "1")
 	.action(async (term, options) => {
 		// API key is optional for search - use if available, don't prompt
 		const apiKey = await getApiKey()
@@ -403,12 +406,17 @@ program
 		}
 
 		const { searchServers } = await import("./lib/registry")
-		const servers = await searchServers(term, apiKey)
+		const searchTerm = term ?? ""
+		const servers = await searchServers(searchTerm, apiKey, {
+			verified: options.verified,
+			pageSize: parseInt(options.limit, 10),
+			page: parseInt(options.page, 10),
+		})
 
 		if (options.json) {
 			const serversWithUrl = servers.map((server) => ({
 				...server,
-				connectionUrl: `https://server.smithery.ai/${server.qualifiedName}/mcp`,
+				connectionUrl: `https://server.smithery.ai/${server.qualifiedName}`,
 			}))
 			console.log(JSON.stringify({ servers: serversWithUrl }, null, 2))
 			return
@@ -419,6 +427,10 @@ program
 			return
 		}
 
+		if (!term) {
+			console.log(chalk.bold("Most popular servers:\n"))
+		}
+
 		const yaml = (await import("yaml")).default
 		const output = servers.map((server) => ({
 			name: server.displayName || server.qualifiedName,
@@ -426,7 +438,7 @@ program
 			...(server.description && { description: server.description }),
 			...(server.verified && { verified: true }),
 			useCount: server.useCount,
-			connectionUrl: `https://server.smithery.ai/${server.qualifiedName}/mcp`,
+			connectionUrl: `https://server.smithery.ai/${server.qualifiedName}`,
 		}))
 		console.log(yaml.stringify(output).replace(/\n\n/g, "\n").trimEnd())
 		console.log()
@@ -653,6 +665,10 @@ connect
 	.option("--metadata <json>", "Custom metadata as JSON object")
 	.option("--headers <json>", "Custom headers as JSON object (stored securely)")
 	.option("--namespace <ns>", "Target namespace")
+	.option(
+		"--force",
+		"Create a new connection even if one already exists for this URL",
+	)
 	.action(async (mcpUrl, options) => {
 		const { addServer } = await import("./commands/connect")
 		await addServer(mcpUrl, options)
