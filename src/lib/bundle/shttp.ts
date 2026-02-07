@@ -101,6 +101,7 @@ export async function buildShttpBundle(
 	const payload: DeployPayload = {
 		type: "hosted",
 		stateful: scanResult.stateful ?? false,
+		hasAuthAdapter: scanResult.hasAuthAdapter ?? false,
 		configSchema: scanResult.configSchema,
 		serverCard: scanResult.serverCard,
 		source: gitInfo,

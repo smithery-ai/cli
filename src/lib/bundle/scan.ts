@@ -72,15 +72,18 @@ export interface ScanResult {
 	serverCard?: ServerCard
 	configSchema?: Record<string, unknown>
 	stateful?: boolean
+	hasAuthAdapter?: boolean
 }
 
 export async function scanModule(modulePath: string): Promise<ScanResult> {
 	const module = (await import(pathToFileURL(modulePath).href)) as {
 		default: ServerModule
 		stateful?: boolean
+		createAuthAdapter?: unknown
 	}
 	const serverModule = module.default
 	const stateful = module.stateful ?? false
+	const hasAuthAdapter = typeof module.createAuthAdapter === "function"
 
 	const session: Session = {
 		id: "scan-session",
@@ -137,5 +140,6 @@ export async function scanModule(modulePath: string): Promise<ScanResult> {
 				>)
 			: undefined,
 		stateful,
+		hasAuthAdapter,
 	}
 }

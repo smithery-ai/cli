@@ -111,6 +111,7 @@ export async function buildStdioBundle(
 	const payload: DeployPayload = {
 		type: "stdio" as const,
 		runtime: "node" as const,
+		hasAuthAdapter: scanResult.hasAuthAdapter ?? false,
 		configSchema: scanResult.configSchema,
 		serverCard: scanResult.serverCard,
 		source: gitInfo,
