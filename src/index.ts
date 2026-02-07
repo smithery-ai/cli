@@ -814,6 +814,14 @@ skills
 		})
 	})
 
+skills
+	.command("view <identifier>")
+	.description("View a skill's documentation without installing")
+	.action(async (identifier) => {
+		const { viewSkill } = await import("./commands/skills")
+		await viewSkill(identifier)
+	})
+
 // Uses the Vercel Labs skills CLI: https://github.com/vercel-labs/skills
 skills
 	.command("install <skill>")
@@ -932,23 +940,21 @@ skillsReview
 
 // Show welcome message if no command provided
 if (process.argv.length <= 2) {
-	const line = "=".repeat(60)
-	console.log(`
-${line}
-  ${chalk.bold.hex("#ea580c")("Smithery CLI")} ${chalk.dim(`v${__SMITHERY_VERSION__}`)}
-${line}
-
-Get started:
-  smithery --help            Show all commands
-  smithery servers search    Browse MCP servers
-  smithery skills search     Browse skills
-
-For agents: install the Smithery skill to learn how to use this CLI:
-  smithery skills install smithery-ai/cli --agent <agent-name>
-
-Explore 100K+ tools and skills at ${chalk.cyan("https://smithery.ai")}
-${line}
-`)
+	console.log(
+		`\n${chalk.bold("Smithery")} ${chalk.dim(`v${__SMITHERY_VERSION__}`)} — Discover and connect to 100K+ MCP tools and skills\n`,
+	)
+	const featured = ["connect", "skills", "servers"]
+	const cmds = program.commands.filter((cmd) => featured.includes(cmd.name()))
+	const nameWidth = Math.max(...cmds.map((cmd) => cmd.name().length))
+	console.log("Get started:")
+	for (const cmd of cmds) {
+		const name = cmd.name().padEnd(nameWidth + 2)
+		console.log(`  smithery ${name} ${cmd.description()}`)
+	}
+	console.log(`  smithery ${"help".padEnd(nameWidth + 2)} Show all commands`)
+	console.log()
+	console.log("Run this command to learn how to use this CLI:")
+	console.log(`  smithery skills view smithery-ai/cli\n`)
 	process.exit(0)
 }
 
