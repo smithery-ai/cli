@@ -101,6 +101,7 @@ export async function buildShttpBundle(
 	const payload: DeployPayload = {
 		type: "hosted",
 		stateful: scanResult.stateful ?? false,
+		hasAuthAdapter: scanResult.hasAuthAdapter ?? false,
 		configSchema: scanResult.configSchema,
 		serverCard: scanResult.serverCard,
 		source: gitInfo,
@@ -113,14 +114,7 @@ export async function buildShttpBundle(
 		result.sourcemapFile = sourcemapFile
 	}
 
-	writeFileSync(
-		join(outDir, "manifest.json"),
-		JSON.stringify(
-			{ ...payload, hasAuthAdapter: scanResult.hasAuthAdapter ?? false },
-			null,
-			2,
-		),
-	)
+	writeFileSync(join(outDir, "manifest.json"), JSON.stringify(payload, null, 2))
 
 	console.log(
 		chalk.green("\n✓ Smithery shttp bundle created at ") + chalk.bold(outDir),

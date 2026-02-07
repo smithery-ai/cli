@@ -140,7 +140,7 @@ describe("deploy command", () => {
 		// Setup default buildBundle mock return value
 		vi.mocked(buildBundle).mockResolvedValue({
 			outDir: "/tmp/build",
-			payload: { type: "hosted", stateful: false },
+			payload: { type: "hosted", stateful: false, hasAuthAdapter: false },
 			moduleFile: "/tmp/build/module.js",
 			sourcemapFile: "/tmp/build/module.js.map",
 		})
@@ -307,7 +307,7 @@ describe("deploy command", () => {
 	test("--transport stdio: respects transport type and builds stdio bundle", async () => {
 		vi.mocked(buildBundle).mockResolvedValue({
 			outDir: "/tmp/build",
-			payload: { type: "stdio", runtime: "node" },
+			payload: { type: "stdio", runtime: "node", hasAuthAdapter: false },
 			moduleFile: "/tmp/build/module.js",
 			mcpbFile: "/tmp/build/bundle.mcpb",
 		})
@@ -332,7 +332,7 @@ describe("deploy command", () => {
 	test("--transport shttp: respects transport type and builds shttp bundle", async () => {
 		vi.mocked(buildBundle).mockResolvedValue({
 			outDir: "/tmp/build",
-			payload: { type: "hosted", stateful: false },
+			payload: { type: "hosted", stateful: false, hasAuthAdapter: false },
 			moduleFile: "/tmp/build/module.js",
 			sourcemapFile: "/tmp/build/module.js.map",
 		})
@@ -381,7 +381,7 @@ describe("deploy command", () => {
 		})
 		vi.mocked(buildBundle).mockResolvedValue({
 			outDir: "/tmp/build",
-			payload: { type: "stdio", runtime: "node" },
+			payload: { type: "stdio", runtime: "node", hasAuthAdapter: false },
 			moduleFile: "/tmp/build/module.js",
 			mcpbFile: "/tmp/build/bundle.mcpb",
 		})
