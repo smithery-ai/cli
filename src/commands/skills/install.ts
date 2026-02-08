@@ -46,34 +46,26 @@ export interface InstallOptions {
 /**
  * Install a skill using the Vercel Labs skills CLI
  * https://github.com/vercel-labs/skills
- * @param skillIdentifier - Skill identifier (namespace/slug or URL) - required
- * @param agent - Target agent for installation - required
+ * @param skillIdentifier - Skill identifier (namespace/slug or URL), omit for interactive mode
+ * @param agent - Target agent for installation, omit to be prompted interactively
  * @param options - Install options (global flag)
  */
 export async function installSkill(
-	skillIdentifier: string,
-	agent: string,
+	skillIdentifier?: string,
+	agent?: string,
 	options: InstallOptions = {},
 ): Promise<void> {
-	if (!skillIdentifier) {
-		console.error(chalk.red("Error: Skill identifier is required"))
-		console.error(
-			chalk.dim(
-				"Usage: smithery skills install <namespace/slug> --agent <agent>",
-			),
-		)
-		console.error(
-			chalk.dim("       smithery skills install <url> --agent <agent>"),
-		)
-		process.exit(1)
-	}
+	const { execSync } = await import("node:child_process")
+	const globalFlag = options.global ? " -g" : ""
 
-	if (!agent) {
-		console.error(chalk.red("Error: Agent is required"))
-		console.error(
-			chalk.dim("Usage: smithery skills install <skill> --agent <agent>"),
-		)
-		process.exit(1)
+	// No skill provided — fully interactive mode
+	if (!skillIdentifier) {
+		const command = `npx -y skills add${globalFlag}`
+		console.log()
+		console.log(chalk.cyan(`Running: ${command}`))
+		console.log()
+		execSync(command, { stdio: "inherit" })
+		return
 	}
 
 	let skillUrl: string
@@ -87,13 +79,20 @@ export async function installSkill(
 		process.exit(1)
 	}
 
-	const globalFlag = options.global ? " -g" : ""
-	const command = `npx -y skills add ${skillUrl} --agent ${agent}${globalFlag} -y`
+	// Skill provided but no agent — semi-interactive (will prompt for agent)
+	if (!agent) {
+		const command = `npx -y skills add ${skillUrl}${globalFlag}`
+		console.log()
+		console.log(chalk.cyan(`Running: ${command}`))
+		console.log()
+		execSync(command, { stdio: "inherit" })
+		return
+	}
 
+	// Both provided — non-interactive
+	const command = `npx -y skills add ${skillUrl} --agent ${agent}${globalFlag} -y`
 	console.log()
 	console.log(chalk.cyan(`Running: ${command}`))
 	console.log()
-
-	const { execSync } = await import("node:child_process")
 	execSync(command, { stdio: "inherit" })
 }
