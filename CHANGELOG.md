@@ -5,6 +5,19 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 
+## [3.18.0](https://github.com/smithery-ai/cli/compare/v3.17.0...v3.18.0) (2026-02-08)
+
+
+### Features
+
+* add skills view command ([#609](https://github.com/smithery-ai/cli/issues/609)) ([e0d3e65](https://github.com/smithery-ai/cli/commit/e0d3e65e65f44cec5dddb307e398f2c2a81d409c))
+* detect createAuthAdapter export and write to manifest [SMI-1160] ([#604](https://github.com/smithery-ai/cli/issues/604)) ([f5f6b74](https://github.com/smithery-ai/cli/commit/f5f6b742a2885178b229a11df74ea3b17a292c16))
+
+
+### Bug Fixes
+
+* keep skill required, only make agent optional ([#611](https://github.com/smithery-ai/cli/issues/611)) ([714b7f8](https://github.com/smithery-ai/cli/commit/714b7f896cfe5f96592f414a02b99645f83400a1))
+
 ## [3.17.0](https://github.com/smithery-ai/cli/compare/v3.16.0...v3.17.0) (2026-02-06)
 
 
