@@ -824,9 +824,9 @@ skills
 
 // Uses the Vercel Labs skills CLI: https://github.com/vercel-labs/skills
 skills
-	.command("install <skill>")
+	.command("install [skill]")
 	.description("Install a skill (via github.com/vercel-labs/skills)")
-	.requiredOption(
+	.option(
 		"-a, --agent <name>",
 		`Target agent (${SKILL_AGENTS.slice(0, 5).join(", ")}, ...)`,
 	)

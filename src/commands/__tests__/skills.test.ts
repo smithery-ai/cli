@@ -85,16 +85,48 @@ describe("skills commands use public API", () => {
 		)
 	})
 
-	test("skills install includes -y flag for auto-confirm", async () => {
+	test("skills install includes -y flag when both skill and agent provided", async () => {
 		const { execSync } = await import("node:child_process")
 		const { installSkill } = await import("../skills/install")
 
 		await installSkill("test-ns/test-skill", "claude-code", {})
 
-		// Verify -y flag is included
-		expect(execSync).toHaveBeenCalledWith(
-			expect.stringContaining("-y"),
-			expect.any(Object),
-		)
+		const command = (execSync as ReturnType<typeof vi.fn>).mock.calls[0][0]
+		// Trailing -y should be present for non-interactive mode
+		expect(command).toMatch(/-y$/)
+	})
+
+	test("skills install runs interactive mode when no skill provided", async () => {
+		const { execSync } = await import("node:child_process")
+		const { installSkill } = await import("../skills/install")
+
+		await installSkill(undefined, undefined, {})
+
+		expect(execSync).toHaveBeenCalledWith("npx -y skills add", {
+			stdio: "inherit",
+		})
+	})
+
+	test("skills install runs semi-interactive when skill provided but no agent", async () => {
+		const { execSync } = await import("node:child_process")
+		const { installSkill } = await import("../skills/install")
+
+		await installSkill("test-ns/test-skill", undefined, {})
+
+		const command = (execSync as ReturnType<typeof vi.fn>).mock.calls[0][0]
+		expect(command).toContain("npx -y skills add https://smithery.ai/skills/test-ns/test-skill")
+		// Should NOT have trailing -y
+		expect(command).not.toMatch(/-y$/)
+	})
+
+	test("skills install passes global flag in interactive mode", async () => {
+		const { execSync } = await import("node:child_process")
+		const { installSkill } = await import("../skills/install")
+
+		await installSkill(undefined, undefined, { global: true })
+
+		expect(execSync).toHaveBeenCalledWith("npx -y skills add -g", {
+			stdio: "inherit",
+		})
 	})
 })
