@@ -46,28 +46,15 @@ export interface InstallOptions {
 /**
  * Install a skill using the Vercel Labs skills CLI
  * https://github.com/vercel-labs/skills
- * @param skillIdentifier - Skill identifier (namespace/slug or URL), omit for interactive mode
+ * @param skillIdentifier - Skill identifier (namespace/slug or URL)
  * @param agent - Target agent for installation, omit to be prompted interactively
  * @param options - Install options (global flag)
  */
 export async function installSkill(
-	skillIdentifier?: string,
+	skillIdentifier: string,
 	agent?: string,
 	options: InstallOptions = {},
 ): Promise<void> {
-	const { execSync } = await import("node:child_process")
-	const globalFlag = options.global ? " -g" : ""
-
-	// No skill provided — fully interactive mode
-	if (!skillIdentifier) {
-		const command = `npx -y skills add${globalFlag}`
-		console.log()
-		console.log(chalk.cyan(`Running: ${command}`))
-		console.log()
-		execSync(command, { stdio: "inherit" })
-		return
-	}
-
 	let skillUrl: string
 
 	try {
@@ -79,7 +66,10 @@ export async function installSkill(
 		process.exit(1)
 	}
 
-	// Skill provided but no agent — semi-interactive (will prompt for agent)
+	const { execSync } = await import("node:child_process")
+	const globalFlag = options.global ? " -g" : ""
+
+	// No agent — interactive (will prompt for agent)
 	if (!agent) {
 		const command = `npx -y skills add ${skillUrl}${globalFlag}`
 		console.log()
