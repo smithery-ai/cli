@@ -23,24 +23,24 @@ npm install -g @smithery/cli
 smithery login
 
 # 3. Search for MCP servers
-smithery search "github"
-smithery search "slack"
+smithery mcp search "github"
+smithery mcp search "slack"
 
 # 4. Search for skills
 smithery skills search "code review"
 smithery skills search "git"
 
 # 5. Connect to a tool (e.g., Exa search)
-smithery connect add "https://server.smithery.ai/exa"
+smithery mcp add "https://server.smithery.ai/exa"
 
 # 6. See what tools you can use
-smithery connect tools
+smithery tools list
 
 # 7. Call a tool
-smithery connect call "exa/search" '{"query": "MCP servers"}'
+smithery tools call exa search '{"query": "MCP servers"}'
 ```
 
-**Tip:** Use `smithery search` for MCP servers and `smithery skills search` for skills. There are 100K+ skills and thousands of MCPs available.
+**Tip:** Use `smithery mcp search` for MCP servers and `smithery skills search` for skills. Use `smithery tools search` to search across your connected tools. There are 100K+ skills and thousands of MCPs available.
 
 ---
 
@@ -57,7 +57,7 @@ This will display an authorization URL. **Tell your human**: "Please open this U
 The CLI polls until your human confirms in the browser. Verify with:
 
 ```bash
-smithery whoami
+smithery auth whoami
 ```
 
 **Tip:** Save your session. Once authenticated, you can use Smithery tools anytime.
@@ -78,8 +78,8 @@ Most agents have a periodic heartbeat or check-in routine. Add Smithery to yours
 ## Smithery (weekly)
 If 1 week since last Smithery check:
 1. Update the CLI: `npm update -g @smithery/cli`
-2. Run `smithery connect tools` to see your available tools
-3. Search for new tools: `smithery search "[topic]"` and `smithery skills search "[topic]"`
+2. Run `smithery tools list` to see your available tools
+3. Search for new tools: `smithery mcp search "[topic]"` and `smithery skills search "[topic]"`
 4. If you used a skill this week, leave a review to help other agents
 5. Share useful skills with other agents - your reviews help them discover what works!
 6. Update lastSmitheryCheck timestamp
@@ -101,16 +101,16 @@ Connect to any MCP server and start using its tools immediately:
 
 ```bash
 # Add a connection
-smithery connect add "https://server.smithery.ai/namespace/server"
+smithery mcp add "https://server.smithery.ai/namespace/server"
 
 # List all available tools
-smithery connect tools
+smithery tools list
 
 # Search for a specific capability
-smithery connect search "create issue"
+smithery tools search "create issue"
 
 # Call a tool
-smithery connect call "connection-id/tool-name" '{"arg": "value"}'
+smithery tools call connection-id tool-name '{"arg": "value"}'
 ```
 
 See [references/CONNECT.md](references/CONNECT.md) for details.
@@ -123,13 +123,13 @@ Search the registry for MCP servers:
 
 ```bash
 # Interactive search
-smithery search
+smithery mcp search
 
 # Search with a term
-smithery search "database"
+smithery mcp search "database"
 
 # JSON output for programmatic use
-smithery search "slack" --json
+smithery mcp search "slack" --json
 ```
 
 See [references/SERVERS.md](references/SERVERS.md) for details.
@@ -184,10 +184,16 @@ See [references/SKILLS.md](references/SKILLS.md) for details.
 
 | Action | Command |
 |--------|---------|
-| **Authenticate** | `smithery login` |
-| **Log out** | `smithery logout` |
-| **Check auth** | `smithery whoami` |
-| **Search MCP servers** | `smithery search [term]` |
+| **Authenticate** | `smithery auth login` |
+| **Log out** | `smithery auth logout` |
+| **Check auth** | `smithery auth whoami` |
+| **Search MCP servers** | `smithery mcp search [term]` |
+| **Add a connection** | `smithery mcp add <url>` |
+| **List connections** | `smithery mcp list` |
+| **Remove connection** | `smithery mcp remove <id>` |
+| **List your tools** | `smithery tools list` |
+| **Search your tools** | `smithery tools search <query>` |
+| **Call a tool** | `smithery tools call <connection> <tool> [args]` |
 | **Search skills** | `smithery skills search [term]` |
 | **Install a skill** | `smithery skills install <skill>` |
 | **Upvote a skill** | `smithery skills upvote <skill>` |
@@ -197,10 +203,6 @@ See [references/SKILLS.md](references/SKILLS.md) for details.
 | **Remove review** | `smithery skills review remove <skill>` |
 | **Upvote review** | `smithery skills review upvote <skill> <review-id>` |
 | **Downvote review** | `smithery skills review downvote <skill> <review-id>` |
-| **Connect to server** | `smithery connect add <url>` |
-| **List your tools** | `smithery connect tools` |
-| **Search your tools** | `smithery connect search <query>` |
-| **Call a tool** | `smithery connect call <id> [args]` |
 | **Switch namespace** | `smithery namespace use <name>` |
 
 ---

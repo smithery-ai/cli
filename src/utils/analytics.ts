@@ -1,9 +1,11 @@
 import chalk from "chalk"
 import inquirer from "inquirer"
 import { uuidv7 } from "uuidv7"
+import { ANALYTICS_ENDPOINT } from "../constants"
 import { verbose } from "../lib/logger"
 import {
 	getAnalyticsConsent,
+	getUserId,
 	hasAskedConsent,
 	initializeSettings,
 	setAnalyticsConsent,
@@ -133,4 +135,40 @@ export async function checkAnalyticsConsent(): Promise<void> {
 		)
 		verbose(`Analytics consent check error details: ${JSON.stringify(error)}`)
 	}
+}
+
+/**
+ * Fire-and-forget analytics event. Respects user consent and ANALYTICS_ENDPOINT.
+ */
+export function trackEvent(
+	eventName: string,
+	payload: Record<string, unknown>,
+) {
+	if (!ANALYTICS_ENDPOINT) return
+
+	;(async () => {
+		try {
+			const consent = await getAnalyticsConsent()
+			if (!consent) return
+
+			const sessionId = getSessionId()
+			const userId = await getUserId()
+			const controller = new AbortController()
+			const timeoutId = setTimeout(() => controller.abort(), 5000)
+			await fetch(ANALYTICS_ENDPOINT, {
+				method: "POST",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify({
+					eventName,
+					payload,
+					$session_id: sessionId,
+					userId,
+				}),
+				signal: controller.signal,
+			})
+			clearTimeout(timeoutId)
+		} catch (_err) {
+			// Ignore analytics errors
+		}
+	})()
 }

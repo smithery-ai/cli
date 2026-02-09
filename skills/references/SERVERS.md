@@ -6,17 +6,17 @@ Find, explore, and install MCP servers from the Smithery registry.
 
 Interactive search:
 ```bash
-smithery search
+smithery mcp search
 ```
 
 Search with a term:
 ```bash
-smithery search "database"
+smithery mcp search "database"
 ```
 
 JSON output for programmatic use:
 ```bash
-smithery search "github" --json
+smithery mcp search "github" --json
 ```
 
 Output:
@@ -31,20 +31,6 @@ Output:
   ]
 }
 ```
-
-## Inspect a Server
-
-View detailed information about a server:
-
-```bash
-smithery inspect namespace/server-name
-```
-
-This shows:
-- Server description
-- Available tools
-- Configuration options
-- Installation instructions
 
 ## Install Locally
 
@@ -75,7 +61,7 @@ Supported clients:
 ## List Installed Servers
 
 ```bash
-smithery list
+smithery mcp list
 ```
 
 Options:
@@ -95,7 +81,7 @@ Options:
 Run a server without installing:
 
 ```bash
-smithery run namespace/server-name
+smithery mcp run namespace/server-name
 ```
 
 Options:
@@ -105,14 +91,11 @@ Options:
 
 ```bash
 # 1. Search for what you need
-smithery search "slack"
+smithery mcp search "slack"
 
-# 2. Inspect to learn more
-smithery inspect smithery/slack
-
-# 3. Install for your client
+# 2. Install for your client
 smithery install smithery/slack -c claude
 
-# 4. Verify installation
-smithery list -c claude
+# 3. Verify installation
+smithery mcp list -c claude
 ```

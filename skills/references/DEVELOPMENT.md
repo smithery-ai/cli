@@ -7,7 +7,7 @@ Build and test MCP servers locally, then publish to Smithery.
 Start a development server with hot-reload:
 
 ```bash
-smithery dev
+smithery mcp dev
 ```
 
 Options:
@@ -19,7 +19,7 @@ Options:
 
 With a specific entry file:
 ```bash
-smithery dev src/index.ts
+smithery mcp dev src/index.ts
 ```
 
 The dev server:
@@ -30,7 +30,7 @@ The dev server:
 ## Build for Production
 
 ```bash
-smithery build
+smithery mcp build
 ```
 
 Options:
@@ -39,7 +39,7 @@ Options:
 
 With entry file:
 ```bash
-smithery build src/index.ts -o dist
+smithery mcp build src/index.ts -o dist
 ```
 
 ## Publish to Smithery
@@ -47,7 +47,7 @@ smithery build src/index.ts -o dist
 Publish an external MCP server URL to the registry:
 
 ```bash
-smithery publish --url "https://my-mcp-server.com" -n myorg/my-server
+smithery mcp publish --url "https://my-mcp-server.com" -n myorg/my-server
 ```
 
 Options:
@@ -62,7 +62,7 @@ Options:
 Open an interactive playground to test your server:
 
 ```bash
-smithery playground namespace/server-name
+smithery mcp playground namespace/server-name
 ```
 
 Options:
@@ -74,19 +74,19 @@ Options:
 
 Test a local server:
 ```bash
-smithery playground -- node dist/index.js
+smithery mcp playground -- node dist/index.js
 ```
 
 ## Example Workflow
 
 ```bash
 # 1. Start development
-smithery dev src/index.ts
+smithery mcp dev src/index.ts
 
 # 2. Test in playground (automatic)
 
 # 3. Build and deploy to your infrastructure
 
 # 4. Publish your URL to Smithery
-smithery publish --url "https://my-mcp-server.com" -n myorg/my-server
+smithery mcp publish --url "https://my-mcp-server.com" -n myorg/my-server
 ```

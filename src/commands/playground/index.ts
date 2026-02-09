@@ -17,9 +17,9 @@ import { createStdioPlaygroundRunner } from "./stdio-playground-runner"
 /**
  * Opens the MCP playground in a browser, supporting three modes:
  *
- * 1. **STDIO mode with server**: `smithery playground <server>` - Resolves server, prepares connection, runs in playground
- * 2. **STDIO mode with raw command**: `smithery playground -- <command>` - Runs raw command in playground
- * 3. **HTTP mode**: `smithery playground --port <port>` - Tunnels existing local HTTP server
+ * 1. **STDIO mode with server**: `smithery mcp playground <server>` - Resolves server, prepares connection, runs in playground
+ * 2. **STDIO mode with raw command**: `smithery mcp playground -- <command>` - Runs raw command in playground
+ * 3. **HTTP mode**: `smithery mcp playground --port <port>` - Tunnels existing local HTTP server
  *
  * In all modes, sets up a tunnel to expose the local server and optionally opens
  * the playground in the browser. Handles cleanup on process exit.
@@ -184,7 +184,7 @@ export async function playground(options: {
 		console.error(chalk.red("× Please provide a server, command, or port."))
 		console.error(
 			chalk.yellow(
-				"Usage:\n  smithery playground <server>\n  smithery playground -- <command>\n  smithery playground --port <port>",
+				"Usage:\n  smithery mcp playground <server>\n  smithery mcp playground -- <command>\n  smithery mcp playground --port <port>",
 			),
 		)
 		process.exit(1)

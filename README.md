@@ -11,18 +11,22 @@ Requires Node.js 20+.
 
 ## Commands
 
-### Servers
+### MCP Servers
 
 ```bash
-smithery install <server>     # Install a server to an AI client
-smithery uninstall <server>   # Remove a server
-smithery list                 # List installed servers
-smithery search [term]        # Search the Smithery registry
-smithery inspect <server>     # Interactive server testing
-smithery run <server>         # Run an MCP bundle locally
+smithery mcp search [term]              # Search the Smithery registry
+smithery mcp add <url>                  # Add an MCP server connection
+smithery mcp list                       # List your connections
+smithery mcp remove <ids...>            # Remove connections
 ```
 
-Options: `--client <name>` to skip client selection, `--config <json>` to provide configuration.
+### Tools
+
+```bash
+smithery tools list [connection]        # List available tools
+smithery tools search <query>           # Search tools by intent
+smithery tools call <connection> <tool> [args]  # Call a tool
+```
 
 ### Skills
 
@@ -42,74 +46,49 @@ smithery skills review upvote <skill> <review-id>     # Upvote a review
 smithery skills review downvote <skill> <review-id>   # Downvote a review
 ```
 
-### Namespaces
-
-Discover public namespaces on Smithery.
+### Auth
 
 ```bash
-smithery namespace search [query] # Search public namespaces (requires login)
+smithery auth login                     # Login with Smithery (OAuth)
+smithery auth logout                    # Log out
+smithery auth whoami                    # Check current user
 ```
 
-Options: `--limit <n>`, `--has-skills`, `--has-servers`.
-
-### Smithery Connect (Cloud MCP)
-
-Manage cloud-hosted MCP servers via [Smithery Connect](https://smithery.ai).
+### Namespaces
 
 ```bash
-# Namespace context (auto-created on first use)
-smithery namespace list       # List your namespaces
-smithery namespace use <name> # Set current namespace
-smithery namespace show       # Show current namespace
-
-# Server connections
-smithery connect add <url>    # Add MCP server (--name for display name)
-smithery connect list         # List connected servers
-smithery connect remove <id>  # Remove a connection
-
-# Tools
-smithery connect tools [server]     # List tools (all or for specific server)
-smithery connect search <query>     # Fuzzy search tools by intent
-smithery connect call <id> [args]   # Call a tool (format: server/tool-name)
+smithery namespace list                 # List your namespaces
+smithery namespace use <name>           # Set current namespace
+smithery namespace search [query]       # Search public namespaces
 ```
 
 ### Development
 
 ```bash
-smithery login                # Login with Smithery (OAuth)
-smithery dev [entry]          # Dev server with hot-reload and tunnel
-smithery build [entry]        # Build for production
-smithery playground           # Open interactive testing UI
+smithery mcp dev [entry]                # Dev server with hot-reload and tunnel
+smithery mcp build [entry]              # Build for production
+smithery mcp publish [entry]            # Publish to Smithery
+smithery mcp playground                 # Open interactive testing UI
 ```
 
 ## Examples
 
 ```bash
-# Install a server locally
-smithery install exa --client cursor
+# Search and connect to an MCP server
+smithery mcp search "github"
+smithery mcp add https://server.smithery.ai/github --id github
+
+# Discover and use tools
+smithery tools search "create issue"
+smithery tools call github create_issue '{"title":"Bug fix","body":"..."}'
 
 # Browse and install skills
-smithery skills search "frontend" --json --page 2    # Paginated results
-smithery skills search --namespace anthropics --json  # Filter by namespace
+smithery skills search "frontend" --json --page 2
 smithery skills install anthropics/frontend-design --agent claude-code
 
-# Review and vote on skills
-smithery skills review list anthropics/frontend-design
-smithery skills review add anthropics/frontend-design --up -b "Great for Tailwind components, follows accessibility best practices"
-smithery skills review upvote anthropics/frontend-design 550e8400-e29b-41d4-a716-446655440000
-smithery skills upvote anthropics/frontend-design
-
-# Discover namespaces
-smithery namespace search --has-skills  # Find namespaces with skills
-
-# Cloud MCP workflow (works with any MCP server URL)
-smithery connect add https://server.smithery.ai/github  # Or any MCP server
-smithery connect search "create issue"
-smithery connect call github/create_issue '{"title":"Bug fix","body":"..."}'
-
 # Development
-smithery dev server.ts --port 3000
-smithery build --out dist/server.cjs
+smithery mcp dev server.ts --port 3000
+smithery mcp build --out dist
 ```
 
 ## Development

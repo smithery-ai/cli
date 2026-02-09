@@ -27,7 +27,7 @@ export function setupProcessLifecycle(options: ProcessLifecycleOptions): void {
 			console.log(chalk.gray(" Received exit signal, shutting down..."))
 		}
 		await cleanupFn()
-		console.log(chalk.blue("🚀 Run 'smithery deploy' to publish on Smithery"))
+		console.log(chalk.blue("🚀 Run 'smithery mcp publish' to publish on Smithery"))
 		process.exit(0)
 	}
 
