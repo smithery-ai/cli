@@ -5,6 +5,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 
+## [3.19.0](https://github.com/smithery-ai/cli/compare/v3.18.0...v3.19.0) (2026-02-09)
+
+
+### Features
+
+* add smithery setup command ([#616](https://github.com/smithery-ai/cli/issues/616)) ([d78e8d0](https://github.com/smithery-ai/cli/commit/d78e8d03a45f8b9254a52129eeb781f23a33a18f))
+
+
+### Refactors
+
+* improve Smithery skill metadata; ref SMI-1404 ([#614](https://github.com/smithery-ai/cli/issues/614)) ([f36b4ba](https://github.com/smithery-ai/cli/commit/f36b4ba794e1b6df73de59a46d378eb6f5e9da14))
+
 ## [3.18.0](https://github.com/smithery-ai/cli/compare/v3.17.0...v3.18.0) (2026-02-08)
 
 
