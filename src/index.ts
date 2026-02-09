@@ -834,6 +834,25 @@ auth
 
 program.commandsGroup("Management:")
 
+// Setup command - install the Smithery CLI skill
+program
+	.command("setup")
+	.description("Install the Smithery CLI skill for your agent")
+	.option(
+		"-a, --agent <name>",
+		`Target agent (${SKILL_AGENTS.slice(0, 5).join(", ")}, ...)`,
+	)
+	.option(
+		"-g, --global",
+		"Install globally (user-level) instead of project-level",
+	)
+	.action(async (options) => {
+		const { installSkill } = await import("./commands/skills")
+		await installSkill("smithery-ai/cli", options.agent, {
+			global: options.global,
+		})
+	})
+
 // Namespace command - manage namespace context
 const namespace = program
 	.command("namespace")
@@ -1107,6 +1126,7 @@ program.hook("preAction", async (_thisCommand, actionCommand) => {
 // ═══════════════════════════════════════════════════════════════════════════════
 // Welcome message & entry point
 // ═══════════════════════════════════════════════════════════════════════════════
+
 
 // Show welcome message if no command provided
 if (process.argv.length <= 2) {
