@@ -938,12 +938,31 @@ skillsReview
 		await voteReview(skill, reviewId, "down")
 	})
 
+// Setup command - install the Smithery CLI skill
+program
+	.command("setup")
+	.description("Install the Smithery CLI skill for your agent")
+	.option(
+		"-a, --agent <name>",
+		`Target agent (${SKILL_AGENTS.slice(0, 5).join(", ")}, ...)`,
+	)
+	.option(
+		"-g, --global",
+		"Install globally (user-level) instead of project-level",
+	)
+	.action(async (options) => {
+		const { installSkill } = await import("./commands/skills")
+		await installSkill("smithery-ai/cli", options.agent, {
+			global: options.global,
+		})
+	})
+
 // Show welcome message if no command provided
 if (process.argv.length <= 2) {
 	console.log(
 		`\n${chalk.bold("Smithery")} ${chalk.dim(`v${__SMITHERY_VERSION__}`)} — Discover and connect to 100K+ MCP tools and skills\n`,
 	)
-	const featured = ["connect", "skills", "servers"]
+	const featured = ["setup", "connect", "skills", "servers"]
 	const cmds = program.commands.filter((cmd) => featured.includes(cmd.name()))
 	const nameWidth = Math.max(...cmds.map((cmd) => cmd.name().length))
 	console.log("Get started:")
