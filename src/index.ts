@@ -42,9 +42,7 @@ async function handleSearch(term: string | undefined, options: any) {
 	const apiKey = await getApiKey()
 
 	if (options.interactive) {
-		const { interactiveServerSearch } = await import(
-			"./utils/command-prompts"
-		)
+		const { interactiveServerSearch } = await import("./utils/command-prompts")
 		await interactiveServerSearch(apiKey, term)
 		return
 	}
@@ -187,11 +185,7 @@ async function handleInstall(server: string | undefined, options: any) {
 	const { installServer } = await import("./commands/install")
 
 	const selectedClient = await selectClient(options.client, "Install")
-	const selectedServer = await selectServer(
-		server,
-		selectedClient,
-		undefined,
-	)
+	const selectedServer = await selectServer(server, selectedClient, undefined)
 	validateClient(selectedClient)
 
 	const config: ServerConfig = options.config
@@ -243,8 +237,7 @@ async function handleLogin() {
 		}
 	} catch (error) {
 		console.error(chalk.red("✗ Login failed"))
-		const errorMessage =
-			error instanceof Error ? error.message : String(error)
+		const errorMessage = error instanceof Error ? error.message : String(error)
 		console.error(chalk.gray(errorMessage))
 		process.exit(1)
 	}
@@ -818,10 +811,7 @@ const auth = program
 	.command("auth")
 	.description("Authentication and permissions")
 
-auth
-	.command("login")
-	.description("Login with Smithery")
-	.action(handleLogin)
+auth.command("login").description("Login with Smithery").action(handleLogin)
 
 auth
 	.command("logout")
@@ -1039,9 +1029,9 @@ program
 	.option("--config <json>", "Provide configuration as JSON")
 	.action(handleRun)
 
-withSearchOptions(
-	program.command("search [term]", { hidden: true }),
-).action(handleSearch)
+withSearchOptions(program.command("search [term]", { hidden: true })).action(
+	handleSearch,
+)
 
 program
 	.command("list", { hidden: true })
@@ -1055,17 +1045,15 @@ program
 
 // ─── dev, build, publish (hidden) ───────────────────────────────────────────
 
-withDevOptions(
-	program.command("dev [entryFile]", { hidden: true }),
-).action(handleDev)
-
-withBuildOptions(
-	program.command("build [entryFile]", { hidden: true }),
-).action(handleBuild)
-
-withPublishOptions(
-	program.command("publish [entryFile]", { hidden: true }),
+withDevOptions(program.command("dev [entryFile]", { hidden: true })).action(
+	handleDev,
 )
+
+withBuildOptions(program.command("build [entryFile]", { hidden: true })).action(
+	handleBuild,
+)
+
+withPublishOptions(program.command("publish [entryFile]", { hidden: true }))
 	.action(handlePublish)
 	.hook("postAction", (thisCommand) => {
 		const options = thisCommand.opts()
@@ -1080,13 +1068,9 @@ withPublishOptions(
 
 // ─── login, logout, whoami (hidden) ─────────────────────────────────────────
 
-program
-	.command("login", { hidden: true })
-	.action(handleLogin)
+program.command("login", { hidden: true }).action(handleLogin)
 
-program
-	.command("logout", { hidden: true })
-	.action(handleLogout)
+program.command("logout", { hidden: true }).action(handleLogout)
 
 program
 	.command("whoami", { hidden: true })
