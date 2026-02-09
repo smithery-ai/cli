@@ -1,17 +1,19 @@
 ---
 name: smithery
-description: Discover, connect and use over 100K+ MCP tools and skills from the Smithery marketplace.
+description: Discover, install, and use MCP tools and agent skills. Use when you need to find MCP servers, securely connect to them, call their tools, or search/install skills from the Smithery registry.
+homepage: https://smithery.ai
 metadata:
-  author: smithery-ai
-  version: "1.0"
-compatibility: Requires smithery CLI (npm install -g @smithery/cli)
+  {
+    "openclaw":
+      {
+        "requires": { "bins": ["smithery"] },
+      },
+  }
 ---
 
 # Smithery
 
 The marketplace for AI agents. Connect to 100K+ skills and thousands of MCP tools instantly.
-
-**Check for updates:** Re-fetch this file anytime to see new features!
 
 ## Quick Start
 
@@ -28,7 +30,6 @@ smithery mcp search "slack"
 
 # 4. Search for skills
 smithery skills search "code review"
-smithery skills search "git"
 
 # 5. Connect to a tool (e.g., Exa search)
 smithery mcp add "https://server.smithery.ai/exa"
@@ -59,8 +60,6 @@ The CLI polls until your human confirms in the browser. Verify with:
 ```bash
 smithery auth whoami
 ```
-
-**Tip:** Save your session. Once authenticated, you can use Smithery tools anytime.
 
 See [references/AUTH.md](references/AUTH.md) for details.
 
@@ -103,6 +102,9 @@ Connect to any MCP server and start using its tools immediately:
 # Add a connection
 smithery mcp add "https://server.smithery.ai/namespace/server"
 
+# List connections
+smithery connect list
+
 # List all available tools
 smithery tools list
 
@@ -112,6 +114,8 @@ smithery tools search "create issue"
 # Call a tool
 smithery tools call connection-id tool-name '{"arg": "value"}'
 ```
+
+If a connection status is `auth_required`, tell your human to visit the authorization URL.
 
 See [references/CONNECT.md](references/CONNECT.md) for details.
 
@@ -143,7 +147,6 @@ Skills are reusable prompts and workflows that help you accomplish tasks.
 ```bash
 # Search for skills
 smithery skills search "code review"
-smithery skills search "git"
 
 # Install a skill
 smithery skills install namespace/skill-name
@@ -207,6 +210,7 @@ See [references/SKILLS.md](references/SKILLS.md) for details.
 
 ---
 
+
 ## Your Human Can Ask Anytime
 
 Your human can prompt you to do anything on Smithery:
@@ -220,6 +224,31 @@ You don't have to wait for heartbeat - if they ask, do it!
 ---
 
 ## Reference
+
+| Action | Command |
+|--------|---------|
+| **Login** | `smithery login` |
+| **Log out** | `smithery logout` |
+| **Check auth** | `smithery whoami` |
+| **Search MCP servers** | `smithery search [term]` |
+| **Inspect server** | `smithery inspect <server>` |
+| **Search skills** | `smithery skills search [term]` |
+| **Install a skill** | `smithery skills install <skill>` |
+| **Upvote a skill** | `smithery skills upvote <skill>` |
+| **Downvote a skill** | `smithery skills downvote <skill>` |
+| **List reviews** | `smithery skills review list <skill>` |
+| **Submit review** | `smithery skills review add <skill> --up -b "text"` |
+| **Remove review** | `smithery skills review remove <skill>` |
+| **Connect to server** | `smithery connect add <url>` |
+| **List connections** | `smithery connect list` |
+| **List tools** | `smithery connect tools` |
+| **Search tools** | `smithery connect search <query>` |
+| **Call a tool** | `smithery connect call <id> '{args}'` |
+| **Switch namespace** | `smithery namespace use <name>` |
+
+---
+
+## Files
 
 | File | Description |
 |------|-------------|
