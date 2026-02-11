@@ -129,6 +129,45 @@ export class ConnectSession {
 		})
 	}
 
+	async createTask(
+		connectionId: string,
+		toolName: string,
+		args: Record<string, unknown>,
+		options?: { ttl?: number },
+	) {
+		const mcpClient = await this.getMcpClient(connectionId)
+		const stream = mcpClient.experimental.tasks.callToolStream(
+			{ name: toolName, arguments: args },
+			undefined,
+			options?.ttl ? { task: { ttl: options.ttl } } : { task: {} },
+		)
+		const first = await stream.next()
+		if (first.done || first.value.type !== "taskCreated") {
+			throw new Error("Server did not return a task")
+		}
+		return first.value.task
+	}
+
+	async getTask(connectionId: string, taskId: string) {
+		const mcpClient = await this.getMcpClient(connectionId)
+		return mcpClient.experimental.tasks.getTask(taskId)
+	}
+
+	async getTaskResult(connectionId: string, taskId: string) {
+		const mcpClient = await this.getMcpClient(connectionId)
+		return mcpClient.experimental.tasks.getTaskResult(taskId)
+	}
+
+	async listTasks(connectionId: string, cursor?: string) {
+		const mcpClient = await this.getMcpClient(connectionId)
+		return mcpClient.experimental.tasks.listTasks(cursor)
+	}
+
+	async cancelTask(connectionId: string, taskId: string) {
+		const mcpClient = await this.getMcpClient(connectionId)
+		return mcpClient.experimental.tasks.cancelTask(taskId)
+	}
+
 	async createConnection(
 		mcpUrl: string,
 		options: {
@@ -150,7 +189,7 @@ export class ConnectSession {
 
 	/**
 	 * Create or update a connection with a specific ID.
-	 * If the connection already exists (409), deletes and recreates it.
+	 * Upserts: if the connection exists with the same URL, updates name/metadata/headers.
 	 */
 	async setConnection(
 		connectionId: string,
@@ -161,28 +200,16 @@ export class ConnectSession {
 			headers?: Record<string, string>
 		} = {},
 	): Promise<Connection> {
-		const params = {
-			namespace: this.namespace,
-			mcpUrl,
-			name: options.name,
-			metadata: options.metadata,
-			headers: options.headers,
-		}
-		try {
-			return await this.smitheryClient.experimental.connect.connections.set(
-				connectionId,
-				params,
-			)
-		} catch (error) {
-			if (error instanceof Error && error.message.includes("409")) {
-				await this.deleteConnection(connectionId)
-				return this.smitheryClient.experimental.connect.connections.set(
-					connectionId,
-					params,
-				)
-			}
-			throw error
-		}
+		return this.smitheryClient.experimental.connect.connections.set(
+			connectionId,
+			{
+				namespace: this.namespace,
+				mcpUrl,
+				name: options.name,
+				metadata: options.metadata,
+				headers: options.headers,
+			},
+		)
 	}
 
 	async deleteConnection(connectionId: string): Promise<void> {

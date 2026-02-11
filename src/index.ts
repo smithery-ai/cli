@@ -598,6 +598,57 @@ toolsCmd
 	})
 
 // ═══════════════════════════════════════════════════════════════════════════════
+// Tasks command — Async task execution lifecycle
+// ═══════════════════════════════════════════════════════════════════════════════
+
+const tasksCmd = program
+	.command("tasks")
+	.description("Manage async task execution")
+
+tasksCmd
+	.command("create <connection> <tool> [args]")
+	.description("Start a tool call as a background task")
+	.option("--ttl <ms>", "Task lifetime in milliseconds")
+	.option("--namespace <ns>", "Namespace")
+	.option("--json", "Output as JSON")
+	.action(async (connection, tool, args, options) => {
+		const { createTask } = await import("./commands/tasks")
+		await createTask(connection, tool, args, options)
+	})
+
+tasksCmd
+	.command("get <connection> <task-id>")
+	.description("Get task status")
+	.option("--wait", "Poll until completion and return result")
+	.option("--namespace <ns>", "Namespace")
+	.option("--json", "Output as JSON")
+	.action(async (connection, taskId, options) => {
+		const { getTask } = await import("./commands/tasks")
+		await getTask(connection, taskId, options)
+	})
+
+tasksCmd
+	.command("list <connection>")
+	.description("List tasks for a connection")
+	.option("--cursor <cursor>", "Pagination cursor")
+	.option("--namespace <ns>", "Namespace")
+	.option("--json", "Output as JSON")
+	.action(async (connection, options) => {
+		const { listTasks } = await import("./commands/tasks")
+		await listTasks(connection, options)
+	})
+
+tasksCmd
+	.command("cancel <connection> <task-id>")
+	.description("Cancel a running task")
+	.option("--namespace <ns>", "Namespace")
+	.option("--json", "Output as JSON")
+	.action(async (connection, taskId, options) => {
+		const { cancelTask } = await import("./commands/tasks")
+		await cancelTask(connection, taskId, options)
+	})
+
+// ═══════════════════════════════════════════════════════════════════════════════
 // Skills command — Search, view, and install Smithery skills
 // ═══════════════════════════════════════════════════════════════════════════════
 
