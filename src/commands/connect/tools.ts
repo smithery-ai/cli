@@ -107,6 +107,7 @@ export async function listTools(
 				columns: TOOL_COLUMNS,
 				json: isJson,
 				jsonData: { tools: data, page, hasMore },
+				pagination: { page, hasMore },
 				tip: "Use smithery tools call <connection> <tool> '<args>' to call a tool.",
 			})
 		} catch (error) {
@@ -181,6 +182,7 @@ export async function listTools(
 			hasMore,
 			...(issues.length > 0 ? { connectionIssues: issues } : {}),
 		},
+		pagination: { page, hasMore },
 		tip:
 			data.length === 0
 				? "No tools found. Your servers may not have any tools."

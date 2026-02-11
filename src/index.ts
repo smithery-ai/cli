@@ -79,6 +79,10 @@ async function handleSearch(term: string | undefined, options: any) {
 		connectionUrl: `https://server.smithery.ai/${server.qualifiedName}`,
 	}))
 
+	const page = parseInt(options.page, 10) || 1
+	const limit = parseInt(options.limit, 10) || 10
+	const hasMore = results.length >= limit
+
 	outputTable({
 		data,
 		columns: [
@@ -91,7 +95,8 @@ async function handleSearch(term: string | undefined, options: any) {
 			{ key: "useCount", header: "USES", format: (v) => String(v ?? 0) },
 		],
 		json: options.json,
-		jsonData: { servers: data },
+		jsonData: { servers: data, page, hasMore },
+		pagination: { page, hasMore },
 		tip: "Use smithery mcp add <connectionUrl> to connect a server.",
 	})
 }

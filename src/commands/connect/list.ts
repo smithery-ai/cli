@@ -34,6 +34,7 @@ export async function listServers(options: {
 			servers: data,
 			...(nextCursor ? { nextCursor } : {}),
 		},
+		pagination: { nextCursor },
 		tip:
 			data.length === 0
 				? "No servers connected. Use 'smithery mcp add <mcp-url>' to add one."

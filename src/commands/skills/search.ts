@@ -140,6 +140,8 @@ export async function searchSkills(
 				}
 			: undefined
 
+		const hasMore = skills.length >= limit
+
 		outputTable({
 			data,
 			columns: [
@@ -158,6 +160,7 @@ export async function searchSkills(
 			],
 			json,
 			jsonData,
+			pagination: { page, hasMore },
 			tip:
 				data.length === 0
 					? "No skills found. Try a different search term."

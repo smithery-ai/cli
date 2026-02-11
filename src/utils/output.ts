@@ -8,6 +8,15 @@ interface OutputColumn {
 	format?: (val: unknown) => string
 }
 
+export interface PaginationInfo {
+	/** Cursor-based: server-provided cursor for next page */
+	nextCursor?: string | null
+	/** Page-based: current page number */
+	page?: number
+	/** Page-based: whether more results exist */
+	hasMore?: boolean
+}
+
 /**
  * Render data as a compact table (default) or JSON (--json).
  * Hints are included in both modes.
@@ -18,8 +27,9 @@ export function outputTable(options: {
 	json: boolean
 	jsonData?: unknown
 	tip?: string
+	pagination?: PaginationInfo
 }): void {
-	const { data, columns, json, jsonData, tip } = options
+	const { data, columns, json, jsonData, tip, pagination } = options
 
 	if (json) {
 		const payload = jsonData ?? data
@@ -57,6 +67,13 @@ export function outputTable(options: {
 			.map((col, i) => formatCell(row[col.key], col.format).padEnd(widths[i]))
 			.join("  ")
 		console.log(line)
+	}
+
+	if (pagination) {
+		const msg = formatPagination(pagination)
+		if (msg) {
+			console.log(chalk.dim(`\n${msg}`))
+		}
 	}
 
 	if (tip) {
@@ -135,4 +152,19 @@ function wrapArray(data: unknown): Record<string, unknown> {
 export function truncate(str: string, maxLen = 60): string {
 	if (str.length <= maxLen) return str
 	return `${str.slice(0, maxLen - 1)}…`
+}
+
+function formatPagination(info: PaginationInfo): string | null {
+	// Cursor-based pagination
+	if (info.nextCursor) {
+		return `More results available. Use --cursor ${info.nextCursor}`
+	}
+	// Page-based pagination
+	if (info.hasMore && info.page != null) {
+		return `Page ${info.page}. Use --page ${info.page + 1} for next page.`
+	}
+	if (info.page != null && info.page > 1) {
+		return `Page ${info.page} (last page).`
+	}
+	return null
 }
