@@ -149,8 +149,8 @@ export class ConnectSession {
 	}
 
 	/**
-	 * Create a connection with a specific ID using the set() API.
-	 * Returns 409 error if connection already exists.
+	 * Create or update a connection with a specific ID.
+	 * If the connection already exists (409), deletes and recreates it.
 	 */
 	async setConnection(
 		connectionId: string,
@@ -161,16 +161,28 @@ export class ConnectSession {
 			headers?: Record<string, string>
 		} = {},
 	): Promise<Connection> {
-		return this.smitheryClient.experimental.connect.connections.set(
-			connectionId,
-			{
-				namespace: this.namespace,
-				mcpUrl,
-				name: options.name,
-				metadata: options.metadata,
-				headers: options.headers,
-			},
-		)
+		const params = {
+			namespace: this.namespace,
+			mcpUrl,
+			name: options.name,
+			metadata: options.metadata,
+			headers: options.headers,
+		}
+		try {
+			return await this.smitheryClient.experimental.connect.connections.set(
+				connectionId,
+				params,
+			)
+		} catch (error) {
+			if (error instanceof Error && error.message.includes("409")) {
+				await this.deleteConnection(connectionId)
+				return this.smitheryClient.experimental.connect.connections.set(
+					connectionId,
+					params,
+				)
+			}
+			throw error
+		}
 	}
 
 	async deleteConnection(connectionId: string): Promise<void> {
