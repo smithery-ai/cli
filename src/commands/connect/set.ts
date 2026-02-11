@@ -7,7 +7,7 @@ import { parseJsonObject } from "./parse-json"
 
 export async function setServer(
 	id: string,
-	mcpUrl: string,
+	mcpUrl: string | undefined,
 	options: {
 		name?: string
 		metadata?: string
@@ -26,9 +26,18 @@ export async function setServer(
 			true,
 		)
 
-		const normalizedUrl = normalizeMcpUrl(mcpUrl)
 		const session = await ConnectSession.create(options.namespace)
-		const connection = await session.setConnection(id, normalizedUrl, {
+
+		// If no URL provided, fetch from existing connection
+		let resolvedUrl: string
+		if (mcpUrl) {
+			resolvedUrl = normalizeMcpUrl(mcpUrl)
+		} else {
+			const existing = await session.getConnection(id)
+			resolvedUrl = existing.mcpUrl
+		}
+
+		const connection = await session.setConnection(id, resolvedUrl, {
 			name: options.name,
 			metadata: parsedMetadata,
 			headers: parsedHeaders,

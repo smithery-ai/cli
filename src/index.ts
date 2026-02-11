@@ -489,7 +489,7 @@ mcpCmd
 	})
 
 mcpCmd
-	.command("set <id> <mcp-url>")
+	.command("set <id> [mcp-url]")
 	.description("Create or update a connection by ID")
 	.option("--name <name>", "Human-readable name")
 	.option("--metadata <json>", "Metadata as JSON object")
@@ -923,7 +923,7 @@ connect
 	})
 
 connect
-	.command("set <id> <mcp-url>")
+	.command("set <id> [mcp-url]")
 	.description("Create or update a connection by ID")
 	.option("--name <name>", "Human-readable name")
 	.option("--metadata <json>", "Metadata as JSON object")
