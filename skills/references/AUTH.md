@@ -62,6 +62,32 @@ curl http://localhost:4260/whoami
 
 The server automatically refreshes expired tokens.
 
+## Mint Service Tokens
+
+Create scoped service tokens for machine-to-machine use:
+
+```bash
+# Mint a default token (1h TTL)
+smithery auth token
+
+# Mint a restricted token with a policy
+smithery auth token --policy '[{"resources": ["connections"], "operations": ["read"], "ttl": "30m"}]'
+
+# Output as JSON
+smithery auth token --json
+```
+
+Policy constraints (all optional):
+- `resources` - `"connections"`, `"servers"`, `"namespaces"`, `"skills"` (string or array)
+- `operations` - `"read"`, `"write"`, `"execute"` (string or array)
+- `namespaces` - Namespace name(s) to restrict to (string or array)
+- `ttl` - Duration string (`"30m"`, `"1h"`) or seconds (max 24h, default 1h)
+- `metadata` - Key-value pairs for fine-grained access control
+
+A single constraint object is automatically wrapped in an array.
+
+Tokens use Biscuit attenuation — they can only be narrowed, never expanded.
+
 ## Environment Variables
 
 You can also set your API key via environment variable:

@@ -53,6 +53,8 @@ smithery skills review downvote <skill> <review-id>   # Downvote a review
 smithery auth login                     # Login with Smithery (OAuth)
 smithery auth logout                    # Log out
 smithery auth whoami                    # Check current user
+smithery auth token                     # Mint a service token
+smithery auth token --policy '<json>'   # Mint a restricted token
 ```
 
 ### Namespaces

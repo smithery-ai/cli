@@ -790,6 +790,16 @@ auth
 	)
 	.action(handleWhoami)
 
+auth
+	.command("token")
+	.description("Mint a restricted service token")
+	.option("--policy <json>", "Policy constraints as JSON array")
+	.option("--json", "Output as JSON")
+	.action(async (options) => {
+		const { createToken } = await import("./commands/auth/token")
+		await createToken(options)
+	})
+
 // ═══════════════════════════════════════════════════════════════════════════════
 // Management
 // ═══════════════════════════════════════════════════════════════════════════════
