@@ -48,15 +48,10 @@ async function handleSearch(term: string | undefined, options: any) {
 	}
 
 	const { searchServers } = await import("./lib/registry")
+	const searchTerm = term ?? ""
 
 	if (options.json) {
-		if (!term) {
-			console.error(
-				chalk.red("Error: Search term is required when using --json"),
-			)
-			process.exit(1)
-		}
-		const results = await searchServers(term, apiKey, {
+		const results = await searchServers(searchTerm, apiKey, {
 			verified: options.verified,
 			pageSize: parseInt(options.limit, 10),
 			page: parseInt(options.page, 10),
@@ -69,7 +64,6 @@ async function handleSearch(term: string | undefined, options: any) {
 		return
 	}
 
-	const searchTerm = term ?? ""
 	const results = await searchServers(searchTerm, apiKey, {
 		verified: options.verified,
 		pageSize: parseInt(options.limit, 10),
@@ -105,10 +99,30 @@ async function handleSearch(term: string | undefined, options: any) {
 
 async function handleRun(server: string, options: any) {
 	const { parseServerConfig } = await import("./utils/command-prompts")
-	const { run } = await import("./commands/run/index")
 	const config: ServerConfig = options.config
 		? parseServerConfig(options.config)
 		: {}
+
+	// Backward compat: support deprecated --playground on `smithery run`.
+	if (options.playground) {
+		const { playground } = await import("./commands/playground")
+		const { ensureApiKey } = await import("./utils/runtime")
+		console.warn(
+			chalk.yellow(
+				"⚠ Warning: --playground flag is deprecated. Use 'smithery playground <server>' instead.",
+			),
+		)
+		await playground({
+			server,
+			configOverride: config,
+			apiKey: await ensureApiKey(),
+			open: options.open !== false,
+			initialMessage: options.prompt,
+		})
+		return
+	}
+
+	const { run } = await import("./commands/run/index")
 	await run(server, config)
 }
 
@@ -214,6 +228,16 @@ async function handleUninstall(server: string | undefined, options: any) {
 	)
 
 	await uninstallServer(selectedServer, selectedClient as ValidClient)
+}
+
+async function handleLegacyList(client: string | undefined) {
+	const { selectClient } = await import("./utils/command-prompts")
+	const { list } = await import("./commands/list")
+
+	const selectedClient = await selectClient(client, "List")
+	validateClient(selectedClient)
+
+	await list("servers", selectedClient as ValidClient)
 }
 
 async function handleLogin() {
@@ -890,21 +914,6 @@ namespace
 		await createNamespace(name)
 	})
 
-namespace
-	.command("search [query]")
-	.description("Search public namespaces (requires login)")
-	.option("--limit <number>", "Maximum number of results to show", "20")
-	.option("--has-skills", "Only show namespaces with skills")
-	.option("--has-servers", "Only show namespaces with servers")
-	.action(async (query, options) => {
-		const { searchPublicNamespaces } = await import("./commands/namespace")
-		await searchPublicNamespaces(query, {
-			limit: Number.parseInt(options.limit, 10),
-			hasSkills: options.hasSkills,
-			hasServers: options.hasServers,
-		})
-	})
-
 // ═══════════════════════════════════════════════════════════════════════════════
 // Hidden backward-compat aliases
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -1041,23 +1050,75 @@ program
 	})
 	.action(handleUninstall)
 
-// ─── run, search, list (hidden) ─────────────────────────────────────────────
+// ─── run, search, list, inspect, playground, servers (hidden) ──────────────
 
 program
 	.command("run <server>", { hidden: true })
 	.option("--config <json>", "Provide configuration as JSON")
+	.option(
+		"--playground",
+		"[DEPRECATED] Use 'smithery playground <server>' instead. Create playground tunnel and open playground",
+	)
+	.option(
+		"--no-open",
+		"Don't automatically open the playground (when using --playground)",
+	)
+	.option(
+		"--prompt <prompt>",
+		"Initial message to start the playground with (when using --playground)",
+	)
 	.action(handleRun)
 
 withSearchOptions(program.command("search [term]", { hidden: true })).action(
 	handleSearch,
 )
 
+const serversCompat = program
+	.command("servers", { hidden: true })
+	.description("Search and browse MCP servers")
+
+withSearchOptions(
+	serversCompat
+		.command("search [term]")
+		.description("Search for servers in the Smithery registry"),
+).action(handleSearch)
+
+program
+	.command("inspect <server>", { hidden: true })
+	.description("Inspect server from registry")
+	.action(async (server) => {
+		const { inspectServer } = await import("./commands/inspect")
+		// API key is optional - use if available, don't prompt
+		const apiKey = await getApiKey()
+		await inspectServer(server, apiKey)
+	})
+
+withPlaygroundOptions(
+	program.command("playground [server]", { hidden: true }),
+).action(handlePlayground)
+
 program
 	.command("list", { hidden: true })
+	.description("List installed servers (legacy) or MCP connections")
+	.option(
+		"-c, --client <name>",
+		`Specify the AI client (${VALID_CLIENTS.join(", ")})`,
+	)
 	.option("--namespace <ns>", "Namespace to list from")
 	.option("--limit <n>", "Maximum number of results (default: all)")
 	.option("--cursor <cursor>", "Pagination cursor from previous response")
 	.action(async (options) => {
+		const hasConnectionListOptions =
+			options.namespace !== undefined ||
+			options.limit !== undefined ||
+			options.cursor !== undefined
+
+		// Backward compat: preserve legacy `smithery list -c <client>` behavior.
+		if (options.client || !hasConnectionListOptions) {
+			await handleLegacyList(options.client)
+			return
+		}
+
 		const { listServers } = await import("./commands/connect")
 		await listServers(options)
 	})
@@ -1073,6 +1134,26 @@ withBuildOptions(program.command("build [entryFile]", { hidden: true })).action(
 )
 
 withPublishOptions(program.command("publish [entryFile]", { hidden: true }))
+	.action(handlePublish)
+	.hook("postAction", (thisCommand) => {
+		const options = thisCommand.opts()
+		if (options.url && !options.configSchema) {
+			console.log(
+				chalk.dim(
+					"\nTip: Use --config-schema to define configuration options for your server.",
+				),
+			)
+		}
+	})
+
+withPublishOptions(program.command("deploy [entryFile]", { hidden: true }))
+	.hook("preAction", () => {
+		console.warn(
+			chalk.yellow(
+				"Warning: 'deploy' is deprecated. Please use 'publish' instead.",
+			),
+		)
+	})
 	.action(handlePublish)
 	.hook("postAction", (thisCommand) => {
 		const options = thisCommand.opts()
@@ -1126,7 +1207,6 @@ program.hook("preAction", async (_thisCommand, actionCommand) => {
 // ═══════════════════════════════════════════════════════════════════════════════
 // Welcome message & entry point
 // ═══════════════════════════════════════════════════════════════════════════════
-
 
 // Show welcome message if no command provided
 if (process.argv.length <= 2) {

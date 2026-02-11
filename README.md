@@ -59,7 +59,6 @@ smithery auth whoami                    # Check current user
 ```bash
 smithery namespace list                 # List your namespaces
 smithery namespace use <name>           # Set current namespace
-smithery namespace search [query]       # Search public namespaces
 ```
 
 ### Development

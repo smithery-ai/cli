@@ -1,5 +1,4 @@
 export { createNamespace } from "./create"
 export { listNamespaces } from "./list"
-export { searchPublicNamespaces } from "./search"
 export { showNamespace } from "./show"
 export { useNamespace } from "./use"
