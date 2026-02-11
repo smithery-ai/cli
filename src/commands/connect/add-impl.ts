@@ -1,9 +1,9 @@
 import chalk from "chalk"
+import { outputDetail } from "../../utils/output"
 import { ConnectSession } from "./api"
 import { formatConnectionOutput } from "./format-connection"
 import { normalizeMcpUrl } from "./normalize-url"
 import { parseJsonObject } from "./parse-json"
-import { outputDetail } from "../../utils/output"
 
 export async function addServer(
 	mcpUrl: string,

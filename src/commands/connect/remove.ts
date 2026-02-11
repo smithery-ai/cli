@@ -1,6 +1,6 @@
 import chalk from "chalk"
-import { ConnectSession } from "./api"
 import { outputJson } from "../../utils/output"
+import { ConnectSession } from "./api"
 
 export async function removeServer(
 	serverIds: string[],

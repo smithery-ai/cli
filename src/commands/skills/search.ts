@@ -2,8 +2,8 @@ import { Smithery } from "@smithery/api/client.js"
 import type { SkillListResponse } from "@smithery/api/resources/skills"
 import chalk from "chalk"
 import { SKILL_AGENTS } from "../../config/agents.js"
-import { installSkill } from "./install.js"
 import { outputTable, truncate } from "../../utils/output"
+import { installSkill } from "./install.js"
 
 export interface SearchOptions {
 	json?: boolean
@@ -145,14 +145,23 @@ export async function searchSkills(
 			columns: [
 				{ key: "name", header: "NAME" },
 				{ key: "qualifiedName", header: "QUALIFIED_NAME" },
-				{ key: "stars", header: "STARS", format: (v) => (Number(v) > 0 ? String(v) : "") },
-				{ key: "description", header: "DESCRIPTION", format: (v) => truncate(String(v ?? "")) },
+				{
+					key: "stars",
+					header: "STARS",
+					format: (v) => (Number(v) > 0 ? String(v) : ""),
+				},
+				{
+					key: "description",
+					header: "DESCRIPTION",
+					format: (v) => truncate(String(v ?? "")),
+				},
 			],
 			json,
 			jsonData,
-			tip: data.length === 0
-				? "No skills found. Try a different search term."
-				: "Use smithery skills install <qualified-name> --agent <agent> to install.",
+			tip:
+				data.length === 0
+					? "No skills found. Try a different search term."
+					: "Use smithery skills install <qualified-name> --agent <agent> to install.",
 		})
 		return null
 	} catch (error) {

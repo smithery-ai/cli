@@ -1,7 +1,7 @@
 import chalk from "chalk"
+import { outputDetail } from "../../utils/output"
 import { ConnectSession } from "./api"
 import { formatConnectionOutput } from "./format-connection"
-import { outputDetail } from "../../utils/output"
 
 export async function getServer(
 	id: string,

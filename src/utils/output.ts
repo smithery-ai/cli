@@ -93,8 +93,7 @@ export function outputDetail(options: {
 	for (const key of keys) {
 		const val = data[key]
 		if (val === undefined || val === null) continue
-		const display =
-			typeof val === "object" ? JSON.stringify(val) : String(val)
+		const display = typeof val === "object" ? JSON.stringify(val) : String(val)
 		console.log(`${chalk.dim(key.padEnd(maxKeyLen))}  ${display}`)
 	}
 
@@ -115,10 +114,7 @@ export function outputJson(data: unknown): void {
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
-function formatCell(
-	val: unknown,
-	format?: (val: unknown) => string,
-): string {
+function formatCell(val: unknown, format?: (val: unknown) => string): string {
 	if (val === undefined || val === null) return ""
 	if (format) return format(val)
 	return String(val)
@@ -138,5 +134,5 @@ function wrapArray(data: unknown): Record<string, unknown> {
 /** Truncate a string to maxLen, adding ellipsis if needed. */
 export function truncate(str: string, maxLen = 60): string {
 	if (str.length <= maxLen) return str
-	return str.slice(0, maxLen - 1) + "…"
+	return `${str.slice(0, maxLen - 1)}…`
 }

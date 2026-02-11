@@ -1,6 +1,6 @@
+import { outputJson } from "../../utils/output"
 import { ConnectSession } from "./api"
 import { formatToolOutput } from "./output"
-import { outputJson } from "../../utils/output"
 
 export async function callTool(
 	toolId: string,

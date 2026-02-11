@@ -1,6 +1,6 @@
 import FlexSearch from "flexsearch"
-import { ConnectSession, type ToolInfo } from "./api"
 import { outputTable, truncate } from "../../utils/output"
+import { ConnectSession, type ToolInfo } from "./api"
 
 export async function searchTools(
 	query: string,

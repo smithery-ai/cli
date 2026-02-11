@@ -1,7 +1,7 @@
 import chalk from "chalk"
+import { outputJson, outputTable, truncate } from "../../utils/output"
 import type { Connection, ToolInfo } from "./api"
 import { ConnectSession } from "./api"
-import { outputTable, outputJson, truncate } from "../../utils/output"
 
 const DEFAULT_LIMIT = 10
 
@@ -62,7 +62,12 @@ const TOOL_COLUMNS = [
 
 export async function listTools(
 	server: string | undefined,
-	options: { namespace?: string; limit?: string; page?: string; json?: boolean },
+	options: {
+		namespace?: string
+		limit?: string
+		page?: string
+		json?: boolean
+	},
 ): Promise<void> {
 	const isJson = options.json ?? false
 	const session = await ConnectSession.create(options.namespace)
@@ -106,7 +111,8 @@ export async function listTools(
 			})
 		} catch (error) {
 			const issue = formatConnectionStatus(connection)
-			const errMsg = issue?.error ?? (error instanceof Error ? error.message : String(error))
+			const errMsg =
+				issue?.error ?? (error instanceof Error ? error.message : String(error))
 			if (isJson) {
 				outputJson({
 					tools: [],
@@ -116,7 +122,9 @@ export async function listTools(
 				})
 			} else {
 				console.error(chalk.red(errMsg))
-				console.log(chalk.dim("Tip: smithery mcp get <id> - Get connection details"))
+				console.log(
+					chalk.dim("Tip: smithery mcp get <id> - Get connection details"),
+				)
 			}
 		}
 		return
@@ -173,8 +181,9 @@ export async function listTools(
 			hasMore,
 			...(issues.length > 0 ? { connectionIssues: issues } : {}),
 		},
-		tip: data.length === 0
-			? "No tools found. Your servers may not have any tools."
-			: "Use smithery tools call <connection> <tool> '<args>' to call a tool.",
+		tip:
+			data.length === 0
+				? "No tools found. Your servers may not have any tools."
+				: "Use smithery tools call <connection> <tool> '<args>' to call a tool.",
 	})
 }

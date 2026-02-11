@@ -1,5 +1,5 @@
-import { ConnectSession } from "./api"
 import { outputTable } from "../../utils/output"
+import { ConnectSession } from "./api"
 
 export async function listServers(options: {
 	namespace?: string
@@ -34,8 +34,9 @@ export async function listServers(options: {
 			servers: data,
 			...(nextCursor ? { nextCursor } : {}),
 		},
-		tip: data.length === 0
-			? "No servers connected. Use 'smithery mcp add <mcp-url>' to add one."
-			: "Use smithery tools list <connection> to list tools for a connection.",
+		tip:
+			data.length === 0
+				? "No servers connected. Use 'smithery mcp add <mcp-url>' to add one."
+				: "Use smithery tools list <connection> to list tools for a connection.",
 	})
 }
