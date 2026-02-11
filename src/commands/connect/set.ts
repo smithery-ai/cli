@@ -2,8 +2,8 @@ import chalk from "chalk"
 import { ConnectSession } from "./api"
 import { formatConnectionOutput } from "./format-connection"
 import { normalizeMcpUrl } from "./normalize-url"
-import { outputJson } from "./output"
 import { parseJsonObject } from "./parse-json"
+import { outputDetail } from "../../utils/output"
 
 export async function setServer(
 	id: string,
@@ -13,8 +13,11 @@ export async function setServer(
 		metadata?: string
 		headers?: string
 		namespace?: string
+		json?: boolean
 	},
 ): Promise<void> {
+	const isJson = options.json ?? false
+
 	try {
 		const parsedMetadata = parseJsonObject(options.metadata, "Metadata")
 		const parsedHeaders = parseJsonObject<Record<string, string>>(
@@ -32,7 +35,11 @@ export async function setServer(
 		})
 
 		const output = formatConnectionOutput(connection)
-		outputJson(output)
+		outputDetail({
+			data: output,
+			json: isJson,
+			tip: `Use smithery tools list ${connection.connectionId} to list tools.`,
+		})
 	} catch (error) {
 		const errorMessage = error instanceof Error ? error.message : String(error)
 		console.error(chalk.red(`Failed to set connection: ${errorMessage}`))

@@ -3,6 +3,7 @@ import type { SkillListResponse } from "@smithery/api/resources/skills"
 import chalk from "chalk"
 import { SKILL_AGENTS } from "../../config/agents.js"
 import { installSkill } from "./install.js"
+import { outputTable, truncate } from "../../utils/output"
 
 export interface SearchOptions {
 	json?: boolean
@@ -106,49 +107,53 @@ export async function searchSkills(
 		const response = await client.skills.list(queryParams)
 		const skills = response.skills
 
-		if (json) {
-			const cleanedSkills = skills.map((skill) => {
-				const {
-					vector,
-					$dist,
-					score,
-					gitUrl,
-					totalActivations,
-					uniqueUsers,
-					externalStars,
-					...rest
-				} = skill as SkillListResponse & {
-					vector?: unknown
-					$dist?: unknown
-					score?: unknown
-				}
-				return {
-					...rest,
-					stars: externalStars,
-					url: getSkillUrl(skill.namespace, skill.slug),
-				}
-			})
-			console.log(JSON.stringify(cleanedSkills, null, 2))
-			return null
-		}
-
-		if (skills.length === 0) {
-			console.log(chalk.yellow("No skills found."))
-			return null
-		}
-
-		const yaml = (await import("yaml")).default
-		const output = skills.map((skill) => ({
+		const data = skills.map((skill) => ({
 			name: skill.displayName || `${skill.namespace}/${skill.slug}`,
 			qualifiedName: `${skill.namespace}/${skill.slug}`,
-			...(skill.description && { description: skill.description }),
-			...(skill.externalStars && { stars: skill.externalStars }),
-			...(skill.categories &&
-				skill.categories.length > 0 && { categories: skill.categories }),
+			description: skill.description ?? "",
+			stars: skill.externalStars ?? 0,
 		}))
-		console.log(yaml.stringify(output).replace(/\n\n/g, "\n").trimEnd())
-		console.log()
-		console.log(chalk.dim("Tip: Use --json for machine-readable output"))
+
+		const jsonData = json
+			? {
+					skills: skills.map((skill) => {
+						const {
+							vector,
+							$dist,
+							score,
+							gitUrl,
+							totalActivations,
+							uniqueUsers,
+							externalStars,
+							...rest
+						} = skill as SkillListResponse & {
+							vector?: unknown
+							$dist?: unknown
+							score?: unknown
+						}
+						return {
+							...rest,
+							stars: externalStars,
+							url: getSkillUrl(skill.namespace, skill.slug),
+						}
+					}),
+				}
+			: undefined
+
+		outputTable({
+			data,
+			columns: [
+				{ key: "name", header: "NAME" },
+				{ key: "qualifiedName", header: "QUALIFIED_NAME" },
+				{ key: "stars", header: "STARS", format: (v) => (Number(v) > 0 ? String(v) : "") },
+				{ key: "description", header: "DESCRIPTION", format: (v) => truncate(String(v ?? "")) },
+			],
+			json,
+			jsonData,
+			tip: data.length === 0
+				? "No skills found. Try a different search term."
+				: "Use smithery skills install <qualified-name> --agent <agent> to install.",
+		})
 		return null
 	} catch (error) {
 		console.error(

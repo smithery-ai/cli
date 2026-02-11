@@ -113,19 +113,19 @@ export async function deploy(options: DeployOptions = {}) {
 	const isExternal = !!externalUrl
 	const isStdio = transport === "stdio"
 
-	// Reject --url with --transport stdio (incompatible)
+	// Reject URL publishing with --transport stdio (incompatible)
 	if (isExternal && isStdio) {
 		console.error(
-			chalk.red("Error: --url cannot be used with --transport stdio"),
+			chalk.red("Error: URL publishing cannot be used with --transport stdio"),
 		)
 		process.exit(1)
 	}
 
-	// Reject --config-schema without --url (only for external URLs)
+	// Reject --config-schema without a URL (only for external URLs)
 	if (options.configSchema && !isExternal) {
 		console.error(
 			chalk.red(
-				"Error: --config-schema can only be used with --url (external URLs)",
+				"Error: --config-schema can only be used when publishing a URL",
 			),
 		)
 		process.exit(1)

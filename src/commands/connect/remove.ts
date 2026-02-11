@@ -1,10 +1,10 @@
 import chalk from "chalk"
 import { ConnectSession } from "./api"
-import { outputJson } from "./output"
+import { outputJson } from "../../utils/output"
 
 export async function removeServer(
 	serverIds: string[],
-	options: { namespace?: string },
+	options: { namespace?: string; json?: boolean },
 ): Promise<void> {
 	try {
 		const session = await ConnectSession.create(options.namespace)
@@ -24,7 +24,6 @@ export async function removeServer(
 		}
 
 		if (failed.length > 0 && removed.length === 0) {
-			// All failed
 			console.error(chalk.red(`Failed to remove connections:`))
 			for (const f of failed) {
 				console.error(chalk.red(`  ${f.id}: ${f.error}`))
@@ -32,7 +31,18 @@ export async function removeServer(
 			process.exit(1)
 		}
 
-		outputJson({ removed, failed: failed.length > 0 ? failed : undefined })
+		const result = { removed, failed: failed.length > 0 ? failed : undefined }
+
+		if (options.json) {
+			outputJson(result)
+		} else {
+			for (const id of removed) {
+				console.log(`${chalk.green("✓")} Removed ${id}`)
+			}
+			for (const f of result.failed ?? []) {
+				console.log(`${chalk.red("✗")} ${f.id}: ${f.error}`)
+			}
+		}
 	} catch (error) {
 		console.error(
 			chalk.red(

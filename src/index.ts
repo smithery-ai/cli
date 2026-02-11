@@ -48,20 +48,12 @@ async function handleSearch(term: string | undefined, options: any) {
 	}
 
 	const { searchServers } = await import("./lib/registry")
+	const { outputTable, truncate } = await import("./utils/output")
 	const searchTerm = term ?? ""
 
-	if (options.json) {
-		const results = await searchServers(searchTerm, apiKey, {
-			verified: options.verified,
-			pageSize: parseInt(options.limit, 10),
-			page: parseInt(options.page, 10),
-		})
-		const serversWithUrl = results.map((server) => ({
-			...server,
-			connectionUrl: `https://server.smithery.ai/${server.qualifiedName}`,
-		}))
-		console.log(JSON.stringify({ servers: serversWithUrl }, null, 2))
-		return
+	if (options.json && !searchTerm) {
+		console.error(chalk.red("Error: Search term is required when using --json"))
+		process.exit(1)
 	}
 
 	const results = await searchServers(searchTerm, apiKey, {
@@ -70,31 +62,38 @@ async function handleSearch(term: string | undefined, options: any) {
 		page: parseInt(options.page, 10),
 	})
 
-	if (results.length === 0) {
+	if (results.length === 0 && !options.json) {
 		console.log(chalk.yellow("No servers found."))
 		return
 	}
 
-	if (!term) {
+	if (!term && !options.json) {
 		console.log(chalk.bold("Most popular servers:\n"))
 	}
 
-	const yaml = (await import("yaml")).default
-	const output = results.map((server) => ({
+	const data = results.map((server) => ({
 		name: server.displayName || server.qualifiedName,
 		qualifiedName: server.qualifiedName,
-		...(server.description && { description: server.description }),
-		...(server.verified && { verified: true }),
+		description: server.description ?? "",
 		useCount: server.useCount,
 		connectionUrl: `https://server.smithery.ai/${server.qualifiedName}`,
 	}))
-	console.log(yaml.stringify(output).replace(/\n\n/g, "\n").trimEnd())
-	console.log()
-	console.log(
-		chalk.dim(
-			"Tip: Use --json for machine-readable output. Use smithery mcp add <connectionUrl> to connect a server.",
-		),
-	)
+
+	outputTable({
+		data,
+		columns: [
+			{ key: "qualifiedName", header: "SERVER" },
+			{
+				key: "description",
+				header: "DESCRIPTION",
+				format: (v) => truncate(String(v ?? "")),
+			},
+			{ key: "useCount", header: "USES", format: (v) => String(v ?? 0) },
+		],
+		json: options.json,
+		jsonData: { servers: data },
+		tip: "Use smithery mcp add <connectionUrl> to connect a server.",
+	})
 }
 
 async function handleRun(server: string, options: any) {
@@ -150,7 +149,7 @@ async function handleBuild(entryFile: string | undefined, options: any) {
 	})
 }
 
-async function handlePublish(entryFile: string | undefined, options: any) {
+async function handlePublish(server: string | undefined, options: any) {
 	if (options.transport && !["shttp", "stdio"].includes(options.transport)) {
 		console.error(
 			chalk.red(
@@ -160,12 +159,14 @@ async function handlePublish(entryFile: string | undefined, options: any) {
 		process.exit(1)
 	}
 
+	const isUrl = server?.startsWith("http://") || server?.startsWith("https://")
+
 	const { deploy } = await import("./commands/deploy")
 	await deploy({
-		entryFile,
+		url: isUrl ? server : undefined,
+		entryFile: isUrl ? undefined : server,
 		key: options.key,
 		name: options.name,
-		url: options.url,
 		resume: options.resume,
 		transport: options.transport as "shttp" | "stdio",
 		configSchema: options.configSchema,
@@ -329,32 +330,6 @@ async function handleWhoami(options: any) {
 	}
 }
 
-async function handlePlayground(server: string | undefined, options: any) {
-	const { parseServerConfig } = await import("./utils/command-prompts")
-	const { playground } = await import("./commands/playground")
-
-	let command: string | undefined
-	const rawArgs = process.argv
-	const separatorIndex = rawArgs.indexOf("--")
-	if (separatorIndex !== -1 && separatorIndex + 1 < rawArgs.length) {
-		command = rawArgs.slice(separatorIndex + 1).join(" ")
-	}
-
-	const configOverride: ServerConfig = options.config
-		? parseServerConfig(options.config)
-		: {}
-
-	await playground({
-		server,
-		port: options.port,
-		command,
-		configOverride,
-		apiKey: options.key,
-		open: options.open !== false,
-		initialMessage: options.prompt,
-	})
-}
-
 // Helper to register search options on a command
 function withSearchOptions(cmd: InstanceType<typeof Command>) {
 	return cmd
@@ -403,10 +378,6 @@ function withPublishOptions(cmd: InstanceType<typeof Command>) {
 			"-n, --name <name>",
 			"Target server qualified name (e.g., @org/name)",
 		)
-		.option(
-			"-u, --url <url>",
-			"External MCP server URL (publishes as external server)",
-		)
 		.option("-k, --key <apikey>", "Smithery API key")
 		.option(
 			"--resume",
@@ -419,26 +390,8 @@ function withPublishOptions(cmd: InstanceType<typeof Command>) {
 		)
 		.option(
 			"--config-schema <json-or-path>",
-			"JSON Schema for external URLs (--url). Inline JSON or path to .json file",
+			"JSON Schema for server configuration. Inline JSON or path to .json file",
 		)
-}
-
-// Helper to register playground options on a command
-function withPlaygroundOptions(cmd: InstanceType<typeof Command>) {
-	return cmd
-		.option(
-			"--port <port>",
-			`Port to expose (default: ${DEFAULT_PORT} for HTTP, 6969 for STDIO)`,
-		)
-		.option("--key <apikey>", "Provide an API key")
-		.option(
-			"--config <json>",
-			"Provide configuration as JSON (when using server)",
-		)
-		.option("--no-open", "Don't automatically open the playground")
-		.option("--prompt <prompt>", "Initial message to start the playground with")
-		.allowUnknownOption()
-		.allowExcessArguments()
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -448,6 +401,27 @@ function withPlaygroundOptions(cmd: InstanceType<typeof Command>) {
 const mcpCmd = program
 	.command("mcp")
 	.description("Search, connect, and manage MCP servers")
+
+// ─── Publishing ─────────────────────────────────────────────────────────────
+
+withPublishOptions(
+	mcpCmd
+		.command("publish [server]")
+		.description("Publish an MCP server to Smithery"),
+)
+	.action(handlePublish)
+	.hook("postAction", (thisCommand) => {
+		const server = thisCommand.args[0]
+		const isUrl =
+			server?.startsWith("http://") || server?.startsWith("https://")
+		if (isUrl && !thisCommand.opts().configSchema) {
+			console.log(
+				chalk.dim(
+					"\nTip: Use --config-schema to define configuration options for your server.",
+				),
+			)
+		}
+	})
 
 // ─── Discovery ──────────────────────────────────────────────────────────────
 
@@ -476,6 +450,7 @@ mcpCmd
 		"--force",
 		"Create a new connection even if one already exists for this URL",
 	)
+	.option("--json", "Output as JSON")
 	.action(async (mcpUrl, options) => {
 		const { addServer } = await import("./commands/connect")
 		await addServer(mcpUrl, options)
@@ -487,6 +462,7 @@ mcpCmd
 	.option("--namespace <ns>", "Namespace to list from")
 	.option("--limit <n>", "Maximum number of results (default: all)")
 	.option("--cursor <cursor>", "Pagination cursor from previous response")
+	.option("--json", "Output as JSON")
 	.action(async (options) => {
 		const { listServers } = await import("./commands/connect")
 		await listServers(options)
@@ -496,6 +472,7 @@ mcpCmd
 	.command("get <id>")
 	.description("Get connection details")
 	.option("--namespace <ns>", "Namespace for the connection")
+	.option("--json", "Output as JSON")
 	.action(async (id, options) => {
 		const { getServer } = await import("./commands/connect")
 		await getServer(id, options)
@@ -505,6 +482,7 @@ mcpCmd
 	.command("remove <ids...>")
 	.description("Remove connections")
 	.option("--namespace <ns>", "Namespace for the server")
+	.option("--json", "Output as JSON")
 	.action(async (ids, options) => {
 		const { removeServer } = await import("./commands/connect")
 		await removeServer(ids, options)
@@ -517,6 +495,7 @@ mcpCmd
 	.option("--metadata <json>", "Metadata as JSON object")
 	.option("--headers <json>", "Custom headers as JSON object (stored securely)")
 	.option("--namespace <ns>", "Namespace for the server")
+	.option("--json", "Output as JSON")
 	.action(async (id, mcpUrl, options) => {
 		const { setServer } = await import("./commands/connect")
 		await setServer(id, mcpUrl, options)
@@ -548,48 +527,25 @@ mcpCmd
 	)
 	.action(handleUninstall)
 
-// ─── Development ────────────────────────────────────────────────────────────
-
-mcpCmd.commandsGroup("Development:")
+// ─── Development (hidden) ───────────────────────────────────────────────────
 
 withDevOptions(
 	mcpCmd
-		.command("dev [entryFile]")
+		.command("dev [entryFile]", { hidden: true })
 		.description("Start development server with hot-reload"),
 ).action(handleDev)
 
 withBuildOptions(
 	mcpCmd
-		.command("build [entryFile]")
+		.command("build [entryFile]", { hidden: true })
 		.description("Build MCP server for production"),
 ).action(handleBuild)
 
-withPublishOptions(
-	mcpCmd
-		.command("publish [entryFile]")
-		.description("Publish MCP server to Smithery"),
-)
-	.action(handlePublish)
-	.hook("postAction", (thisCommand) => {
-		const options = thisCommand.opts()
-		if (options.url && !options.configSchema) {
-			console.log(
-				chalk.dim(
-					"\nTip: Use --config-schema to define configuration options for your server.",
-				),
-			)
-		}
-	})
-
-// Hidden within mcp: run and playground (backward compat)
+// Hidden within mcp: run (backward compat)
 mcpCmd
 	.command("run <server>", { hidden: true })
 	.option("--config <json>", "Provide configuration as JSON")
 	.action(handleRun)
-
-withPlaygroundOptions(
-	mcpCmd.command("playground [server]", { hidden: true }),
-).action(handlePlayground)
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // Tools command — Discover and call tools from your MCPs
@@ -605,6 +561,7 @@ toolsCmd
 	.option("--namespace <ns>", "Namespace to list from")
 	.option("--limit <n>", "Maximum number of tools to return (default: 10)")
 	.option("--page <n>", "Page number (default: 1)")
+	.option("--json", "Output as JSON")
 	.action(async (connection, options) => {
 		const { listTools } = await import("./commands/connect")
 		await listTools(connection, options)
@@ -614,6 +571,7 @@ toolsCmd
 	.command("search <query>")
 	.description("Search tools by intent")
 	.option("--namespace <ns>", "Namespace to search in")
+	.option("--json", "Output as JSON")
 	.action(async (query, options) => {
 		const { searchTools } = await import("./commands/connect")
 		await searchTools(query, options)
@@ -855,9 +813,10 @@ const namespace = program
 namespace
 	.command("list")
 	.description("List available namespaces")
-	.action(async () => {
+	.option("--json", "Output as JSON")
+	.action(async (options) => {
 		const { listNamespaces } = await import("./commands/namespace")
-		await listNamespaces()
+		await listNamespaces(options)
 	})
 
 namespace
@@ -1020,7 +979,7 @@ program
 	})
 	.action(handleUninstall)
 
-// ─── run, search, list, servers (hidden) ────────────────────────────────────
+// ─── run, search, servers (hidden) ──────────────────────────────────────────
 
 program
 	.command("run <server>", { hidden: true })
@@ -1041,16 +1000,6 @@ withSearchOptions(
 		.description("Search for servers in the Smithery registry"),
 ).action(handleSearch)
 
-program
-	.command("list", { hidden: true })
-	.option("--namespace <ns>", "Namespace to list from")
-	.option("--limit <n>", "Maximum number of results (default: all)")
-	.option("--cursor <cursor>", "Pagination cursor from previous response")
-	.action(async (options) => {
-		const { listServers } = await import("./commands/connect")
-		await listServers(options)
-	})
-
 // ─── dev, build, publish (hidden) ───────────────────────────────────────────
 
 withDevOptions(program.command("dev [entryFile]", { hidden: true })).action(
@@ -1061,11 +1010,13 @@ withBuildOptions(program.command("build [entryFile]", { hidden: true })).action(
 	handleBuild,
 )
 
-withPublishOptions(program.command("publish [entryFile]", { hidden: true }))
+withPublishOptions(program.command("publish [server]", { hidden: true }))
 	.action(handlePublish)
 	.hook("postAction", (thisCommand) => {
-		const options = thisCommand.opts()
-		if (options.url && !options.configSchema) {
+		const server = thisCommand.args[0]
+		const isUrl =
+			server?.startsWith("http://") || server?.startsWith("https://")
+		if (isUrl && !thisCommand.opts().configSchema) {
 			console.log(
 				chalk.dim(
 					"\nTip: Use --config-schema to define configuration options for your server.",

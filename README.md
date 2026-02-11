@@ -61,13 +61,10 @@ smithery namespace list                 # List your namespaces
 smithery namespace use <name>           # Set current namespace
 ```
 
-### Development
+### Publishing
 
 ```bash
-smithery mcp dev [entry]                # Dev server with hot-reload and tunnel
-smithery mcp build [entry]              # Build for production
-smithery mcp publish [entry]            # Publish to Smithery
-smithery mcp playground                 # Open interactive testing UI
+smithery mcp publish <url> -n <org/server>  # Publish an MCP server URL
 ```
 
 ## Examples
@@ -85,9 +82,8 @@ smithery tools call github create_issue '{"title":"Bug fix","body":"..."}'
 smithery skills search "frontend" --json --page 2
 smithery skills install anthropics/frontend-design --agent claude-code
 
-# Development
-smithery mcp dev server.ts --port 3000
-smithery mcp build --out dist
+# Publish your MCP server URL
+smithery mcp publish "https://my-mcp-server.com" -n myorg/my-server
 ```
 
 ## Development

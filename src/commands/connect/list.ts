@@ -1,10 +1,11 @@
 import { ConnectSession } from "./api"
-import { outputJson } from "./output"
+import { outputTable } from "../../utils/output"
 
 export async function listServers(options: {
 	namespace?: string
 	limit?: string
 	cursor?: string
+	json?: boolean
 }): Promise<void> {
 	const session = await ConnectSession.create(options.namespace)
 	const limit = options.limit ? Number.parseInt(options.limit, 10) : undefined
@@ -13,27 +14,28 @@ export async function listServers(options: {
 		cursor: options.cursor,
 	})
 
-	if (connections.length === 0) {
-		outputJson({
-			servers: [],
-			help: "No servers connected. Use 'smithery connect add <mcp-url>' to add one.",
-		})
-		return
-	}
+	const data = connections.map((conn) => ({
+		id: conn.connectionId,
+		name: conn.name,
+		mcpUrl: conn.mcpUrl,
+		status: conn.status?.state ?? "unknown",
+	}))
 
-	const output: Record<string, unknown> = {
-		servers: connections.map((conn) => ({
-			id: conn.connectionId,
-			name: conn.name,
-			mcpUrl: conn.mcpUrl,
-			status: conn.status?.state ?? "unknown",
-		})),
-		help: "smithery connect tools <server> - List tools for a specific server",
-	}
-
-	if (nextCursor) {
-		output.nextCursor = nextCursor
-	}
-
-	outputJson(output)
+	outputTable({
+		data,
+		columns: [
+			{ key: "id", header: "ID" },
+			{ key: "name", header: "NAME" },
+			{ key: "mcpUrl", header: "URL" },
+			{ key: "status", header: "STATUS" },
+		],
+		json: options.json ?? false,
+		jsonData: {
+			servers: data,
+			...(nextCursor ? { nextCursor } : {}),
+		},
+		tip: data.length === 0
+			? "No servers connected. Use 'smithery mcp add <mcp-url>' to add one."
+			: "Use smithery tools list <connection> to list tools for a connection.",
+	})
 }

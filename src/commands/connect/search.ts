@@ -1,31 +1,22 @@
 import FlexSearch from "flexsearch"
 import { ConnectSession, type ToolInfo } from "./api"
-import { outputJson } from "./output"
-
-interface SearchResult {
-	id: string
-	name: string
-	connection: string
-	description?: string
-	inputSchema?: unknown
-}
-
-interface SearchOutput {
-	tools: SearchResult[]
-	help: string
-}
+import { outputTable, truncate } from "../../utils/output"
 
 export async function searchTools(
 	query: string,
-	options: { namespace?: string },
+	options: { namespace?: string; json?: boolean },
 ): Promise<void> {
+	const isJson = options.json ?? false
 	const session = await ConnectSession.create(options.namespace)
 	const { connections } = await session.listConnections()
 
 	if (connections.length === 0) {
-		outputJson({
-			tools: [],
-			help: "No connections found. Add connections at smithery.ai first.",
+		outputTable({
+			data: [],
+			columns: [],
+			json: isJson,
+			jsonData: { tools: [] },
+			tip: "No connections found. Use smithery mcp add <url> to add one.",
 		})
 		return
 	}
@@ -40,13 +31,15 @@ export async function searchTools(
 		if (result.status === "fulfilled") {
 			allTools.push(...result.value)
 		}
-		// Silently skip connections that fail (auth required, errors, etc.)
 	}
 
 	if (allTools.length === 0) {
-		outputJson({
-			tools: [],
-			help: "No tools found. Your connections may not have any tools, or may be disconnected.",
+		outputTable({
+			data: [],
+			columns: [],
+			json: isJson,
+			jsonData: { tools: [] },
+			tip: "No tools found. Your connections may not have any tools, or may be disconnected.",
 		})
 		return
 	}
@@ -57,29 +50,39 @@ export async function searchTools(
 		resolution: 9,
 	})
 
-	// Index tools by combining name and description
 	for (let i = 0; i < allTools.length; i++) {
 		const tool = allTools[i]
 		const text = `${tool.name} ${tool.description || ""}`
 		index.add(i, text)
 	}
 
-	// Search and get matching indices
 	const matchingIndices = index.search(query, { limit: 10 }) as number[]
 
-	const output: SearchOutput = {
-		tools: matchingIndices.map((idx) => {
-			const tool = allTools[idx]
-			return {
-				id: `${tool.connectionId}/${tool.name}`,
-				name: tool.name,
-				connection: tool.connectionName,
-				description: tool.description,
-				inputSchema: tool.inputSchema,
-			}
-		}),
-		help: "smithery connect call <id> '<args>'",
-	}
+	const data = matchingIndices.map((idx) => {
+		const tool = allTools[idx]
+		return {
+			id: `${tool.connectionId}/${tool.name}`,
+			name: tool.name,
+			connection: tool.connectionName,
+			description: tool.description ?? "",
+			inputSchema: tool.inputSchema,
+		}
+	})
 
-	outputJson(output)
+	outputTable({
+		data,
+		columns: [
+			{ key: "id", header: "ID" },
+			{ key: "name", header: "TOOL" },
+			{ key: "connection", header: "CONNECTION" },
+			{
+				key: "description",
+				header: "DESCRIPTION",
+				format: (v: unknown) => truncate(String(v ?? "")),
+			},
+		],
+		json: isJson,
+		jsonData: { tools: data },
+		tip: "Use smithery tools call <connection> <tool> '<args>' to call a tool.",
+	})
 }

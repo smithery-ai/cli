@@ -1,6 +1,7 @@
+import chalk from "chalk"
 import type { Connection, ToolInfo } from "./api"
 import { ConnectSession } from "./api"
-import { outputJson } from "./output"
+import { outputTable, outputJson, truncate } from "../../utils/output"
 
 const DEFAULT_LIMIT = 10
 
@@ -38,10 +39,32 @@ function formatConnectionStatus(
 	return null
 }
 
+function formatToolRow(t: ToolInfo) {
+	return {
+		id: `${t.connectionId}/${t.name}`,
+		name: t.name,
+		server: t.connectionName,
+		description: t.description ?? "",
+		inputSchema: t.inputSchema,
+	}
+}
+
+const TOOL_COLUMNS = [
+	{ key: "id", header: "ID" },
+	{ key: "name", header: "TOOL" },
+	{ key: "server", header: "SERVER" },
+	{
+		key: "description",
+		header: "DESCRIPTION",
+		format: (v: unknown) => truncate(String(v ?? "")),
+	},
+]
+
 export async function listTools(
 	server: string | undefined,
-	options: { namespace?: string; limit?: string; page?: string },
+	options: { namespace?: string; limit?: string; page?: string; json?: boolean },
 ): Promise<void> {
+	const isJson = options.json ?? false
 	const session = await ConnectSession.create(options.namespace)
 	const limit = options.limit
 		? Number.parseInt(options.limit, 10)
@@ -55,54 +78,45 @@ export async function listTools(
 		try {
 			connection = await session.getConnection(server)
 		} catch {
-			outputJson({
-				tools: [],
-				error: `Server "${server}" not found`,
-				help: "smithery connect list - List all servers",
-			})
+			if (isJson) {
+				outputJson({
+					tools: [],
+					error: `Server "${server}" not found`,
+					hint: "smithery mcp list - List all connections",
+				})
+			} else {
+				console.error(chalk.red(`Server "${server}" not found`))
+				console.log(chalk.dim("Tip: smithery mcp list - List all connections"))
+			}
 			return
 		}
 
 		try {
 			const tools = await session.listToolsForConnection(connection)
-
-			// Apply pagination for single server
 			const paginatedTools = tools.slice(offset, offset + limit)
 			const hasMore = offset + limit < tools.length
+			const data = paginatedTools.map(formatToolRow)
 
-			const output: Record<string, unknown> = {
-				tools: paginatedTools.map((t) => ({
-					id: `${t.connectionId}/${t.name}`,
-					name: t.name,
-					server: t.connectionName,
-					description: t.description,
-					inputSchema: t.inputSchema,
-				})),
-				page,
-				hasMore,
-				help: "smithery connect call <id> '<args>'",
-			}
-
-			outputJson(output)
+			outputTable({
+				data,
+				columns: TOOL_COLUMNS,
+				json: isJson,
+				jsonData: { tools: data, page, hasMore },
+				tip: "Use smithery tools call <connection> <tool> '<args>' to call a tool.",
+			})
 		} catch (error) {
-			// Listing tools failed - check connection status for known issues
 			const issue = formatConnectionStatus(connection)
-			if (issue) {
+			const errMsg = issue?.error ?? (error instanceof Error ? error.message : String(error))
+			if (isJson) {
 				outputJson({
 					tools: [],
-					error: issue.error,
-					status: issue.status,
-					help: "smithery connect get <id> - Get connection details",
+					error: errMsg,
+					...(issue?.status ? { status: issue.status } : {}),
+					hint: "smithery mcp get <id> - Get connection details",
 				})
 			} else {
-				// Unknown error (timeout, network issue, etc.)
-				const errorMessage =
-					error instanceof Error ? error.message : String(error)
-				outputJson({
-					tools: [],
-					error: errorMessage,
-					help: "smithery connect get <id> - Get connection details",
-				})
+				console.error(chalk.red(errMsg))
+				console.log(chalk.dim("Tip: smithery mcp get <id> - Get connection details"))
 			}
 		}
 		return
@@ -112,14 +126,16 @@ export async function listTools(
 	const { connections } = await session.listConnections()
 
 	if (connections.length === 0) {
-		outputJson({
-			tools: [],
-			help: "No servers connected. Use 'smithery connect add <mcp-url>' to add one.",
+		outputTable({
+			data: [],
+			columns: TOOL_COLUMNS,
+			json: isJson,
+			jsonData: { tools: [] },
+			tip: "No servers connected. Use 'smithery mcp add <mcp-url>' to add one.",
 		})
 		return
 	}
 
-	// Collect all tools from all connections first, then paginate
 	const allTools: ToolInfo[] = []
 	const issues: Array<{
 		server: string
@@ -127,7 +143,6 @@ export async function listTools(
 		status?: Record<string, unknown>
 	}> = []
 
-	// Process connections sequentially to maintain consistent ordering
 	for (const conn of connections) {
 		try {
 			const tools = await session.listToolsForConnection(conn)
@@ -144,34 +159,22 @@ export async function listTools(
 		}
 	}
 
-	if (allTools.length === 0 && issues.length === 0) {
-		outputJson({
-			tools: [],
-			help: "No tools found. Your servers may not have any tools.",
-		})
-		return
-	}
-
-	// Apply pagination to collected tools
 	const paginatedTools = allTools.slice(offset, offset + limit)
 	const hasMore = offset + limit < allTools.length
+	const data = paginatedTools.map(formatToolRow)
 
-	const output: Record<string, unknown> = {
-		tools: paginatedTools.map((t) => ({
-			id: `${t.connectionId}/${t.name}`,
-			name: t.name,
-			server: t.connectionName,
-			description: t.description,
-			inputSchema: t.inputSchema,
-		})),
-		page,
-		hasMore,
-		help: "smithery connect call <id> '<args>'",
-	}
-
-	if (issues.length > 0) {
-		output.connectionIssues = issues
-	}
-
-	outputJson(output)
+	outputTable({
+		data,
+		columns: TOOL_COLUMNS,
+		json: isJson,
+		jsonData: {
+			tools: data,
+			page,
+			hasMore,
+			...(issues.length > 0 ? { connectionIssues: issues } : {}),
+		},
+		tip: data.length === 0
+			? "No tools found. Your servers may not have any tools."
+			: "Use smithery tools call <connection> <tool> '<args>' to call a tool.",
+	})
 }

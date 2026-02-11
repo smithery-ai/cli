@@ -2,8 +2,8 @@ import chalk from "chalk"
 import { ConnectSession } from "./api"
 import { formatConnectionOutput } from "./format-connection"
 import { normalizeMcpUrl } from "./normalize-url"
-import { outputJson } from "./output"
 import { parseJsonObject } from "./parse-json"
+import { outputDetail } from "../../utils/output"
 
 export async function addServer(
 	mcpUrl: string,
@@ -13,8 +13,11 @@ export async function addServer(
 		headers?: string
 		namespace?: string
 		force?: boolean
+		json?: boolean
 	},
 ): Promise<void> {
+	const isJson = options.json ?? false
+
 	try {
 		const parsedMetadata = parseJsonObject(options.metadata, "Metadata")
 		const parsedHeaders = parseJsonObject<Record<string, string>>(
@@ -49,7 +52,7 @@ export async function addServer(
 				} else if (status === "connected") {
 					console.error(
 						chalk.yellow(
-							`Use "smithery connect tools ${match.connectionId}" to interact with it.`,
+							`Use "smithery tools list ${match.connectionId}" to interact with it.`,
 						),
 					)
 				}
@@ -57,7 +60,7 @@ export async function addServer(
 					chalk.dim(`Use --force to create a new connection anyway.`),
 				)
 				const output = formatConnectionOutput(match)
-				outputJson(output)
+				outputDetail({ data: output, json: isJson })
 				return
 			}
 		}
@@ -79,7 +82,11 @@ export async function addServer(
 		}
 
 		const output = formatConnectionOutput(connection)
-		outputJson(output)
+		outputDetail({
+			data: output,
+			json: isJson,
+			tip: `Use smithery tools list ${connection.connectionId} to list tools.`,
+		})
 	} catch (error) {
 		const errorMessage = error instanceof Error ? error.message : String(error)
 		console.error(chalk.red(`Failed to add connection: ${errorMessage}`))
@@ -89,7 +96,7 @@ export async function addServer(
 		) {
 			console.error(
 				chalk.yellow(
-					`\nYour authentication token may be expired or missing required permissions. Run "smithery login" to re-authenticate.`,
+					`\nYour authentication token may be expired or missing required permissions. Run "smithery auth login" to re-authenticate.`,
 				),
 			)
 		}
