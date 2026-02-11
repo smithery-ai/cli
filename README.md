@@ -25,6 +25,7 @@ smithery mcp remove <ids...>            # Remove connections
 ```bash
 smithery tools list [connection]        # List available tools
 smithery tools search <query>           # Search tools by intent
+smithery tools get <connection/tool>    # Show full details for one tool
 smithery tools call <connection> <tool> [args]  # Call a tool
 ```
 

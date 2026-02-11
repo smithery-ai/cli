@@ -578,6 +578,16 @@ toolsCmd
 	})
 
 toolsCmd
+	.command("get <tool-id>")
+	.description("Get details for a specific tool")
+	.option("--namespace <ns>", "Namespace for the tool")
+	.option("--json", "Output as JSON")
+	.action(async (toolId, options) => {
+		const { getTool } = await import("./commands/connect")
+		await getTool(toolId, options)
+	})
+
+toolsCmd
 	.command("call <connection> <tool> [args]")
 	.description("Call a tool")
 	.option("--namespace <ns>", "Namespace for the tool")

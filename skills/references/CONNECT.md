@@ -99,6 +99,18 @@ smithery tools search "create issue"
 Options:
 - `--namespace <ns>` - Namespace to search in
 
+## Get Tool Details
+
+Show one tool in detail (full description + schemas):
+
+```bash
+smithery tools get my-github/create_issue
+```
+
+Options:
+- `--namespace <ns>` - Namespace for the tool
+- `--json` - Output full details as JSON
+
 ## Call a Tool
 
 Call a tool by specifying the connection and tool name:
