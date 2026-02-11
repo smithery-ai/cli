@@ -22,7 +22,7 @@ The marketplace for AI agents. Connect to 100K+ skills and thousands of MCP tool
 npm install -g @smithery/cli
 
 # 2. Authenticate (requires human to confirm in browser)
-smithery login
+smithery auth login
 
 # 3. Search for MCP servers
 smithery mcp search "github"
@@ -50,7 +50,7 @@ smithery tools call exa search '{"query": "MCP servers"}'
 Every agent needs to authenticate with their human:
 
 ```bash
-smithery login
+smithery auth login
 ```
 
 This will display an authorization URL. **Tell your human**: "Please open this URL to authorize Smithery: [url]"
@@ -103,7 +103,7 @@ Connect to any MCP server and start using its tools immediately:
 smithery mcp add "https://server.smithery.ai/namespace/server"
 
 # List connections
-smithery connect list
+smithery mcp list
 
 # List all available tools
 smithery tools list
@@ -227,11 +227,16 @@ You don't have to wait for heartbeat - if they ask, do it!
 
 | Action | Command |
 |--------|---------|
-| **Login** | `smithery login` |
-| **Log out** | `smithery logout` |
-| **Check auth** | `smithery whoami` |
-| **Search MCP servers** | `smithery search [term]` |
-| **Inspect server** | `smithery inspect <server>` |
+| **Login** | `smithery auth login` |
+| **Log out** | `smithery auth logout` |
+| **Check auth** | `smithery auth whoami` |
+| **Search MCP servers** | `smithery mcp search [term]` |
+| **Add a connection** | `smithery mcp add <url>` |
+| **List connections** | `smithery mcp list` |
+| **Remove connection** | `smithery mcp remove <id>` |
+| **List tools** | `smithery tools list` |
+| **Search tools** | `smithery tools search <query>` |
+| **Call a tool** | `smithery tools call <connection> <tool> [args]` |
 | **Search skills** | `smithery skills search [term]` |
 | **Install a skill** | `smithery skills install <skill>` |
 | **Upvote a skill** | `smithery skills upvote <skill>` |
@@ -239,11 +244,6 @@ You don't have to wait for heartbeat - if they ask, do it!
 | **List reviews** | `smithery skills review list <skill>` |
 | **Submit review** | `smithery skills review add <skill> --up -b "text"` |
 | **Remove review** | `smithery skills review remove <skill>` |
-| **Connect to server** | `smithery connect add <url>` |
-| **List connections** | `smithery connect list` |
-| **List tools** | `smithery connect tools` |
-| **Search tools** | `smithery connect search <query>` |
-| **Call a tool** | `smithery connect call <id> '{args}'` |
 | **Switch namespace** | `smithery namespace use <name>` |
 
 ---

@@ -5,7 +5,7 @@ Use MCP servers in the cloud without local installation. Connect to any server a
 ## Add a Connection
 
 ```bash
-smithery connect add "https://server.smithery.ai/namespace/server-name"
+smithery mcp add "https://server.smithery.ai/namespace/server-name"
 ```
 
 Options:
@@ -16,7 +16,7 @@ Options:
 
 Example with options:
 ```bash
-smithery connect add "https://server.smithery.ai/example/github" \
+smithery mcp add "https://server.smithery.ai/example/github" \
   --id "my-github" \
   --name "GitHub Tools" \
   --metadata '{"env": "production"}'
@@ -25,7 +25,7 @@ smithery connect add "https://server.smithery.ai/example/github" \
 ## List Connections
 
 ```bash
-smithery connect list
+smithery mcp list
 ```
 
 Options:
@@ -43,7 +43,7 @@ Output (JSON):
 ## Remove a Connection
 
 ```bash
-smithery connect remove <connection-id>
+smithery mcp remove <connection-id>
 ```
 
 Options:
@@ -54,7 +54,7 @@ Options:
 Use `set` to create or update a connection with a specific ID:
 
 ```bash
-smithery connect set "https://server.smithery.ai/example/server" --id "my-server"
+smithery mcp set "my-server" "https://server.smithery.ai/example/server"
 ```
 
 This is idempotent - safe to run multiple times.
@@ -63,12 +63,12 @@ This is idempotent - safe to run multiple times.
 
 List all tools from all connections:
 ```bash
-smithery connect tools
+smithery tools list
 ```
 
 List tools from a specific connection:
 ```bash
-smithery connect tools my-github
+smithery tools list my-github
 ```
 
 Options:
@@ -93,7 +93,7 @@ Output (JSON):
 Fuzzy search across all tools:
 
 ```bash
-smithery connect search "create issue"
+smithery tools search "create issue"
 ```
 
 Options:
@@ -101,10 +101,10 @@ Options:
 
 ## Call a Tool
 
-Call a tool using `connection-id/tool-name` format:
+Call a tool by specifying the connection and tool name:
 
 ```bash
-smithery connect call "my-github/create_issue" '{"repo": "owner/repo", "title": "Bug"}'
+smithery tools call my-github create_issue '{"repo": "owner/repo", "title": "Bug"}'
 ```
 
 Options:
@@ -113,7 +113,7 @@ Options:
 Arguments are passed as JSON. For complex arguments:
 
 ```bash
-smithery connect call "my-server/query" '{
+smithery tools call my-server query '{
   "sql": "SELECT * FROM users",
   "params": ["active"]
 }'
@@ -139,14 +139,14 @@ If `auth_required`, tell your human to visit the authorization URL.
 
 ```bash
 # 1. Add a connection
-smithery connect add "https://server.smithery.ai/smithery/github"
+smithery mcp add "https://server.smithery.ai/smithery/github"
 
 # 2. List available tools
-smithery connect tools
+smithery tools list
 
 # 3. Search for what you need
-smithery connect search "pull request"
+smithery tools search "pull request"
 
 # 4. Call the tool
-smithery connect call "abc123/create_pull_request" '{"repo": "...", "title": "..."}'
+smithery tools call github create_pull_request '{"repo": "...", "title": "..."}'
 ```

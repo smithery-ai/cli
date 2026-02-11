@@ -5,7 +5,7 @@ Smithery uses OAuth for authentication. Your human must confirm login via browse
 ## Login Flow
 
 ```bash
-smithery login
+smithery auth login
 ```
 
 This will:
@@ -23,7 +23,7 @@ The CLI will wait up to 5 minutes for confirmation.
 To remove all local credentials:
 
 ```bash
-smithery logout
+smithery auth logout
 ```
 
 This removes:
@@ -34,13 +34,13 @@ This removes:
 ## Check Auth Status
 
 ```bash
-smithery whoami
+smithery auth whoami
 ```
 
 Shows masked API key. Use `--full` to show complete key:
 
 ```bash
-smithery whoami --full
+smithery auth whoami --full
 ```
 
 Output: `SMITHERY_API_KEY=sk_...`
@@ -50,7 +50,7 @@ Output: `SMITHERY_API_KEY=sk_...`
 Start a local server that serves your API key:
 
 ```bash
-smithery whoami --server
+smithery auth whoami --server
 ```
 
 This starts a server on `http://localhost:4260`. Fetch the key:
@@ -72,7 +72,7 @@ export SMITHERY_BEARER_AUTH="sk_your_api_key"
 
 Priority order:
 1. `SMITHERY_BEARER_AUTH` environment variable
-2. Stored API key from `smithery login`
+2. Stored API key from `smithery auth login`
 
 ## Storage Location
 
@@ -85,8 +85,8 @@ Override with `SMITHERY_CONFIG_PATH` environment variable.
 
 ## Troubleshooting
 
-**"No API key found"**: Run `smithery login` and have your human confirm.
+**"No API key found"**: Run `smithery auth login` and have your human confirm.
 
-**Login times out**: The 5-minute window expired. Run `smithery login` again.
+**Login times out**: The 5-minute window expired. Run `smithery auth login` again.
 
-**Invalid API key**: Your key may have expired. Run `smithery login` to get a fresh one.
+**Invalid API key**: Your key may have expired. Run `smithery auth login` to get a fresh one.

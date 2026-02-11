@@ -32,60 +32,47 @@ Output:
 }
 ```
 
-## Install Locally
+## Connect a Server
 
-Install a server for use with a specific client:
+Add an MCP server connection:
 
 ```bash
-smithery install namespace/server-name
+smithery mcp add "https://server.smithery.ai/namespace/server-name"
 ```
 
 Options:
-- `-c, --client <name>` - Target client (claude, cursor, windsurf, etc.)
-- `--config <json>` - Configuration as JSON (skips prompts)
+- `--id <id>` - Custom connection ID
+- `--name <name>` - Human-readable name
+- `--namespace <ns>` - Target namespace
 
-Example with config:
-```bash
-smithery install smithery/github -c claude --config '{"token": "ghp_..."}'
-```
-
-Supported clients:
-- `claude` - Claude Desktop
-- `cursor` - Cursor IDE
-- `windsurf` - Windsurf IDE
-- `cline` - Cline extension
-- `witsy` - Witsy
-- `enconvo` - Enconvo
-- `claudecode` - Claude Code
-
-## List Installed Servers
+## List Connections
 
 ```bash
 smithery mcp list
 ```
 
 Options:
-- `-c, --client <name>` - List for specific client
+- `--namespace <ns>` - List from specific namespace
 
-## Uninstall a Server
+## Remove a Connection
 
 ```bash
-smithery uninstall server-name
+smithery mcp remove <connection-id>
+```
+
+## Install Locally (deprecated)
+
+Install a server for use with a specific client:
+
+```bash
+smithery mcp install namespace/server-name
 ```
 
 Options:
-- `-c, --client <name>` - Target client
+- `-c, --client <name>` - Target client (claude, cursor, windsurf, etc.)
+- `--config <json>` - Configuration as JSON (skips prompts)
 
-## Run a Server Locally
-
-Run a server without installing:
-
-```bash
-smithery mcp run namespace/server-name
-```
-
-Options:
-- `--config <json>` - Configuration as JSON
+Note: `install` is deprecated. Use `smithery mcp add <url>` to add connections instead.
 
 ## Example Workflow
 
@@ -93,9 +80,9 @@ Options:
 # 1. Search for what you need
 smithery mcp search "slack"
 
-# 2. Install for your client
-smithery install smithery/slack -c claude
+# 2. Connect to the server
+smithery mcp add "https://server.smithery.ai/smithery/slack"
 
-# 3. Verify installation
-smithery mcp list -c claude
+# 3. Verify connection
+smithery mcp list
 ```
