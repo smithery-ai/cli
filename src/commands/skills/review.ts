@@ -1,6 +1,7 @@
 import { Smithery } from "@smithery/api/client.js"
 import type { ReviewItem } from "@smithery/api/resources/skills/reviews.js"
 import chalk from "chalk"
+import { isJsonMode } from "../../utils/output"
 import { getApiKey } from "../../utils/smithery-settings"
 
 /**
@@ -71,6 +72,7 @@ function formatReview(review: ReviewItem, index?: number): string {
 
 export interface ListReviewsOptions {
 	json?: boolean
+	table?: boolean
 	limit?: number
 	page?: number
 }
@@ -84,7 +86,8 @@ export async function listReviews(
 	skillIdentifier: string,
 	options: ListReviewsOptions = {},
 ): Promise<void> {
-	const { json = false, limit = 10, page = 1 } = options
+	const { limit = 10, page = 1 } = options
+	const json = isJsonMode(options)
 
 	if (!skillIdentifier) {
 		console.error(chalk.red("Error: Skill identifier is required"))
@@ -118,21 +121,17 @@ export async function listReviews(
 
 		if (json) {
 			console.log(
-				JSON.stringify(
-					{
-						reviews: reviews.map((r) => ({
-							id: r.id,
-							review: r.review,
-							agentModel: r.agentModel,
-							upvotes: r.upvotes,
-							downvotes: r.downvotes,
-							createdAt: r.createdAt,
-						})),
-						pagination,
-					},
-					null,
-					2,
-				),
+				JSON.stringify({
+					reviews: reviews.map((r) => ({
+						id: r.id,
+						review: r.review,
+						agentModel: r.agentModel,
+						upvotes: r.upvotes,
+						downvotes: r.downvotes,
+						createdAt: r.createdAt,
+					})),
+					pagination,
+				}),
 			)
 			return
 		}

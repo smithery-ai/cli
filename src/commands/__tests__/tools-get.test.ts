@@ -29,10 +29,14 @@ vi.mock("../connect/api", () => ({
 	},
 }))
 
-vi.mock("../../utils/output", () => ({
-	outputDetail: mockOutputDetail,
-	outputJson: mockOutputJson,
-}))
+vi.mock("../../utils/output", async (importOriginal) => {
+	const actual = await importOriginal<typeof import("../../utils/output")>()
+	return {
+		...actual,
+		outputDetail: mockOutputDetail,
+		outputJson: mockOutputJson,
+	}
+})
 
 import { getTool } from "../connect/tool"
 
@@ -60,14 +64,15 @@ describe("tools get command", () => {
 			},
 		])
 
-		await getTool("posthog/add-insight-to-dashboard", { json: false })
+		await getTool("posthog", "add-insight-to-dashboard", { json: false })
 
 		expect(mockCreateSession).toHaveBeenCalledWith(undefined)
 		expect(mockOutputDetail).toHaveBeenCalledWith(
 			expect.objectContaining({
 				json: false,
 				data: expect.objectContaining({
-					id: "posthog/add-insight-to-dashboard",
+					name: "add-insight-to-dashboard",
+					connection: "posthog",
 					description: longDescription,
 					inputSchema: { type: "object" },
 					outputSchema: { type: "object" },
@@ -75,19 +80,6 @@ describe("tools get command", () => {
 			}),
 		)
 		expect(mockOutputJson).not.toHaveBeenCalled()
-	})
-
-	test("returns error for invalid tool-id format", async () => {
-		await expect(getTool("posthog", { json: true })).rejects.toThrow(
-			"process.exit() was called",
-		)
-
-		expect(mockOutputJson).toHaveBeenCalledWith(
-			expect.objectContaining({
-				tool: null,
-				error: expect.stringContaining('Expected "connection/tool-name"'),
-			}),
-		)
 	})
 
 	test("returns error when tool is missing from the specified connection", async () => {
@@ -106,7 +98,7 @@ describe("tools get command", () => {
 		])
 
 		await expect(
-			getTool("posthog/add-insight-to-dashboard", { json: true }),
+			getTool("posthog", "add-insight-to-dashboard", { json: true }),
 		).rejects.toThrow("process.exit() was called")
 
 		expect(mockOutputJson).toHaveBeenCalledWith(
@@ -134,13 +126,13 @@ describe("tools get command", () => {
 			},
 		])
 
-		await getTool("posthog/insights/add-to-dashboard", { json: false })
+		await getTool("posthog", "insights/add-to-dashboard", { json: false })
 
 		expect(mockOutputDetail).toHaveBeenCalledWith(
 			expect.objectContaining({
 				data: expect.objectContaining({
-					id: "posthog/insights/add-to-dashboard",
 					name: "insights/add-to-dashboard",
+					connection: "posthog",
 				}),
 			}),
 		)

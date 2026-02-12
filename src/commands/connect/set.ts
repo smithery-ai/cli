@@ -1,5 +1,5 @@
 import chalk from "chalk"
-import { outputDetail } from "../../utils/output"
+import { isJsonMode, outputDetail } from "../../utils/output"
 import { ConnectSession } from "./api"
 import { formatConnectionOutput } from "./format-connection"
 import { normalizeMcpUrl } from "./normalize-url"
@@ -14,9 +14,10 @@ export async function setServer(
 		headers?: string
 		namespace?: string
 		json?: boolean
+		table?: boolean
 	},
 ): Promise<void> {
-	const isJson = options.json ?? false
+	const isJson = isJsonMode(options)
 
 	try {
 		const parsedMetadata = parseJsonObject(options.metadata, "Metadata")

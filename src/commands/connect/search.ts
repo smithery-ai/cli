@@ -1,12 +1,12 @@
 import FlexSearch from "flexsearch"
-import { outputTable, truncate } from "../../utils/output"
+import { isJsonMode, outputTable, truncate } from "../../utils/output"
 import { ConnectSession, type ToolInfo } from "./api"
 
 export async function searchTools(
 	query: string,
-	options: { namespace?: string; json?: boolean },
+	options: { namespace?: string; json?: boolean; table?: boolean },
 ): Promise<void> {
-	const isJson = options.json ?? false
+	const isJson = isJsonMode(options)
 	const session = await ConnectSession.create(options.namespace)
 	const { connections } = await session.listConnections()
 
@@ -61,9 +61,8 @@ export async function searchTools(
 	const data = matchingIndices.map((idx) => {
 		const tool = allTools[idx]
 		return {
-			id: `${tool.connectionId}/${tool.name}`,
 			name: tool.name,
-			connection: tool.connectionName,
+			connection: tool.connectionId,
 			description: tool.description ?? "",
 			inputSchema: tool.inputSchema,
 		}
@@ -72,7 +71,6 @@ export async function searchTools(
 	outputTable({
 		data,
 		columns: [
-			{ key: "id", header: "ID" },
 			{ key: "name", header: "TOOL" },
 			{ key: "connection", header: "CONNECTION" },
 			{

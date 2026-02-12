@@ -1,10 +1,10 @@
 import chalk from "chalk"
-import { outputJson } from "../../utils/output"
+import { isJsonMode, outputJson } from "../../utils/output"
 import { ConnectSession } from "./api"
 
 export async function removeServer(
 	serverIds: string[],
-	options: { namespace?: string; json?: boolean },
+	options: { namespace?: string; json?: boolean; table?: boolean },
 ): Promise<void> {
 	try {
 		const session = await ConnectSession.create(options.namespace)
@@ -33,7 +33,7 @@ export async function removeServer(
 
 		const result = { removed, failed: failed.length > 0 ? failed : undefined }
 
-		if (options.json) {
+		if (isJsonMode(options)) {
 			outputJson(result)
 		} else {
 			for (const id of removed) {

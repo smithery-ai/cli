@@ -2,11 +2,12 @@ import { Smithery } from "@smithery/api/client.js"
 import type { SkillListResponse } from "@smithery/api/resources/skills"
 import chalk from "chalk"
 import { SKILL_AGENTS } from "../../config/agents.js"
-import { outputTable, truncate } from "../../utils/output"
+import { isJsonMode, outputTable, truncate } from "../../utils/output"
 import { installSkill } from "./install.js"
 
 export interface SearchOptions {
 	json?: boolean
+	table?: boolean
 	interactive?: boolean
 	limit?: number
 	page?: number
@@ -67,13 +68,8 @@ export async function searchSkills(
 	initialQuery?: string,
 	options: SearchOptions = {},
 ): Promise<SkillListResponse | null> {
-	const {
-		json = false,
-		interactive = false,
-		limit = 10,
-		page = 1,
-		namespace,
-	} = options
+	const { interactive = false, limit = 10, page = 1, namespace } = options
+	const json = isJsonMode(options)
 
 	const searchTerm = interactive
 		? await getSearchTerm(initialQuery)

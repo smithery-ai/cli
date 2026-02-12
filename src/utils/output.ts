@@ -1,5 +1,22 @@
 import chalk from "chalk"
 
+// ─── Output mode detection ──────────────────────────────────────────────────
+
+/**
+ * Resolve whether to use JSON output mode.
+ * - --json flag → always JSON
+ * - --table flag → always table
+ * - Neither → auto-detect: JSON when stdout is piped (non-TTY), table when interactive
+ */
+export function isJsonMode(options: {
+	json?: boolean
+	table?: boolean
+}): boolean {
+	if (options.table) return false
+	if (options.json !== undefined) return options.json
+	return !process.stdout.isTTY
+}
+
 // ─── Table output ───────────────────────────────────────────────────────────
 
 interface OutputColumn {
@@ -18,7 +35,7 @@ export interface PaginationInfo {
 }
 
 /**
- * Render data as a compact table (default) or JSON (--json).
+ * Render data as a compact table (default in TTY) or compact JSON (default when piped).
  * Hints are included in both modes.
  */
 export function outputTable(options: {
@@ -33,11 +50,14 @@ export function outputTable(options: {
 
 	if (json) {
 		const payload = jsonData ?? data
-		if (tip) {
-			console.log(JSON.stringify({ ...wrapArray(payload), hint: tip }, null, 2))
-		} else {
-			console.log(JSON.stringify(payload, null, 2))
-		}
+		const paginationHint = pagination ? formatPagination(pagination) : null
+		console.log(
+			JSON.stringify({
+				...wrapArray(payload),
+				...(tip ? { hint: tip } : {}),
+				...(paginationHint ? { pagination: paginationHint } : {}),
+			}),
+		)
 		return
 	}
 
@@ -85,7 +105,7 @@ export function outputTable(options: {
 // ─── Detail output (key-value for single records) ───────────────────────────
 
 /**
- * Render a single record as key-value pairs (default) or JSON (--json).
+ * Render a single record as key-value pairs (default in TTY) or compact JSON (default when piped).
  * Hints are included in both modes.
  */
 export function outputDetail(options: {
@@ -97,9 +117,9 @@ export function outputDetail(options: {
 
 	if (json) {
 		if (tip) {
-			console.log(JSON.stringify({ ...data, hint: tip }, null, 2))
+			console.log(JSON.stringify({ ...data, hint: tip }))
 		} else {
-			console.log(JSON.stringify(data, null, 2))
+			console.log(JSON.stringify(data))
 		}
 		return
 	}
@@ -123,10 +143,10 @@ export function outputDetail(options: {
 // ─── Raw JSON output ────────────────────────────────────────────────────────
 
 /**
- * Output raw JSON. Used for inherently structured responses (e.g. tools call).
+ * Output compact JSON. Used for inherently structured responses (e.g. tools call).
  */
 export function outputJson(data: unknown): void {
-	console.log(JSON.stringify(data, null, 2))
+	console.log(JSON.stringify(data))
 }
 
 // ─── Helpers ────────────────────────────────────────────────────────────────

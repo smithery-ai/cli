@@ -1,4 +1,4 @@
-import { outputTable } from "../../utils/output"
+import { isJsonMode, outputTable } from "../../utils/output"
 import { ConnectSession } from "./api"
 
 export async function listServers(options: {
@@ -6,6 +6,7 @@ export async function listServers(options: {
 	limit?: string
 	cursor?: string
 	json?: boolean
+	table?: boolean
 }): Promise<void> {
 	const session = await ConnectSession.create(options.namespace)
 	const limit = options.limit ? Number.parseInt(options.limit, 10) : undefined
@@ -29,7 +30,7 @@ export async function listServers(options: {
 			{ key: "mcpUrl", header: "URL" },
 			{ key: "status", header: "STATUS" },
 		],
-		json: options.json ?? false,
+		json: isJsonMode(options),
 		jsonData: {
 			servers: data,
 			...(nextCursor ? { nextCursor } : {}),

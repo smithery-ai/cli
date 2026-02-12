@@ -1,35 +1,12 @@
 import { outputJson } from "../../utils/output"
 import { ConnectSession } from "./api"
-import { formatToolOutput } from "./output"
 
 export async function callTool(
-	toolId: string,
+	connection: string,
+	tool: string,
 	args: string | undefined,
 	options: { namespace?: string },
 ): Promise<void> {
-	// Parse tool ID (format: "connection/tool-name")
-	const slashIndex = toolId.indexOf("/")
-	if (slashIndex === -1) {
-		outputJson({
-			result: null,
-			isError: true,
-			error: `Invalid tool ID format. Expected "connection/tool-name", got "${toolId}"`,
-		})
-		process.exit(1)
-	}
-
-	const connectionId = toolId.slice(0, slashIndex)
-	const toolName = toolId.slice(slashIndex + 1)
-
-	if (!connectionId || !toolName) {
-		outputJson({
-			result: null,
-			isError: true,
-			error: `Invalid tool ID format. Expected "connection/tool-name", got "${toolId}"`,
-		})
-		process.exit(1)
-	}
-
 	// Parse args JSON
 	let parsedArgs: Record<string, unknown> = {}
 	if (args) {
@@ -47,11 +24,8 @@ export async function callTool(
 
 	try {
 		const session = await ConnectSession.create(options.namespace)
-		const result = await session.callTool(connectionId, toolName, parsedArgs)
-
-		// Format output with three-tier strategy
-		const output = formatToolOutput(result, false)
-		outputJson(output)
+		const result = await session.callTool(connection, tool, parsedArgs)
+		outputJson(result)
 	} catch (e) {
 		outputJson({
 			result: null,

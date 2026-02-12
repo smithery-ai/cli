@@ -25,6 +25,12 @@ program
 	)
 	.option("--verbose", "Show detailed logs")
 	.option("--debug", "Show debug logs")
+	.addHelpText(
+		"after",
+		`
+Learn how to use this CLI:
+  smithery skills view smithery-ai/cli`,
+	)
 	.hook("preAction", (thisCommand, _actionCommand) => {
 		const opts = thisCommand.opts()
 		if (opts.verbose) {
@@ -48,10 +54,11 @@ async function handleSearch(term: string | undefined, options: any) {
 	}
 
 	const { searchServers } = await import("./lib/registry")
-	const { outputTable, truncate } = await import("./utils/output")
+	const { isJsonMode, outputTable, truncate } = await import("./utils/output")
 	const searchTerm = term ?? ""
+	const json = isJsonMode(options)
 
-	if (options.json && !searchTerm) {
+	if (json && !searchTerm) {
 		console.error(chalk.red("Error: Search term is required when using --json"))
 		process.exit(1)
 	}
@@ -62,12 +69,12 @@ async function handleSearch(term: string | undefined, options: any) {
 		page: parseInt(options.page, 10),
 	})
 
-	if (results.length === 0 && !options.json) {
+	if (results.length === 0 && !json) {
 		console.log(chalk.yellow("No servers found."))
 		return
 	}
 
-	if (!term && !options.json) {
+	if (!term && !json) {
 		console.log(chalk.bold("Most popular servers:\n"))
 	}
 
@@ -94,7 +101,7 @@ async function handleSearch(term: string | undefined, options: any) {
 			},
 			{ key: "useCount", header: "USES", format: (v) => String(v ?? 0) },
 		],
-		json: options.json,
+		json,
 		jsonData: { servers: data, page, hasMore },
 		pagination: { page, hasMore },
 		tip: "Use smithery mcp add <connectionUrl> to connect a server.",
@@ -339,6 +346,7 @@ async function handleWhoami(options: any) {
 function withSearchOptions(cmd: InstanceType<typeof Command>) {
 	return cmd
 		.option("--json", "Output results as JSON")
+		.option("--table", "Output as human-readable table")
 		.option("-i, --interactive", "Interactive search mode")
 		.option("--verified", "Only show verified servers")
 		.option("--limit <number>", "Max results per page", "10")
@@ -434,14 +442,22 @@ mcpCmd.commandsGroup("Discovery:")
 
 withSearchOptions(
 	mcpCmd.command("search [term]").description("Search the Smithery registry"),
-).action(handleSearch)
+)
+	.addHelpText(
+		"after",
+		`
+Examples:
+  smithery mcp search slack
+  smithery mcp search "web search" --json`,
+	)
+	.action(handleSearch)
 
 // ─── Connections ────────────────────────────────────────────────────────────
 
 mcpCmd.commandsGroup("Connections:")
 
 mcpCmd
-	.command("add <mcp-url>")
+	.command("add <server>")
 	.description("Add an MCP server connection")
 	.option(
 		"--id <id>",
@@ -455,10 +471,32 @@ mcpCmd
 		"--force",
 		"Create a new connection even if one already exists for this URL",
 	)
+	.option("--local", "Install to a local AI client instead of remote")
+	.option(
+		"-c, --client <name>",
+		`AI client for local install (${VALID_CLIENTS.join(", ")})`,
+	)
+	.option(
+		"--config <json>",
+		"Configuration data as JSON for local install (skips prompts)",
+	)
 	.option("--json", "Output as JSON")
-	.action(async (mcpUrl, options) => {
-		const { addServer } = await import("./commands/connect")
-		await addServer(mcpUrl, options)
+	.option("--table", "Output as human-readable table")
+	.addHelpText(
+		"after",
+		`
+Examples:
+  smithery mcp add https://server.smithery.ai/exa
+  smithery mcp add https://server.smithery.ai/exa --id exa --name "Exa Search"
+  smithery mcp add @anthropic/exa --local --client claude`,
+	)
+	.action(async (server, options) => {
+		if (options.local) {
+			await handleInstall(server, options)
+		} else {
+			const { addServer } = await import("./commands/connect")
+			await addServer(server, options)
+		}
 	})
 
 mcpCmd
@@ -468,6 +506,14 @@ mcpCmd
 	.option("--limit <n>", "Maximum number of results (default: all)")
 	.option("--cursor <cursor>", "Pagination cursor from previous response")
 	.option("--json", "Output as JSON")
+	.option("--table", "Output as human-readable table")
+	.addHelpText(
+		"after",
+		`
+Examples:
+  smithery mcp list
+  smithery mcp list --json`,
+	)
 	.action(async (options) => {
 		const { listServers } = await import("./commands/connect")
 		await listServers(options)
@@ -478,6 +524,7 @@ mcpCmd
 	.description("Get connection details")
 	.option("--namespace <ns>", "Namespace for the connection")
 	.option("--json", "Output as JSON")
+	.option("--table", "Output as human-readable table")
 	.action(async (id, options) => {
 		const { getServer } = await import("./commands/connect")
 		await getServer(id, options)
@@ -487,10 +534,20 @@ mcpCmd
 	.command("remove <ids...>")
 	.description("Remove connections")
 	.option("--namespace <ns>", "Namespace for the server")
+	.option("--local", "Uninstall from a local AI client instead of remote")
+	.option(
+		"-c, --client <name>",
+		`AI client for local uninstall (${VALID_CLIENTS.join(", ")})`,
+	)
 	.option("--json", "Output as JSON")
+	.option("--table", "Output as human-readable table")
 	.action(async (ids, options) => {
-		const { removeServer } = await import("./commands/connect")
-		await removeServer(ids, options)
+		if (options.local) {
+			await handleUninstall(ids[0], options)
+		} else {
+			const { removeServer } = await import("./commands/connect")
+			await removeServer(ids, options)
+		}
 	})
 
 mcpCmd
@@ -501,18 +558,15 @@ mcpCmd
 	.option("--headers <json>", "Custom headers as JSON object (stored securely)")
 	.option("--namespace <ns>", "Namespace for the server")
 	.option("--json", "Output as JSON")
+	.option("--table", "Output as human-readable table")
 	.action(async (id, mcpUrl, options) => {
 		const { setServer } = await import("./commands/connect")
 		await setServer(id, mcpUrl, options)
 	})
 
-// ─── Installers (deprecated) ────────────────────────────────────────────────
-
-mcpCmd.commandsGroup("Installers:")
-
+// Hidden backward-compat aliases for deprecated install/uninstall
 mcpCmd
-	.command("install [server]")
-	.description("Install a server to an AI client (deprecated)")
+	.command("install [server]", { hidden: true })
 	.option(
 		"-c, --client <name>",
 		`Specify the AI client (${VALID_CLIENTS.join(", ")})`,
@@ -521,15 +575,28 @@ mcpCmd
 		"--config <json>",
 		"Provide configuration data as JSON (skips prompts)",
 	)
+	.hook("preAction", () => {
+		console.warn(
+			chalk.yellow(
+				"Note: 'mcp install' is deprecated. Use 'smithery mcp add <server> --local' instead.",
+			),
+		)
+	})
 	.action(handleInstall)
 
 mcpCmd
-	.command("uninstall [server]")
-	.description("Uninstall a server from a client (deprecated)")
+	.command("uninstall [server]", { hidden: true })
 	.option(
 		"-c, --client <name>",
 		`Specify the AI client (${VALID_CLIENTS.join(", ")})`,
 	)
+	.hook("preAction", () => {
+		console.warn(
+			chalk.yellow(
+				"Note: 'mcp uninstall' is deprecated. Use 'smithery mcp remove <server> --local' instead.",
+			),
+		)
+	})
 	.action(handleUninstall)
 
 // ─── Development (hidden) ───────────────────────────────────────────────────
@@ -567,6 +634,15 @@ toolsCmd
 	.option("--limit <n>", "Maximum number of tools to return (default: 10)")
 	.option("--page <n>", "Page number (default: 1)")
 	.option("--json", "Output as JSON")
+	.option("--table", "Output as human-readable table")
+	.addHelpText(
+		"after",
+		`
+Examples:
+  smithery tools list                    List tools from all connections
+  smithery tools list myserver           List tools for a specific connection
+  smithery tools list myserver --json    Output as JSON`,
+	)
 	.action(async (connection, options) => {
 		const { listTools } = await import("./commands/connect")
 		await listTools(connection, options)
@@ -577,29 +653,43 @@ toolsCmd
 	.description("Search tools by intent")
 	.option("--namespace <ns>", "Namespace to search in")
 	.option("--json", "Output as JSON")
+	.option("--table", "Output as human-readable table")
 	.action(async (query, options) => {
 		const { searchTools } = await import("./commands/connect")
 		await searchTools(query, options)
 	})
 
 toolsCmd
-	.command("get <tool-id>")
+	.command("get <connection> <tool>")
 	.description("Get details for a specific tool")
 	.option("--namespace <ns>", "Namespace for the tool")
 	.option("--json", "Output as JSON")
-	.action(async (toolId, options) => {
+	.option("--table", "Output as human-readable table")
+	.addHelpText(
+		"after",
+		`
+Examples:
+  smithery tools get myserver search     Show tool details and input schema`,
+	)
+	.action(async (connection, tool, options) => {
 		const { getTool } = await import("./commands/connect")
-		await getTool(toolId, options)
+		await getTool(connection, tool, options)
 	})
 
 toolsCmd
 	.command("call <connection> <tool> [args]")
 	.description("Call a tool")
 	.option("--namespace <ns>", "Namespace for the tool")
+	.addHelpText(
+		"after",
+		`
+Examples:
+  smithery tools call myserver search '{"query":"hello"}'
+  smithery tools call exa web_search_exa '{"query":"AI tools"}' | jq '.results'`,
+	)
 	.action(async (connection, tool, args, options) => {
 		const { callTool } = await import("./commands/connect")
-		const toolId = `${connection}/${tool}`
-		await callTool(toolId, args, options)
+		await callTool(connection, tool, args, options)
 	})
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -629,6 +719,7 @@ skills
 	.command("search <query>")
 	.description("Search for skills in the Smithery registry")
 	.option("--json", "Output results as JSON")
+	.option("--table", "Output as human-readable table")
 	.option("-i, --interactive", "Interactive search mode")
 	.option("--limit <number>", "Maximum number of results to show", "10")
 	.option("--page <number>", "Page number", "1")
@@ -637,6 +728,7 @@ skills
 		const { searchSkills } = await import("./commands/skills")
 		await searchSkills(query, {
 			json: options.json,
+			table: options.table,
 			interactive: options.interactive,
 			limit: Number.parseInt(options.limit, 10),
 			page: Number.parseInt(options.page, 10),
@@ -695,12 +787,14 @@ skillsReview
 	.command("list <skill>")
 	.description("List reviews for a skill")
 	.option("--json", "Output as JSON")
+	.option("--table", "Output as human-readable table")
 	.option("--limit <number>", "Number of reviews to show", "10")
 	.option("--page <number>", "Page number", "1")
 	.action(async (skill, options) => {
 		const { listReviews } = await import("./commands/skills")
 		await listReviews(skill, {
 			json: options.json,
+			table: options.table,
 			limit: Number.parseInt(options.limit, 10),
 			page: Number.parseInt(options.page, 10),
 		})
@@ -800,6 +894,7 @@ auth
 	.description("Mint a restricted service token")
 	.option("--policy <json>", "Policy constraints as JSON array")
 	.option("--json", "Output as JSON")
+	.option("--table", "Output as human-readable table")
 	.action(async (options) => {
 		const { createToken } = await import("./commands/auth/token")
 		await createToken(options)
@@ -839,6 +934,7 @@ namespace
 	.command("list")
 	.description("List available namespaces")
 	.option("--json", "Output as JSON")
+	.option("--table", "Output as human-readable table")
 	.action(async (options) => {
 		const { listNamespaces } = await import("./commands/namespace")
 		await listNamespaces(options)
@@ -960,12 +1056,12 @@ connect
 	})
 
 connect
-	.command("call <tool-id> [args]")
-	.description("Call a tool (format: server/tool-name)")
+	.command("call <connection> <tool> [args]")
+	.description("Call a tool")
 	.option("--namespace <ns>", "Namespace for the tool")
-	.action(async (toolId, args, options) => {
+	.action(async (connection, tool, args, options) => {
 		const { callTool } = await import("./commands/connect")
-		await callTool(toolId, args, options)
+		await callTool(connection, tool, args, options)
 	})
 
 // ─── install / uninstall (hidden + deprecation notice) ──────────────────────
@@ -983,7 +1079,7 @@ program
 	.hook("preAction", () => {
 		console.warn(
 			chalk.yellow(
-				"Note: 'install' is deprecated. Use 'smithery mcp add <url>' to add connections.",
+				"Note: 'install' is deprecated. Use 'smithery mcp add <server> --local' instead.",
 			),
 		)
 	})
@@ -998,7 +1094,7 @@ program
 	.hook("preAction", () => {
 		console.warn(
 			chalk.yellow(
-				"Note: 'uninstall' is deprecated. Use 'smithery mcp remove <id>' to remove connections.",
+				"Note: 'uninstall' is deprecated. Use 'smithery mcp remove <server> --local' instead.",
 			),
 		)
 	})
@@ -1089,27 +1185,12 @@ program.hook("preAction", async (_thisCommand, actionCommand) => {
 })
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// Welcome message & entry point
+// Entry point
 // ═══════════════════════════════════════════════════════════════════════════════
 
-// Show welcome message if no command provided
+// Show help when no command is provided
 if (process.argv.length <= 2) {
-	console.log(
-		`\n${chalk.bold("Smithery")} ${chalk.dim(`v${__SMITHERY_VERSION__}`)} — Discover and connect to 100K+ MCP tools and skills\n`,
-	)
-	const featured = ["mcp", "tools", "skills"]
-	const cmds = program.commands.filter((cmd) => featured.includes(cmd.name()))
-	const nameWidth = Math.max(...cmds.map((cmd) => cmd.name().length))
-	console.log("Get started:")
-	for (const cmd of cmds) {
-		const name = cmd.name().padEnd(nameWidth + 2)
-		console.log(`  smithery ${name} ${cmd.description()}`)
-	}
-	console.log(`  smithery ${"help".padEnd(nameWidth + 2)} Show all commands`)
-	console.log()
-	console.log("Run this command to learn how to use this CLI:")
-	console.log(`  smithery skills view smithery-ai/cli\n`)
-	process.exit(0)
+	program.help()
 }
 
 // Parse arguments and run

@@ -1,13 +1,14 @@
 import { Smithery } from "@smithery/api/client.js"
 import chalk from "chalk"
-import { outputDetail } from "../../utils/output"
+import { isJsonMode, outputDetail } from "../../utils/output"
 import { getApiKey } from "../../utils/smithery-settings"
 
 export async function createToken(options: {
 	policy?: string
 	json?: boolean
+	table?: boolean
 }) {
-	const isJson = options.json ?? false
+	const isJson = isJsonMode(options)
 	const apiKey = await getApiKey()
 	if (!apiKey) {
 		console.error(chalk.red("Not logged in. Run 'smithery auth login' first."))

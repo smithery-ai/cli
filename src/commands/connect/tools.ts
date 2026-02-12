@@ -1,5 +1,10 @@
 import chalk from "chalk"
-import { outputJson, outputTable, truncate } from "../../utils/output"
+import {
+	isJsonMode,
+	outputJson,
+	outputTable,
+	truncate,
+} from "../../utils/output"
 import type { Connection, ToolInfo } from "./api"
 import { ConnectSession } from "./api"
 
@@ -41,18 +46,16 @@ function formatConnectionStatus(
 
 function formatToolRow(t: ToolInfo) {
 	return {
-		id: `${t.connectionId}/${t.name}`,
 		name: t.name,
-		server: t.connectionName,
+		connection: t.connectionId,
 		description: t.description ?? "",
 		inputSchema: t.inputSchema,
 	}
 }
 
 const TOOL_COLUMNS = [
-	{ key: "id", header: "ID" },
 	{ key: "name", header: "TOOL" },
-	{ key: "server", header: "SERVER" },
+	{ key: "connection", header: "CONNECTION" },
 	{
 		key: "description",
 		header: "DESCRIPTION",
@@ -67,9 +70,10 @@ export async function listTools(
 		limit?: string
 		page?: string
 		json?: boolean
+		table?: boolean
 	},
 ): Promise<void> {
-	const isJson = options.json ?? false
+	const isJson = isJsonMode(options)
 	const session = await ConnectSession.create(options.namespace)
 	const limit = options.limit
 		? Number.parseInt(options.limit, 10)

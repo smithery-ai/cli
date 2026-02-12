@@ -1,5 +1,5 @@
 import chalk from "chalk"
-import { outputDetail } from "../../utils/output"
+import { isJsonMode, outputDetail } from "../../utils/output"
 import { ConnectSession } from "./api"
 import { formatConnectionOutput } from "./format-connection"
 
@@ -8,6 +8,7 @@ export async function getServer(
 	options: {
 		namespace?: string
 		json?: boolean
+		table?: boolean
 	},
 ): Promise<void> {
 	try {
@@ -16,7 +17,7 @@ export async function getServer(
 		const data = formatConnectionOutput(connection)
 		outputDetail({
 			data,
-			json: options.json ?? false,
+			json: isJsonMode(options),
 			tip: `Use smithery tools list ${id} to list tools for this connection.`,
 		})
 	} catch (error) {

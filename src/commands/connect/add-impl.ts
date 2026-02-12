@@ -1,5 +1,5 @@
 import chalk from "chalk"
-import { outputDetail } from "../../utils/output"
+import { isJsonMode, outputDetail } from "../../utils/output"
 import { ConnectSession } from "./api"
 import { formatConnectionOutput } from "./format-connection"
 import { normalizeMcpUrl } from "./normalize-url"
@@ -14,9 +14,10 @@ export async function addServer(
 		namespace?: string
 		force?: boolean
 		json?: boolean
+		table?: boolean
 	},
 ): Promise<void> {
-	const isJson = options.json ?? false
+	const isJson = isJsonMode(options)
 
 	try {
 		const parsedMetadata = parseJsonObject(options.metadata, "Metadata")
@@ -82,10 +83,11 @@ export async function addServer(
 		}
 
 		const output = formatConnectionOutput(connection)
+		const id = connection.connectionId
 		outputDetail({
 			data: output,
 			json: isJson,
-			tip: `Use smithery tools list ${connection.connectionId} to list tools.`,
+			tip: `Call tools: smithery tools call ${id} <tool> '<args>'\nList tools: smithery tools list ${id}`,
 		})
 	} catch (error) {
 		const errorMessage = error instanceof Error ? error.message : String(error)
