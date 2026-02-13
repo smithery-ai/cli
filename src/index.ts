@@ -479,11 +479,12 @@ function withPublishOptions(cmd: InstanceType<typeof Command>) {
 		)
 }
 
-/** Register a hidden backward-compat alias that copies options from a source command. */
+/** Register a hidden backward-compat alias that copies options and action from a source command. */
 function registerAlias(
 	parent: InstanceType<typeof Command>,
 	name: string,
 	sourceCmd: InstanceType<typeof Command>,
+	action: (...args: unknown[]) => void,
 	opts?: { deprecation?: string },
 ) {
 	const alias = parent.command(name, { hidden: true })
@@ -495,13 +496,7 @@ function registerAlias(
 			console.warn(chalk.yellow(opts.deprecation))
 		})
 	}
-	// Copy action handler via internal property (Commander stores it as _actionHandler)
-	const handler = (
-		sourceCmd as unknown as { _actionHandler: (...args: unknown[]) => void }
-	)._actionHandler
-	if (handler) {
-		alias.action(handler)
-	}
+	alias.action(action)
 	return alias
 }
 
@@ -626,7 +621,7 @@ const removeCmd = mcpCmd
 
 	.action(handleMcpRemove)
 
-registerAlias(mcpCmd, "rm <ids...>", removeCmd)
+registerAlias(mcpCmd, "rm <ids...>", removeCmd, handleMcpRemove)
 
 mcpCmd
 	.command("set <id> [mcp-url]")
@@ -914,7 +909,10 @@ const reviewRemoveCmd = skillReview
 		await deleteReview(skill)
 	})
 
-registerAlias(skillReview, "rm <skill>", reviewRemoveCmd)
+registerAlias(skillReview, "rm <skill>", reviewRemoveCmd, async (skill) => {
+	const { deleteReview } = await import("./commands/skill")
+	await deleteReview(skill)
+})
 
 skillReview
 	.command("upvote <skill> <review-id>")
@@ -1038,27 +1036,27 @@ namespace
 
 // ─── Top-level hidden aliases (backward compat) ────────────────────────────
 
-registerAlias(program, "install [server]", mcpInstallCmd, {
+registerAlias(program, "install [server]", mcpInstallCmd, handleInstall, {
 	deprecation:
 		"Note: 'install' is deprecated. Use 'smithery mcp add <server> --client <name>' instead.",
 })
-registerAlias(program, "uninstall [server]", mcpUninstallCmd, {
+registerAlias(program, "uninstall [server]", mcpUninstallCmd, handleUninstall, {
 	deprecation:
 		"Note: 'uninstall' is deprecated. Use 'smithery mcp remove <server> --client <name>' instead.",
 })
-registerAlias(program, "run <server>", runCmd)
-registerAlias(program, "search [term]", searchCmd)
-registerAlias(program, "dev [entryFile]", devCmd)
-registerAlias(program, "build [entryFile]", buildCmd)
-registerAlias(program, "publish [server]", publishCmd)
+registerAlias(program, "run <server>", runCmd, handleRun)
+registerAlias(program, "search [term]", searchCmd, handleSearch)
+registerAlias(program, "dev [entryFile]", devCmd, handleDev)
+registerAlias(program, "build [entryFile]", buildCmd, handleBuild)
+registerAlias(program, "publish [server]", publishCmd, handlePublish)
 program.command("login", { hidden: true }).action(handleLogin)
 program.command("logout", { hidden: true }).action(handleLogout)
-registerAlias(program, "whoami", whoamiCmd)
+registerAlias(program, "whoami", whoamiCmd, handleWhoami)
 
 const serversCompat = program
 	.command("servers", { hidden: true })
 	.description("Search and browse MCP servers")
-registerAlias(serversCompat, "search [term]", searchCmd)
+registerAlias(serversCompat, "search [term]", searchCmd, handleSearch)
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // Analytics: track command invocations
