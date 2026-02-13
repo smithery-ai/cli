@@ -38,7 +38,7 @@ export function createPublicSkillsClient(): Smithery {
 	return createPublicClient()
 }
 
-export async function createAuthenticatedSkillsClient(): Promise<Smithery | null> {
+async function createAuthenticatedSkillsClient(): Promise<Smithery | null> {
 	return createScopedClient(SKILLS_SCOPE_POLICY)
 }
 

@@ -21,8 +21,6 @@ export interface ToolInfo extends Tool {
 	connectionName: string
 }
 
-export { createSmitheryClient }
-
 // Use Awaited to get the concrete type from createSmitheryClient
 type SmitheryClient = Awaited<ReturnType<typeof createSmitheryClient>>
 
@@ -210,7 +208,7 @@ export class ConnectSession {
 	}
 }
 
-export async function getCurrentNamespace(): Promise<string> {
+async function getCurrentNamespace(): Promise<string> {
 	// First check stored namespace from settings
 	const stored = await getStoredNamespace()
 	if (stored) {

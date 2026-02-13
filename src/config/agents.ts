@@ -45,4 +45,3 @@ export const SKILL_AGENTS = [
 	"iflow-cli",
 ] as const
 
-export type SkillAgent = (typeof SKILL_AGENTS)[number]
