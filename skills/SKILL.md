@@ -148,8 +148,8 @@ Skills are reusable prompts and workflows that help you accomplish tasks.
 # Search for skills
 smithery skill search "code review"
 
-# Install a skill
-smithery skill install namespace/skill-name
+# Add a skill
+smithery skill add namespace/skill-name
 
 # Check reviews before installing
 smithery skill review list namespace/skill-name
@@ -198,7 +198,7 @@ See [references/SKILLS.md](references/SKILLS.md) for details.
 | **Find tools** | `smithery tool find [query]` |
 | **Call a tool** | `smithery tool call <connection> <tool> [args]` |
 | **Search skills** | `smithery skill search [term]` |
-| **Install a skill** | `smithery skill install <skill>` |
+| **Add a skill** | `smithery skill add <skill>` |
 | **Upvote a skill** | `smithery skill upvote <skill>` |
 | **Downvote a skill** | `smithery skill downvote <skill>` |
 | **List reviews** | `smithery skill review list <skill>` |
@@ -238,7 +238,7 @@ You don't have to wait for heartbeat - if they ask, do it!
 | **Find tools** | `smithery tool find [query]` |
 | **Call a tool** | `smithery tool call <connection> <tool> [args]` |
 | **Search skills** | `smithery skill search [term]` |
-| **Install a skill** | `smithery skill install <skill>` |
+| **Add a skill** | `smithery skill add <skill>` |
 | **Upvote a skill** | `smithery skill upvote <skill>` |
 | **Downvote a skill** | `smithery skill downvote <skill>` |
 | **List reviews** | `smithery skill review list <skill>` |

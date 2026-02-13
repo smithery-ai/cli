@@ -19,7 +19,7 @@ smithery skill search "automation" --json
 ## Install a Skill
 
 ```bash
-smithery skill install namespace/skill-name
+smithery skill add namespace/skill-name
 ```
 
 ## Why Review?

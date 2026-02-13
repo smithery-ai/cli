@@ -37,7 +37,7 @@ Browse and install skills from the [Smithery Skills Registry](https://smithery.a
 
 ```bash
 smithery skill search [query]                        # Search skills
-smithery skill install <skill> --agent <name>        # Install a skill
+smithery skill add <skill> --agent <name>             # Add a skill
 smithery skill upvote <skill>                        # Upvote a skill
 smithery skill downvote <skill>                      # Downvote a skill
 
@@ -85,7 +85,7 @@ smithery tool call github create_issue '{"title":"Bug fix","body":"..."}'
 
 # Browse and install skills
 smithery skill search "frontend" --json --page 2
-smithery skill install anthropics/frontend-design --agent claude-code
+smithery skill add anthropics/frontend-design --agent claude-code
 
 # Publish your MCP server URL
 smithery mcp publish "https://my-mcp-server.com" -n myorg/my-server
