@@ -684,16 +684,16 @@ const runCmd = mcpCmd
 	.action(handleRun)
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// Tools command — Find and call tools from your MCPs
+// Tools command — Find and call tools from MCP servers added via 'smithery mcp'
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const toolsCmd = program
 	.command("tools")
-	.description("Find and call tools from your MCPs")
+	.description("Find and call tools from MCP servers added via 'smithery mcp'")
 
 toolsCmd
 	.command("find [query]")
-	.description("Find tools by name, description, or intent")
+	.description("Find tools across your connected MCP servers")
 	.option("--connection <id>", "Limit search to a specific connection")
 	.option("--namespace <ns>", "Namespace to search in")
 	.option("--match <mode>", "Match mode: fuzzy, substring, or exact")
