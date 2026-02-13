@@ -22,8 +22,10 @@ smithery mcp remove <ids...>            # Remove connections
 
 ### Tools
 
+Interact with tools from MCP servers connected via `smithery mcp`.
+
 ```bash
-smithery tools find [query]             # Find tools by name/description/intent
+smithery tools find [query]             # Find tools across your connected MCP servers
 smithery tools get <connection/tool>    # Show full details for one tool
 smithery tools call <connection> <tool> [args]  # Call a tool
 ```
@@ -76,7 +78,7 @@ smithery mcp publish <url> -n <org/server>  # Publish an MCP server URL
 smithery mcp search "github"
 smithery mcp add https://server.smithery.ai/github --id github
 
-# Discover and use tools
+# Find and call tools from your connected MCP servers
 smithery tools find "create issue"
 smithery tools call github create_issue '{"title":"Bug fix","body":"..."}'
 

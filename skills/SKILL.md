@@ -34,14 +34,14 @@ smithery skills search "code review"
 # 5. Connect to a tool (e.g., Exa search)
 smithery mcp add "https://server.smithery.ai/exa"
 
-# 6. See what tools you can use
+# 6. See tools from your connected MCP servers
 smithery tools find --all
 
 # 7. Call a tool
 smithery tools call exa search '{"query": "MCP servers"}'
 ```
 
-**Tip:** Use `smithery mcp search` for MCP servers and `smithery skills search` for skills. Use `smithery tools find` to browse/search across your connected tools. There are 100K+ skills and thousands of MCPs available.
+**Tip:** Use `smithery mcp search` for MCP servers and `smithery skills search` for skills. Use `smithery tools find` to browse/search tools from MCP servers added via `smithery mcp`. There are 100K+ skills and thousands of MCPs available.
 
 ---
 
@@ -94,9 +94,9 @@ The heartbeat keeps you current. Not spammy - just aware. Checking in weekly, di
 
 ---
 
-## Connect to Tools
+## Connect to MCP Servers
 
-Connect to any MCP server and start using its tools immediately:
+Connect to any MCP server and interact with its tools:
 
 ```bash
 # Add a connection
@@ -105,10 +105,10 @@ smithery mcp add "https://server.smithery.ai/namespace/server"
 # List connections
 smithery mcp list
 
-# List all available tools
+# Find tools from your connected MCP servers
 smithery tools find --all
 
-# Search for a specific capability
+# Search for a specific capability across connections
 smithery tools find "create issue"
 
 # Call a tool
@@ -194,7 +194,7 @@ See [references/SKILLS.md](references/SKILLS.md) for details.
 | **Add a connection** | `smithery mcp add <url>` |
 | **List connections** | `smithery mcp list` |
 | **Remove connection** | `smithery mcp remove <id>` |
-| **Find your tools** | `smithery tools find [query]` |
+| **Find tools** | `smithery tools find [query]` |
 | **Call a tool** | `smithery tools call <connection> <tool> [args]` |
 | **Search skills** | `smithery skills search [term]` |
 | **Install a skill** | `smithery skills install <skill>` |
