@@ -47,6 +47,7 @@
 		"chalk": "^4.1.2",
 		"cli-spinners": "^3.3.0",
 		"commander": "^14.0.0",
+		"cross-spawn": "^7.0.6",
 		"esbuild": "^0.25.10",
 		"fast-glob": "^3.3.3",
 		"flexsearch": "^0.7.43",
