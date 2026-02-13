@@ -194,55 +194,103 @@ export async function deploy(options: DeployOptions = {}) {
 		}
 	}
 
+	const { namespace, serverName: server } = parseQualifiedName(qualifiedName)
+
+	await deployWithAutoCreate(
+		registry,
+		server,
+		namespace,
+		qualifiedName,
+		payload,
+		moduleFile,
+		sourcemapFile,
+		bundleFile,
+	)
+}
+
+function isNotFoundError(error: unknown): boolean {
+	if (error instanceof NotFoundError) return true
+	if (error instanceof Error && error.name === "NotFoundError") return true
+	return false
+}
+
+function getApiErrorDetail(error: unknown): string {
+	const err = error as { error?: { error?: string }; message?: string }
+	return err.error?.error || err.message || "Not found"
+}
+
+async function deployToServer(
+	registry: Smithery,
+	server: string,
+	namespace: string,
+	qualifiedName: string,
+	payload: DeployPayload,
+	moduleFile?: ReturnType<typeof createReadStream>,
+	sourcemapFile?: ReturnType<typeof createReadStream>,
+	bundleFile?: ReturnType<typeof createReadStream>,
+) {
 	const uploadSpinner = ora({
 		text: "Uploading deployment...",
 		spinner: cliSpinners.star,
 		color: "yellow",
 	}).start()
 
+	const deployParams: DeploymentDeployParams = {
+		namespace,
+		payload: JSON.stringify(payload),
+		module: moduleFile,
+		sourcemap: sourcemapFile,
+		bundle: bundleFile,
+	}
+	const result = await registry.servers.deployments.deploy(server, deployParams)
+
+	uploadSpinner.stop()
+	console.log(chalk.dim(`✓ Deployment ${result.deploymentId} accepted`))
+
+	console.log(chalk.dim("> Waiting for completion..."))
+	console.log(
+		chalk.dim(
+			`> Track progress at: https://smithery.ai/server/${qualifiedName}/deployments`,
+		),
+	)
+
+	await pollDeployment(registry, qualifiedName, result.deploymentId)
+}
+
+async function deployWithAutoCreate(
+	registry: Smithery,
+	server: string,
+	namespace: string,
+	qualifiedName: string,
+	payload: DeployPayload,
+	moduleFile?: ReturnType<typeof createReadStream>,
+	sourcemapFile?: ReturnType<typeof createReadStream>,
+	bundleFile?: ReturnType<typeof createReadStream>,
+) {
 	try {
-		const { namespace, serverName: server } = parseQualifiedName(qualifiedName)
-		const deployParams: DeploymentDeployParams = {
-			namespace,
-			payload: JSON.stringify(payload),
-			module: moduleFile,
-			sourcemap: sourcemapFile,
-			bundle: bundleFile,
-		}
-		const result = await registry.servers.deployments.deploy(
+		await deployToServer(
+			registry,
 			server,
-			deployParams,
+			namespace,
+			qualifiedName,
+			payload,
+			moduleFile,
+			sourcemapFile,
+			bundleFile,
 		)
-
-		uploadSpinner.stop()
-		console.log(chalk.dim(`✓ Deployment ${result.deploymentId} accepted`))
-
-		console.log(chalk.dim("> Waiting for completion..."))
-		console.log(
-			chalk.dim(
-				`> Track progress at: https://smithery.ai/server/${qualifiedName}/deployments`,
-			),
-		)
-
-		await pollDeployment(registry, qualifiedName, result.deploymentId)
 	} catch (error) {
-		uploadSpinner.fail("Upload failed")
-
-		// Handle 403 Permission Denied errors - extract error message from SDK error
 		if (error instanceof PermissionDeniedError) {
-			// SDK error.error contains the parsed JSON response body
 			const errorBody = error.error as { error?: string } | undefined
 			const errorMessage = errorBody?.error || "Forbidden"
 			console.error(chalk.red(`\n✗ Error: ${errorMessage}`))
 			process.exit(1)
 		}
 
-		// Handle 404 Not Found errors
-		if (error instanceof NotFoundError) {
-			const errorBody = error.error as { error?: string } | undefined
-			const errorMessage = errorBody?.error || error.message || "Not found"
-			if (errorMessage.includes("namespace")) {
-				const { namespace } = parseQualifiedName(qualifiedName)
+		if (isNotFoundError(error)) {
+			const errorMessage = getApiErrorDetail(error)
+
+			// Namespace not found — can't auto-create
+			if (errorMessage.toLowerCase().includes("namespace")) {
 				console.error(
 					chalk.red(`\n✗ Error: Namespace "${namespace}" not found.`),
 				)
@@ -251,15 +299,40 @@ export async function deploy(options: DeployOptions = {}) {
 						"   The namespace doesn't exist. Please create it first or use a different namespace.",
 					),
 				)
-			} else {
-				console.error(
-					chalk.red(`\n✗ Error: Server "${qualifiedName}" not found.`),
-				)
+				process.exit(1)
 			}
-			process.exit(1)
+
+			// Server not found — confirm in interactive mode, auto-create otherwise
+			if (process.stdout.isTTY) {
+				const inquirer = (await import("inquirer")).default
+				const { confirmed } = await inquirer.prompt([
+					{
+						type: "confirm",
+						name: "confirmed",
+						message: `Server "${qualifiedName}" doesn't exist yet. Create it?`,
+						default: true,
+					},
+				])
+				if (!confirmed) return
+			}
+
+			await registry.servers.create(server, { namespace })
+			console.log(chalk.dim(`✓ Created server "${qualifiedName}"`))
+
+			// Retry the deploy
+			await deployToServer(
+				registry,
+				server,
+				namespace,
+				qualifiedName,
+				payload,
+				moduleFile,
+				sourcemapFile,
+				bundleFile,
+			)
+			return
 		}
 
-		// Handle other errors
 		if (error instanceof Error) {
 			throw error
 		}
