@@ -551,6 +551,25 @@ mcpCmd
 	})
 
 mcpCmd
+	.command("rm <ids...>", { hidden: true })
+	.option("--namespace <ns>", "Namespace for the server")
+	.option("--local", "Uninstall from a local AI client instead of remote")
+	.option(
+		"-c, --client <name>",
+		`AI client for local uninstall (${VALID_CLIENTS.join(", ")})`,
+	)
+	.option("--json", "Output as JSON")
+	.option("--table", "Output as human-readable table")
+	.action(async (ids, options) => {
+		if (options.local) {
+			await handleUninstall(ids[0], options)
+		} else {
+			const { removeServer } = await import("./commands/connect")
+			await removeServer(ids, options)
+		}
+	})
+
+mcpCmd
 	.command("set <id> [mcp-url]")
 	.description("Create or update a connection by ID")
 	.option("--name <name>", "Human-readable name")
@@ -744,10 +763,9 @@ skills
 		await viewSkill(identifier)
 	})
 
-// Uses the Vercel Labs skills CLI: https://github.com/vercel-labs/skills
 skills
 	.command("add <skill>")
-	.description("Install a skill (via github.com/vercel-labs/skills)")
+	.description("Add a skill to your agent")
 	.option(
 		"-a, --agent <name>",
 		`Target agent (${SKILL_AGENTS.slice(0, 5).join(", ")}, ...)`,
@@ -841,6 +859,13 @@ skillsReview
 skillsReview
 	.command("remove <skill>")
 	.description("Remove your review for a skill")
+	.action(async (skill) => {
+		const { deleteReview } = await import("./commands/skills")
+		await deleteReview(skill)
+	})
+
+skillsReview
+	.command("rm <skill>", { hidden: true })
 	.action(async (skill) => {
 		const { deleteReview } = await import("./commands/skills")
 		await deleteReview(skill)
@@ -1017,6 +1042,14 @@ connect
 connect
 	.command("remove <ids...>")
 	.description("Remove one or more server connections")
+	.option("--namespace <ns>", "Namespace for the server")
+	.action(async (ids, options) => {
+		const { removeServer } = await import("./commands/connect")
+		await removeServer(ids, options)
+	})
+
+connect
+	.command("rm <ids...>", { hidden: true })
 	.option("--namespace <ns>", "Namespace for the server")
 	.action(async (ids, options) => {
 		const { removeServer } = await import("./commands/connect")
