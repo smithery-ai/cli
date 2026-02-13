@@ -1,12 +1,9 @@
-import { Smithery } from "@smithery/api/client.js"
 import chalk from "chalk"
-
-/**
- * Construct the Smithery URL for a skill
- */
-function getSkillUrl(namespace: string, slug: string): string {
-	return `https://smithery.ai/skills/${namespace}/${slug}`
-}
+import {
+	createPublicSkillsClient,
+	getSkillUrl,
+	parseSkillIdentifier,
+} from "./shared.js"
 
 /**
  * Resolve a skill identifier to a URL for installation
@@ -19,18 +16,19 @@ async function resolveSkillUrl(identifier: string): Promise<string> {
 		return identifier
 	}
 
-	// Parse namespace/slug format
-	const match = identifier.match(/^([^/]+)\/(.+)$/)
-	if (!match) {
+	let namespace: string
+	let slug: string
+	try {
+		const parsed = parseSkillIdentifier(identifier)
+		namespace = parsed.namespace
+		slug = parsed.slug
+	} catch {
 		throw new Error(
 			`Invalid skill identifier: ${identifier}. Use format namespace/slug or a URL.`,
 		)
 	}
 
-	const [, namespace, slug] = match
-
-	// Skills lookup is a public endpoint, no authentication required
-	const client = new Smithery({ apiKey: "" })
+	const client = createPublicSkillsClient()
 	try {
 		await client.skills.get(slug, { namespace })
 		return getSkillUrl(namespace, slug)

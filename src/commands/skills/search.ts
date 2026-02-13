@@ -1,9 +1,10 @@
-import { Smithery } from "@smithery/api/client.js"
+import type { Smithery } from "@smithery/api/client.js"
 import type { SkillListResponse } from "@smithery/api/resources/skills"
 import chalk from "chalk"
 import { SKILL_AGENTS } from "../../config/agents.js"
 import { isJsonMode, outputTable, truncate } from "../../utils/output"
 import { installSkill } from "./install.js"
+import { createPublicSkillsClient, getSkillUrl } from "./shared.js"
 
 export interface SearchOptions {
 	json?: boolean
@@ -34,13 +35,6 @@ async function getSearchTerm(providedTerm?: string): Promise<string> {
 	])
 	console.log()
 	return result.searchTerm
-}
-
-/**
- * Construct the Smithery URL for a skill
- */
-function getSkillUrl(namespace: string, slug: string): string {
-	return `https://smithery.ai/skills/${namespace}/${slug}`
 }
 
 /**
@@ -76,8 +70,7 @@ export async function searchSkills(
 		: (initialQuery ?? "")
 
 	try {
-		// Skills search is a public endpoint, no authentication required
-		const client = new Smithery({ apiKey: "" })
+		const client = createPublicSkillsClient()
 
 		// Build query params
 		const queryParams: {

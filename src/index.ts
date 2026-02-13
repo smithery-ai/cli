@@ -223,6 +223,102 @@ async function handleUninstall(server: string | undefined, options: any) {
 	await uninstallServer(selectedServer, selectedClient as ValidClient)
 }
 
+const loadConnectCommands = () => import("./commands/connect")
+
+async function handleAddConnection(server: string, options: any) {
+	const { addServer } = await loadConnectCommands()
+	await addServer(server, options)
+}
+
+async function handleListConnections(options: any) {
+	const { listServers } = await loadConnectCommands()
+	await listServers(options)
+}
+
+async function handleGetConnection(id: string, options: any) {
+	const { getServer } = await loadConnectCommands()
+	await getServer(id, options)
+}
+
+async function handleRemoveConnections(ids: string[], options: any) {
+	const { removeServer } = await loadConnectCommands()
+	await removeServer(ids, options)
+}
+
+async function handleSetConnection(
+	id: string,
+	mcpUrl: string | undefined,
+	options: any,
+) {
+	const { setServer } = await loadConnectCommands()
+	await setServer(id, mcpUrl, options)
+}
+
+async function handleListTools(connection: string | undefined, options: any) {
+	const { listTools } = await loadConnectCommands()
+	await listTools(connection, options)
+}
+
+async function handleSearchTools(query: string, options: any) {
+	const { searchTools } = await loadConnectCommands()
+	await searchTools(query, options)
+}
+
+async function handleGetTool(
+	connection: string,
+	toolName: string,
+	options: any,
+) {
+	const { getTool } = await loadConnectCommands()
+	await getTool(connection, toolName, options)
+}
+
+async function handleCallTool(
+	connection: string,
+	toolName: string,
+	args: string | undefined,
+	options: any,
+) {
+	const { callTool } = await loadConnectCommands()
+	await callTool(connection, toolName, args, options)
+}
+
+async function handleCallToolById(
+	toolId: string,
+	args: string | undefined,
+	options: any,
+) {
+	const slashIndex = toolId.indexOf("/")
+	if (slashIndex <= 0 || slashIndex === toolId.length - 1) {
+		const { outputJson } = await import("./utils/output")
+		outputJson({
+			result: null,
+			isError: true,
+			error: `Invalid tool ID format. Expected "connection/tool-name", got "${toolId}"`,
+		})
+		process.exit(1)
+	}
+	const connection = toolId.slice(0, slashIndex)
+	const toolName = toolId.slice(slashIndex + 1)
+	await handleCallTool(connection, toolName, args, options)
+}
+
+async function handleMcpAdd(server: string, options: any) {
+	if (options.local) {
+		await handleInstall(server, options)
+		return
+	}
+	await handleAddConnection(server, options)
+}
+
+async function handleMcpRemove(ids: string[], options: any) {
+	if (options.local) {
+		await handleUninstall(ids[0], options)
+		return
+	}
+	await handleRemoveConnections(ids, options)
+}
+
 async function handleLogin() {
 	const { executeCliAuthFlow } = await import("./lib/cli-auth")
 	const { validateApiKey } = await import("./lib/registry")
@@ -490,14 +586,7 @@ Examples:
   smithery mcp add https://server.smithery.ai/exa --id exa --name "Exa Search"
   smithery mcp add @anthropic/exa --local --client claude`,
 	)
-	.action(async (server, options) => {
-		if (options.local) {
-			await handleInstall(server, options)
-		} else {
-			const { addServer } = await import("./commands/connect")
-			await addServer(server, options)
-		}
-	})
+	.action(handleMcpAdd)
 
 mcpCmd
 	.command("list")
@@ -514,10 +603,7 @@ Examples:
   smithery mcp list
   smithery mcp list --json`,
 	)
-	.action(async (options) => {
-		const { listServers } = await import("./commands/connect")
-		await listServers(options)
-	})
+	.action(handleListConnections)
 
 mcpCmd
 	.command("get <id>")
@@ -525,10 +611,7 @@ mcpCmd
 	.option("--namespace <ns>", "Namespace for the connection")
 	.option("--json", "Output as JSON")
 	.option("--table", "Output as human-readable table")
-	.action(async (id, options) => {
-		const { getServer } = await import("./commands/connect")
-		await getServer(id, options)
-	})
+	.action(handleGetConnection)
 
 mcpCmd
 	.command("remove <ids...>")
@@ -541,14 +624,7 @@ mcpCmd
 	)
 	.option("--json", "Output as JSON")
 	.option("--table", "Output as human-readable table")
-	.action(async (ids, options) => {
-		if (options.local) {
-			await handleUninstall(ids[0], options)
-		} else {
-			const { removeServer } = await import("./commands/connect")
-			await removeServer(ids, options)
-		}
-	})
+	.action(handleMcpRemove)
 
 mcpCmd
 	.command("rm <ids...>", { hidden: true })
@@ -560,14 +636,7 @@ mcpCmd
 	)
 	.option("--json", "Output as JSON")
 	.option("--table", "Output as human-readable table")
-	.action(async (ids, options) => {
-		if (options.local) {
-			await handleUninstall(ids[0], options)
-		} else {
-			const { removeServer } = await import("./commands/connect")
-			await removeServer(ids, options)
-		}
-	})
+	.action(handleMcpRemove)
 
 mcpCmd
 	.command("set <id> [mcp-url]")
@@ -578,10 +647,7 @@ mcpCmd
 	.option("--namespace <ns>", "Namespace for the server")
 	.option("--json", "Output as JSON")
 	.option("--table", "Output as human-readable table")
-	.action(async (id, mcpUrl, options) => {
-		const { setServer } = await import("./commands/connect")
-		await setServer(id, mcpUrl, options)
-	})
+	.action(handleSetConnection)
 
 // Hidden backward-compat aliases for deprecated install/uninstall
 mcpCmd
@@ -662,10 +728,7 @@ Examples:
   smithery tools list myserver           List tools for a specific connection
   smithery tools list myserver --json    Output as JSON`,
 	)
-	.action(async (connection, options) => {
-		const { listTools } = await import("./commands/connect")
-		await listTools(connection, options)
-	})
+	.action(handleListTools)
 
 toolsCmd
 	.command("search <query>")
@@ -673,10 +736,7 @@ toolsCmd
 	.option("--namespace <ns>", "Namespace to search in")
 	.option("--json", "Output as JSON")
 	.option("--table", "Output as human-readable table")
-	.action(async (query, options) => {
-		const { searchTools } = await import("./commands/connect")
-		await searchTools(query, options)
-	})
+	.action(handleSearchTools)
 
 toolsCmd
 	.command("get <connection> <tool>")
@@ -690,10 +750,7 @@ toolsCmd
 Examples:
   smithery tools get myserver search     Show tool details and input schema`,
 	)
-	.action(async (connection, tool, options) => {
-		const { getTool } = await import("./commands/connect")
-		await getTool(connection, tool, options)
-	})
+	.action(handleGetTool)
 
 toolsCmd
 	.command("call <connection> <tool> [args]")
@@ -706,10 +763,7 @@ Examples:
   smithery tools call myserver search '{"query":"hello"}'
   smithery tools call exa web_search_exa '{"query":"AI tools"}' | jq '.results'`,
 	)
-	.action(async (connection, tool, args, options) => {
-		const { callTool } = await import("./commands/connect")
-		await callTool(connection, tool, args, options)
-	})
+	.action(handleCallTool)
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // Skills command — Search, view, and install Smithery skills
@@ -864,12 +918,10 @@ skillsReview
 		await deleteReview(skill)
 	})
 
-skillsReview
-	.command("rm <skill>", { hidden: true })
-	.action(async (skill) => {
-		const { deleteReview } = await import("./commands/skills")
-		await deleteReview(skill)
-	})
+skillsReview.command("rm <skill>", { hidden: true }).action(async (skill) => {
+	const { deleteReview } = await import("./commands/skills")
+	await deleteReview(skill)
+})
 
 skillsReview
 	.command("upvote <skill> <review-id>")
@@ -1014,10 +1066,7 @@ connect
 		"--force",
 		"Create a new connection even if one already exists for this URL",
 	)
-	.action(async (mcpUrl, options) => {
-		const { addServer } = await import("./commands/connect")
-		await addServer(mcpUrl, options)
-	})
+	.action(handleAddConnection)
 
 connect
 	.command("list")
@@ -1025,36 +1074,24 @@ connect
 	.option("--namespace <ns>", "Namespace to list from")
 	.option("--limit <n>", "Maximum number of results (default: all)")
 	.option("--cursor <cursor>", "Pagination cursor from previous response")
-	.action(async (options) => {
-		const { listServers } = await import("./commands/connect")
-		await listServers(options)
-	})
+	.action(handleListConnections)
 
 connect
 	.command("get <id>")
 	.description("Get details for a connection")
 	.option("--namespace <ns>", "Namespace for the connection")
-	.action(async (id, options) => {
-		const { getServer } = await import("./commands/connect")
-		await getServer(id, options)
-	})
+	.action(handleGetConnection)
 
 connect
 	.command("remove <ids...>")
 	.description("Remove one or more server connections")
 	.option("--namespace <ns>", "Namespace for the server")
-	.action(async (ids, options) => {
-		const { removeServer } = await import("./commands/connect")
-		await removeServer(ids, options)
-	})
+	.action(handleRemoveConnections)
 
 connect
 	.command("rm <ids...>", { hidden: true })
 	.option("--namespace <ns>", "Namespace for the server")
-	.action(async (ids, options) => {
-		const { removeServer } = await import("./commands/connect")
-		await removeServer(ids, options)
-	})
+	.action(handleRemoveConnections)
 
 connect
 	.command("set <id> [mcp-url]")
@@ -1063,10 +1100,7 @@ connect
 	.option("--metadata <json>", "Metadata as JSON object")
 	.option("--headers <json>", "Custom headers as JSON object (stored securely)")
 	.option("--namespace <ns>", "Namespace for the server")
-	.action(async (id, mcpUrl, options) => {
-		const { setServer } = await import("./commands/connect")
-		await setServer(id, mcpUrl, options)
-	})
+	.action(handleSetConnection)
 
 connect
 	.command("tools [server]")
@@ -1074,28 +1108,19 @@ connect
 	.option("--namespace <ns>", "Namespace to list from")
 	.option("--limit <n>", "Maximum number of tools to return (default: 10)")
 	.option("--page <n>", "Page number (default: 1)")
-	.action(async (server, options) => {
-		const { listTools } = await import("./commands/connect")
-		await listTools(server, options)
-	})
+	.action(handleListTools)
 
 connect
 	.command("search <query>")
 	.description("Search tools by intent")
 	.option("--namespace <ns>", "Namespace to search in")
-	.action(async (query, options) => {
-		const { searchTools } = await import("./commands/connect")
-		await searchTools(query, options)
-	})
+	.action(handleSearchTools)
 
 connect
-	.command("call <connection> <tool> [args]")
-	.description("Call a tool")
+	.command("call <tool-id> [args]")
+	.description("Call a tool (format: connection/tool-name)")
 	.option("--namespace <ns>", "Namespace for the tool")
-	.action(async (connection, tool, args, options) => {
-		const { callTool } = await import("./commands/connect")
-		await callTool(connection, tool, args, options)
-	})
+	.action(handleCallToolById)
 
 // ─── install / uninstall (hidden + deprecation notice) ──────────────────────
 

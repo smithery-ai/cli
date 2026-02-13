@@ -1,6 +1,7 @@
 import FlexSearch from "flexsearch"
-import { isJsonMode, outputTable, truncate } from "../../utils/output"
+import { isJsonMode, outputTable } from "../../utils/output"
 import { ConnectSession, type ToolInfo } from "./api"
+import { formatToolRow, TOOL_TABLE_COLUMNS } from "./tool-table"
 
 export async function searchTools(
 	query: string,
@@ -58,27 +59,11 @@ export async function searchTools(
 
 	const matchingIndices = index.search(query, { limit: 10 }) as number[]
 
-	const data = matchingIndices.map((idx) => {
-		const tool = allTools[idx]
-		return {
-			name: tool.name,
-			connection: tool.connectionId,
-			description: tool.description ?? "",
-			inputSchema: tool.inputSchema,
-		}
-	})
+	const data = matchingIndices.map((idx) => formatToolRow(allTools[idx]))
 
 	outputTable({
 		data,
-		columns: [
-			{ key: "name", header: "TOOL" },
-			{ key: "connection", header: "CONNECTION" },
-			{
-				key: "description",
-				header: "DESCRIPTION",
-				format: (v: unknown) => truncate(String(v ?? "")),
-			},
-		],
+		columns: TOOL_TABLE_COLUMNS,
 		json: isJson,
 		jsonData: { tools: data },
 		tip: "Use smithery tools call <connection> <tool> '<args>' to call a tool.",

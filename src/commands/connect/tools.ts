@@ -1,12 +1,8 @@
 import chalk from "chalk"
-import {
-	isJsonMode,
-	outputJson,
-	outputTable,
-	truncate,
-} from "../../utils/output"
+import { isJsonMode, outputJson, outputTable } from "../../utils/output"
 import type { Connection, ToolInfo } from "./api"
 import { ConnectSession } from "./api"
+import { formatToolRow, TOOL_TABLE_COLUMNS } from "./tool-table"
 
 const DEFAULT_LIMIT = 10
 
@@ -43,25 +39,6 @@ function formatConnectionStatus(
 
 	return null
 }
-
-function formatToolRow(t: ToolInfo) {
-	return {
-		name: t.name,
-		connection: t.connectionId,
-		description: t.description ?? "",
-		inputSchema: t.inputSchema,
-	}
-}
-
-const TOOL_COLUMNS = [
-	{ key: "name", header: "TOOL" },
-	{ key: "connection", header: "CONNECTION" },
-	{
-		key: "description",
-		header: "DESCRIPTION",
-		format: (v: unknown) => truncate(String(v ?? "")),
-	},
-]
 
 export async function listTools(
 	server: string | undefined,
@@ -108,7 +85,7 @@ export async function listTools(
 
 			outputTable({
 				data,
-				columns: TOOL_COLUMNS,
+				columns: TOOL_TABLE_COLUMNS,
 				json: isJson,
 				jsonData: { tools: data, page, hasMore },
 				pagination: { page, hasMore },
@@ -141,7 +118,7 @@ export async function listTools(
 	if (connections.length === 0) {
 		outputTable({
 			data: [],
-			columns: TOOL_COLUMNS,
+			columns: TOOL_TABLE_COLUMNS,
 			json: isJson,
 			jsonData: { tools: [] },
 			tip: "No servers connected. Use 'smithery mcp add <mcp-url>' to add one.",
@@ -178,7 +155,7 @@ export async function listTools(
 
 	outputTable({
 		data,
-		columns: TOOL_COLUMNS,
+		columns: TOOL_TABLE_COLUMNS,
 		json: isJson,
 		jsonData: {
 			tools: data,

@@ -1,50 +1,11 @@
-import { Smithery } from "@smithery/api/client.js"
 import type { ReviewItem } from "@smithery/api/resources/skills/reviews.js"
 import chalk from "chalk"
 import { isJsonMode } from "../../utils/output"
-import { getApiKey } from "../../utils/smithery-settings"
-
-/**
- * Creates an authenticated Smithery client with skills permissions
- */
-async function createClient(): Promise<Smithery | null> {
-	const rootApiKey = await getApiKey()
-	if (!rootApiKey) return null
-
-	// Mint a scoped token with skills permissions
-	try {
-		const rootClient = new Smithery({ apiKey: rootApiKey })
-		const token = await rootClient.tokens.create({
-			policy: [
-				{
-					resources: ["skills"],
-					operations: ["read", "write"],
-					ttl: 3600,
-				},
-			],
-		})
-		return new Smithery({ apiKey: token.token })
-	} catch {
-		// Fall back to root key if minting fails
-		return new Smithery({ apiKey: rootApiKey })
-	}
-}
-
-/**
- * Parse a skill identifier into namespace and slug
- */
-function parseSkillIdentifier(identifier: string): {
-	namespace: string
-	slug: string
-} {
-	const match = identifier.match(/^([^/]+)\/(.+)$/)
-	if (!match) {
-		throw new Error(
-			`Invalid skill identifier: ${identifier}. Use format namespace/slug.`,
-		)
-	}
-	return { namespace: match[1], slug: match[2] }
-}
+import {
+	createAuthenticatedSkillsClient,
+	createPublicSkillsClient,
+	parseSkillIdentifier,
+} from "./shared.js"
 
 /**
  * Format a single review for display
@@ -109,7 +70,7 @@ export async function listReviews(
 	}
 
 	try {
-		const client = new Smithery({ apiKey: "" })
+		const client = createPublicSkillsClient()
 		const reviewsPage = await client.skills.reviews.list(slug, {
 			namespace,
 			page,
@@ -221,7 +182,7 @@ export async function submitReview(
 	}
 
 	// Reviews require authentication
-	const client = await createClient()
+	const client = await createAuthenticatedSkillsClient()
 	if (!client) {
 		console.error(chalk.red("Error: Not logged in."))
 		console.error(chalk.dim("Run 'smithery login' to authenticate."))
@@ -305,7 +266,7 @@ export async function deleteReview(skillIdentifier: string): Promise<void> {
 	}
 
 	// Requires authentication
-	const client = await createClient()
+	const client = await createAuthenticatedSkillsClient()
 	if (!client) {
 		console.error(chalk.red("Error: Not logged in."))
 		console.error(chalk.dim("Run 'smithery login' to authenticate."))
@@ -367,7 +328,7 @@ export async function voteReview(
 	}
 
 	// Voting requires authentication
-	const client = await createClient()
+	const client = await createAuthenticatedSkillsClient()
 	if (!client) {
 		console.error(chalk.red("Error: Not logged in."))
 		console.error(chalk.dim("Run 'smithery login' to authenticate."))
