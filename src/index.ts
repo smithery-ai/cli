@@ -277,7 +277,7 @@ async function handleCallTool(
 }
 
 async function handleMcpAdd(server: string, options: any) {
-	if (options.local) {
+	if (options.client) {
 		await handleInstall(server, options)
 		return
 	}
@@ -285,7 +285,7 @@ async function handleMcpAdd(server: string, options: any) {
 }
 
 async function handleMcpRemove(ids: string[], options: any) {
-	if (options.local) {
+	if (options.client) {
 		await handleUninstall(ids[0], options)
 		return
 	}
@@ -564,14 +564,13 @@ mcpCmd
 		"--force",
 		"Create a new connection even if one already exists for this URL",
 	)
-	.option("--local", "Install to a local AI client instead of remote")
 	.option(
 		"-c, --client <name>",
-		`AI client for local install (${VALID_CLIENTS.join(", ")})`,
+		`Install directly to an AI client's config (${VALID_CLIENTS.join(", ")})`,
 	)
 	.option(
 		"--config <json>",
-		"Configuration data as JSON for local install (skips prompts)",
+		"Configuration data as JSON for client install (skips prompts)",
 	)
 	.addHelpText(
 		"after",
@@ -579,7 +578,7 @@ mcpCmd
 Examples:
   smithery mcp add https://server.smithery.ai/exa
   smithery mcp add https://server.smithery.ai/exa --id exa --name "Exa Search"
-  smithery mcp add anthropic/exa --local --client claude`,
+  smithery mcp add anthropic/exa --client claude`,
 	)
 	.action(handleMcpAdd)
 
@@ -610,10 +609,9 @@ const removeCmd = mcpCmd
 	.command("remove <ids...>")
 	.description("Remove connections")
 	.option("--namespace <ns>", "Namespace for the server")
-	.option("--local", "Uninstall from a local AI client instead of remote")
 	.option(
 		"-c, --client <name>",
-		`AI client for local uninstall (${VALID_CLIENTS.join(", ")})`,
+		`Uninstall from an AI client's config (${VALID_CLIENTS.join(", ")})`,
 	)
 
 	.action(handleMcpRemove)
@@ -644,7 +642,7 @@ const mcpInstallCmd = mcpCmd
 	.hook("preAction", () => {
 		console.warn(
 			chalk.yellow(
-				"Note: 'mcp install' is deprecated. Use 'smithery mcp add <server> --local' instead.",
+				"Note: 'mcp install' is deprecated. Use 'smithery mcp add <server> --client <name>' instead.",
 			),
 		)
 	})
@@ -659,7 +657,7 @@ const mcpUninstallCmd = mcpCmd
 	.hook("preAction", () => {
 		console.warn(
 			chalk.yellow(
-				"Note: 'mcp uninstall' is deprecated. Use 'smithery mcp remove <server> --local' instead.",
+				"Note: 'mcp uninstall' is deprecated. Use 'smithery mcp remove <server> --client <name>' instead.",
 			),
 		)
 	})
@@ -1032,11 +1030,11 @@ namespace
 
 registerAlias(program, "install [server]", mcpInstallCmd, {
 	deprecation:
-		"Note: 'install' is deprecated. Use 'smithery mcp add <server> --local' instead.",
+		"Note: 'install' is deprecated. Use 'smithery mcp add <server> --client <name>' instead.",
 })
 registerAlias(program, "uninstall [server]", mcpUninstallCmd, {
 	deprecation:
-		"Note: 'uninstall' is deprecated. Use 'smithery mcp remove <server> --local' instead.",
+		"Note: 'uninstall' is deprecated. Use 'smithery mcp remove <server> --client <name>' instead.",
 })
 registerAlias(program, "run <server>", runCmd)
 registerAlias(program, "search [term]", searchCmd)
