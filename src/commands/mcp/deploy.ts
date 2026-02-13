@@ -29,6 +29,8 @@ interface DeployOptions {
 	resume?: boolean
 	transport?: "shttp" | "stdio"
 	configSchema?: string // JSON string or path to .json file
+	packageName?: string // npm package to use as build adapter
+	packageArgs?: string[] // Arguments to pass to the adapter's generate()
 }
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
@@ -171,31 +173,56 @@ export async function deploy(options: DeployOptions = {}) {
 			...(configSchema && { configSchema }),
 		}
 	} else {
-		// Build the bundle (handles both shttp and stdio)
-		const buildResult = await buildBundle({
-			entryFile: options.entryFile,
-			transport,
-			production: true,
-		})
+		// Handle package adapter mode
+		let entryFile = options.entryFile
+		let packageCleanup: (() => void) | undefined
 
-		payload = buildResult.payload
+		if (options.packageName) {
+			const { preparePackageBuild } = await import(
+				"../../lib/package-build.js"
+			)
+			const result = await preparePackageBuild(
+				options.packageName,
+				options.packageArgs ?? [],
+			)
+			entryFile = result.entryFile
+			packageCleanup = result.cleanup
+		}
 
-		if (isStdio) {
-			// For stdio, read the mcpb bundle
-			if (!buildResult.mcpbFile || !existsSync(buildResult.mcpbFile)) {
-				throw new Error("MCPB bundle not found after build")
-			}
-			bundlePath = buildResult.mcpbFile
-		} else {
-			// For shttp, read the module and sourcemap
-			if (!existsSync(buildResult.moduleFile)) {
-				throw new Error(`Bundle module not found at ${buildResult.moduleFile}`)
-			}
-			modulePath = buildResult.moduleFile
+		try {
+			// Build the bundle (handles both shttp and stdio)
+			const buildResult = await buildBundle({
+				entryFile,
+				transport,
+				production: true,
+			})
 
-			if (buildResult.sourcemapFile && existsSync(buildResult.sourcemapFile)) {
-				sourcemapPath = buildResult.sourcemapFile
+			payload = buildResult.payload
+
+			if (isStdio) {
+				// For stdio, read the mcpb bundle
+				if (!buildResult.mcpbFile || !existsSync(buildResult.mcpbFile)) {
+					throw new Error("MCPB bundle not found after build")
+				}
+				bundlePath = buildResult.mcpbFile
+			} else {
+				// For shttp, read the module and sourcemap
+				if (!existsSync(buildResult.moduleFile)) {
+					throw new Error(
+						`Bundle module not found at ${buildResult.moduleFile}`,
+					)
+				}
+				modulePath = buildResult.moduleFile
+
+				if (
+					buildResult.sourcemapFile &&
+					existsSync(buildResult.sourcemapFile)
+				) {
+					sourcemapPath = buildResult.sourcemapFile
+				}
 			}
+		} finally {
+			packageCleanup?.()
 		}
 	}
 

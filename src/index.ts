@@ -153,13 +153,31 @@ async function handleBuild(entryFile: string | undefined, options: any) {
 		console.warn()
 	}
 
-	const { buildBundle } = await import("./lib/bundle")
-	await buildBundle({
-		entryFile,
-		outDir: options.out,
-		transport: options.transport as "shttp" | "stdio",
-		production: true,
-	})
+	let resolvedEntryFile = entryFile
+	let cleanup: (() => void) | undefined
+
+	if (options.package) {
+		const { preparePackageBuild } = await import("./lib/package-build")
+		// When --package is used, the positional arg becomes the adapter argument
+		const result = await preparePackageBuild(
+			options.package,
+			entryFile ? [entryFile] : [],
+		)
+		resolvedEntryFile = result.entryFile
+		cleanup = result.cleanup
+	}
+
+	try {
+		const { buildBundle } = await import("./lib/bundle")
+		await buildBundle({
+			entryFile: resolvedEntryFile,
+			outDir: options.out,
+			transport: options.transport as "shttp" | "stdio",
+			production: true,
+		})
+	} finally {
+		cleanup?.()
+	}
 }
 
 async function handlePublish(server: string | undefined, options: any) {
@@ -173,13 +191,16 @@ async function handlePublish(server: string | undefined, options: any) {
 
 	const { deploy } = await import("./commands/mcp/deploy")
 	await deploy({
-		url: isUrl ? server : undefined,
-		entryFile: isUrl ? undefined : server,
+		url: isUrl && !options.package ? server : undefined,
+		entryFile: !isUrl && !options.package ? server : undefined,
 		key: options.key,
 		name: options.name,
 		resume: options.resume,
 		transport: options.transport as "shttp" | "stdio",
 		configSchema: options.configSchema,
+		packageName: options.package,
+		// When --package is used, the positional arg becomes the adapter argument
+		packageArgs: options.package && server ? [server] : undefined,
 	})
 }
 
@@ -450,6 +471,10 @@ function withBuildOptions(cmd: InstanceType<typeof Command>) {
 			"Transport type: shttp or stdio (default: shttp)",
 			"shttp",
 		)
+		.option(
+			"--package <pkg>",
+			"npm package to use as build adapter (e.g., @smithery/openapi-runtime)",
+		)
 }
 
 // Helper to register publish options on a command
@@ -472,6 +497,10 @@ function withPublishOptions(cmd: InstanceType<typeof Command>) {
 		.option(
 			"--config-schema <json-or-path>",
 			"JSON Schema for server configuration. Inline JSON or path to .json file",
+		)
+		.option(
+			"--package <pkg>",
+			"npm package to use as build adapter (e.g., @smithery/openapi-runtime)",
 		)
 }
 
