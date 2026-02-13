@@ -107,7 +107,7 @@ describe("outputDetail", () => {
 			tip: "Use --help for more info.",
 		})
 
-		const output = consoleLogSpy.mock.calls[0][0]
+		const output = consoleLogSpy.mock.calls[0][0] as string
 		const parsed = JSON.parse(output)
 		expect(parsed).toEqual({
 			name: "test",
@@ -122,7 +122,7 @@ describe("outputDetail", () => {
 			json: true,
 		})
 
-		const output = consoleLogSpy.mock.calls[0][0]
+		const output = consoleLogSpy.mock.calls[0][0] as string
 		const parsed = JSON.parse(output)
 		expect(parsed).toEqual({ name: "test" })
 	})
@@ -165,7 +165,7 @@ describe("outputTable", () => {
 			jsonData: { tools: [{ name: "a" }], total: 1 },
 		})
 
-		const output = consoleLogSpy.mock.calls[0][0]
+		const output = consoleLogSpy.mock.calls[0][0] as string
 		const parsed = JSON.parse(output)
 		expect(parsed.tools).toEqual([{ name: "a" }])
 		expect(parsed.total).toBe(1)
@@ -179,7 +179,7 @@ describe("outputTable", () => {
 			tip: "No results found.",
 		})
 
-		const output = consoleLogSpy.mock.calls[0][0]
+		const output = consoleLogSpy.mock.calls[0][0] as string
 		const parsed = JSON.parse(output)
 		expect(parsed.hint).toBe("No results found.")
 	})
@@ -192,7 +192,7 @@ describe("outputTable", () => {
 			pagination: { page: 1, hasMore: true },
 		})
 
-		const output = consoleLogSpy.mock.calls[0][0]
+		const output = consoleLogSpy.mock.calls[0][0] as string
 		const parsed = JSON.parse(output)
 		expect(parsed.pagination).toContain("--page 2")
 	})
@@ -206,7 +206,7 @@ describe("outputTable", () => {
 			jsonData: [{ name: "a" }],
 		})
 
-		const output = consoleLogSpy.mock.calls[0][0]
+		const output = consoleLogSpy.mock.calls[0][0] as string
 		const parsed = JSON.parse(output)
 		expect(parsed.results).toEqual([{ name: "a" }])
 	})
