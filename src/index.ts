@@ -484,7 +484,7 @@ function registerAlias(
 	parent: InstanceType<typeof Command>,
 	name: string,
 	sourceCmd: InstanceType<typeof Command>,
-	action: (...args: unknown[]) => void,
+	action: (...args: any[]) => void,
 	opts?: { deprecation?: string },
 ) {
 	const alias = parent.command(name, { hidden: true })
