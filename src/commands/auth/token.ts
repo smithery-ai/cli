@@ -2,9 +2,7 @@ import { fatal } from "../../lib/cli-error"
 import { createSmitheryClient } from "../../lib/smithery-client"
 import { isJsonMode, outputDetail } from "../../utils/output"
 
-export async function createToken(options: {
-	policy?: string
-}) {
+export async function createToken(options: { policy?: string }) {
 	const isJson = isJsonMode()
 
 	let policy: Array<Record<string, unknown>> | undefined
