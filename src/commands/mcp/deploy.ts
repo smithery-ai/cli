@@ -13,13 +13,13 @@ import type {
 import chalk from "chalk"
 import cliSpinners from "cli-spinners"
 import ora from "ora"
-import { buildBundle } from "../lib/bundle/index.js"
-import { loadProjectConfig } from "../lib/config-loader.js"
-import { resolveNamespace } from "../lib/namespace.js"
-import { createSmitheryClientSync } from "../lib/smithery-client"
-import { parseConfigSchema, parseQualifiedName } from "../utils/cli-utils.js"
-import { promptForServerNameInput } from "../utils/command-prompts.js"
-import { ensureApiKey } from "../utils/runtime.js"
+import { buildBundle } from "../../lib/bundle/index.js"
+import { loadProjectConfig } from "../../lib/config-loader.js"
+import { resolveNamespace } from "../../lib/namespace.js"
+import { createSmitheryClientSync } from "../../lib/smithery-client"
+import { parseConfigSchema, parseQualifiedName } from "../../utils/cli-utils.js"
+import { promptForServerNameInput } from "../../utils/command-prompts.js"
+import { ensureApiKey } from "../../utils/runtime.js"
 
 interface DeployOptions {
 	entryFile?: string

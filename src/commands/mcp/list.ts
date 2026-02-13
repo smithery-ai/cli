@@ -1,3 +1,6 @@
+import { getClientConfiguration } from "../../config/clients"
+import { fatal } from "../../lib/cli-error"
+import { readConfig } from "../../lib/client-config-io"
 import { isJsonMode, outputTable } from "../../utils/output"
 import { ConnectSession } from "./api"
 
@@ -38,5 +41,33 @@ export async function listServers(options: {
 			data.length === 0
 				? "No servers connected. Use 'smithery mcp add <mcp-url>' to add one."
 				: "Use smithery tool list <id> to view tools for a connection.",
+	})
+}
+
+/**
+ * List MCP servers installed in a specific AI client's config.
+ */
+export async function listClientServers(client: string): Promise<void> {
+	const isJson = isJsonMode()
+
+	const configTarget = getClientConfiguration(client)
+	if (configTarget.install.method === "command") {
+		fatal(`Listing servers is not supported for ${client}`)
+	}
+
+	const config = readConfig(client)
+	const servers = Object.keys(config.mcpServers).sort()
+
+	const data = servers.map((name) => ({ name }))
+
+	outputTable({
+		data,
+		columns: [{ key: "name", header: "NAME" }],
+		json: isJson,
+		jsonData: { client, servers },
+		tip:
+			data.length === 0
+				? `No servers installed for ${client}. Use smithery mcp add <url> --client ${client} to install one.`
+				: `Use smithery mcp remove <name> --client ${client} to uninstall.`,
 	})
 }

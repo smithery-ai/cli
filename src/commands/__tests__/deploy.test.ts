@@ -115,7 +115,7 @@ import {
 	promptForServerNameInput,
 } from "../../utils/command-prompts"
 import { ensureApiKey } from "../../utils/runtime"
-import { deploy } from "../deploy"
+import { deploy } from "../mcp/deploy"
 
 describe("deploy command", () => {
 	let mockRegistry: {

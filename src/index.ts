@@ -122,7 +122,7 @@ async function handleRun(server: string, options: any) {
 }
 
 async function handleDev(entryFile: string | undefined, options: any) {
-	const { dev } = await import("./commands/dev")
+	const { dev } = await import("./commands/mcp/dev")
 	await dev({
 		entryFile,
 		port: options.port,
@@ -171,7 +171,7 @@ async function handlePublish(server: string | undefined, options: any) {
 
 	const isUrl = server?.startsWith("http://") || server?.startsWith("https://")
 
-	const { deploy } = await import("./commands/deploy")
+	const { deploy } = await import("./commands/mcp/deploy")
 	await deploy({
 		url: isUrl ? server : undefined,
 		entryFile: isUrl ? undefined : server,
@@ -187,7 +187,7 @@ async function handleInstall(server: string | undefined, options: any) {
 	const { selectClient, selectServer, parseServerConfig } = await import(
 		"./utils/command-prompts"
 	)
-	const { installServer } = await import("./commands/install")
+	const { installServer } = await import("./commands/mcp/install")
 
 	const selectedClient = await selectClient(options.client, "Install")
 	const selectedServer = await selectServer(server, selectedClient, undefined)
@@ -205,7 +205,7 @@ async function handleUninstall(server: string | undefined, options: any) {
 	const { selectClient, selectInstalledServer } = await import(
 		"./utils/command-prompts"
 	)
-	const { uninstallServer } = await import("./commands/uninstall")
+	const { uninstallServer } = await import("./commands/mcp/uninstall")
 
 	const selectedClient = await selectClient(options.client, "Uninstall")
 	validateClient(selectedClient)
@@ -230,7 +230,7 @@ async function handleAddConnection(server: string, options: any) {
 
 async function handleListConnections(options: any) {
 	if (options.client) {
-		const { listClientServers } = await import("./commands/list")
+		const { listClientServers } = await import("./commands/mcp/list")
 		await listClientServers(options.client)
 		return
 	}

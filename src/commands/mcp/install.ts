@@ -1,29 +1,29 @@
-import "../utils/suppress-punycode-warning"
+import "../../utils/suppress-punycode-warning"
 import { APIConnectionTimeoutError } from "@smithery/api"
 import chalk from "chalk"
 import ora from "ora"
-import type { ValidClient } from "../config/clients"
-import { getClientConfiguration } from "../config/clients"
+import type { ValidClient } from "../../config/clients"
+import { getClientConfiguration } from "../../config/clients"
 import {
 	formatServerConfig,
 	readConfig,
 	runConfigCommand,
 	writeConfig,
-} from "../lib/client-config-io"
-import { saveConfig } from "../lib/keychain"
-import { verbose } from "../lib/logger"
-import { resolveServer } from "../lib/registry"
-import type { ServerConfig } from "../types/registry"
-import { checkAnalyticsConsent } from "../utils/analytics"
-import { parseQualifiedName } from "../utils/cli-utils"
-import { promptForRestart, showPostInstallHint } from "../utils/client"
-import { resolveTransport } from "../utils/install/transport"
-import { resolveUserConfig } from "../utils/install/user-config"
+} from "../../lib/client-config-io"
+import { saveConfig } from "../../lib/keychain"
+import { verbose } from "../../lib/logger"
+import { resolveServer } from "../../lib/registry"
+import type { ServerConfig } from "../../types/registry"
+import { checkAnalyticsConsent } from "../../utils/analytics"
+import { parseQualifiedName } from "../../utils/cli-utils"
+import { promptForRestart, showPostInstallHint } from "../../utils/client"
+import { resolveTransport } from "../../utils/install/transport"
+import { resolveUserConfig } from "../../utils/install/user-config"
 import {
 	checkAndNotifyRemoteServer,
 	ensureBunInstalled,
 	ensureUVInstalled,
-} from "../utils/runtime"
+} from "../../utils/runtime"
 
 /**
  * Installs and configures a Smithery server for a specified client.
