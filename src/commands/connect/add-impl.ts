@@ -92,10 +92,7 @@ export async function addServer(
 		})
 	} catch (error) {
 		const msg = errorMessage(error)
-		if (
-			msg.includes("Missing required permission") ||
-			msg.includes("403")
-		) {
+		if (msg.includes("Missing required permission") || msg.includes("403")) {
 			console.error(chalk.red(`Failed to add connection: ${msg}`))
 			console.error(
 				chalk.yellow(

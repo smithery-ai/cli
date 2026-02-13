@@ -44,7 +44,9 @@ export async function listReviews(
 	const json = isJsonMode(options)
 
 	if (!skillIdentifier) {
-		fatal("Skill identifier is required\nUsage: smithery skills reviews <namespace/slug>")
+		fatal(
+			"Skill identifier is required\nUsage: smithery skills reviews <namespace/slug>",
+		)
 	}
 
 	const { namespace, slug } = parseSkillIdentifierOrDie(skillIdentifier)
@@ -131,7 +133,9 @@ export async function submitReview(
 	options: SubmitReviewOptions,
 ): Promise<void> {
 	if (!skillIdentifier) {
-		fatal("Skill identifier is required\nUsage: smithery skills review <namespace/slug>")
+		fatal(
+			"Skill identifier is required\nUsage: smithery skills review <namespace/slug>",
+		)
 	}
 
 	const { namespace, slug } = parseSkillIdentifierOrDie(skillIdentifier)
@@ -140,7 +144,9 @@ export async function submitReview(
 	const reviewText = options.review?.trim()
 
 	if (!reviewText || reviewText.length === 0) {
-		fatal("Review text is required\nUsage: smithery skills review create <skill> -b <text>")
+		fatal(
+			"Review text is required\nUsage: smithery skills review create <skill> -b <text>",
+		)
 	}
 
 	if (reviewText.length > 1000) {
@@ -177,7 +183,9 @@ export async function submitReview(
 
 export async function deleteReview(skillIdentifier: string): Promise<void> {
 	if (!skillIdentifier) {
-		fatal("Skill identifier is required\nUsage: smithery skills review --delete <namespace/slug>")
+		fatal(
+			"Skill identifier is required\nUsage: smithery skills review --delete <namespace/slug>",
+		)
 	}
 
 	const { namespace, slug } = parseSkillIdentifierOrDie(skillIdentifier)
@@ -201,7 +209,9 @@ export async function voteReview(
 	vote: "up" | "down",
 ): Promise<void> {
 	if (!skillIdentifier) {
-		fatal("Skill identifier is required\nUsage: smithery skills vote <namespace/slug> <review-id> --up|--down")
+		fatal(
+			"Skill identifier is required\nUsage: smithery skills vote <namespace/slug> <review-id> --up|--down",
+		)
 	}
 
 	if (!reviewId) {

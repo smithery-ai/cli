@@ -43,7 +43,9 @@ export async function createAuthenticatedSkillsClient(): Promise<Smithery | null
 }
 
 /** Parse a skill identifier or exit with an error message. */
-export function parseSkillIdentifierOrDie(identifier: string): ParsedSkillIdentifier {
+export function parseSkillIdentifierOrDie(
+	identifier: string,
+): ParsedSkillIdentifier {
 	try {
 		return parseSkillIdentifier(identifier)
 	} catch (error) {

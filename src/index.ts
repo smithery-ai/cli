@@ -132,7 +132,9 @@ async function handleDev(entryFile: string | undefined, options: any) {
 
 async function handleBuild(entryFile: string | undefined, options: any) {
 	if (!["shttp", "stdio"].includes(options.transport)) {
-		fatal(`Invalid transport type "${options.transport}". Valid options are: shttp, stdio`)
+		fatal(
+			`Invalid transport type "${options.transport}". Valid options are: shttp, stdio`,
+		)
 	}
 
 	if (options.out && /\.(js|cjs|mjs)$/.test(options.out)) {
@@ -158,7 +160,9 @@ async function handleBuild(entryFile: string | undefined, options: any) {
 
 async function handlePublish(server: string | undefined, options: any) {
 	if (options.transport && !["shttp", "stdio"].includes(options.transport)) {
-		fatal(`Invalid transport type "${options.transport}". Valid options are: shttp, stdio`)
+		fatal(
+			`Invalid transport type "${options.transport}". Valid options are: shttp, stdio`,
+		)
 	}
 
 	const isUrl = server?.startsWith("http://") || server?.startsWith("https://")
@@ -485,7 +489,9 @@ function registerAlias(
 		})
 	}
 	// Copy action handler via internal property (Commander stores it as _actionHandler)
-	const handler = (sourceCmd as unknown as { _actionHandler: (...args: unknown[]) => void })._actionHandler
+	const handler = (
+		sourceCmd as unknown as { _actionHandler: (...args: unknown[]) => void }
+	)._actionHandler
 	if (handler) {
 		alias.action(handler)
 	}
@@ -1019,10 +1025,12 @@ namespace
 // ─── Top-level hidden aliases (backward compat) ────────────────────────────
 
 registerAlias(program, "install [server]", mcpInstallCmd, {
-	deprecation: "Note: 'install' is deprecated. Use 'smithery mcp add <server> --local' instead.",
+	deprecation:
+		"Note: 'install' is deprecated. Use 'smithery mcp add <server> --local' instead.",
 })
 registerAlias(program, "uninstall [server]", mcpUninstallCmd, {
-	deprecation: "Note: 'uninstall' is deprecated. Use 'smithery mcp remove <server> --local' instead.",
+	deprecation:
+		"Note: 'uninstall' is deprecated. Use 'smithery mcp remove <server> --local' instead.",
 })
 registerAlias(program, "run <server>", runCmd)
 registerAlias(program, "search [term]", searchCmd)

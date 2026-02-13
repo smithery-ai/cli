@@ -9,7 +9,9 @@ export async function voteSkill(
 	vote: "up" | "down",
 ): Promise<void> {
 	if (!skillIdentifier) {
-		fatal("Skill identifier is required\nUsage: smithery skills vote <namespace/slug> --up|--down")
+		fatal(
+			"Skill identifier is required\nUsage: smithery skills vote <namespace/slug> --up|--down",
+		)
 	}
 
 	const { namespace, slug } = parseSkillIdentifierOrDie(skillIdentifier)

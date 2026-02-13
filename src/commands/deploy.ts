@@ -1,5 +1,9 @@
 import { createReadStream, existsSync } from "node:fs"
-import { type Smithery, NotFoundError, PermissionDeniedError } from "@smithery/api"
+import {
+	NotFoundError,
+	PermissionDeniedError,
+	type Smithery,
+} from "@smithery/api"
 import type {
 	DeploymentDeployParams,
 	DeploymentGetResponse,
@@ -12,9 +16,9 @@ import ora from "ora"
 import { buildBundle } from "../lib/bundle/index.js"
 import { loadProjectConfig } from "../lib/config-loader.js"
 import { resolveNamespace } from "../lib/namespace.js"
+import { createSmitheryClientSync } from "../lib/smithery-client"
 import { parseConfigSchema, parseQualifiedName } from "../utils/cli-utils.js"
 import { promptForServerNameInput } from "../utils/command-prompts.js"
-import { createSmitheryClientSync } from "../lib/smithery-client"
 import { ensureApiKey } from "../utils/runtime.js"
 
 interface DeployOptions {
@@ -243,9 +247,7 @@ async function deployToServer(
 		sourcemap: sourcemapFile,
 		bundle: bundleFile,
 	}
-	let result: Awaited<
-		ReturnType<typeof registry.servers.deployments.deploy>
-	>
+	let result: Awaited<ReturnType<typeof registry.servers.deployments.deploy>>
 	try {
 		result = await registry.servers.deployments.deploy(server, deployParams)
 	} catch (error) {
