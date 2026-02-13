@@ -229,6 +229,11 @@ async function handleAddConnection(server: string, options: any) {
 }
 
 async function handleListConnections(options: any) {
+	if (options.client) {
+		const { listClientServers } = await import("./commands/list")
+		await listClientServers(options.client)
+		return
+	}
 	const { listServers } = await loadConnectCommands()
 	await listServers(options)
 }
@@ -588,12 +593,17 @@ mcpCmd
 	.option("--namespace <ns>", "Namespace to list from")
 	.option("--limit <n>", "Maximum number of results (default: all)")
 	.option("--cursor <cursor>", "Pagination cursor from previous response")
+	.option(
+		"-c, --client <name>",
+		`List servers installed in an AI client's config (${VALID_CLIENTS.join(", ")})`,
+	)
 
 	.addHelpText(
 		"after",
 		`
 Examples:
   smithery mcp list
+  smithery mcp list --client claude-code
   smithery mcp list --json`,
 	)
 	.action(handleListConnections)

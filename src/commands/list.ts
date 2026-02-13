@@ -4,8 +4,41 @@ import {
 	VALID_CLIENTS,
 	type ValidClient,
 } from "../config/clients"
+import { fatal } from "../lib/cli-error"
 import { readConfig } from "../lib/client-config-io"
+import { isJsonMode, outputTable } from "../utils/output"
 
+/**
+ * List MCP servers installed in a specific AI client's config.
+ */
+export async function listClientServers(client: string): Promise<void> {
+	const isJson = isJsonMode()
+
+	const configTarget = getClientConfiguration(client)
+	if (configTarget.install.method === "command") {
+		fatal(`Listing servers is not supported for ${client}`)
+	}
+
+	const config = readConfig(client)
+	const servers = Object.keys(config.mcpServers).sort()
+
+	const data = servers.map((name) => ({ name }))
+
+	outputTable({
+		data,
+		columns: [{ key: "name", header: "NAME" }],
+		json: isJson,
+		jsonData: { client, servers },
+		tip:
+			data.length === 0
+				? `No servers installed for ${client}. Use smithery mcp add <url> --client ${client} to install one.`
+				: `Use smithery mcp remove <name> --client ${client} to uninstall.`,
+	})
+}
+
+/**
+ * @deprecated Use listClientServers instead.
+ */
 export async function list(
 	subcommand: string | undefined,
 	client: ValidClient,
@@ -13,36 +46,13 @@ export async function list(
 	switch (subcommand) {
 		case "clients":
 			console.log(chalk.bold("Available clients:"))
-			VALID_CLIENTS.forEach((client) => {
-				console.log(`  ${chalk.green(client)}`)
-			})
-			break
-		case "servers": {
-			/* check if client is command-type */
-			const configTarget = getClientConfiguration(client)
-			if (configTarget.install.method === "command") {
-				console.log(
-					chalk.yellow(
-						`Listing servers is currently not supported for ${client}`,
-					),
-				)
-				return
+			for (const c of VALID_CLIENTS) {
+				console.log(`  ${chalk.green(c)}`)
 			}
-
-			const config = readConfig(client)
-			const servers = Object.keys(config.mcpServers)
-			if (servers?.length > 0) {
-				console.log(chalk.bold(`Installed servers for ${client}:`))
-				servers.sort().forEach((server) => {
-					console.log(`${chalk.green(server)}`)
-				})
-			} else {
-				const info = `No installed servers found for ${client}`
-				console.log(`${chalk.red(info)}`)
-			}
-
 			break
-		}
+		case "servers":
+			await listClientServers(client)
+			break
 		default:
 			console.log(
 				chalk.yellow("Please specify what to list. Available options:"),
