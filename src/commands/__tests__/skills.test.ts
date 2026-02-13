@@ -5,30 +5,35 @@
 
 import { beforeEach, describe, expect, test, vi } from "vitest"
 
-// Mock the Smithery client
-vi.mock("@smithery/api/client.js", () => ({
-	Smithery: vi.fn().mockImplementation((config) => ({
-		_config: config,
-		skills: {
-			list: vi.fn().mockResolvedValue({
-				skills: [
-					{
-						id: "test-id",
-						namespace: "test-ns",
-						slug: "test-skill",
-						displayName: "Test Skill",
-						description: "A test skill",
-					},
-				],
-			}),
-			get: vi.fn().mockResolvedValue({
-				id: "test-id",
-				namespace: "test-ns",
-				slug: "test-skill",
-			}),
-		},
-	})),
-}))
+function createSmitheryMock() {
+	return {
+		Smithery: vi.fn().mockImplementation((config) => ({
+			_config: config,
+			skills: {
+				list: vi.fn().mockResolvedValue({
+					skills: [
+						{
+							id: "test-id",
+							namespace: "test-ns",
+							slug: "test-skill",
+							displayName: "Test Skill",
+							description: "A test skill",
+						},
+					],
+				}),
+				get: vi.fn().mockResolvedValue({
+					id: "test-id",
+					namespace: "test-ns",
+					slug: "test-skill",
+				}),
+			},
+		})),
+	}
+}
+
+// Mock both import paths to the same factory
+vi.mock("@smithery/api", () => createSmitheryMock())
+vi.mock("@smithery/api/client.js", () => createSmitheryMock())
 
 // Mock child_process for install
 vi.mock("node:child_process", () => ({
@@ -39,7 +44,7 @@ vi.mock("node:child_process", () => ({
 vi.spyOn(console, "log").mockImplementation(() => {})
 vi.spyOn(console, "error").mockImplementation(() => {})
 
-import { Smithery } from "@smithery/api/client.js"
+import { Smithery } from "@smithery/api"
 
 describe("skills commands use public API", () => {
 	beforeEach(() => {

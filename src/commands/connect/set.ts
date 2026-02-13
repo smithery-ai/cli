@@ -1,4 +1,4 @@
-import chalk from "chalk"
+import { fatal } from "../../lib/cli-error"
 import { isJsonMode, outputDetail } from "../../utils/output"
 import { ConnectSession } from "./api"
 import { formatConnectionOutput } from "./format-connection"
@@ -48,11 +48,9 @@ export async function setServer(
 		outputDetail({
 			data: output,
 			json: isJson,
-			tip: `Use smithery tools list ${connection.connectionId} to list tools.`,
+			tip: `Use smithery tools find --connection ${connection.connectionId} --all to view tools.`,
 		})
 	} catch (error) {
-		const errorMessage = error instanceof Error ? error.message : String(error)
-		console.error(chalk.red(`Failed to set connection: ${errorMessage}`))
-		process.exit(1)
+		fatal("Failed to set connection", error)
 	}
 }

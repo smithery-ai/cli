@@ -1,6 +1,7 @@
-import type { Smithery } from "@smithery/api/client.js"
+import type { Smithery } from "@smithery/api"
 import type { SkillListResponse } from "@smithery/api/resources/skills"
 import chalk from "chalk"
+import { fatal } from "../../lib/cli-error"
 import { SKILL_AGENTS } from "../../config/agents.js"
 import { isJsonMode, outputTable, truncate } from "../../utils/output"
 import { installSkill } from "./install.js"
@@ -157,11 +158,7 @@ export async function searchSkills(
 		})
 		return null
 	} catch (error) {
-		console.error(
-			chalk.red("Error searching skills:"),
-			error instanceof Error ? error.message : String(error),
-		)
-		process.exit(1)
+		fatal("Error searching skills", error)
 	}
 }
 

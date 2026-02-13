@@ -23,8 +23,7 @@ smithery mcp remove <ids...>            # Remove connections
 ### Tools
 
 ```bash
-smithery tools list [connection]        # List available tools
-smithery tools search <query>           # Search tools by intent
+smithery tools find [query]             # Find tools by name/description/intent
 smithery tools get <connection/tool>    # Show full details for one tool
 smithery tools call <connection> <tool> [args]  # Call a tool
 ```
@@ -78,7 +77,7 @@ smithery mcp search "github"
 smithery mcp add https://server.smithery.ai/github --id github
 
 # Discover and use tools
-smithery tools search "create issue"
+smithery tools find "create issue"
 smithery tools call github create_issue '{"title":"Bug fix","body":"..."}'
 
 # Browse and install skills

@@ -6,7 +6,7 @@ const SMITHERY_GATEWAY_BASE = "https://server.smithery.ai/"
  * prepend the Smithery server base URL.
  *
  * Examples:
- *   "@anthropic/fetch" → "https://server.smithery.ai/@anthropic/fetch"
+ *   "anthropic/fetch" → "https://server.smithery.ai/anthropic/fetch"
  *   "https://example.com/mcp" → "https://example.com/mcp"
  */
 export function normalizeMcpUrl(url: string): string {

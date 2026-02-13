@@ -1,4 +1,5 @@
 import chalk from "chalk"
+import { errorMessage, fatal } from "../../lib/cli-error"
 import { isJsonMode, outputJson } from "../../utils/output"
 import { ConnectSession } from "./api"
 
@@ -16,10 +17,7 @@ export async function removeServer(
 				await session.deleteConnection(id)
 				removed.push(id)
 			} catch (error) {
-				failed.push({
-					id,
-					error: error instanceof Error ? error.message : String(error),
-				})
+				failed.push({ id, error: errorMessage(error) })
 			}
 		}
 
@@ -44,11 +42,6 @@ export async function removeServer(
 			}
 		}
 	} catch (error) {
-		console.error(
-			chalk.red(
-				`Failed to remove connections: ${error instanceof Error ? error.message : String(error)}`,
-			),
-		)
-		process.exit(1)
+		fatal("Failed to remove connections", error)
 	}
 }

@@ -1,4 +1,4 @@
-import chalk from "chalk"
+import { fatal } from "../../lib/cli-error"
 import { isJsonMode, outputDetail } from "../../utils/output"
 import { ConnectSession } from "./api"
 import { formatConnectionOutput } from "./format-connection"
@@ -18,11 +18,9 @@ export async function getServer(
 		outputDetail({
 			data,
 			json: isJsonMode(options),
-			tip: `Use smithery tools list ${id} to list tools for this connection.`,
+			tip: `Use smithery tools find --connection ${id} --all to view tools for this connection.`,
 		})
 	} catch (error) {
-		const errorMessage = error instanceof Error ? error.message : String(error)
-		console.error(chalk.red(`Failed to get connection: ${errorMessage}`))
-		process.exit(1)
+		fatal("Failed to get connection", error)
 	}
 }

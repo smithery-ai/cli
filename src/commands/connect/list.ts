@@ -39,6 +39,6 @@ export async function listServers(options: {
 		tip:
 			data.length === 0
 				? "No servers connected. Use 'smithery mcp add <mcp-url>' to add one."
-				: "Use smithery tools list <connection> to list tools for a connection.",
+				: "Use smithery tools find --connection <id> --all to view tools for a connection.",
 	})
 }

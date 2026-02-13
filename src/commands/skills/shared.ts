@@ -1,11 +1,11 @@
-import { Smithery } from "@smithery/api/client.js"
-import { getApiKey } from "../../utils/smithery-settings"
+import type { Smithery } from "@smithery/api"
+import { errorMessage, fatal } from "../../lib/cli-error"
+import {
+	createPublicClient,
+	createScopedClient,
+} from "../../lib/smithery-client"
 
-const SKILLS_SCOPE_POLICY: Array<{
-	resources: Array<"skills">
-	operations: Array<"read" | "write">
-	ttl: number
-}> = [
+const SKILLS_SCOPE_POLICY = [
 	{
 		resources: ["skills"],
 		operations: ["read", "write"],
@@ -35,21 +35,27 @@ export function getSkillUrl(namespace: string, slug: string): string {
 }
 
 export function createPublicSkillsClient(): Smithery {
-	return new Smithery({ apiKey: "" })
+	return createPublicClient()
 }
 
 export async function createAuthenticatedSkillsClient(): Promise<Smithery | null> {
-	const rootApiKey = await getApiKey()
-	if (!rootApiKey) return null
+	return createScopedClient(SKILLS_SCOPE_POLICY)
+}
 
+/** Parse a skill identifier or exit with an error message. */
+export function parseSkillIdentifierOrDie(identifier: string): ParsedSkillIdentifier {
 	try {
-		const rootClient = new Smithery({ apiKey: rootApiKey })
-		const token = await rootClient.tokens.create({
-			policy: SKILLS_SCOPE_POLICY,
-		})
-		return new Smithery({ apiKey: token.token })
-	} catch {
-		// Fall back to root key if minting fails.
-		return new Smithery({ apiKey: rootApiKey })
+		return parseSkillIdentifier(identifier)
+	} catch (error) {
+		fatal(errorMessage(error))
 	}
+}
+
+/** Get an authenticated skills client or exit if not logged in. */
+export async function requireAuthenticatedSkillsClient(): Promise<Smithery> {
+	const client = await createAuthenticatedSkillsClient()
+	if (!client) {
+		fatal("Not logged in. Run 'smithery auth login' to authenticate.")
+	}
+	return client
 }

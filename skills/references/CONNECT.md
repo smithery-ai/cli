@@ -59,20 +59,22 @@ smithery mcp set "my-server" "https://server.smithery.ai/example/server"
 
 This is idempotent - safe to run multiple times.
 
-## List Tools
+## Find Tools
 
-List all tools from all connections:
+Find all tools across all connections:
 ```bash
-smithery tools list
+smithery tools find --all
 ```
 
-List tools from a specific connection:
+Find all tools from a specific connection:
 ```bash
-smithery tools list my-github
+smithery tools find --connection my-github --all
 ```
 
 Options:
-- `--namespace <ns>` - Namespace to list from
+- `--namespace <ns>` - Namespace to search in
+- `--connection <id>` - Restrict to one connection
+- `--all` - Return all matches (disable pagination)
 
 Output (JSON):
 ```json
@@ -88,16 +90,19 @@ Output (JSON):
 }
 ```
 
-## Search Tools
+## Find by Query
 
-Fuzzy search across all tools:
+Find tools by intent across all connections:
 
 ```bash
-smithery tools search "create issue"
+smithery tools find "create issue"
 ```
 
 Options:
 - `--namespace <ns>` - Namespace to search in
+- `--match <mode>` - `fuzzy`, `substring`, or `exact`
+- `--limit <n>` - Max results per page (default: 10)
+- `--page <n>` - Page number (default: 1)
 
 ## Get Tool Details
 
@@ -153,11 +158,11 @@ If `auth_required`, tell your human to visit the authorization URL.
 # 1. Add a connection
 smithery mcp add "https://server.smithery.ai/smithery/github"
 
-# 2. List available tools
-smithery tools list
+# 2. Find available tools
+smithery tools find --all
 
-# 3. Search for what you need
-smithery tools search "pull request"
+# 3. Find what you need
+smithery tools find "pull request"
 
 # 4. Call the tool
 smithery tools call github create_pull_request '{"repo": "...", "title": "..."}'

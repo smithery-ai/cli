@@ -8,7 +8,7 @@ import { formatServerConfig } from "../../../lib/client-config-io"
 describe("formatServerConfig", () => {
 	test("should return http config for http-oauth transport", () => {
 		// ARRANGE
-		const qualifiedName = "@test/http-server"
+		const qualifiedName = "test/http-server"
 
 		// ACT
 		const result = formatServerConfig(qualifiedName, "http-oauth")
@@ -23,7 +23,7 @@ describe("formatServerConfig", () => {
 
 	test("should return mcp-remote config for http-proxy transport", () => {
 		// ARRANGE
-		const qualifiedName = "@test/http-server"
+		const qualifiedName = "test/http-server"
 
 		// ACT
 		const result = formatServerConfig(qualifiedName, "http-proxy")
@@ -41,7 +41,7 @@ describe("formatServerConfig", () => {
 
 	test("should return stdio config for stdio transport", () => {
 		// ARRANGE
-		const qualifiedName = "@test/stdio-server"
+		const qualifiedName = "test/stdio-server"
 
 		// ACT
 		const result = formatServerConfig(qualifiedName, "stdio")

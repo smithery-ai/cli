@@ -145,7 +145,7 @@ async function downloadBundle(
 
 /**
  * Downloads and extracts a bundle to the local cache
- * @param qualifiedName - Server qualified name (e.g., @user/server)
+ * @param qualifiedName - Server qualified name (e.g., user/server)
  * @param bundleUrl - URL to download the .mcpb bundle from
  * @returns Path to the extracted bundle directory
  */

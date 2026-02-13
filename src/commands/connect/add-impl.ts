@@ -1,4 +1,5 @@
 import chalk from "chalk"
+import { errorMessage, fatal } from "../../lib/cli-error"
 import { isJsonMode, outputDetail } from "../../utils/output"
 import { ConnectSession } from "./api"
 import { formatConnectionOutput } from "./format-connection"
@@ -53,7 +54,7 @@ export async function addServer(
 				} else if (status === "connected") {
 					console.error(
 						chalk.yellow(
-							`Use "smithery tools list ${match.connectionId}" to interact with it.`,
+							`Use "smithery tools find --connection ${match.connectionId}" to interact with it.`,
 						),
 					)
 				}
@@ -87,21 +88,22 @@ export async function addServer(
 		outputDetail({
 			data: output,
 			json: isJson,
-			tip: `Call tools: smithery tools call ${id} <tool> '<args>'\nList tools: smithery tools list ${id}`,
+			tip: `Call tools: smithery tools call ${id} <tool> '<args>'\nFind tools: smithery tools find --connection ${id} --all`,
 		})
 	} catch (error) {
-		const errorMessage = error instanceof Error ? error.message : String(error)
-		console.error(chalk.red(`Failed to add connection: ${errorMessage}`))
+		const msg = errorMessage(error)
 		if (
-			errorMessage.includes("Missing required permission") ||
-			errorMessage.includes("403")
+			msg.includes("Missing required permission") ||
+			msg.includes("403")
 		) {
+			console.error(chalk.red(`Failed to add connection: ${msg}`))
 			console.error(
 				chalk.yellow(
 					`\nYour authentication token may be expired or missing required permissions. Run "smithery auth login" to re-authenticate.`,
 				),
 			)
+			process.exit(1)
 		}
-		process.exit(1)
+		fatal("Failed to add connection", error)
 	}
 }

@@ -1,15 +1,13 @@
 import type { ReviewItem } from "@smithery/api/resources/skills/reviews.js"
 import chalk from "chalk"
+import { fatal } from "../../lib/cli-error"
 import { isJsonMode } from "../../utils/output"
 import {
-	createAuthenticatedSkillsClient,
 	createPublicSkillsClient,
-	parseSkillIdentifier,
+	parseSkillIdentifierOrDie,
+	requireAuthenticatedSkillsClient,
 } from "./shared.js"
 
-/**
- * Format a single review for display
- */
 function formatReview(review: ReviewItem, index?: number): string {
 	const prefix = index !== undefined ? `${index + 1}. ` : ""
 	const agent = review.agentModel
@@ -38,11 +36,6 @@ export interface ListReviewsOptions {
 	page?: number
 }
 
-/**
- * List reviews for a skill
- * @param skillIdentifier - Skill identifier (namespace/slug)
- * @param options - List options
- */
 export async function listReviews(
 	skillIdentifier: string,
 	options: ListReviewsOptions = {},
@@ -51,23 +44,10 @@ export async function listReviews(
 	const json = isJsonMode(options)
 
 	if (!skillIdentifier) {
-		console.error(chalk.red("Error: Skill identifier is required"))
-		console.error(chalk.dim("Usage: smithery skills reviews <namespace/slug>"))
-		process.exit(1)
+		fatal("Skill identifier is required\nUsage: smithery skills reviews <namespace/slug>")
 	}
 
-	let namespace: string
-	let slug: string
-	try {
-		const parsed = parseSkillIdentifier(skillIdentifier)
-		namespace = parsed.namespace
-		slug = parsed.slug
-	} catch (error) {
-		console.error(
-			chalk.red(error instanceof Error ? error.message : String(error)),
-		)
-		process.exit(1)
-	}
+	const { namespace, slug } = parseSkillIdentifierOrDie(skillIdentifier)
 
 	try {
 		const client = createPublicSkillsClient()
@@ -109,7 +89,6 @@ export async function listReviews(
 
 		const totalCount = pagination.totalCount ?? reviews.length
 
-		// Show header
 		console.log(
 			chalk.bold(
 				`Reviews for ${chalk.cyan(skillIdentifier)} (${totalCount} review${totalCount === 1 ? "" : "s"})`,
@@ -117,13 +96,11 @@ export async function listReviews(
 		)
 		console.log()
 
-		// Show reviews
 		for (let i = 0; i < reviews.length; i++) {
 			console.log(formatReview(reviews[i], i))
 			console.log()
 		}
 
-		// Pagination info
 		const totalPages = pagination.totalPages ?? 1
 		const currentPage = pagination.currentPage ?? page
 		if (totalPages > 1) {
@@ -139,11 +116,7 @@ export async function listReviews(
 			}
 		}
 	} catch (error) {
-		console.error(
-			chalk.red("Error fetching reviews:"),
-			error instanceof Error ? error.message : String(error),
-		)
-		process.exit(1)
+		fatal("Error fetching reviews", error)
 	}
 }
 
@@ -153,59 +126,25 @@ export interface SubmitReviewOptions {
 	vote: "up" | "down"
 }
 
-/**
- * Submit a review for a skill
- * @param skillIdentifier - Skill identifier (namespace/slug)
- * @param options - Review options (review text, model)
- */
 export async function submitReview(
 	skillIdentifier: string,
 	options: SubmitReviewOptions,
 ): Promise<void> {
 	if (!skillIdentifier) {
-		console.error(chalk.red("Error: Skill identifier is required"))
-		console.error(chalk.dim("Usage: smithery skills review <namespace/slug>"))
-		process.exit(1)
+		fatal("Skill identifier is required\nUsage: smithery skills review <namespace/slug>")
 	}
 
-	let namespace: string
-	let slug: string
-	try {
-		const parsed = parseSkillIdentifier(skillIdentifier)
-		namespace = parsed.namespace
-		slug = parsed.slug
-	} catch (error) {
-		console.error(
-			chalk.red(error instanceof Error ? error.message : String(error)),
-		)
-		process.exit(1)
-	}
-
-	// Reviews require authentication
-	const client = await createAuthenticatedSkillsClient()
-	if (!client) {
-		console.error(chalk.red("Error: Not logged in."))
-		console.error(chalk.dim("Run 'smithery login' to authenticate."))
-		process.exit(1)
-	}
+	const { namespace, slug } = parseSkillIdentifierOrDie(skillIdentifier)
+	const client = await requireAuthenticatedSkillsClient()
 
 	const reviewText = options.review?.trim()
 
 	if (!reviewText || reviewText.length === 0) {
-		console.error(chalk.red("Error: Review text is required"))
-		console.error(
-			chalk.dim("Usage: smithery skills review create <skill> -b <text>"),
-		)
-		process.exit(1)
+		fatal("Review text is required\nUsage: smithery skills review create <skill> -b <text>")
 	}
 
 	if (reviewText.length > 1000) {
-		console.error(
-			chalk.red(
-				`Error: Review is too long (${reviewText.length}/1000 characters)`,
-			),
-		)
-		process.exit(1)
+		fatal(`Review is too long (${reviewText.length}/1000 characters)`)
 	}
 
 	const ora = (await import("ora")).default
@@ -232,46 +171,17 @@ export async function submitReview(
 			),
 		)
 	} catch (error) {
-		console.error(
-			chalk.red(error instanceof Error ? error.message : String(error)),
-		)
-		process.exit(1)
+		fatal("Failed to submit review", error)
 	}
 }
 
-/**
- * Delete your review for a skill
- * @param skillIdentifier - Skill identifier (namespace/slug)
- */
 export async function deleteReview(skillIdentifier: string): Promise<void> {
 	if (!skillIdentifier) {
-		console.error(chalk.red("Error: Skill identifier is required"))
-		console.error(
-			chalk.dim("Usage: smithery skills review --delete <namespace/slug>"),
-		)
-		process.exit(1)
+		fatal("Skill identifier is required\nUsage: smithery skills review --delete <namespace/slug>")
 	}
 
-	let namespace: string
-	let slug: string
-	try {
-		const parsed = parseSkillIdentifier(skillIdentifier)
-		namespace = parsed.namespace
-		slug = parsed.slug
-	} catch (error) {
-		console.error(
-			chalk.red(error instanceof Error ? error.message : String(error)),
-		)
-		process.exit(1)
-	}
-
-	// Requires authentication
-	const client = await createAuthenticatedSkillsClient()
-	if (!client) {
-		console.error(chalk.red("Error: Not logged in."))
-		console.error(chalk.dim("Run 'smithery login' to authenticate."))
-		process.exit(1)
-	}
+	const { namespace, slug } = parseSkillIdentifierOrDie(skillIdentifier)
+	const client = await requireAuthenticatedSkillsClient()
 
 	const ora = (await import("ora")).default
 	const spinner = ora("Deleting review...").start()
@@ -281,59 +191,25 @@ export async function deleteReview(skillIdentifier: string): Promise<void> {
 		spinner.succeed("Review deleted")
 	} catch (error) {
 		spinner.fail("Failed to delete review")
-		console.error(
-			chalk.red(error instanceof Error ? error.message : String(error)),
-		)
-		process.exit(1)
+		fatal("Failed to delete review", error)
 	}
 }
 
-/**
- * Vote on a review (upvote or downvote)
- * @param skillIdentifier - Skill identifier (namespace/slug)
- * @param reviewId - The review ID to vote on
- * @param vote - 'up' or 'down'
- */
 export async function voteReview(
 	skillIdentifier: string,
 	reviewId: string,
 	vote: "up" | "down",
 ): Promise<void> {
 	if (!skillIdentifier) {
-		console.error(chalk.red("Error: Skill identifier is required"))
-		console.error(
-			chalk.dim(
-				"Usage: smithery skills vote <namespace/slug> <review-id> --up|--down",
-			),
-		)
-		process.exit(1)
+		fatal("Skill identifier is required\nUsage: smithery skills vote <namespace/slug> <review-id> --up|--down")
 	}
 
 	if (!reviewId) {
-		console.error(chalk.red("Error: Review ID is required"))
-		process.exit(1)
+		fatal("Review ID is required")
 	}
 
-	let namespace: string
-	let slug: string
-	try {
-		const parsed = parseSkillIdentifier(skillIdentifier)
-		namespace = parsed.namespace
-		slug = parsed.slug
-	} catch (error) {
-		console.error(
-			chalk.red(error instanceof Error ? error.message : String(error)),
-		)
-		process.exit(1)
-	}
-
-	// Voting requires authentication
-	const client = await createAuthenticatedSkillsClient()
-	if (!client) {
-		console.error(chalk.red("Error: Not logged in."))
-		console.error(chalk.dim("Run 'smithery login' to authenticate."))
-		process.exit(1)
-	}
+	const { namespace, slug } = parseSkillIdentifierOrDie(skillIdentifier)
+	const client = await requireAuthenticatedSkillsClient()
 
 	const ora = (await import("ora")).default
 	const voteLabel = vote === "up" ? "Upvoting" : "Downvoting"
@@ -349,9 +225,6 @@ export async function voteReview(
 		spinner.succeed(`Review ${vote}voted`)
 	} catch (error) {
 		spinner.fail("Failed to vote")
-		console.error(
-			chalk.red(error instanceof Error ? error.message : String(error)),
-		)
-		process.exit(1)
+		fatal("Failed to vote on review", error)
 	}
 }

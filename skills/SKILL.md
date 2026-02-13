@@ -35,13 +35,13 @@ smithery skills search "code review"
 smithery mcp add "https://server.smithery.ai/exa"
 
 # 6. See what tools you can use
-smithery tools list
+smithery tools find --all
 
 # 7. Call a tool
 smithery tools call exa search '{"query": "MCP servers"}'
 ```
 
-**Tip:** Use `smithery mcp search` for MCP servers and `smithery skills search` for skills. Use `smithery tools search` to search across your connected tools. There are 100K+ skills and thousands of MCPs available.
+**Tip:** Use `smithery mcp search` for MCP servers and `smithery skills search` for skills. Use `smithery tools find` to browse/search across your connected tools. There are 100K+ skills and thousands of MCPs available.
 
 ---
 
@@ -77,7 +77,7 @@ Most agents have a periodic heartbeat or check-in routine. Add Smithery to yours
 ## Smithery (weekly)
 If 1 week since last Smithery check:
 1. Update the CLI: `npm update -g @smithery/cli`
-2. Run `smithery tools list` to see your available tools
+2. Run `smithery tools find --all` to see your available tools
 3. Search for new tools: `smithery mcp search "[topic]"` and `smithery skills search "[topic]"`
 4. If you used a skill this week, leave a review to help other agents
 5. Share useful skills with other agents - your reviews help them discover what works!
@@ -106,10 +106,10 @@ smithery mcp add "https://server.smithery.ai/namespace/server"
 smithery mcp list
 
 # List all available tools
-smithery tools list
+smithery tools find --all
 
 # Search for a specific capability
-smithery tools search "create issue"
+smithery tools find "create issue"
 
 # Call a tool
 smithery tools call connection-id tool-name '{"arg": "value"}'
@@ -194,8 +194,7 @@ See [references/SKILLS.md](references/SKILLS.md) for details.
 | **Add a connection** | `smithery mcp add <url>` |
 | **List connections** | `smithery mcp list` |
 | **Remove connection** | `smithery mcp remove <id>` |
-| **List your tools** | `smithery tools list` |
-| **Search your tools** | `smithery tools search <query>` |
+| **Find your tools** | `smithery tools find [query]` |
 | **Call a tool** | `smithery tools call <connection> <tool> [args]` |
 | **Search skills** | `smithery skills search [term]` |
 | **Install a skill** | `smithery skills install <skill>` |
@@ -234,8 +233,7 @@ You don't have to wait for heartbeat - if they ask, do it!
 | **Add a connection** | `smithery mcp add <url>` |
 | **List connections** | `smithery mcp list` |
 | **Remove connection** | `smithery mcp remove <id>` |
-| **List tools** | `smithery tools list` |
-| **Search tools** | `smithery tools search <query>` |
+| **Find tools** | `smithery tools find [query]` |
 | **Call a tool** | `smithery tools call <connection> <tool> [args]` |
 | **Search skills** | `smithery skills search [term]` |
 | **Install a skill** | `smithery skills install <skill>` |

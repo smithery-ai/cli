@@ -1,3 +1,4 @@
+import { errorMessage } from "../../lib/cli-error"
 import { outputJson } from "../../utils/output"
 import { ConnectSession } from "./api"
 
@@ -7,7 +8,6 @@ export async function callTool(
 	args: string | undefined,
 	options: { namespace?: string },
 ): Promise<void> {
-	// Parse args JSON
 	let parsedArgs: Record<string, unknown> = {}
 	if (args) {
 		try {
@@ -16,7 +16,7 @@ export async function callTool(
 			outputJson({
 				result: null,
 				isError: true,
-				error: `Invalid JSON args: ${e instanceof Error ? e.message : String(e)}`,
+				error: `Invalid JSON args: ${errorMessage(e)}`,
 			})
 			process.exit(1)
 		}
@@ -30,7 +30,7 @@ export async function callTool(
 		outputJson({
 			result: null,
 			isError: true,
-			error: e instanceof Error ? e.message : String(e),
+			error: errorMessage(e),
 		})
 		process.exit(1)
 	}

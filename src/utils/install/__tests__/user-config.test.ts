@@ -72,7 +72,7 @@ const createMockSpinner = () => ({
 
 describe("resolveUserConfig", () => {
 	let mockSpinner: OraSpinner
-	const qualifiedName = "@test/test-server"
+	const qualifiedName = "test/test-server"
 
 	beforeEach(() => {
 		vi.clearAllMocks()
@@ -610,7 +610,7 @@ describe("resolveUserConfig", () => {
 })
 
 describe("serverNeedsConfig", () => {
-	const qualifiedName = "@test/test-server"
+	const qualifiedName = "test/test-server"
 
 	it("returns false when schema has no properties", async () => {
 		const connection = noConfigServer.connections[0]

@@ -1,4 +1,5 @@
 import chalk from "chalk"
+import { errorMessage } from "../../lib/cli-error"
 import { isJsonMode, outputDetail, outputJson } from "../../utils/output"
 import type { ToolInfo } from "./api"
 import { ConnectSession } from "./api"
@@ -38,18 +39,18 @@ export async function getTool(
 		const found = tools.find((t) => t.name === tool)
 
 		if (!found) {
-			const errorMessage = `Tool "${tool}" was not found in connection "${connection}".`
+			const msg = `Tool "${tool}" was not found in connection "${connection}".`
 			if (isJson) {
 				outputJson({
 					tool: null,
-					error: errorMessage,
-					hint: `Use smithery tools list ${connection} to browse available tools.`,
+					error: msg,
+					hint: `Use smithery tools find --connection ${connection} to browse available tools.`,
 				})
 			} else {
-				console.error(chalk.red(errorMessage))
+				console.error(chalk.red(msg))
 				console.log(
 					chalk.dim(
-						`Tip: Use smithery tools list ${connection} to browse available tools.`,
+						`Tip: Use smithery tools find --connection ${connection} to browse available tools.`,
 					),
 				)
 			}
@@ -63,14 +64,11 @@ export async function getTool(
 			tip: `Use smithery tools call ${connection} '${found.name}' '<args>' to call this tool.`,
 		})
 	} catch (error) {
-		const errorMessage = error instanceof Error ? error.message : String(error)
+		const msg = errorMessage(error)
 		if (isJson) {
-			outputJson({
-				tool: null,
-				error: `Failed to get tool: ${errorMessage}`,
-			})
+			outputJson({ tool: null, error: `Failed to get tool: ${msg}` })
 		} else {
-			console.error(chalk.red(`Failed to get tool: ${errorMessage}`))
+			console.error(chalk.red(`Failed to get tool: ${msg}`))
 		}
 		process.exit(1)
 	}

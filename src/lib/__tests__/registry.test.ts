@@ -52,14 +52,14 @@ describe("resolveServer", () => {
 	})
 
 	test("calls SDK with namespace and serverName", async () => {
-		await resolveServer(parseQualifiedName("@foo/bar"))
+		await resolveServer(parseQualifiedName("foo/bar"))
 
 		expect(mockGet).toHaveBeenCalledWith("bar", { namespace: "foo" })
 	})
 
 	test("returns server and first connection", async () => {
 		const mockResponse = {
-			qualifiedName: "@foo/bar",
+			qualifiedName: "foo/bar",
 			connections: [
 				{ type: "stdio", command: "npx foo" },
 				{ type: "http", url: "https://example.com" },
@@ -67,7 +67,7 @@ describe("resolveServer", () => {
 		}
 		mockGet.mockResolvedValue(mockResponse)
 
-		const result = await resolveServer(parseQualifiedName("@foo/bar"))
+		const result = await resolveServer(parseQualifiedName("foo/bar"))
 
 		expect(result.server).toEqual(mockResponse)
 		expect(result.connection).toEqual({ type: "stdio", command: "npx foo" })
@@ -75,11 +75,11 @@ describe("resolveServer", () => {
 
 	test("throws when no connections available", async () => {
 		mockGet.mockResolvedValue({
-			qualifiedName: "@foo/bar",
+			qualifiedName: "foo/bar",
 			connections: [],
 		})
 
-		await expect(resolveServer(parseQualifiedName("@foo/bar"))).rejects.toThrow(
+		await expect(resolveServer(parseQualifiedName("foo/bar"))).rejects.toThrow(
 			"No connection configuration found for server",
 		)
 	})
@@ -87,7 +87,7 @@ describe("resolveServer", () => {
 	test("creates Smithery client with empty API key when env var not set", async () => {
 		delete process.env.SMITHERY_API_KEY
 
-		await resolveServer(parseQualifiedName("@foo/bar"))
+		await resolveServer(parseQualifiedName("foo/bar"))
 
 		// Verify Smithery was instantiated with empty string API key
 		expect(Smithery).toHaveBeenCalledWith(
@@ -98,7 +98,7 @@ describe("resolveServer", () => {
 	test("creates Smithery client with API key from env when available", async () => {
 		process.env.SMITHERY_API_KEY = "test-api-key"
 
-		await resolveServer(parseQualifiedName("@foo/bar"))
+		await resolveServer(parseQualifiedName("foo/bar"))
 
 		expect(Smithery).toHaveBeenCalledWith(
 			expect.objectContaining({ apiKey: "test-api-key" }),

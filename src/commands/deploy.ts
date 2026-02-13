@@ -1,5 +1,5 @@
 import { createReadStream, existsSync } from "node:fs"
-import { NotFoundError, PermissionDeniedError, Smithery } from "@smithery/api"
+import { type Smithery, NotFoundError, PermissionDeniedError } from "@smithery/api"
 import type {
 	DeploymentDeployParams,
 	DeploymentGetResponse,
@@ -14,6 +14,7 @@ import { loadProjectConfig } from "../lib/config-loader.js"
 import { resolveNamespace } from "../lib/namespace.js"
 import { parseConfigSchema, parseQualifiedName } from "../utils/cli-utils.js"
 import { promptForServerNameInput } from "../utils/command-prompts.js"
+import { createSmitheryClientSync } from "../lib/smithery-client"
 import { ensureApiKey } from "../utils/runtime.js"
 
 interface DeployOptions {
@@ -30,7 +31,7 @@ const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
 
 export async function deploy(options: DeployOptions = {}) {
 	const apiKey = await ensureApiKey(options.key)
-	const registry = new Smithery({ apiKey })
+	const registry = createSmitheryClientSync(apiKey)
 
 	// Map CLI option 'name' to internal 'qualifiedName' for clarity
 	let qualifiedName = options.name
@@ -149,9 +150,9 @@ export async function deploy(options: DeployOptions = {}) {
 	}
 
 	let payload: DeployPayload
-	let moduleFile: ReturnType<typeof createReadStream> | undefined
-	let sourcemapFile: ReturnType<typeof createReadStream> | undefined
-	let bundleFile: ReturnType<typeof createReadStream> | undefined
+	let modulePath: string | undefined
+	let sourcemapPath: string | undefined
+	let bundlePath: string | undefined
 
 	// Parse config schema if provided
 	const configSchema = options.configSchema
@@ -180,16 +181,16 @@ export async function deploy(options: DeployOptions = {}) {
 			if (!buildResult.mcpbFile || !existsSync(buildResult.mcpbFile)) {
 				throw new Error("MCPB bundle not found after build")
 			}
-			bundleFile = createReadStream(buildResult.mcpbFile)
+			bundlePath = buildResult.mcpbFile
 		} else {
 			// For shttp, read the module and sourcemap
 			if (!existsSync(buildResult.moduleFile)) {
 				throw new Error(`Bundle module not found at ${buildResult.moduleFile}`)
 			}
-			moduleFile = createReadStream(buildResult.moduleFile)
+			modulePath = buildResult.moduleFile
 
 			if (buildResult.sourcemapFile && existsSync(buildResult.sourcemapFile)) {
-				sourcemapFile = createReadStream(buildResult.sourcemapFile)
+				sourcemapPath = buildResult.sourcemapFile
 			}
 		}
 	}
@@ -202,9 +203,9 @@ export async function deploy(options: DeployOptions = {}) {
 		namespace,
 		qualifiedName,
 		payload,
-		moduleFile,
-		sourcemapFile,
-		bundleFile,
+		modulePath,
+		sourcemapPath,
+		bundlePath,
 	)
 }
 
@@ -242,7 +243,15 @@ async function deployToServer(
 		sourcemap: sourcemapFile,
 		bundle: bundleFile,
 	}
-	const result = await registry.servers.deployments.deploy(server, deployParams)
+	let result: Awaited<
+		ReturnType<typeof registry.servers.deployments.deploy>
+	>
+	try {
+		result = await registry.servers.deployments.deploy(server, deployParams)
+	} catch (error) {
+		uploadSpinner.fail("Upload failed")
+		throw error
+	}
 
 	uploadSpinner.stop()
 	console.log(chalk.dim(`✓ Deployment ${result.deploymentId} accepted`))
@@ -257,17 +266,34 @@ async function deployToServer(
 	await pollDeployment(registry, qualifiedName, result.deploymentId)
 }
 
+function createStreams(
+	modulePath?: string,
+	sourcemapPath?: string,
+	bundlePath?: string,
+) {
+	return {
+		moduleFile: modulePath ? createReadStream(modulePath) : undefined,
+		sourcemapFile: sourcemapPath ? createReadStream(sourcemapPath) : undefined,
+		bundleFile: bundlePath ? createReadStream(bundlePath) : undefined,
+	}
+}
+
 async function deployWithAutoCreate(
 	registry: Smithery,
 	server: string,
 	namespace: string,
 	qualifiedName: string,
 	payload: DeployPayload,
-	moduleFile?: ReturnType<typeof createReadStream>,
-	sourcemapFile?: ReturnType<typeof createReadStream>,
-	bundleFile?: ReturnType<typeof createReadStream>,
+	modulePath?: string,
+	sourcemapPath?: string,
+	bundlePath?: string,
 ) {
 	try {
+		const { moduleFile, sourcemapFile, bundleFile } = createStreams(
+			modulePath,
+			sourcemapPath,
+			bundlePath,
+		)
 		await deployToServer(
 			registry,
 			server,
@@ -319,16 +345,17 @@ async function deployWithAutoCreate(
 			await registry.servers.create(server, { namespace })
 			console.log(chalk.dim(`✓ Created server "${qualifiedName}"`))
 
-			// Retry the deploy
+			// Retry the deploy with fresh streams
+			const streams = createStreams(modulePath, sourcemapPath, bundlePath)
 			await deployToServer(
 				registry,
 				server,
 				namespace,
 				qualifiedName,
 				payload,
-				moduleFile,
-				sourcemapFile,
-				bundleFile,
+				streams.moduleFile,
+				streams.sourcemapFile,
+				streams.bundleFile,
 			)
 			return
 		}

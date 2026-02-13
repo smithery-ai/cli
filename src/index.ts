@@ -6,6 +6,7 @@ import { Command } from "commander"
 import { SKILL_AGENTS } from "./config/agents"
 import { VALID_CLIENTS, type ValidClient } from "./config/clients"
 import { DEFAULT_PORT } from "./constants"
+import { errorMessage, fatal } from "./lib/cli-error"
 import { setDebug, setVerbose } from "./lib/logger"
 import type { ServerConfig } from "./types/registry"
 import { validateClient } from "./utils/command-prompts"
@@ -59,8 +60,7 @@ async function handleSearch(term: string | undefined, options: any) {
 	const json = isJsonMode(options)
 
 	if (json && !searchTerm) {
-		console.error(chalk.red("Error: Search term is required when using --json"))
-		process.exit(1)
+		fatal("Search term is required when using --json")
 	}
 
 	const results = await searchServers(searchTerm, apiKey, {
@@ -132,12 +132,7 @@ async function handleDev(entryFile: string | undefined, options: any) {
 
 async function handleBuild(entryFile: string | undefined, options: any) {
 	if (!["shttp", "stdio"].includes(options.transport)) {
-		console.error(
-			chalk.red(
-				`Invalid transport type "${options.transport}". Valid options are: shttp, stdio`,
-			),
-		)
-		process.exit(1)
+		fatal(`Invalid transport type "${options.transport}". Valid options are: shttp, stdio`)
 	}
 
 	if (options.out && /\.(js|cjs|mjs)$/.test(options.out)) {
@@ -163,12 +158,7 @@ async function handleBuild(entryFile: string | undefined, options: any) {
 
 async function handlePublish(server: string | undefined, options: any) {
 	if (options.transport && !["shttp", "stdio"].includes(options.transport)) {
-		console.error(
-			chalk.red(
-				`Invalid transport type "${options.transport}". Valid options are: shttp, stdio`,
-			),
-		)
-		process.exit(1)
+		fatal(`Invalid transport type "${options.transport}". Valid options are: shttp, stdio`)
 	}
 
 	const isUrl = server?.startsWith("http://") || server?.startsWith("https://")
@@ -254,14 +244,9 @@ async function handleSetConnection(
 	await setServer(id, mcpUrl, options)
 }
 
-async function handleListTools(connection: string | undefined, options: any) {
-	const { listTools } = await loadConnectCommands()
-	await listTools(connection, options)
-}
-
-async function handleSearchTools(query: string, options: any) {
-	const { searchTools } = await loadConnectCommands()
-	await searchTools(query, options)
+async function handleFindTools(query: string | undefined, options: any) {
+	const { findTools } = await loadConnectCommands()
+	await findTools(query, options)
 }
 
 async function handleGetTool(
@@ -320,8 +305,7 @@ async function handleLogin() {
 		}
 	} catch (error) {
 		console.error(chalk.red("✗ Login failed"))
-		const errorMessage = error instanceof Error ? error.message : String(error)
-		console.error(chalk.gray(errorMessage))
+		console.error(chalk.gray(errorMessage(error)))
 		process.exit(1)
 	}
 }
@@ -341,11 +325,12 @@ async function handleLogout() {
 }
 
 async function handleWhoami(options: any) {
-	const { Smithery } = await import("@smithery/api/client.js")
+	const { createSmitheryClientSync } = await import("./lib/smithery-client")
 
 	async function mintApiKey() {
 		const rootApiKey = await getApiKey()
-		const client = new Smithery({ apiKey: rootApiKey })
+		if (!rootApiKey) throw new Error("No API key found")
+		const client = createSmitheryClientSync(rootApiKey)
 		const token = await client.tokens.create({
 			policy: [
 				{
@@ -465,7 +450,7 @@ function withPublishOptions(cmd: InstanceType<typeof Command>) {
 	return cmd
 		.option(
 			"-n, --name <name>",
-			"Target server qualified name (e.g., @org/name)",
+			"Target server qualified name (e.g., org/name)",
 		)
 		.option("-k, --key <apikey>", "Smithery API key")
 		.option(
@@ -483,6 +468,30 @@ function withPublishOptions(cmd: InstanceType<typeof Command>) {
 		)
 }
 
+/** Register a hidden backward-compat alias that copies options from a source command. */
+function registerAlias(
+	parent: InstanceType<typeof Command>,
+	name: string,
+	sourceCmd: InstanceType<typeof Command>,
+	opts?: { deprecation?: string },
+) {
+	const alias = parent.command(name, { hidden: true })
+	for (const opt of sourceCmd.options) {
+		alias.addOption(opt)
+	}
+	if (opts?.deprecation) {
+		alias.hook("preAction", () => {
+			console.warn(chalk.yellow(opts.deprecation))
+		})
+	}
+	// Copy action handler via internal property (Commander stores it as _actionHandler)
+	const handler = (sourceCmd as unknown as { _actionHandler: (...args: unknown[]) => void })._actionHandler
+	if (handler) {
+		alias.action(handler)
+	}
+	return alias
+}
+
 // ═══════════════════════════════════════════════════════════════════════════════
 // MCP command — Search, connect, and manage MCP servers
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -493,7 +502,7 @@ const mcpCmd = program
 
 // ─── Publishing ─────────────────────────────────────────────────────────────
 
-withPublishOptions(
+const publishCmd = withPublishOptions(
 	mcpCmd
 		.command("publish [server]")
 		.description("Publish an MCP server to Smithery"),
@@ -516,7 +525,7 @@ withPublishOptions(
 
 mcpCmd.commandsGroup("Discovery:")
 
-withSearchOptions(
+const searchCmd = withSearchOptions(
 	mcpCmd.command("search [term]").description("Search the Smithery registry"),
 )
 	.addHelpText(
@@ -564,7 +573,7 @@ mcpCmd
 Examples:
   smithery mcp add https://server.smithery.ai/exa
   smithery mcp add https://server.smithery.ai/exa --id exa --name "Exa Search"
-  smithery mcp add @anthropic/exa --local --client claude`,
+  smithery mcp add anthropic/exa --local --client claude`,
 	)
 	.action(handleMcpAdd)
 
@@ -593,7 +602,7 @@ mcpCmd
 	.option("--table", "Output as human-readable table")
 	.action(handleGetConnection)
 
-mcpCmd
+const removeCmd = mcpCmd
 	.command("remove <ids...>")
 	.description("Remove connections")
 	.option("--namespace <ns>", "Namespace for the server")
@@ -606,17 +615,7 @@ mcpCmd
 	.option("--table", "Output as human-readable table")
 	.action(handleMcpRemove)
 
-mcpCmd
-	.command("rm <ids...>", { hidden: true })
-	.option("--namespace <ns>", "Namespace for the server")
-	.option("--local", "Uninstall from a local AI client instead of remote")
-	.option(
-		"-c, --client <name>",
-		`AI client for local uninstall (${VALID_CLIENTS.join(", ")})`,
-	)
-	.option("--json", "Output as JSON")
-	.option("--table", "Output as human-readable table")
-	.action(handleMcpRemove)
+registerAlias(mcpCmd, "rm <ids...>", removeCmd)
 
 mcpCmd
 	.command("set <id> [mcp-url]")
@@ -630,7 +629,7 @@ mcpCmd
 	.action(handleSetConnection)
 
 // Hidden backward-compat aliases for deprecated install/uninstall
-mcpCmd
+const mcpInstallCmd = mcpCmd
 	.command("install [server]", { hidden: true })
 	.option(
 		"-c, --client <name>",
@@ -649,7 +648,7 @@ mcpCmd
 	})
 	.action(handleInstall)
 
-mcpCmd
+const mcpUninstallCmd = mcpCmd
 	.command("uninstall [server]", { hidden: true })
 	.option(
 		"-c, --client <name>",
@@ -666,57 +665,52 @@ mcpCmd
 
 // ─── Development (hidden) ───────────────────────────────────────────────────
 
-withDevOptions(
+const devCmd = withDevOptions(
 	mcpCmd
 		.command("dev [entryFile]", { hidden: true })
 		.description("Start development server with hot-reload"),
 ).action(handleDev)
 
-withBuildOptions(
+const buildCmd = withBuildOptions(
 	mcpCmd
 		.command("build [entryFile]", { hidden: true })
 		.description("Build MCP server for production"),
 ).action(handleBuild)
 
 // Hidden within mcp: run (backward compat)
-mcpCmd
+const runCmd = mcpCmd
 	.command("run <server>", { hidden: true })
 	.option("--config <json>", "Provide configuration as JSON")
 	.action(handleRun)
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// Tools command — Discover and call tools from your MCPs
+// Tools command — Find and call tools from your MCPs
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const toolsCmd = program
 	.command("tools")
-	.description("Discover and call tools from your MCPs")
+	.description("Find and call tools from your MCPs")
 
 toolsCmd
-	.command("list [connection]")
-	.description("List available tools")
-	.option("--namespace <ns>", "Namespace to list from")
+	.command("find [query]")
+	.description("Find tools by name, description, or intent")
+	.option("--connection <id>", "Limit search to a specific connection")
+	.option("--namespace <ns>", "Namespace to search in")
+	.option("--match <mode>", "Match mode: fuzzy, substring, or exact")
 	.option("--limit <n>", "Maximum number of tools to return (default: 10)")
 	.option("--page <n>", "Page number (default: 1)")
+	.option("--all", "Return all matches without pagination")
 	.option("--json", "Output as JSON")
 	.option("--table", "Output as human-readable table")
 	.addHelpText(
 		"after",
 		`
 Examples:
-  smithery tools list                    List tools from all connections
-  smithery tools list myserver           List tools for a specific connection
-  smithery tools list myserver --json    Output as JSON`,
+  smithery tools find "create issue"                      Find by intent across connections
+  smithery tools find --connection github --all           Show all tools for one connection
+  smithery tools find notion-fetch --match exact --json   Exact match as JSON`,
 	)
-	.action(handleListTools)
-
-toolsCmd
-	.command("search <query>")
-	.description("Search tools by intent")
-	.option("--namespace <ns>", "Namespace to search in")
-	.option("--json", "Output as JSON")
-	.option("--table", "Output as human-readable table")
-	.action(handleSearchTools)
+	.action(handleFindTools)
 
 toolsCmd
 	.command("get <connection> <tool>")
@@ -890,7 +884,7 @@ skillsReview
 		})
 	})
 
-skillsReview
+const reviewRemoveCmd = skillsReview
 	.command("remove <skill>")
 	.description("Remove your review for a skill")
 	.action(async (skill) => {
@@ -898,10 +892,7 @@ skillsReview
 		await deleteReview(skill)
 	})
 
-skillsReview.command("rm <skill>", { hidden: true }).action(async (skill) => {
-	const { deleteReview } = await import("./commands/skills")
-	await deleteReview(skill)
-})
+registerAlias(skillsReview, "rm <skill>", reviewRemoveCmd)
 
 skillsReview
 	.command("upvote <skill> <review-id>")
@@ -936,7 +927,7 @@ auth
 	.description("Log out and remove all local credentials")
 	.action(handleLogout)
 
-auth
+const whoamiCmd = auth
 	.command("whoami")
 	.description("Display the currently logged in user")
 	.option("--full", "Show the full API key instead of masking it")
@@ -1025,102 +1016,27 @@ namespace
 // Hidden backward-compat aliases
 // ═══════════════════════════════════════════════════════════════════════════════
 
-// ─── install / uninstall (hidden + deprecation notice) ──────────────────────
+// ─── Top-level hidden aliases (backward compat) ────────────────────────────
 
-program
-	.command("install [server]", { hidden: true })
-	.option(
-		"-c, --client <name>",
-		`Specify the AI client (${VALID_CLIENTS.join(", ")})`,
-	)
-	.option(
-		"--config <json>",
-		"Provide configuration data as JSON (skips prompts)",
-	)
-	.hook("preAction", () => {
-		console.warn(
-			chalk.yellow(
-				"Note: 'install' is deprecated. Use 'smithery mcp add <server> --local' instead.",
-			),
-		)
-	})
-	.action(handleInstall)
-
-program
-	.command("uninstall [server]", { hidden: true })
-	.option(
-		"-c, --client <name>",
-		`Specify the AI client (${VALID_CLIENTS.join(", ")})`,
-	)
-	.hook("preAction", () => {
-		console.warn(
-			chalk.yellow(
-				"Note: 'uninstall' is deprecated. Use 'smithery mcp remove <server> --local' instead.",
-			),
-		)
-	})
-	.action(handleUninstall)
-
-// ─── run, search, servers (hidden) ──────────────────────────────────────────
-
-program
-	.command("run <server>", { hidden: true })
-	.option("--config <json>", "Provide configuration as JSON")
-	.action(handleRun)
-
-withSearchOptions(program.command("search [term]", { hidden: true })).action(
-	handleSearch,
-)
+registerAlias(program, "install [server]", mcpInstallCmd, {
+	deprecation: "Note: 'install' is deprecated. Use 'smithery mcp add <server> --local' instead.",
+})
+registerAlias(program, "uninstall [server]", mcpUninstallCmd, {
+	deprecation: "Note: 'uninstall' is deprecated. Use 'smithery mcp remove <server> --local' instead.",
+})
+registerAlias(program, "run <server>", runCmd)
+registerAlias(program, "search [term]", searchCmd)
+registerAlias(program, "dev [entryFile]", devCmd)
+registerAlias(program, "build [entryFile]", buildCmd)
+registerAlias(program, "publish [server]", publishCmd)
+program.command("login", { hidden: true }).action(handleLogin)
+program.command("logout", { hidden: true }).action(handleLogout)
+registerAlias(program, "whoami", whoamiCmd)
 
 const serversCompat = program
 	.command("servers", { hidden: true })
 	.description("Search and browse MCP servers")
-
-withSearchOptions(
-	serversCompat
-		.command("search [term]")
-		.description("Search for servers in the Smithery registry"),
-).action(handleSearch)
-
-// ─── dev, build, publish (hidden) ───────────────────────────────────────────
-
-withDevOptions(program.command("dev [entryFile]", { hidden: true })).action(
-	handleDev,
-)
-
-withBuildOptions(program.command("build [entryFile]", { hidden: true })).action(
-	handleBuild,
-)
-
-withPublishOptions(program.command("publish [server]", { hidden: true }))
-	.action(handlePublish)
-	.hook("postAction", (thisCommand) => {
-		const server = thisCommand.args[0]
-		const isUrl =
-			server?.startsWith("http://") || server?.startsWith("https://")
-		if (isUrl && !thisCommand.opts().configSchema) {
-			console.log(
-				chalk.dim(
-					"\nTip: Use --config-schema to define configuration options for your server.",
-				),
-			)
-		}
-	})
-
-// ─── login, logout, whoami (hidden) ─────────────────────────────────────────
-
-program.command("login", { hidden: true }).action(handleLogin)
-
-program.command("logout", { hidden: true }).action(handleLogout)
-
-program
-	.command("whoami", { hidden: true })
-	.option("--full", "Show the full API key instead of masking it")
-	.option(
-		"--server",
-		"Start an HTTP server on localhost:4260 that serves the API key",
-	)
-	.action(handleWhoami)
+registerAlias(serversCompat, "search [term]", searchCmd)
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // Analytics: track command invocations
