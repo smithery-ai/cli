@@ -1,0 +1,144 @@
+import { beforeEach, describe, expect, test, vi } from "vitest"
+
+const {
+	mockGetConnection,
+	mockListToolsForConnection,
+	mockCreateSession,
+	mockOutputDetail,
+	mockOutputJson,
+} = vi.hoisted(() => {
+	const getConnection = vi.fn()
+	const listToolsForConnection = vi.fn()
+	const createSession = vi.fn(async () => ({
+		getConnection,
+		listToolsForConnection,
+	}))
+
+	return {
+		mockGetConnection: getConnection,
+		mockListToolsForConnection: listToolsForConnection,
+		mockCreateSession: createSession,
+		mockOutputDetail: vi.fn(),
+		mockOutputJson: vi.fn(),
+	}
+})
+
+vi.mock("../mcp/api", () => ({
+	ConnectSession: {
+		create: mockCreateSession,
+	},
+}))
+
+vi.mock("../../utils/output", async (importOriginal) => {
+	const actual = await importOriginal<typeof import("../../utils/output")>()
+	return {
+		...actual,
+		outputDetail: mockOutputDetail,
+		outputJson: mockOutputJson,
+	}
+})
+
+import { setOutputMode } from "../../utils/output"
+import { getTool } from "../mcp/tool"
+
+describe("tools get command", () => {
+	beforeEach(() => {
+		vi.clearAllMocks()
+	})
+
+	test("returns full tool details without truncating description", async () => {
+		setOutputMode({ table: true }) // force table mode (non-json)
+		const longDescription =
+			"Creates an insight and pins it to a target dashboard with complete insight metadata."
+
+		mockGetConnection.mockResolvedValue({
+			connectionId: "posthog",
+			name: "PostHog",
+		})
+		mockListToolsForConnection.mockResolvedValue([
+			{
+				connectionId: "posthog",
+				connectionName: "PostHog",
+				name: "add-insight-to-dashboard",
+				description: longDescription,
+				inputSchema: { type: "object" },
+				outputSchema: { type: "object" },
+			},
+		])
+
+		await getTool("posthog", "add-insight-to-dashboard", {})
+
+		expect(mockCreateSession).toHaveBeenCalledWith(undefined)
+		expect(mockOutputDetail).toHaveBeenCalledWith(
+			expect.objectContaining({
+				json: false,
+				data: expect.objectContaining({
+					name: "add-insight-to-dashboard",
+					connection: "posthog",
+					description: longDescription,
+					inputSchema: { type: "object" },
+					outputSchema: { type: "object" },
+				}),
+			}),
+		)
+		expect(mockOutputJson).not.toHaveBeenCalled()
+	})
+
+	test("returns error when tool is missing from the specified connection", async () => {
+		mockGetConnection.mockResolvedValue({
+			connectionId: "posthog",
+			name: "PostHog",
+		})
+		mockListToolsForConnection.mockResolvedValue([
+			{
+				connectionId: "posthog",
+				connectionName: "PostHog",
+				name: "create-dashboard",
+				description: "Create a dashboard",
+				inputSchema: { type: "object" },
+			},
+		])
+
+		setOutputMode({ json: true })
+		await expect(
+			getTool("posthog", "add-insight-to-dashboard", {}),
+		).rejects.toThrow("process.exit() was called")
+
+		expect(mockOutputJson).toHaveBeenCalledWith(
+			expect.objectContaining({
+				tool: null,
+				error: expect.stringContaining(
+					'Tool "add-insight-to-dashboard" was not found',
+				),
+			}),
+		)
+	})
+
+	test("supports tool names containing slashes", async () => {
+		mockGetConnection.mockResolvedValue({
+			connectionId: "posthog",
+			name: "PostHog",
+		})
+		mockListToolsForConnection.mockResolvedValue([
+			{
+				connectionId: "posthog",
+				connectionName: "PostHog",
+				name: "insights/add-to-dashboard",
+				description: "Nested tool name",
+				inputSchema: { type: "object" },
+			},
+		])
+
+		setOutputMode({ table: true })
+		await getTool("posthog", "insights/add-to-dashboard", {})
+
+		expect(mockOutputDetail).toHaveBeenCalledWith(
+			expect.objectContaining({
+				data: expect.objectContaining({
+					name: "insights/add-to-dashboard",
+					connection: "posthog",
+				}),
+			}),
+		)
+	})
+})

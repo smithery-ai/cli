@@ -31,7 +31,7 @@ const ACCOUNT_PREFIX = "config:"
 
 /**
  * Get the keychain account name for a server
- * Format: config:@user/server
+ * Format: config:user/server
  */
 function getAccountName(qualifiedName: string): string {
 	return `${ACCOUNT_PREFIX}${qualifiedName}`
@@ -39,7 +39,7 @@ function getAccountName(qualifiedName: string): string {
 
 /**
  * Save server configuration to OS keychain
- * @param qualifiedName - The qualified name of the server (e.g., @user/server)
+ * @param qualifiedName - The qualified name of the server (e.g., user/server)
  * @param config - The configuration object to save
  */
 export async function saveConfig(
@@ -71,7 +71,7 @@ export async function saveConfig(
 
 /**
  * Retrieve server configuration from OS keychain
- * @param qualifiedName - The qualified name of the server (e.g., @user/server)
+ * @param qualifiedName - The qualified name of the server (e.g., user/server)
  * @returns The configuration object, or null if not found
  */
 export async function getConfig(
@@ -109,7 +109,7 @@ export async function getConfig(
 
 /**
  * Delete server configuration from OS keychain
- * @param qualifiedName - The qualified name of the server (e.g., @user/server)
+ * @param qualifiedName - The qualified name of the server (e.g., user/server)
  */
 export async function deleteConfig(qualifiedName: string): Promise<void> {
 	const kt = getKeytar()

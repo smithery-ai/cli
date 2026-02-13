@@ -1,4 +1,4 @@
-import { Smithery } from "@smithery/api/client.js"
+import { Smithery } from "@smithery/api"
 import { getApiKey } from "../utils/smithery-settings"
 
 /**
@@ -26,4 +26,25 @@ export async function createSmitheryClient(apiKey?: string): Promise<Smithery> {
  */
 export function createSmitheryClientSync(apiKey: string): Smithery {
 	return new Smithery({ apiKey })
+}
+
+/** Create an unauthenticated client (for public endpoints like skills search). */
+export function createPublicClient(): Smithery {
+	return new Smithery({ apiKey: "" })
+}
+
+/** Create a scoped client by minting a restricted token. Falls back to root key. */
+export async function createScopedClient(
+	policy: Array<Record<string, unknown>>,
+): Promise<Smithery | null> {
+	const rootApiKey = await getApiKey()
+	if (!rootApiKey) return null
+
+	try {
+		const rootClient = new Smithery({ apiKey: rootApiKey })
+		const token = await rootClient.tokens.create({ policy })
+		return new Smithery({ apiKey: token.token })
+	} catch {
+		return new Smithery({ apiKey: rootApiKey })
+	}
 }

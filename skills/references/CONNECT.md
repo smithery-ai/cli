@@ -5,7 +5,7 @@ Use MCP servers in the cloud without local installation. Connect to any server a
 ## Add a Connection
 
 ```bash
-smithery connect add "https://server.smithery.ai/namespace/server-name"
+smithery mcp add "https://server.smithery.ai/namespace/server-name"
 ```
 
 Options:
@@ -16,7 +16,7 @@ Options:
 
 Example with options:
 ```bash
-smithery connect add "https://server.smithery.ai/example/github" \
+smithery mcp add "https://server.smithery.ai/example/github" \
   --id "my-github" \
   --name "GitHub Tools" \
   --metadata '{"env": "production"}'
@@ -25,7 +25,7 @@ smithery connect add "https://server.smithery.ai/example/github" \
 ## List Connections
 
 ```bash
-smithery connect list
+smithery mcp list
 ```
 
 Options:
@@ -35,51 +35,53 @@ Output (JSON):
 ```json
 {
   "servers": [
-    {"id": "abc123", "name": "GitHub Tools", "status": "connected"}
-  ]
+    {"id": "abc123", "name": "GitHub Tools", "mcpUrl": "https://...", "status": "connected"}
+  ],
+  "total": 1,
+  "hasMore": false
 }
 ```
 
 ## Remove a Connection
 
 ```bash
-smithery connect remove <connection-id>
+smithery mcp remove <connection-id>
 ```
 
 Options:
 - `--namespace <ns>` - Namespace for the connection
 
-## Create or Update (Idempotent)
+## Update a Connection
 
-Use `set` to create or update a connection with a specific ID:
+Use `update` to modify a connection's name, metadata, or headers:
 
 ```bash
-smithery connect set "https://server.smithery.ai/example/server" --id "my-server"
+smithery mcp update "my-server" --name "My Server"
+smithery mcp update "my-server" --metadata '{"env": "prod"}'
 ```
-
-This is idempotent - safe to run multiple times.
 
 ## List Tools
 
-List all tools from all connections:
+List all tools across all connections:
 ```bash
-smithery connect tools
+smithery tool list
 ```
 
 List tools from a specific connection:
 ```bash
-smithery connect tools my-github
+smithery tool list my-github
 ```
 
 Options:
 - `--namespace <ns>` - Namespace to list from
+- `--limit <n>` - Maximum number of tools (default: 10)
+- `--page <n>` - Page number (default: 1)
 
 Output (JSON):
 ```json
 {
   "tools": [
     {
-      "id": "my-github/create_issue",
       "name": "create_issue",
       "connection": "my-github",
       "description": "Create a GitHub issue"
@@ -88,23 +90,40 @@ Output (JSON):
 }
 ```
 
-## Search Tools
+## Find Tools by Query
 
-Fuzzy search across all tools:
+Search tools by name or intent across all connections:
 
 ```bash
-smithery connect search "create issue"
+smithery tool find "create issue"
 ```
 
 Options:
+- `--connection <id>` - Restrict to one connection
 - `--namespace <ns>` - Namespace to search in
+- `--match <mode>` - `fuzzy`, `substring`, or `exact`
+- `--limit <n>` - Max results per page (default: 10)
+- `--page <n>` - Page number (default: 1)
+- `--all` - Return all matches without pagination
+
+## Get Tool Details
+
+Show one tool in detail (full description + schemas):
+
+```bash
+smithery tool get my-github create_issue
+```
+
+Options:
+- `--namespace <ns>` - Namespace for the tool
+- `--json` - Output full details as JSON
 
 ## Call a Tool
 
-Call a tool using `connection-id/tool-name` format:
+Call a tool by specifying the connection and tool name:
 
 ```bash
-smithery connect call "my-github/create_issue" '{"repo": "owner/repo", "title": "Bug"}'
+smithery tool call my-github create_issue '{"repo": "owner/repo", "title": "Bug"}'
 ```
 
 Options:
@@ -113,7 +132,7 @@ Options:
 Arguments are passed as JSON. For complex arguments:
 
 ```bash
-smithery connect call "my-server/query" '{
+smithery tool call my-server query '{
   "sql": "SELECT * FROM users",
   "params": ["active"]
 }'
@@ -139,14 +158,14 @@ If `auth_required`, tell your human to visit the authorization URL.
 
 ```bash
 # 1. Add a connection
-smithery connect add "https://server.smithery.ai/smithery/github"
+smithery mcp add "https://server.smithery.ai/smithery/github"
 
 # 2. List available tools
-smithery connect tools
+smithery tool list
 
 # 3. Search for what you need
-smithery connect search "pull request"
+smithery tool find "pull request"
 
 # 4. Call the tool
-smithery connect call "abc123/create_pull_request" '{"repo": "...", "title": "..."}'
+smithery tool call github create_pull_request '{"repo": "...", "title": "..."}'
 ```

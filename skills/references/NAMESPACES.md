@@ -39,7 +39,7 @@ Creates and claims a new namespace.
 Most commands accept a `--namespace` flag to override the current context:
 
 ```bash
-smithery connect list --namespace other-namespace
+smithery mcp list --namespace other-namespace
 ```
 
 ## How Namespaces Work

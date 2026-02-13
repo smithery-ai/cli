@@ -6,6 +6,7 @@ import { Command } from "commander"
 import { SKILL_AGENTS } from "./config/agents"
 import { VALID_CLIENTS, type ValidClient } from "./config/clients"
 import { DEFAULT_PORT } from "./constants"
+import { errorMessage, fatal } from "./lib/cli-error"
 import { setDebug, setVerbose } from "./lib/logger"
 import type { ServerConfig } from "./types/registry"
 import { validateClient } from "./utils/command-prompts"
@@ -21,12 +22,19 @@ program
 	.name("smithery")
 	.version(__SMITHERY_VERSION__)
 	.description(
-		`${chalk.bold.italic.hex("#ea580c")("SMITHERY CLI")} ${chalk.bold.italic.hex("#ea580c")(`v${__SMITHERY_VERSION__}`)} - The marketplace for Agent Skills and MCPs`,
+		`${chalk.bold.italic.hex("#ea580c")("SMITHERY CLI")} ${chalk.bold.italic.hex("#ea580c")(`v${__SMITHERY_VERSION__}`)} — Discover and connect to 100K+ AI tools and skills`,
 	)
 	.option("--verbose", "Show detailed logs")
 	.option("--debug", "Show debug logs")
-	.hook("preAction", (thisCommand, _actionCommand) => {
-		// Set verbose mode if flag is present
+	.option("--json", "Output as JSON")
+	.option("--table", "Output as human-readable table")
+	.addHelpText(
+		"after",
+		`
+Learn how to use this CLI:
+  smithery skill view smithery-ai/cli`,
+	)
+	.hook("preAction", async (thisCommand, _actionCommand) => {
 		const opts = thisCommand.opts()
 		if (opts.verbose) {
 			setVerbose(true)
@@ -34,280 +42,481 @@ program
 		if (opts.debug) {
 			setDebug(true)
 		}
+		const { setOutputMode } = await import("./utils/output")
+		setOutputMode({ json: opts.json, table: opts.table })
 	})
 
-// Install command
-program
-	.command("install [server]")
-	.description("install a server")
-	.option(
-		"-c, --client <name>",
-		`Specify the AI client (${VALID_CLIENTS.join(", ")})`,
-	)
-	.option(
-		"--config <json>",
-		"Provide configuration data as JSON (skips prompts)",
-	)
-	.action(async (server, options) => {
-		const { selectClient, selectServer, parseServerConfig } = await import(
-			"./utils/command-prompts"
-		)
-		const { installServer } = await import("./commands/install")
+// ─── Shared action handlers ─────────────────────────────────────────────────
+// Extracted to avoid duplication between canonical commands and hidden aliases.
 
-		// Step 1: Select client if not provided
-		const selectedClient = await selectClient(options.client, "Install")
+async function handleSearch(term: string | undefined, options: any) {
+	const apiKey = await getApiKey()
 
-		// Step 2: Search and select server if not provided
-		const selectedServer = await selectServer(
-			server,
-			selectedClient,
-			undefined, // No API key needed
-		)
+	if (options.interactive) {
+		const { interactiveServerSearch } = await import("./utils/command-prompts")
+		await interactiveServerSearch(apiKey, term)
+		return
+	}
 
-		// Validate client
-		validateClient(selectedClient)
+	const { searchServers } = await import("./lib/registry")
+	const { isJsonMode, outputTable, truncate } = await import("./utils/output")
+	const searchTerm = term ?? ""
+	const json = isJsonMode()
 
-		// Parse config if provided
-		const config: ServerConfig = options.config
-			? parseServerConfig(options.config)
-			: {}
+	if (json && !searchTerm) {
+		fatal("Search term is required when using --json")
+	}
 
-		await installServer(selectedServer, selectedClient as ValidClient, config)
+	const results = await searchServers(searchTerm, apiKey, {
+		verified: options.verified,
+		pageSize: parseInt(options.limit, 10),
+		page: parseInt(options.page, 10),
 	})
 
-// Uninstall command
-program
-	.command("uninstall [server]")
-	.description("uninstall a server")
-	.option(
-		"-c, --client <name>",
-		`Specify the AI client (${VALID_CLIENTS.join(", ")})`,
-	)
-	.action(async (server, options) => {
-		const { readConfig } = await import("./lib/client-config-io")
-		const { selectClient, selectInstalledServer } = await import(
-			"./utils/command-prompts"
-		)
-		const { uninstallServer } = await import("./commands/uninstall")
+	if (results.length === 0 && !json) {
+		console.log(chalk.yellow("No servers found."))
+		return
+	}
 
-		// Step 1: Select client if not provided
-		const selectedClient = await selectClient(options.client, "Uninstall")
+	if (!term && !json) {
+		console.log(chalk.bold("Most popular servers:\n"))
+	}
 
-		// Validate client
-		validateClient(selectedClient)
+	const data = results.map((server) => ({
+		name: server.displayName || server.qualifiedName,
+		qualifiedName: server.qualifiedName,
+		description: server.description ?? "",
+		useCount: server.useCount,
+		connectionUrl: `https://server.smithery.ai/${server.qualifiedName}`,
+	}))
 
-		// Step 2: Select server if not provided
-		const config = readConfig(selectedClient)
-		const installedServers = Object.keys(config.mcpServers)
-		const selectedServer = await selectInstalledServer(
-			server,
-			selectedClient,
-			installedServers,
-		)
+	const page = parseInt(options.page, 10) || 1
+	const limit = parseInt(options.limit, 10) || 10
+	const hasMore = results.length >= limit
 
-		await uninstallServer(selectedServer, selectedClient as ValidClient)
+	outputTable({
+		data,
+		columns: [
+			{ key: "qualifiedName", header: "SERVER" },
+			{
+				key: "description",
+				header: "DESCRIPTION",
+				format: (v) => truncate(String(v ?? "")),
+			},
+			{ key: "useCount", header: "USES", format: (v) => String(v ?? 0) },
+		],
+		json,
+		jsonData: { servers: data, page, hasMore },
+		pagination: { page, hasMore },
+		tip: "Use smithery mcp add <connectionUrl> to connect a server.",
 	})
+}
 
-// Inspect command
-program
-	.command("inspect <server>")
-	.description("Inspect server from registry")
-	.action(async (server) => {
-		const { inspectServer } = await import("./commands/inspect")
-		// API key is optional - use if available, don't prompt
-		const apiKey = await getApiKey()
-		await inspectServer(server, apiKey)
+async function handleRun(server: string, options: any) {
+	const { parseServerConfig } = await import("./utils/command-prompts")
+	const config: ServerConfig = options.config
+		? parseServerConfig(options.config)
+		: {}
+	const { run } = await import("./commands/run/index")
+	await run(server, config)
+}
+
+async function handleDev(entryFile: string | undefined, options: any) {
+	const { dev } = await import("./commands/mcp/dev")
+	await dev({
+		entryFile,
+		port: options.port,
+		key: options.key,
+		tunnel: options.tunnel,
+		open: options.open,
+		initialMessage: options.prompt,
+		minify: options.minify,
 	})
+}
 
-// Run command
-program
-	.command("run <server>")
-	.description("run a server")
-	.option("--config <json>", "Provide configuration as JSON")
-	.option(
-		"--playground",
-		"[DEPRECATED] Use 'smithery playground <server>' instead. Create playground tunnel and open playground",
-	)
-	.option(
-		"--no-open",
-		"Don't automatically open the playground (when using --playground)",
-	)
-	.option(
-		"--prompt <prompt>",
-		"Initial message to start the playground with (when using --playground)",
-	)
-	.action(async (server, options) => {
-		const { parseServerConfig } = await import("./utils/command-prompts")
+async function handleBuild(entryFile: string | undefined, options: any) {
+	if (!["shttp", "stdio"].includes(options.transport)) {
+		fatal(
+			`Invalid transport type "${options.transport}". Valid options are: shttp, stdio`,
+		)
+	}
 
-		// Handle deprecated --playground flag
-		if (options.playground) {
-			const { playground } = await import("./commands/playground")
-			const { ensureApiKey } = await import("./utils/runtime")
-			console.warn(
-				chalk.yellow(
-					"⚠ Warning: --playground flag is deprecated. Use 'smithery playground <server>' instead.",
-				),
-			)
-			// Parse config if provided
-			const config: ServerConfig = options.config
-				? parseServerConfig(options.config)
-				: {}
-			await playground({
-				server,
-				configOverride: config,
-				apiKey: await ensureApiKey(),
-				open: options.open !== false,
-				initialMessage: options.prompt,
+	if (options.out && /\.(js|cjs|mjs)$/.test(options.out)) {
+		console.warn(
+			chalk.yellow(`⚠ Warning: -o now expects a directory, not a file path.`),
+		)
+		console.warn(
+			chalk.yellow(
+				`  Change "${options.out}" to "${options.out.replace(/\/[^/]+\.(js|cjs|mjs)$/, "")}" instead.`,
+			),
+		)
+		console.warn()
+	}
+
+	const { buildBundle } = await import("./lib/bundle")
+	await buildBundle({
+		entryFile,
+		outDir: options.out,
+		transport: options.transport as "shttp" | "stdio",
+		production: true,
+	})
+}
+
+async function handlePublish(server: string | undefined, options: any) {
+	if (options.transport && !["shttp", "stdio"].includes(options.transport)) {
+		fatal(
+			`Invalid transport type "${options.transport}". Valid options are: shttp, stdio`,
+		)
+	}
+
+	const isUrl = server?.startsWith("http://") || server?.startsWith("https://")
+
+	const { deploy } = await import("./commands/mcp/deploy")
+	await deploy({
+		url: isUrl ? server : undefined,
+		entryFile: isUrl ? undefined : server,
+		key: options.key,
+		name: options.name,
+		resume: options.resume,
+		transport: options.transport as "shttp" | "stdio",
+		configSchema: options.configSchema,
+	})
+}
+
+async function handleInstall(server: string | undefined, options: any) {
+	const { selectClient, selectServer, parseServerConfig } = await import(
+		"./utils/command-prompts"
+	)
+	const { installServer } = await import("./commands/mcp/install")
+
+	const selectedClient = await selectClient(options.client, "Install")
+	const selectedServer = await selectServer(server, selectedClient, undefined)
+	validateClient(selectedClient)
+
+	const config: ServerConfig = options.config
+		? parseServerConfig(options.config)
+		: {}
+
+	await installServer(selectedServer, selectedClient as ValidClient, config)
+}
+
+async function handleUninstall(server: string | undefined, options: any) {
+	const { readConfig } = await import("./lib/client-config-io")
+	const { selectClient, selectInstalledServer } = await import(
+		"./utils/command-prompts"
+	)
+	const { uninstallServer } = await import("./commands/mcp/uninstall")
+
+	const selectedClient = await selectClient(options.client, "Uninstall")
+	validateClient(selectedClient)
+
+	const config = readConfig(selectedClient)
+	const installedServers = Object.keys(config.mcpServers)
+	const selectedServer = await selectInstalledServer(
+		server,
+		selectedClient,
+		installedServers,
+	)
+
+	await uninstallServer(selectedServer, selectedClient as ValidClient)
+}
+
+const loadConnectCommands = () => import("./commands/mcp")
+
+async function handleAddConnection(server: string, options: any) {
+	const { addServer } = await loadConnectCommands()
+	await addServer(server, options)
+}
+
+async function handleListConnections(options: any) {
+	if (options.client) {
+		const { listClientServers } = await import("./commands/mcp/list")
+		await listClientServers(options.client)
+		return
+	}
+	const { listServers } = await loadConnectCommands()
+	await listServers(options)
+}
+
+async function handleGetConnection(id: string, options: any) {
+	const { getServer } = await loadConnectCommands()
+	await getServer(id, options)
+}
+
+async function handleRemoveConnections(ids: string[], options: any) {
+	const { removeServer } = await loadConnectCommands()
+	await removeServer(ids, options)
+}
+
+async function handleUpdateConnection(id: string, options: any) {
+	const { updateServer } = await loadConnectCommands()
+	await updateServer(id, options)
+}
+
+async function handleFindTools(query: string | undefined, options: any) {
+	const { findTools } = await loadConnectCommands()
+	await findTools(query, options)
+}
+
+async function handleGetTool(
+	connection: string,
+	toolName: string,
+	options: any,
+) {
+	const { getTool } = await loadConnectCommands()
+	await getTool(connection, toolName, options)
+}
+
+async function handleCallTool(
+	connection: string,
+	toolName: string,
+	args: string | undefined,
+	options: any,
+) {
+	const { callTool } = await loadConnectCommands()
+	await callTool(connection, toolName, args, options)
+}
+
+async function handleMcpAdd(server: string, options: any) {
+	if (options.client) {
+		await handleInstall(server, options)
+		return
+	}
+	await handleAddConnection(server, options)
+}
+
+async function handleMcpRemove(ids: string[], options: any) {
+	if (options.client) {
+		await handleUninstall(ids[0], options)
+		return
+	}
+	await handleRemoveConnections(ids, options)
+}
+
+async function handleLogin() {
+	const { executeCliAuthFlow } = await import("./lib/cli-auth")
+	const { validateApiKey } = await import("./lib/registry")
+
+	console.log(chalk.cyan("Login to Smithery"))
+	console.log()
+
+	try {
+		const apiKey = await executeCliAuthFlow()
+		await validateApiKey(apiKey)
+		const result = await setApiKey(apiKey)
+
+		if (result.success) {
+			console.log(chalk.green("✓ Successfully logged in"))
+			console.log(chalk.gray("You can now use Smithery CLI commands"))
+		} else {
+			console.error(chalk.red("✗ Failed to save API key"))
+			console.error(chalk.gray("You may need to log in again next time"))
+		}
+	} catch (error) {
+		console.error(chalk.red("✗ Login failed"))
+		console.error(chalk.gray(errorMessage(error)))
+		process.exit(1)
+	}
+}
+
+async function handleLogout() {
+	const { clearApiKey, clearNamespace } = await import(
+		"./utils/smithery-settings"
+	)
+	const { clearAllConfigs } = await import("./lib/keychain.js")
+
+	console.log(chalk.cyan("Logging out of Smithery..."))
+	await clearApiKey()
+	await clearNamespace()
+	await clearAllConfigs()
+	console.log(chalk.green("✓ Successfully logged out"))
+	console.log(chalk.gray("All local credentials have been removed"))
+}
+
+async function handleWhoami(options: any) {
+	const { createSmitheryClientSync } = await import("./lib/smithery-client")
+
+	async function mintApiKey() {
+		const rootApiKey = await getApiKey()
+		if (!rootApiKey) throw new Error("No API key found")
+		const client = createSmitheryClientSync(rootApiKey)
+		const token = await client.tokens.create({
+			policy: [
+				{
+					resources: ["connections", "servers", "namespaces", "skills"],
+					operations: ["read", "write", "execute"],
+					namespaces: "*",
+					metadata: { userId: "root-whoami" },
+					ttl: 3600,
+				},
+			],
+		})
+		const apiKey = token.token
+		const expiresAt = new Date(token.expiresAt)
+		return { apiKey, expiresAt }
+	}
+
+	try {
+		let { apiKey, expiresAt } = await mintApiKey()
+
+		if (!apiKey) {
+			console.log(chalk.yellow("No API key found"))
+			console.log(chalk.gray("Run 'smithery auth login' to authenticate"))
+			process.exit(1)
+		}
+
+		if (options.server) {
+			const server = createServer(async (req, res) => {
+				res.setHeader("Access-Control-Allow-Origin", "*")
+				res.setHeader("Access-Control-Allow-Methods", "GET, OPTIONS")
+				res.setHeader("Access-Control-Allow-Headers", "Content-Type")
+
+				if (req.method === "OPTIONS") {
+					res.writeHead(204)
+					res.end()
+					return
+				}
+
+				if (req.method === "GET" && req.url === "/whoami") {
+					if (expiresAt <= new Date()) {
+						const newToken = await mintApiKey()
+						apiKey = newToken.apiKey
+						expiresAt = newToken.expiresAt
+					}
+					res.writeHead(200, { "Content-Type": "application/json" })
+					res.end(JSON.stringify({ SMITHERY_API_KEY: apiKey, expiresAt }))
+				} else {
+					res.writeHead(404, { "Content-Type": "application/json" })
+					res.end(JSON.stringify({ error: "Not found" }))
+				}
+			})
+			server.listen(4260, "localhost", () => {
+				console.log(chalk.cyan("Server running at http://localhost:4260"))
+				console.log(chalk.gray("GET /whoami to retrieve API key"))
+				console.log(chalk.gray("Press Ctrl+C to stop"))
 			})
 			return
 		}
 
-		const { run } = await import("./commands/run/index")
-		// Parse config if provided
-		const config: ServerConfig = options.config
-			? parseServerConfig(options.config)
-			: {}
+		if (options.full) {
+			console.log(`SMITHERY_API_KEY=${apiKey}`)
+		} else {
+			const masked = `${apiKey.slice(0, 8)}...${apiKey.slice(-4)}`
+			console.log(chalk.cyan("API Key:"), masked)
+			console.log(chalk.gray("Use --full to display the complete key"))
+		}
+	} catch (_error) {
+		console.log(chalk.yellow("Not logged in"))
+		console.log(chalk.gray("Run 'smithery auth login' to authenticate"))
+		process.exit(1)
+	}
+}
 
-		await run(server, config)
-	})
+// Helper to register search options on a command
+function withSearchOptions(cmd: InstanceType<typeof Command>) {
+	return cmd
+		.option("-i, --interactive", "Interactive search mode")
+		.option("--verified", "Only show verified servers")
+		.option("--limit <number>", "Max results per page", "10")
+		.option("--page <number>", "Page number", "1")
+}
 
-// Dev command
-program
-	.command("dev [entryFile]")
-	.description("Start development server with hot-reload and tunnel")
-	.option(
-		"--port <port>",
-		`Port to run the server on (default: ${DEFAULT_PORT})`,
-	)
-	.option("--key <apikey>", "Provide an API key")
-	.option("--no-tunnel", "Don't start the tunnel")
-	.option("--no-open", "Don't automatically open the playground")
-	.option("--prompt <prompt>", "Initial message to start the playground with")
-	.option(
-		"--no-minify",
-		"Build widgets without minification for easier debugging",
-	)
-	.action(async (entryFile, options) => {
-		const { dev } = await import("./commands/dev")
-		await dev({
-			entryFile,
-			port: options.port,
-			key: options.key,
-			tunnel: options.tunnel,
-			open: options.open,
-			initialMessage: options.prompt,
-			minify: options.minify,
+// Helper to register dev options on a command
+function withDevOptions(cmd: InstanceType<typeof Command>) {
+	return cmd
+		.option(
+			"--port <port>",
+			`Port to run the server on (default: ${DEFAULT_PORT})`,
+		)
+		.option("--key <apikey>", "Provide an API key")
+		.option("--no-tunnel", "Don't start the tunnel")
+		.option("--no-open", "Don't automatically open the playground")
+		.option("--prompt <prompt>", "Initial message to start the playground with")
+		.option(
+			"--no-minify",
+			"Build widgets without minification for easier debugging",
+		)
+}
+
+// Helper to register build options on a command
+function withBuildOptions(cmd: InstanceType<typeof Command>) {
+	return cmd
+		.option(
+			"-o, --out <dir>",
+			"Output directory (default: .smithery/shttp or .smithery/stdio)",
+		)
+		.option(
+			"-t, --transport <type>",
+			"Transport type: shttp or stdio (default: shttp)",
+			"shttp",
+		)
+}
+
+// Helper to register publish options on a command
+function withPublishOptions(cmd: InstanceType<typeof Command>) {
+	return cmd
+		.option(
+			"-n, --name <name>",
+			"Target server qualified name (e.g., org/name)",
+		)
+		.option("-k, --key <apikey>", "Smithery API key")
+		.option(
+			"--resume",
+			"Resume the latest paused publish (e.g., after OAuth authorization)",
+		)
+		.option(
+			"-t, --transport <type>",
+			"Transport type: shttp or stdio (default: shttp)",
+			"shttp",
+		)
+		.option(
+			"--config-schema <json-or-path>",
+			"JSON Schema for server configuration. Inline JSON or path to .json file",
+		)
+}
+
+/** Register a hidden backward-compat alias that copies options and action from a source command. */
+function registerAlias(
+	parent: InstanceType<typeof Command>,
+	name: string,
+	sourceCmd: InstanceType<typeof Command>,
+	action: (...args: any[]) => void,
+	opts?: { deprecation?: string },
+) {
+	const alias = parent.command(name, { hidden: true })
+	for (const opt of sourceCmd.options) {
+		alias.addOption(opt)
+	}
+	if (opts?.deprecation) {
+		alias.hook("preAction", () => {
+			console.warn(chalk.yellow(opts.deprecation))
 		})
-	})
+	}
+	alias.action(action)
+	return alias
+}
 
-// Build command
-program
-	.command("build [entryFile]")
-	.description("build MCP server for production")
-	.option(
-		"-o, --out <dir>",
-		"Output directory (default: .smithery/shttp or .smithery/stdio)",
-	)
-	.option(
-		"-t, --transport <type>",
-		"Transport type: shttp or stdio (default: shttp)",
-		"shttp",
-	)
-	.action(async (entryFile, options) => {
-		// Validate transport option
-		if (!["shttp", "stdio"].includes(options.transport)) {
-			console.error(
-				chalk.red(
-					`Invalid transport type "${options.transport}". Valid options are: shttp, stdio`,
-				),
-			)
-			process.exit(1)
-		}
+// ═══════════════════════════════════════════════════════════════════════════════
+// MCP command — Search, connect, and manage MCP servers
+// ═══════════════════════════════════════════════════════════════════════════════
 
-		// Warn if -o looks like a file path instead of a directory
-		if (options.out && /\.(js|cjs|mjs)$/.test(options.out)) {
-			console.warn(
-				chalk.yellow(`⚠ Warning: -o now expects a directory, not a file path.`),
-			)
-			console.warn(
-				chalk.yellow(
-					`  Change "${options.out}" to "${options.out.replace(/\/[^/]+\.(js|cjs|mjs)$/, "")}" instead.`,
-				),
-			)
-			console.warn()
-		}
+const mcpCmd = program
+	.command("mcp")
+	.description("Search, connect, and manage MCP servers")
 
-		const { buildBundle } = await import("./lib/bundle")
-		await buildBundle({
-			entryFile,
-			outDir: options.out,
-			transport: options.transport as "shttp" | "stdio",
-			production: true,
-		})
-	})
+// ─── Publishing ─────────────────────────────────────────────────────────────
 
-// Publish command (with 'deploy' as deprecated alias)
-program
-	.command("publish [entryFile]")
-	.alias("deploy")
-	.description("Publish MCP server to Smithery")
-	.option("-n, --name <name>", "Target server qualified name (e.g., @org/name)")
-	.option(
-		"-u, --url <url>",
-		"External MCP server URL (publishes as external server)",
-	)
-	.option("-k, --key <apikey>", "Smithery API key")
-	.option(
-		"--resume",
-		"Resume the latest paused publish (e.g., after OAuth authorization)",
-	)
-	.option(
-		"-t, --transport <type>",
-		"Transport type: shttp or stdio (default: shttp)",
-		"shttp",
-	)
-	.option(
-		"--config-schema <json-or-path>",
-		"JSON Schema for external URLs (--url). Inline JSON or path to .json file",
-	)
-	.hook("preAction", () => {
-		// Show deprecation warning if invoked as 'deploy'
-		const invokedName = process.argv[2]
-		if (invokedName === "deploy") {
-			console.warn(
-				chalk.yellow(
-					"Warning: 'deploy' is deprecated. Please use 'publish' instead.",
-				),
-			)
-		}
-	})
-	.action(async (entryFile, options) => {
-		// Validate transport option
-		if (options.transport && !["shttp", "stdio"].includes(options.transport)) {
-			console.error(
-				chalk.red(
-					`Invalid transport type "${options.transport}". Valid options are: shttp, stdio`,
-				),
-			)
-			process.exit(1)
-		}
-
-		const { deploy } = await import("./commands/deploy")
-		await deploy({
-			entryFile,
-			key: options.key,
-			name: options.name,
-			url: options.url,
-			resume: options.resume,
-			transport: options.transport as "shttp" | "stdio",
-			configSchema: options.configSchema,
-		})
-	})
+const publishCmd = withPublishOptions(
+	mcpCmd
+		.command("publish [server]")
+		.description("Publish an MCP server to Smithery"),
+)
+	.action(handlePublish)
 	.hook("postAction", (thisCommand) => {
-		const options = thisCommand.opts()
-		// Tip for external URL publishes without config schema
-		// TODO: link to docs
-		if (options.url && !options.configSchema) {
+		const server = thisCommand.args[0]
+		const isUrl =
+			server?.startsWith("http://") || server?.startsWith("https://")
+		if (isUrl && !thisCommand.opts().configSchema) {
 			console.log(
 				chalk.dim(
 					"\nTip: Use --config-schema to define configuration options for your server.",
@@ -316,298 +525,480 @@ program
 		}
 	})
 
-// Playground command
-program
-	.command("playground [server]")
-	.description(
-		"open MCP playground in browser (supports HTTP servers or STDIO MCP servers)",
+// ─── Discovery ──────────────────────────────────────────────────────────────
+
+mcpCmd.commandsGroup("Discovery:")
+
+const searchCmd = withSearchOptions(
+	mcpCmd.command("search [term]").description("Search the Smithery registry"),
+)
+	.addHelpText(
+		"after",
+		`
+Examples:
+  smithery mcp search slack
+  smithery mcp search "web search" --json`,
 	)
+	.action(handleSearch)
+
+// ─── Connections ────────────────────────────────────────────────────────────
+
+mcpCmd.commandsGroup("Connections:")
+
+mcpCmd
+	.command("add <server>")
+	.description("Add an MCP server connection")
 	.option(
-		"--port <port>",
-		`Port to expose (default: ${DEFAULT_PORT} for HTTP, 6969 for STDIO)`,
+		"--id <id>",
+		"Custom connection ID (defaults name to ID if name not set)",
 	)
-	.option("--key <apikey>", "Provide an API key")
+	.option("--name <name>", "Human-readable name for the server")
+	.option("--metadata <json>", "Custom metadata as JSON object")
+	.option("--headers <json>", "Custom headers as JSON object (stored securely)")
+	.option("--namespace <ns>", "Target namespace")
 	.option(
-		"--config <json>",
-		"Provide configuration as JSON (when using server)",
+		"--force",
+		"Create a new connection even if one already exists for this URL",
 	)
-	.option("--no-open", "Don't automatically open the playground")
-	.option("--prompt <prompt>", "Initial message to start the playground with")
-	.allowUnknownOption() // Allow pass-through for command after --
-	.allowExcessArguments() // Allow extra args after -- without error
-	.action(async (server, options) => {
-		const { parseServerConfig } = await import("./utils/command-prompts")
-		const { playground } = await import("./commands/playground")
-
-		// Extract command after -- separator
-		let command: string | undefined
-		const rawArgs = process.argv
-		const separatorIndex = rawArgs.indexOf("--")
-		if (separatorIndex !== -1 && separatorIndex + 1 < rawArgs.length) {
-			command = rawArgs.slice(separatorIndex + 1).join(" ")
-		}
-
-		// Parse config if provided
-		const configOverride: ServerConfig = options.config
-			? parseServerConfig(options.config)
-			: {}
-
-		await playground({
-			server,
-			port: options.port,
-			command,
-			configOverride,
-			apiKey: options.key,
-			open: options.open !== false,
-			initialMessage: options.prompt,
-		})
-	})
-
-// List command
-program
-	.command("list")
-	.description("list installed servers")
 	.option(
 		"-c, --client <name>",
-		`Specify the client (${VALID_CLIENTS.join(", ")})`,
+		`Install directly to an AI client's config (${VALID_CLIENTS.join(", ")})`,
 	)
-	.action(async (options) => {
-		const { selectClient } = await import("./utils/command-prompts")
-		const { list } = await import("./commands/list")
+	.option(
+		"--config <json>",
+		"Configuration data as JSON for client install (skips prompts)",
+	)
+	.addHelpText(
+		"after",
+		`
+Examples:
+  smithery mcp add https://server.smithery.ai/exa
+  smithery mcp add https://server.smithery.ai/exa --id exa --name "Exa Search"
+  smithery mcp add anthropic/exa --client claude`,
+	)
+	.action(handleMcpAdd)
 
-		// If no client provided, show interactive selection
-		const selectedClient = await selectClient(options.client, "List")
+mcpCmd
+	.command("list")
+	.description("List your connections")
+	.option("--namespace <ns>", "Namespace to list from")
+	.option("--limit <n>", "Maximum number of results (default: all)")
+	.option("--cursor <cursor>", "Pagination cursor from previous response")
+	.option(
+		"-c, --client <name>",
+		`List servers installed in an AI client's config (${VALID_CLIENTS.join(", ")})`,
+	)
 
-		// Validate client
-		validateClient(selectedClient)
+	.addHelpText(
+		"after",
+		`
+Examples:
+  smithery mcp list
+  smithery mcp list --client claude-code
+  smithery mcp list --json`,
+	)
+	.action(handleListConnections)
 
-		await list("servers", selectedClient as ValidClient)
-	})
+mcpCmd
+	.command("get <id>")
+	.description("Get connection details")
+	.option("--namespace <ns>", "Namespace for the connection")
 
-// Search command
-program
-	.command("search [term]")
-	.description("Search for servers in the Smithery registry")
-	.option("--json", "Output results as JSON")
-	.option("-i, --interactive", "Interactive search mode")
-	.option("--verified", "Only show verified servers")
-	.option("--limit <number>", "Max results per page", "10")
-	.option("--page <number>", "Page number", "1")
-	.action(async (term, options) => {
-		// API key is optional for search - use if available, don't prompt
-		const apiKey = await getApiKey()
+	.action(handleGetConnection)
 
-		if (options.interactive) {
-			const { interactiveServerSearch } = await import(
-				"./utils/command-prompts"
-			)
-			await interactiveServerSearch(apiKey, term)
-			return
-		}
+const removeCmd = mcpCmd
+	.command("remove <ids...>")
+	.description("Remove connections")
+	.option("--namespace <ns>", "Namespace for the server")
+	.option(
+		"-c, --client <name>",
+		`Uninstall from an AI client's config (${VALID_CLIENTS.join(", ")})`,
+	)
 
-		const { searchServers } = await import("./lib/registry")
-		const searchTerm = term ?? ""
-		const servers = await searchServers(searchTerm, apiKey, {
-			verified: options.verified,
-			pageSize: parseInt(options.limit, 10),
-			page: parseInt(options.page, 10),
-		})
+	.action(handleMcpRemove)
 
-		if (options.json) {
-			const serversWithUrl = servers.map((server) => ({
-				...server,
-				connectionUrl: `https://server.smithery.ai/${server.qualifiedName}`,
-			}))
-			console.log(JSON.stringify({ servers: serversWithUrl }, null, 2))
-			return
-		}
+registerAlias(mcpCmd, "rm <ids...>", removeCmd, handleMcpRemove)
 
-		if (servers.length === 0) {
-			console.log(chalk.yellow("No servers found."))
-			return
-		}
+mcpCmd
+	.command("update <id>")
+	.description("Update a connection's name, metadata, or headers")
+	.option("--name <name>", "Human-readable name")
+	.option("--metadata <json>", "Metadata as JSON object")
+	.option("--headers <json>", "Custom headers as JSON object (stored securely)")
+	.option("--namespace <ns>", "Namespace for the server")
+	.action(handleUpdateConnection)
 
-		if (!term) {
-			console.log(chalk.bold("Most popular servers:\n"))
-		}
-
-		const yaml = (await import("yaml")).default
-		const output = servers.map((server) => ({
-			name: server.displayName || server.qualifiedName,
-			qualifiedName: server.qualifiedName,
-			...(server.description && { description: server.description }),
-			...(server.verified && { verified: true }),
-			useCount: server.useCount,
-			connectionUrl: `https://server.smithery.ai/${server.qualifiedName}`,
-		}))
-		console.log(yaml.stringify(output).replace(/\n\n/g, "\n").trimEnd())
-		console.log()
-		console.log(
-			chalk.dim(
-				"Tip: Use --json for machine-readable output. Use smithery connect add <connectionUrl> to connect a server.",
+// Hidden backward-compat aliases for deprecated install/uninstall
+const mcpInstallCmd = mcpCmd
+	.command("install [server]", { hidden: true })
+	.option(
+		"-c, --client <name>",
+		`Specify the AI client (${VALID_CLIENTS.join(", ")})`,
+	)
+	.option(
+		"--config <json>",
+		"Provide configuration data as JSON (skips prompts)",
+	)
+	.hook("preAction", () => {
+		console.warn(
+			chalk.yellow(
+				"Note: 'mcp install' is deprecated. Use 'smithery mcp add <server> --client <name>' instead.",
 			),
 		)
 	})
+	.action(handleInstall)
 
-// Login command
-program
-	.command("login")
-	.description("Login with Smithery")
-	.action(async () => {
-		const { executeCliAuthFlow } = await import("./lib/cli-auth")
-		const { validateApiKey } = await import("./lib/registry")
+const mcpUninstallCmd = mcpCmd
+	.command("uninstall [server]", { hidden: true })
+	.option(
+		"-c, --client <name>",
+		`Specify the AI client (${VALID_CLIENTS.join(", ")})`,
+	)
+	.hook("preAction", () => {
+		console.warn(
+			chalk.yellow(
+				"Note: 'mcp uninstall' is deprecated. Use 'smithery mcp remove <server> --client <name>' instead.",
+			),
+		)
+	})
+	.action(handleUninstall)
 
-		console.log(chalk.cyan("Login to Smithery"))
+// ─── Development (hidden) ───────────────────────────────────────────────────
+
+const devCmd = withDevOptions(
+	mcpCmd
+		.command("dev [entryFile]", { hidden: true })
+		.description("Start development server with hot-reload"),
+).action(handleDev)
+
+const buildCmd = withBuildOptions(
+	mcpCmd
+		.command("build [entryFile]", { hidden: true })
+		.description("Build MCP server for production"),
+).action(handleBuild)
+
+// Hidden within mcp: run (backward compat)
+const runCmd = mcpCmd
+	.command("run <server>", { hidden: true })
+	.option("--config <json>", "Provide configuration as JSON")
+	.action(handleRun)
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// Tool command — Find and call tools from MCP servers added via 'smithery mcp'
+// ═══════════════════════════════════════════════════════════════════════════════
+
+const toolCmd = program
+	.command("tool")
+	.description("Find and call tools from MCP servers added via 'smithery mcp'")
+
+toolCmd
+	.command("find [query]")
+	.description("Find tools across your connected MCP servers")
+	.option("--connection <id>", "Limit search to a specific connection")
+	.option("--namespace <ns>", "Namespace to search in")
+	.option("--match <mode>", "Match mode: fuzzy, substring, or exact")
+	.option("--limit <n>", "Maximum number of tools to return (default: 10)")
+	.option("--page <n>", "Page number (default: 1)")
+	.option("--all", "Return all matches without pagination")
+
+	.addHelpText(
+		"after",
+		`
+Examples:
+  smithery tool find "create issue"                      Find by intent across connections
+  smithery tool find --connection github --all           Show all tools for one connection
+  smithery tool find notion-fetch --match exact --json   Exact match as JSON`,
+	)
+	.action(handleFindTools)
+
+toolCmd
+	.command("list [connection]")
+	.description("List tools from your connected MCP servers")
+	.option("--namespace <ns>", "Namespace to list from")
+	.option("--limit <n>", "Maximum number of tools to return (default: 10)")
+	.option("--page <n>", "Page number (default: 1)")
+
+	.addHelpText(
+		"after",
+		`
+Examples:
+  smithery tool list                    List tools from all connections
+  smithery tool list myserver           List tools for a specific connection
+  smithery tool list myserver --json    Output as JSON
+
+Tip: Use 'smithery tool find <query>' to search tools by name or intent.`,
+	)
+	.action((connection, options) =>
+		handleFindTools(undefined, { ...options, connection }),
+	)
+
+toolCmd
+	.command("get <connection> <tool>")
+	.description("Get details for a specific tool")
+	.option("--namespace <ns>", "Namespace for the tool")
+
+	.addHelpText(
+		"after",
+		`
+Examples:
+  smithery tool get myserver search     Show tool details and input schema`,
+	)
+	.action(handleGetTool)
+
+toolCmd
+	.command("call <connection> <tool> [args]")
+	.description("Call a tool")
+	.option("--namespace <ns>", "Namespace for the tool")
+	.addHelpText(
+		"after",
+		`
+Examples:
+  smithery tool call myserver search '{"query":"hello"}'
+  smithery tool call exa web_search_exa '{"query":"AI tools"}'`,
+	)
+	.action(handleCallTool)
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// Skill command — Search, view, and install Smithery skills
+// ═══════════════════════════════════════════════════════════════════════════════
+
+const skillCmd = program
+	.command("skill")
+	.description("Search, view, and install Smithery skills")
+
+skillCmd
+	.command("agents")
+	.description("List available agents for skill installation")
+	.action(() => {
+		console.log(chalk.bold("Available agents:"))
 		console.log()
+		for (const agent of SKILL_AGENTS) {
+			console.log(`  ${agent}`)
+		}
+		console.log()
+		console.log(
+			chalk.dim("See https://github.com/vercel-labs/skills for more info"),
+		)
+	})
 
-		try {
-			// OAuth flow - uses SMITHERY_BASE_URL env var or defaults to https://smithery.ai
-			const apiKey = await executeCliAuthFlow()
+skillCmd
+	.command("search <query>")
+	.description("Search for skills in the Smithery registry")
+	.option("-i, --interactive", "Interactive search mode")
+	.option("--limit <number>", "Maximum number of results to show", "10")
+	.option("--page <number>", "Page number", "1")
+	.option("--namespace <namespace>", "Filter by namespace")
+	.action(async (query, options) => {
+		const { searchSkills } = await import("./commands/skill")
+		await searchSkills(query, {
+			interactive: options.interactive,
+			limit: Number.parseInt(options.limit, 10),
+			page: Number.parseInt(options.page, 10),
+			namespace: options.namespace,
+		})
+	})
 
-			// Keep existing validation and storage
-			await validateApiKey(apiKey)
+skillCmd
+	.command("view <identifier>")
+	.description("View a skill's documentation without installing")
+	.action(async (identifier) => {
+		const { viewSkill } = await import("./commands/skill")
+		await viewSkill(identifier)
+	})
 
-			const result = await setApiKey(apiKey)
+skillCmd
+	.command("add <skill>")
+	.description("Add a skill to your agent")
+	.option(
+		"-a, --agent <name>",
+		`Target agent (${SKILL_AGENTS.slice(0, 5).join(", ")}, ...)`,
+	)
+	.option(
+		"-g, --global",
+		"Install globally (user-level) instead of project-level",
+	)
+	.action(async (skill, options) => {
+		const { installSkill } = await import("./commands/skill")
+		await installSkill(skill, options.agent, { global: options.global })
+	})
 
-			if (result.success) {
-				console.log(chalk.green("✓ Successfully logged in"))
-				console.log(chalk.gray("You can now use Smithery CLI commands"))
-			} else {
-				console.error(chalk.red("✗ Failed to save API key"))
-				console.error(chalk.gray("You may need to log in again next time"))
-			}
-		} catch (error) {
-			console.error(chalk.red("✗ Login failed"))
-			const errorMessage =
-				error instanceof Error ? error.message : String(error)
-			console.error(chalk.gray(errorMessage))
+// Skill voting (verbs instead of flags)
+skillCmd
+	.command("upvote <skill>")
+	.description("Upvote a skill")
+	.action(async (skill) => {
+		const { voteSkill } = await import("./commands/skill")
+		await voteSkill(skill, "up")
+	})
+
+skillCmd
+	.command("downvote <skill>")
+	.description("Downvote a skill")
+	.action(async (skill) => {
+		const { voteSkill } = await import("./commands/skill")
+		await voteSkill(skill, "down")
+	})
+
+// skill review subcommand
+const skillReview = skillCmd
+	.command("review")
+	.description("Manage skill reviews")
+
+skillReview
+	.command("list <skill>")
+	.description("List reviews for a skill")
+
+	.option("--limit <number>", "Number of reviews to show", "10")
+	.option("--page <number>", "Page number", "1")
+	.action(async (skill, options) => {
+		const { listReviews } = await import("./commands/skill")
+		await listReviews(skill, {
+			limit: Number.parseInt(options.limit, 10),
+			page: Number.parseInt(options.page, 10),
+		})
+	})
+
+skillReview
+	.command("add <skill>")
+	.description("Add a review for a skill")
+	.option("-b, --body <text>", "Review text (required)")
+	.option("-m, --model <name>", "Agent model used (e.g., claude-3.5-sonnet)")
+	.option("--up", "Upvote the skill")
+	.option("--down", "Downvote the skill")
+	.action(async (skill, options) => {
+		if (!options.body) {
+			console.error(chalk.red("Error: --body is required"))
+			console.error(
+				chalk.dim(
+					'Usage: smithery skill review add <skill> --up|--down -b "review text"',
+				),
+			)
 			process.exit(1)
 		}
+		if (!options.up && !options.down) {
+			console.error(chalk.red("Error: --up or --down is required"))
+			console.error(
+				chalk.dim(
+					'Usage: smithery skill review add <skill> --up|--down -b "review text"',
+				),
+			)
+			process.exit(1)
+		}
+		if (options.up && options.down) {
+			console.error(chalk.red("Error: Cannot specify both --up and --down"))
+			process.exit(1)
+		}
+		const { submitReview } = await import("./commands/skill")
+		await submitReview(skill, {
+			review: options.body,
+			model: options.model,
+			vote: options.up ? "up" : "down",
+		})
 	})
 
-// Logout command
-program
+const reviewRemoveCmd = skillReview
+	.command("remove <skill>")
+	.description("Remove your review for a skill")
+	.action(async (skill) => {
+		const { deleteReview } = await import("./commands/skill")
+		await deleteReview(skill)
+	})
+
+registerAlias(skillReview, "rm <skill>", reviewRemoveCmd, async (skill) => {
+	const { deleteReview } = await import("./commands/skill")
+	await deleteReview(skill)
+})
+
+skillReview
+	.command("upvote <skill> <review-id>")
+	.description("Upvote a review")
+	.action(async (skill, reviewId) => {
+		const { voteReview } = await import("./commands/skill")
+		await voteReview(skill, reviewId, "up")
+	})
+
+skillReview
+	.command("downvote <skill> <review-id>")
+	.description("Downvote a review")
+	.action(async (skill, reviewId) => {
+		const { voteReview } = await import("./commands/skill")
+		await voteReview(skill, reviewId, "down")
+	})
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// Auth command — Authentication and permissions
+// ═══════════════════════════════════════════════════════════════════════════════
+
+program.commandsGroup("Authentication:")
+
+const auth = program
+	.command("auth")
+	.description("Authentication and permissions")
+
+auth.command("login").description("Login with Smithery").action(handleLogin)
+
+auth
 	.command("logout")
 	.description("Log out and remove all local credentials")
-	.action(async () => {
-		const { clearApiKey, clearNamespace } = await import(
-			"./utils/smithery-settings"
-		)
-		const { clearAllConfigs } = await import("./lib/keychain.js")
+	.action(handleLogout)
 
-		console.log(chalk.cyan("Logging out of Smithery..."))
-
-		// Clear API key
-		await clearApiKey()
-
-		// Clear namespace
-		await clearNamespace()
-
-		// Clear keychain entries
-		await clearAllConfigs()
-
-		console.log(chalk.green("✓ Successfully logged out"))
-		console.log(chalk.gray("All local credentials have been removed"))
-	})
-
-// Show API key command
-program
+const whoamiCmd = auth
 	.command("whoami")
-	.description("Display the currently logged in API key")
+	.description("Display the currently logged in user")
 	.option("--full", "Show the full API key instead of masking it")
 	.option(
 		"--server",
 		"Start an HTTP server on localhost:4260 that serves the API key",
 	)
+	.action(handleWhoami)
+
+auth
+	.command("token")
+	.description("Mint a restricted service token")
+	.option("--policy <json>", "Policy constraints as JSON array")
+
 	.action(async (options) => {
-		const { Smithery } = await import("@smithery/api/client.js")
+		const { createToken } = await import("./commands/auth/token")
+		await createToken(options)
+	})
 
-		async function mintApiKey() {
-			const rootApiKey = await getApiKey()
-			const client = new Smithery({ apiKey: rootApiKey })
-			const token = await client.tokens.create({
-				policy: [
-					{
-						resources: ["connections", "servers", "namespaces", "skills"],
-						operations: ["read", "write", "execute"],
-						namespaces: "*",
-						metadata: { userId: "root-whoami" },
-						ttl: 3600,
-					},
-				],
-			})
-			const apiKey = token.token
-			const expiresAt = new Date(token.expiresAt)
-			return { apiKey, expiresAt }
-		}
+// ═══════════════════════════════════════════════════════════════════════════════
+// Management
+// ═══════════════════════════════════════════════════════════════════════════════
 
-		try {
-			let { apiKey, expiresAt } = await mintApiKey()
+program.commandsGroup("Management:")
 
-			if (!apiKey) {
-				console.log(chalk.yellow("No API key found"))
-				console.log(chalk.gray("Run 'smithery login' to authenticate"))
-				process.exit(1)
-			}
-
-			if (options.server) {
-				const server = createServer(async (req, res) => {
-					res.setHeader("Access-Control-Allow-Origin", "*")
-					res.setHeader("Access-Control-Allow-Methods", "GET, OPTIONS")
-					res.setHeader("Access-Control-Allow-Headers", "Content-Type")
-
-					if (req.method === "OPTIONS") {
-						res.writeHead(204)
-						res.end()
-						return
-					}
-
-					if (req.method === "GET" && req.url === "/whoami") {
-						if (expiresAt <= new Date()) {
-							const newToken = await mintApiKey()
-							apiKey = newToken.apiKey
-							expiresAt = newToken.expiresAt
-						}
-						res.writeHead(200, { "Content-Type": "application/json" })
-						res.end(JSON.stringify({ SMITHERY_API_KEY: apiKey, expiresAt }))
-					} else {
-						res.writeHead(404, { "Content-Type": "application/json" })
-						res.end(JSON.stringify({ error: "Not found" }))
-					}
-				})
-				server.listen(4260, "localhost", () => {
-					console.log(chalk.cyan("Server running at http://localhost:4260"))
-					console.log(chalk.gray("GET /whoami to retrieve API key"))
-					console.log(chalk.gray("Press Ctrl+C to stop"))
-				})
-				return
-			}
-
-			if (options.full) {
-				console.log(`SMITHERY_API_KEY=${apiKey}`)
-			} else {
-				const masked = `${apiKey.slice(0, 8)}...${apiKey.slice(-4)}`
-				console.log(chalk.cyan("API Key:"), masked)
-				console.log(chalk.gray("Use --full to display the complete key"))
-			}
-		} catch (_error) {
-			console.log(chalk.yellow("Not logged in"))
-			console.log(chalk.gray("Run 'smithery login' to authenticate"))
-			process.exit(1)
-		}
+// Setup command - install the Smithery CLI skill
+program
+	.command("setup")
+	.description("Install the Smithery CLI skill for your agent")
+	.option(
+		"-a, --agent <name>",
+		`Target agent (${SKILL_AGENTS.slice(0, 5).join(", ")}, ...)`,
+	)
+	.option(
+		"-g, --global",
+		"Install globally (user-level) instead of project-level",
+	)
+	.action(async (options) => {
+		const { installSkill } = await import("./commands/skill")
+		await installSkill("smithery-ai/cli", options.agent, {
+			global: options.global,
+		})
 	})
 
 // Namespace command - manage namespace context
 const namespace = program
 	.command("namespace")
-	.description("Manage namespace context (like kubectl config)")
+	.description("Manage namespace context")
 
 namespace
 	.command("list")
 	.description("List available namespaces")
-	.action(async () => {
+
+	.action(async (options) => {
 		const { listNamespaces } = await import("./commands/namespace")
-		await listNamespaces()
+		await listNamespaces(options)
 	})
 
 namespace
@@ -634,351 +1025,86 @@ namespace
 		await createNamespace(name)
 	})
 
-namespace
-	.command("search [query]")
-	.description("Search public namespaces (requires login)")
-	.option("--limit <number>", "Maximum number of results to show", "20")
-	.option("--has-skills", "Only show namespaces with skills")
-	.option("--has-servers", "Only show namespaces with servers")
-	.action(async (query, options) => {
-		const { searchPublicNamespaces } = await import("./commands/namespace")
-		await searchPublicNamespaces(query, {
-			limit: Number.parseInt(options.limit, 10),
-			hasSkills: options.hasSkills,
-			hasServers: options.hasServers,
-		})
-	})
+// ═══════════════════════════════════════════════════════════════════════════════
+// Hidden backward-compat aliases
+// ═══════════════════════════════════════════════════════════════════════════════
 
-// Connect command - manage MCP server connections and tools
-const connect = program
-	.command("connect")
-	.description("Manage MCP server connections (Smithery Connect)")
+// ─── Top-level hidden aliases (backward compat) ────────────────────────────
 
-connect
-	.command("add <mcp-url>")
-	.description("Add an MCP server connection")
-	.option(
-		"--id <id>",
-		"Custom connection ID (defaults name to ID if name not set)",
-	)
-	.option("--name <name>", "Human-readable name for the server")
-	.option("--metadata <json>", "Custom metadata as JSON object")
-	.option("--headers <json>", "Custom headers as JSON object (stored securely)")
-	.option("--namespace <ns>", "Target namespace")
-	.option(
-		"--force",
-		"Create a new connection even if one already exists for this URL",
-	)
-	.action(async (mcpUrl, options) => {
-		const { addServer } = await import("./commands/connect")
-		await addServer(mcpUrl, options)
-	})
+registerAlias(program, "install [server]", mcpInstallCmd, handleInstall, {
+	deprecation:
+		"Note: 'install' is deprecated. Use 'smithery mcp add <server> --client <name>' instead.",
+})
+registerAlias(program, "uninstall [server]", mcpUninstallCmd, handleUninstall, {
+	deprecation:
+		"Note: 'uninstall' is deprecated. Use 'smithery mcp remove <server> --client <name>' instead.",
+})
+registerAlias(program, "run <server>", runCmd, handleRun)
+registerAlias(program, "search [term]", searchCmd, handleSearch)
+registerAlias(program, "dev [entryFile]", devCmd, handleDev)
+registerAlias(program, "build [entryFile]", buildCmd, handleBuild)
+registerAlias(program, "publish [server]", publishCmd, handlePublish)
+program.command("login", { hidden: true }).action(handleLogin)
+program.command("logout", { hidden: true }).action(handleLogout)
+registerAlias(program, "whoami", whoamiCmd, handleWhoami)
 
-connect
-	.command("list")
-	.description("List connected servers")
-	.option("--namespace <ns>", "Namespace to list from")
-	.option("--limit <n>", "Maximum number of results (default: all)")
-	.option("--cursor <cursor>", "Pagination cursor from previous response")
-	.action(async (options) => {
-		const { listServers } = await import("./commands/connect")
-		await listServers(options)
-	})
-
-connect
-	.command("get <id>")
-	.description("Get details for a connection")
-	.option("--namespace <ns>", "Namespace for the connection")
-	.action(async (id, options) => {
-		const { getServer } = await import("./commands/connect")
-		await getServer(id, options)
-	})
-
-connect
-	.command("remove <ids...>")
-	.description("Remove one or more server connections")
-	.option("--namespace <ns>", "Namespace for the server")
-	.action(async (ids, options) => {
-		const { removeServer } = await import("./commands/connect")
-		await removeServer(ids, options)
-	})
-
-connect
-	.command("set <id> <mcp-url>")
-	.description("Create or update a connection by ID")
-	.option("--name <name>", "Human-readable name")
-	.option("--metadata <json>", "Metadata as JSON object")
-	.option("--headers <json>", "Custom headers as JSON object (stored securely)")
-	.option("--namespace <ns>", "Namespace for the server")
-	.action(async (id, mcpUrl, options) => {
-		const { setServer } = await import("./commands/connect")
-		await setServer(id, mcpUrl, options)
-	})
-
-connect
-	.command("tools [server]")
-	.description("List tools (all or for a specific server)")
-	.option("--namespace <ns>", "Namespace to list from")
-	.option("--limit <n>", "Maximum number of tools to return (default: 10)")
-	.option("--page <n>", "Page number (default: 1)")
-	.action(async (server, options) => {
-		const { listTools } = await import("./commands/connect")
-		await listTools(server, options)
-	})
-
-connect
-	.command("search <query>")
-	.description("Search tools by intent")
-	.option("--namespace <ns>", "Namespace to search in")
-	.action(async (query, options) => {
-		const { searchTools } = await import("./commands/connect")
-		await searchTools(query, options)
-	})
-
-connect
-	.command("call <tool-id> [args]")
-	.description("Call a tool (format: server/tool-name)")
-	.option("--namespace <ns>", "Namespace for the tool")
-	.action(async (toolId, args, options) => {
-		const { callTool } = await import("./commands/connect")
-		await callTool(toolId, args, options)
-	})
-
-// Servers command - search for MCP servers
-const servers = program
-	.command("servers")
+const serversCompat = program
+	.command("servers", { hidden: true })
 	.description("Search and browse MCP servers")
+registerAlias(serversCompat, "search [term]", searchCmd, handleSearch)
 
-servers
-	.command("search [term]")
-	.description("Search for servers in the Smithery registry")
-	.option("--json", "Output results as JSON (non-interactive)")
-	.action(async (term, options) => {
-		// API key is optional for search - use if available, don't prompt
-		const apiKey = await getApiKey()
+// ═══════════════════════════════════════════════════════════════════════════════
+// Analytics: track command invocations
+// ═══════════════════════════════════════════════════════════════════════════════
 
-		if (options.json) {
-			const { searchServers } = await import("./lib/registry")
-			// Non-interactive JSON output
-			if (!term) {
-				console.error(
-					chalk.red("Error: Search term is required when using --json"),
-				)
-				process.exit(1)
-			}
-			const servers = await searchServers(term, apiKey)
-			console.log(JSON.stringify({ servers }, null, 2))
-			return
-		}
-
-		const { interactiveServerSearch } = await import("./utils/command-prompts")
-		await interactiveServerSearch(apiKey, term)
-	})
-
-// Skills command - search and install skills
-const skills = program
-	.command("skills")
-	.description("Search and install Smithery skills")
-
-skills
-	.command("agents")
-	.description("List available agents for skill installation")
-	.action(() => {
-		console.log(chalk.bold("Available agents:"))
-		console.log()
-		for (const agent of SKILL_AGENTS) {
-			console.log(`  ${agent}`)
-		}
-		console.log()
-		console.log(
-			chalk.dim("See https://github.com/vercel-labs/skills for more info"),
-		)
-	})
-
-skills
-	.command("search <query>")
-	.description("Search for skills in the Smithery registry")
-	.option("--json", "Output results as JSON")
-	.option("-i, --interactive", "Interactive search mode")
-	.option("--limit <number>", "Maximum number of results to show", "10")
-	.option("--page <number>", "Page number", "1")
-	.option("--namespace <namespace>", "Filter by namespace")
-	.action(async (query, options) => {
-		const { searchSkills } = await import("./commands/skills")
-		await searchSkills(query, {
-			json: options.json,
-			interactive: options.interactive,
-			limit: Number.parseInt(options.limit, 10),
-			page: Number.parseInt(options.page, 10),
-			namespace: options.namespace,
-		})
-	})
-
-skills
-	.command("view <identifier>")
-	.description("View a skill's documentation without installing")
-	.action(async (identifier) => {
-		const { viewSkill } = await import("./commands/skills")
-		await viewSkill(identifier)
-	})
-
-// Uses the Vercel Labs skills CLI: https://github.com/vercel-labs/skills
-skills
-	.command("install <skill>")
-	.description("Install a skill (via github.com/vercel-labs/skills)")
-	.option(
-		"-a, --agent <name>",
-		`Target agent (${SKILL_AGENTS.slice(0, 5).join(", ")}, ...)`,
-	)
-	.option(
-		"-g, --global",
-		"Install globally (user-level) instead of project-level",
-	)
-	.action(async (skill, options) => {
-		const { installSkill } = await import("./commands/skills")
-		await installSkill(skill, options.agent, { global: options.global })
-	})
-
-// Skill voting (verbs instead of flags)
-skills
-	.command("upvote <skill>")
-	.description("Upvote a skill")
-	.action(async (skill) => {
-		const { voteSkill } = await import("./commands/skills")
-		await voteSkill(skill, "up")
-	})
-
-skills
-	.command("downvote <skill>")
-	.description("Downvote a skill")
-	.action(async (skill) => {
-		const { voteSkill } = await import("./commands/skills")
-		await voteSkill(skill, "down")
-	})
-
-// skills review subcommand
-const skillsReview = skills
-	.command("review")
-	.description("Manage skill reviews")
-
-skillsReview
-	.command("list <skill>")
-	.description("List reviews for a skill")
-	.option("--json", "Output as JSON")
-	.option("--limit <number>", "Number of reviews to show", "10")
-	.option("--page <number>", "Page number", "1")
-	.action(async (skill, options) => {
-		const { listReviews } = await import("./commands/skills")
-		await listReviews(skill, {
-			json: options.json,
-			limit: Number.parseInt(options.limit, 10),
-			page: Number.parseInt(options.page, 10),
-		})
-	})
-
-skillsReview
-	.command("add <skill>")
-	.description("Add a review for a skill")
-	.option("-b, --body <text>", "Review text (required)")
-	.option("-m, --model <name>", "Agent model used (e.g., claude-3.5-sonnet)")
-	.option("--up", "Upvote the skill")
-	.option("--down", "Downvote the skill")
-	.action(async (skill, options) => {
-		if (!options.body) {
-			console.error(chalk.red("Error: --body is required"))
-			console.error(
-				chalk.dim(
-					'Usage: smithery skills review add <skill> --up|--down -b "review text"',
-				),
-			)
-			process.exit(1)
-		}
-		if (!options.up && !options.down) {
-			console.error(chalk.red("Error: --up or --down is required"))
-			console.error(
-				chalk.dim(
-					'Usage: smithery skills review add <skill> --up|--down -b "review text"',
-				),
-			)
-			process.exit(1)
-		}
-		if (options.up && options.down) {
-			console.error(chalk.red("Error: Cannot specify both --up and --down"))
-			process.exit(1)
-		}
-		const { submitReview } = await import("./commands/skills")
-		await submitReview(skill, {
-			review: options.body,
-			model: options.model,
-			vote: options.up ? "up" : "down",
-		})
-	})
-
-skillsReview
-	.command("remove <skill>")
-	.description("Remove your review for a skill")
-	.action(async (skill) => {
-		const { deleteReview } = await import("./commands/skills")
-		await deleteReview(skill)
-	})
-
-skillsReview
-	.command("upvote <skill> <review-id>")
-	.description("Upvote a review")
-	.action(async (skill, reviewId) => {
-		const { voteReview } = await import("./commands/skills")
-		await voteReview(skill, reviewId, "up")
-	})
-
-skillsReview
-	.command("downvote <skill> <review-id>")
-	.description("Downvote a review")
-	.action(async (skill, reviewId) => {
-		const { voteReview } = await import("./commands/skills")
-		await voteReview(skill, reviewId, "down")
-	})
-
-// Setup command - install the Smithery CLI skill
-program
-	.command("setup")
-	.description("Install the Smithery CLI skill for your agent")
-	.option(
-		"-a, --agent <name>",
-		`Target agent (${SKILL_AGENTS.slice(0, 5).join(", ")}, ...)`,
-	)
-	.option(
-		"-g, --global",
-		"Install globally (user-level) instead of project-level",
-	)
-	.action(async (options) => {
-		const { installSkill } = await import("./commands/skills")
-		await installSkill("smithery-ai/cli", options.agent, {
-			global: options.global,
-		})
-	})
-
-// Show welcome message if no command provided
-if (process.argv.length <= 2) {
-	console.log(
-		`\n${chalk.bold("Smithery")} ${chalk.dim(`v${__SMITHERY_VERSION__}`)} — Discover and connect to 100K+ MCP tools and skills\n`,
-	)
-	const featured = ["setup", "connect", "skills", "servers"]
-	const cmds = program.commands.filter((cmd) => featured.includes(cmd.name()))
-	const nameWidth = Math.max(...cmds.map((cmd) => cmd.name().length))
-	console.log("Get started:")
-	for (const cmd of cmds) {
-		const name = cmd.name().padEnd(nameWidth + 2)
-		console.log(`  smithery ${name} ${cmd.description()}`)
+function getCommandPath(cmd: InstanceType<typeof Command>): string {
+	const parts: string[] = []
+	let current: InstanceType<typeof Command> | null = cmd
+	while (current && current.name() !== "smithery") {
+		parts.unshift(current.name())
+		current = current.parent
 	}
-	console.log(`  smithery ${"help".padEnd(nameWidth + 2)} Show all commands`)
-	console.log()
-	console.log("Run this command to learn how to use this CLI:")
-	console.log(`  smithery skills view smithery-ai/cli\n`)
-	process.exit(0)
+	return parts.join(".")
+}
+
+program.hook("preAction", async (_thisCommand, actionCommand) => {
+	const { trackEvent } = await import("./utils/analytics")
+	const commandPath = getCommandPath(actionCommand)
+	const globalOpts = program.opts()
+	const localOpts = actionCommand.opts()
+	const allFlags = [
+		...Object.keys(globalOpts).filter((k) => globalOpts[k] !== undefined),
+		...Object.keys(localOpts).filter((k) => localOpts[k] !== undefined),
+	]
+	const isAgent = allFlags.includes("json") || !process.stdin.isTTY
+	trackEvent("command_invocation", {
+		command: commandPath,
+		flags: allFlags,
+		isAgent,
+	})
+})
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// Entry point
+// ═══════════════════════════════════════════════════════════════════════════════
+
+// Show help when no command is provided
+if (process.argv.length <= 2) {
+	program.help()
+}
+
+// Backward compat: accept plural forms
+const COMMAND_ALIASES: Record<string, string> = {
+	tools: "tool",
+	skills: "skill",
+}
+const argv = process.argv.slice()
+if (argv[2] && argv[2] in COMMAND_ALIASES) {
+	argv[2] = COMMAND_ALIASES[argv[2]]
 }
 
 // Parse arguments and run
-program.parseAsync(process.argv).catch((error: unknown) => {
+program.parseAsync(argv).catch((error: unknown) => {
 	if (error instanceof Error) {
 		console.error(chalk.red(`\n✗ ${error.message}`))
 		if (process.argv.includes("--debug") && error.stack) {

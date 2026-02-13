@@ -3,7 +3,7 @@ import type { ServerGetResponse } from "@smithery/api/resources/servers/servers"
 type Server = ServerGetResponse
 
 export const noConfigServer: Server = {
-	qualifiedName: "@test/no-config-server",
+	qualifiedName: "test/no-config-server",
 	displayName: "No Config Server",
 	description: "A test server with no config",
 	iconUrl: null,
@@ -20,7 +20,7 @@ export const noConfigServer: Server = {
 }
 
 export const requiredOnlyServer: Server = {
-	qualifiedName: "@test/required-only-server",
+	qualifiedName: "test/required-only-server",
 	displayName: "Required Only Server",
 	description: "A test server with required only config",
 	iconUrl: null,
@@ -49,7 +49,7 @@ export const requiredOnlyServer: Server = {
 }
 
 export const requiredAndOptionalServer: Server = {
-	qualifiedName: "@test/required-and-optional-server",
+	qualifiedName: "test/required-and-optional-server",
 	displayName: "Required and Optional Server",
 	description: "A test server with both required and optional config",
 	iconUrl: null,

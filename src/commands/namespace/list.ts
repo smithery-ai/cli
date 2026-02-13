@@ -1,15 +1,31 @@
 import { createSmitheryClient } from "../../lib/smithery-client"
+import { isJsonMode, outputTable } from "../../utils/output"
 import { getNamespace } from "../../utils/smithery-settings"
 
-export async function listNamespaces(): Promise<void> {
+export async function listNamespaces(
+	_options: Record<string, unknown> = {},
+): Promise<void> {
+	const isJson = isJsonMode()
 	const client = await createSmitheryClient()
 	const { namespaces } = await client.namespaces.list()
 	const current = await getNamespace()
 
-	console.log(
-		JSON.stringify({
+	const data = namespaces.map((ns) => ({
+		name: ns.name,
+		current: ns.name === current ? "✓" : "",
+	}))
+
+	outputTable({
+		data,
+		columns: [
+			{ key: "name", header: "NAME" },
+			{ key: "current", header: "CURRENT" },
+		],
+		json: isJson,
+		jsonData: {
 			namespaces: namespaces.map((ns) => ns.name),
 			current: current ?? null,
-		}),
-	)
+		},
+		tip: "Use smithery namespace use <name> to switch namespaces.",
+	})
 }

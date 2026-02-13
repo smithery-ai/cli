@@ -115,7 +115,7 @@ import {
 	promptForServerNameInput,
 } from "../../utils/command-prompts"
 import { ensureApiKey } from "../../utils/runtime"
-import { deploy } from "../deploy"
+import { deploy } from "../mcp/deploy"
 
 describe("deploy command", () => {
 	let mockRegistry: {
@@ -124,6 +124,8 @@ describe("deploy command", () => {
 			set: ReturnType<typeof vi.fn>
 		}
 		servers: {
+			get: ReturnType<typeof vi.fn>
+			create: ReturnType<typeof vi.fn>
 			deployments: {
 				deploy: ReturnType<typeof vi.fn>
 				get: ReturnType<typeof vi.fn>
@@ -152,6 +154,8 @@ describe("deploy command", () => {
 				set: vi.fn().mockResolvedValue(undefined),
 			},
 			servers: {
+				get: vi.fn().mockResolvedValue({}),
+				create: vi.fn().mockResolvedValue({}),
 				deployments: {
 					deploy: vi.fn().mockResolvedValue({
 						deploymentId: "test-deployment-id",
@@ -539,23 +543,30 @@ describe("deploy command", () => {
 		)
 		mockRegistry.servers.deployments.deploy.mockRejectedValue(error)
 
-		await expect(deploy({ name: "nonexistent/myserver" })).rejects.toThrow(
-			"process.exit() was called",
+		await expect(deploy({ name: "nonexistent/myserver" })).rejects.toThrow()
+		expect(console.error).toHaveBeenCalledWith(
+			expect.stringContaining("Namespace"),
 		)
 	})
 
-	test("404 error: handles server not found error correctly", async () => {
+	test("404 error: auto-creates server and retries deploy", async () => {
 		const error = new NotFoundError(
 			404,
 			{ error: "Server not found" },
 			"Not found",
 			new Headers(),
 		)
-		mockRegistry.servers.deployments.deploy.mockRejectedValue(error)
+		// First deploy fails with 404, retry succeeds
+		mockRegistry.servers.deployments.deploy
+			.mockRejectedValueOnce(error)
+			.mockResolvedValueOnce({ deploymentId: "retry-id" })
 
-		await expect(deploy({ name: "myorg/nonexistent" })).rejects.toThrow(
-			"process.exit() was called",
-		)
+		await deploy({ name: "myorg/nonexistent" })
+
+		expect(mockRegistry.servers.create).toHaveBeenCalledWith("nonexistent", {
+			namespace: "myorg",
+		})
+		expect(mockRegistry.servers.deployments.deploy).toHaveBeenCalledTimes(2)
 	})
 })
 

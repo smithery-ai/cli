@@ -26,7 +26,7 @@ export interface ParsedQualifiedName {
 /**
  * Parse a qualified name into namespace and server name parts.
  *
- * @param qualifiedName - The qualified name to parse (e.g., "@foo/bar", "linear")
+ * @param qualifiedName - The qualified name to parse (e.g., "foo/bar", "linear")
  * @returns Object with namespace and serverName
  * @throws Error if the qualified name is empty or results in an empty namespace
  */

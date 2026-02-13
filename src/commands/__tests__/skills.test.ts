@@ -5,30 +5,35 @@
 
 import { beforeEach, describe, expect, test, vi } from "vitest"
 
-// Mock the Smithery client
-vi.mock("@smithery/api/client.js", () => ({
-	Smithery: vi.fn().mockImplementation((config) => ({
-		_config: config,
-		skills: {
-			list: vi.fn().mockResolvedValue({
-				skills: [
-					{
-						id: "test-id",
-						namespace: "test-ns",
-						slug: "test-skill",
-						displayName: "Test Skill",
-						description: "A test skill",
-					},
-				],
-			}),
-			get: vi.fn().mockResolvedValue({
-				id: "test-id",
-				namespace: "test-ns",
-				slug: "test-skill",
-			}),
-		},
-	})),
-}))
+function createSmitheryMock() {
+	return {
+		Smithery: vi.fn().mockImplementation((config) => ({
+			_config: config,
+			skills: {
+				list: vi.fn().mockResolvedValue({
+					skills: [
+						{
+							id: "test-id",
+							namespace: "test-ns",
+							slug: "test-skill",
+							displayName: "Test Skill",
+							description: "A test skill",
+						},
+					],
+				}),
+				get: vi.fn().mockResolvedValue({
+					id: "test-id",
+					namespace: "test-ns",
+					slug: "test-skill",
+				}),
+			},
+		})),
+	}
+}
+
+// Mock both import paths to the same factory
+vi.mock("@smithery/api", () => createSmitheryMock())
+vi.mock("@smithery/api/client.js", () => createSmitheryMock())
 
 // Mock child_process for install
 vi.mock("node:child_process", () => ({
@@ -39,7 +44,8 @@ vi.mock("node:child_process", () => ({
 vi.spyOn(console, "log").mockImplementation(() => {})
 vi.spyOn(console, "error").mockImplementation(() => {})
 
-import { Smithery } from "@smithery/api/client.js"
+import { Smithery } from "@smithery/api"
+import { setOutputMode } from "../../utils/output"
 
 describe("skills commands use public API", () => {
 	beforeEach(() => {
@@ -47,10 +53,11 @@ describe("skills commands use public API", () => {
 	})
 
 	test("skills search creates Smithery client with empty API key", async () => {
-		const { searchSkills } = await import("../skills/search")
+		const { searchSkills } = await import("../skill/search")
 
 		// Run search in JSON mode to avoid interactive prompts
-		await searchSkills("test", { json: true, limit: 5 })
+		setOutputMode({ json: true })
+		await searchSkills("test", { limit: 5 })
 
 		// Verify Smithery was instantiated with empty API key
 		expect(Smithery).toHaveBeenCalledWith({ apiKey: "" })
@@ -58,7 +65,7 @@ describe("skills commands use public API", () => {
 
 	test("skills install resolves skill URL with empty API key", async () => {
 		const { execSync } = await import("node:child_process")
-		const { installSkill } = await import("../skills/install")
+		const { installSkill } = await import("../skill/install")
 
 		await installSkill("test-ns/test-skill", "claude-code", {})
 
@@ -74,7 +81,7 @@ describe("skills commands use public API", () => {
 
 	test("skills install passes global flag correctly", async () => {
 		const { execSync } = await import("node:child_process")
-		const { installSkill } = await import("../skills/install")
+		const { installSkill } = await import("../skill/install")
 
 		await installSkill("test-ns/test-skill", "cursor", { global: true })
 
@@ -87,7 +94,7 @@ describe("skills commands use public API", () => {
 
 	test("skills install includes -y flag when both skill and agent provided", async () => {
 		const { execSync } = await import("node:child_process")
-		const { installSkill } = await import("../skills/install")
+		const { installSkill } = await import("../skill/install")
 
 		await installSkill("test-ns/test-skill", "claude-code", {})
 
@@ -98,7 +105,7 @@ describe("skills commands use public API", () => {
 
 	test("skills install runs interactive when no agent provided", async () => {
 		const { execSync } = await import("node:child_process")
-		const { installSkill } = await import("../skills/install")
+		const { installSkill } = await import("../skill/install")
 
 		await installSkill("test-ns/test-skill", undefined, {})
 
