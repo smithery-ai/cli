@@ -746,7 +746,7 @@ skills
 
 // Uses the Vercel Labs skills CLI: https://github.com/vercel-labs/skills
 skills
-	.command("install <skill>")
+	.command("add <skill>")
 	.description("Install a skill (via github.com/vercel-labs/skills)")
 	.option(
 		"-a, --agent <name>",
