@@ -24,9 +24,7 @@ export async function updateServer(
 		)
 
 		const session = await ConnectSession.create(options.namespace)
-		const existing = await session.getConnection(id)
-
-		const connection = await session.setConnection(id, existing.mcpUrl, {
+		const connection = await session.setConnection(id, undefined, {
 			name: options.name,
 			metadata: parsedMetadata,
 			headers: parsedHeaders,

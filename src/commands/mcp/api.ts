@@ -158,7 +158,7 @@ export class ConnectSession {
 	 */
 	async setConnection(
 		connectionId: string,
-		mcpUrl: string,
+		mcpUrl?: string,
 		options: {
 			name?: string
 			metadata?: Record<string, unknown>
@@ -167,7 +167,7 @@ export class ConnectSession {
 	): Promise<Connection> {
 		const params = {
 			namespace: this.namespace,
-			mcpUrl,
+			...(mcpUrl ? { mcpUrl } : {}),
 			name: options.name,
 			metadata: options.metadata,
 			headers: options.headers,
