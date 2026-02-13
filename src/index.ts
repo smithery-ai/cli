@@ -283,26 +283,6 @@ async function handleCallTool(
 	await callTool(connection, toolName, args, options)
 }
 
-async function handleCallToolById(
-	toolId: string,
-	args: string | undefined,
-	options: any,
-) {
-	const slashIndex = toolId.indexOf("/")
-	if (slashIndex <= 0 || slashIndex === toolId.length - 1) {
-		const { outputJson } = await import("./utils/output")
-		outputJson({
-			result: null,
-			isError: true,
-			error: `Invalid tool ID format. Expected "connection/tool-name", got "${toolId}"`,
-		})
-		process.exit(1)
-	}
-	const connection = toolId.slice(0, slashIndex)
-	const toolName = toolId.slice(slashIndex + 1)
-	await handleCallTool(connection, toolName, args, options)
-}
-
 async function handleMcpAdd(server: string, options: any) {
 	if (options.local) {
 		await handleInstall(server, options)
@@ -1044,83 +1024,6 @@ namespace
 // ═══════════════════════════════════════════════════════════════════════════════
 // Hidden backward-compat aliases
 // ═══════════════════════════════════════════════════════════════════════════════
-
-// ─── connect (hidden) — all subcommands still work ──────────────────────────
-
-const connect = program
-	.command("connect", { hidden: true })
-	.description("Manage MCP server connections (Smithery Connect)")
-
-connect
-	.command("add <mcp-url>")
-	.description("Add an MCP server connection")
-	.option(
-		"--id <id>",
-		"Custom connection ID (defaults name to ID if name not set)",
-	)
-	.option("--name <name>", "Human-readable name for the server")
-	.option("--metadata <json>", "Custom metadata as JSON object")
-	.option("--headers <json>", "Custom headers as JSON object (stored securely)")
-	.option("--namespace <ns>", "Target namespace")
-	.option(
-		"--force",
-		"Create a new connection even if one already exists for this URL",
-	)
-	.action(handleAddConnection)
-
-connect
-	.command("list")
-	.description("List connected servers")
-	.option("--namespace <ns>", "Namespace to list from")
-	.option("--limit <n>", "Maximum number of results (default: all)")
-	.option("--cursor <cursor>", "Pagination cursor from previous response")
-	.action(handleListConnections)
-
-connect
-	.command("get <id>")
-	.description("Get details for a connection")
-	.option("--namespace <ns>", "Namespace for the connection")
-	.action(handleGetConnection)
-
-connect
-	.command("remove <ids...>")
-	.description("Remove one or more server connections")
-	.option("--namespace <ns>", "Namespace for the server")
-	.action(handleRemoveConnections)
-
-connect
-	.command("rm <ids...>", { hidden: true })
-	.option("--namespace <ns>", "Namespace for the server")
-	.action(handleRemoveConnections)
-
-connect
-	.command("set <id> [mcp-url]")
-	.description("Create or update a connection by ID")
-	.option("--name <name>", "Human-readable name")
-	.option("--metadata <json>", "Metadata as JSON object")
-	.option("--headers <json>", "Custom headers as JSON object (stored securely)")
-	.option("--namespace <ns>", "Namespace for the server")
-	.action(handleSetConnection)
-
-connect
-	.command("tools [server]")
-	.description("List tools (all or for a specific server)")
-	.option("--namespace <ns>", "Namespace to list from")
-	.option("--limit <n>", "Maximum number of tools to return (default: 10)")
-	.option("--page <n>", "Page number (default: 1)")
-	.action(handleListTools)
-
-connect
-	.command("search <query>")
-	.description("Search tools by intent")
-	.option("--namespace <ns>", "Namespace to search in")
-	.action(handleSearchTools)
-
-connect
-	.command("call <tool-id> [args]")
-	.description("Call a tool (format: connection/tool-name)")
-	.option("--namespace <ns>", "Namespace for the tool")
-	.action(handleCallToolById)
 
 // ─── install / uninstall (hidden + deprecation notice) ──────────────────────
 
