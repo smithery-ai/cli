@@ -45,6 +45,7 @@ vi.spyOn(console, "log").mockImplementation(() => {})
 vi.spyOn(console, "error").mockImplementation(() => {})
 
 import { Smithery } from "@smithery/api"
+import { setOutputMode } from "../../utils/output"
 
 describe("skills commands use public API", () => {
 	beforeEach(() => {
@@ -55,7 +56,8 @@ describe("skills commands use public API", () => {
 		const { searchSkills } = await import("../skill/search")
 
 		// Run search in JSON mode to avoid interactive prompts
-		await searchSkills("test", { json: true, limit: 5 })
+		setOutputMode({ json: true })
+		await searchSkills("test", { limit: 5 })
 
 		// Verify Smithery was instantiated with empty API key
 		expect(Smithery).toHaveBeenCalledWith({ apiKey: "" })
