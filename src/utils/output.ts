@@ -44,6 +44,8 @@ export interface PaginationInfo {
 	page?: number
 	/** Page-based: whether more results exist */
 	hasMore?: boolean
+	/** Total number of results (shown to clarify list completeness) */
+	total?: number
 }
 
 /**
@@ -62,7 +64,9 @@ export function outputTable(options: {
 
 	if (json) {
 		const payload = jsonData ?? data
-		const paginationHint = pagination ? formatPagination(pagination) : null
+		const paginationHint = pagination
+			? formatPagination(pagination, data.length)
+			: null
 		console.log(
 			JSON.stringify({
 				...wrapArray(payload),
@@ -102,7 +106,7 @@ export function outputTable(options: {
 	}
 
 	if (pagination) {
-		const msg = formatPagination(pagination)
+		const msg = formatPagination(pagination, data.length)
 		if (msg) {
 			console.log(chalk.dim(`\n${msg}`))
 		}
@@ -186,17 +190,26 @@ export function truncate(str: string, maxLen = 60): string {
 	return `${str.slice(0, maxLen - 1)}…`
 }
 
-function formatPagination(info: PaginationInfo): string | null {
+function formatPagination(
+	info: PaginationInfo,
+	rowCount: number,
+): string | null {
 	// Cursor-based pagination
 	if (info.nextCursor) {
-		return `More results available. Use --cursor ${info.nextCursor}`
+		return `Showing ${rowCount} results. More available — use --cursor ${info.nextCursor}`
 	}
 	// Page-based pagination
 	if (info.hasMore && info.page != null) {
-		return `Page ${info.page}. Use --page ${info.page + 1} for next page.`
+		const totalLabel =
+			info.total != null ? ` of ${info.total}` : ""
+		return `Showing ${rowCount}${totalLabel} results (page ${info.page}). Use --page ${info.page + 1} for next page.`
 	}
 	if (info.page != null && info.page > 1) {
-		return `Page ${info.page} (last page).`
+		return `Page ${info.page} (last page). ${info.total ?? rowCount} results total.`
+	}
+	// No more pages — show total so agents know the list is complete
+	if (rowCount > 0) {
+		return `${info.total ?? rowCount} results total.`
 	}
 	return null
 }

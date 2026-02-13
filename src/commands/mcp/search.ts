@@ -242,7 +242,9 @@ export async function findTools(
 				: { page, hasMore }),
 			...(issues.length > 0 ? { connectionIssues: issues } : {}),
 		},
-		pagination: options.all ? undefined : { page, hasMore },
+		pagination: options.all
+			? { total: matches.length }
+			: { page, hasMore, total: matches.length },
 		tip:
 			data.length === 0
 				? "No tools found. Try a broader query or change --match mode."
