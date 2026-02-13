@@ -5,7 +5,7 @@ import { formatConnectionOutput } from "./format-connection"
 import { normalizeMcpUrl } from "./normalize-url"
 import { parseJsonObject } from "./parse-json"
 
-export async function setServer(
+export async function updateServer(
 	id: string,
 	mcpUrl: string | undefined,
 	options: {
@@ -49,6 +49,6 @@ export async function setServer(
 			tip: `Use smithery tool list ${connection.connectionId} to view tools.`,
 		})
 	} catch (error) {
-		fatal("Failed to set connection", error)
+		fatal("Failed to update connection", error)
 	}
 }

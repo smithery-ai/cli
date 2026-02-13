@@ -1,5 +1,5 @@
 import { addServer as addServerImpl } from "./add-impl"
-import { setServer } from "./set"
+import { updateServer } from "./update"
 
 export async function addServer(
 	mcpUrl: string,
@@ -16,7 +16,7 @@ export async function addServer(
 
 	if (options.id) {
 		// Use set for explicit ID
-		return setServer(options.id, mcpUrl, { ...options, name })
+		return updateServer(options.id, mcpUrl, { ...options, name })
 	}
 	// Use create for auto-generated ID
 	return addServerImpl(mcpUrl, { ...options, name })

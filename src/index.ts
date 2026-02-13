@@ -248,13 +248,13 @@ async function handleRemoveConnections(ids: string[], options: any) {
 	await removeServer(ids, options)
 }
 
-async function handleSetConnection(
+async function handleUpdateConnection(
 	id: string,
 	mcpUrl: string | undefined,
 	options: any,
 ) {
-	const { setServer } = await loadConnectCommands()
-	await setServer(id, mcpUrl, options)
+	const { updateServer } = await loadConnectCommands()
+	await updateServer(id, mcpUrl, options)
 }
 
 async function handleFindTools(query: string | undefined, options: any) {
@@ -624,14 +624,13 @@ const removeCmd = mcpCmd
 registerAlias(mcpCmd, "rm <ids...>", removeCmd, handleMcpRemove)
 
 mcpCmd
-	.command("set <id> [mcp-url]")
-	.description("Create or update a connection by ID")
+	.command("update <id> [mcp-url]")
+	.description("Update a connection's URL, name, metadata, or headers")
 	.option("--name <name>", "Human-readable name")
 	.option("--metadata <json>", "Metadata as JSON object")
 	.option("--headers <json>", "Custom headers as JSON object (stored securely)")
 	.option("--namespace <ns>", "Namespace for the server")
-
-	.action(handleSetConnection)
+	.action(handleUpdateConnection)
 
 // Hidden backward-compat aliases for deprecated install/uninstall
 const mcpInstallCmd = mcpCmd
