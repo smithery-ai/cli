@@ -1,12 +1,7 @@
 import { execSync } from "node:child_process"
-import {
-	existsSync,
-	mkdtempSync,
-	rmSync,
-	writeFileSync,
-} from "node:fs"
-import { join } from "node:path"
+import { existsSync, mkdtempSync, rmSync, writeFileSync } from "node:fs"
 import { tmpdir } from "node:os"
+import { join } from "node:path"
 import { pathToFileURL } from "node:url"
 import chalk from "chalk"
 
@@ -64,9 +59,7 @@ export async function preparePackageBuild(
 		)
 
 		// Install the adapter package
-		console.log(
-			chalk.dim(`Installing ${chalk.cyan(packageName)}...`),
-		)
+		console.log(chalk.dim(`Installing ${chalk.cyan(packageName)}...`))
 		try {
 			execSync("npm install", {
 				cwd: tempDir,
@@ -128,7 +121,9 @@ export async function preparePackageBuild(
 			)
 		}
 
-		console.log(chalk.dim(`✓ Generated ${Object.keys(result.files).length} file(s)`))
+		console.log(
+			chalk.dim(`✓ Generated ${Object.keys(result.files).length} file(s)`),
+		)
 
 		return { entryFile, cleanup }
 	} catch (error) {

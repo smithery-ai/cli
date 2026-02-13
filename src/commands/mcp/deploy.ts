@@ -178,9 +178,7 @@ export async function deploy(options: DeployOptions = {}) {
 		let packageCleanup: (() => void) | undefined
 
 		if (options.packageName) {
-			const { preparePackageBuild } = await import(
-				"../../lib/package-build.js"
-			)
+			const { preparePackageBuild } = await import("../../lib/package-build.js")
 			const result = await preparePackageBuild(
 				options.packageName,
 				options.packageArgs ?? [],
