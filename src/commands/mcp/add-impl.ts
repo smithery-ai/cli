@@ -14,11 +14,9 @@ export async function addServer(
 		headers?: string
 		namespace?: string
 		force?: boolean
-		json?: boolean
-		table?: boolean
 	},
 ): Promise<void> {
-	const isJson = isJsonMode(options)
+	const isJson = isJsonMode()
 
 	try {
 		const parsedMetadata = parseJsonObject(options.metadata, "Metadata")
@@ -54,7 +52,7 @@ export async function addServer(
 				} else if (status === "connected") {
 					console.error(
 						chalk.yellow(
-							`Use "smithery tools find --connection ${match.connectionId}" to interact with it.`,
+							`Use "smithery tool list ${match.connectionId}" to interact with it.`,
 						),
 					)
 				}
@@ -88,7 +86,7 @@ export async function addServer(
 		outputDetail({
 			data: output,
 			json: isJson,
-			tip: `Call tools: smithery tools call ${id} <tool> '<args>'\nFind tools: smithery tools find --connection ${id} --all`,
+			tip: `Call tools: smithery tool call ${id} <tool> '<args>'\nList tools: smithery tool list ${id}`,
 		})
 	} catch (error) {
 		const msg = errorMessage(error)

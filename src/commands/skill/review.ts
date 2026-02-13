@@ -30,8 +30,6 @@ function formatReview(review: ReviewItem, index?: number): string {
 }
 
 export interface ListReviewsOptions {
-	json?: boolean
-	table?: boolean
 	limit?: number
 	page?: number
 }
@@ -41,7 +39,7 @@ export async function listReviews(
 	options: ListReviewsOptions = {},
 ): Promise<void> {
 	const { limit = 10, page = 1 } = options
-	const json = isJsonMode(options)
+	const json = isJsonMode()
 
 	if (!skillIdentifier) {
 		fatal(

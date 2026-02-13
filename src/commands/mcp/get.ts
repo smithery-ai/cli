@@ -7,8 +7,6 @@ export async function getServer(
 	id: string,
 	options: {
 		namespace?: string
-		json?: boolean
-		table?: boolean
 	},
 ): Promise<void> {
 	try {
@@ -17,8 +15,8 @@ export async function getServer(
 		const data = formatConnectionOutput(connection)
 		outputDetail({
 			data,
-			json: isJsonMode(options),
-			tip: `Use smithery tools find --connection ${id} --all to view tools for this connection.`,
+			json: isJsonMode(),
+			tip: `Use smithery tool list ${id} to view tools for this connection.`,
 		})
 	} catch (error) {
 		fatal("Failed to get connection", error)

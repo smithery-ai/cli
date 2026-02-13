@@ -25,7 +25,7 @@ const {
 	}
 })
 
-vi.mock("../connect/api", () => ({
+vi.mock("../mcp/api", () => ({
 	ConnectSession: {
 		create: mockCreateSession,
 	},
@@ -39,11 +39,14 @@ vi.mock("../../utils/output", async (importOriginal) => {
 	}
 })
 
-import { findTools } from "../connect/search"
+import { setOutputMode } from "../../utils/output"
+
+import { findTools } from "../mcp/search"
 
 describe("tools find command", () => {
 	beforeEach(() => {
 		vi.clearAllMocks()
+		setOutputMode({ json: true })
 	})
 
 	test("supports connection-scoped exact matching", async () => {
@@ -72,7 +75,6 @@ describe("tools find command", () => {
 		await findTools("experiment-results-get", {
 			connection: "posthog-QeNO",
 			match: "exact",
-			json: true,
 		})
 
 		expect(mockGetConnection).toHaveBeenCalledWith("posthog-QeNO")
@@ -121,7 +123,7 @@ describe("tools find command", () => {
 				},
 			])
 
-		await findTools(undefined, { all: true, json: true })
+		await findTools(undefined, { all: true })
 
 		expect(mockListConnections).toHaveBeenCalled()
 		expect(mockOutputTable).toHaveBeenCalledWith(

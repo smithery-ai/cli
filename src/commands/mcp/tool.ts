@@ -28,9 +28,9 @@ function getToolOutput(tool: ToolInfo): Record<string, unknown> {
 export async function getTool(
 	connection: string,
 	tool: string,
-	options: { namespace?: string; json?: boolean; table?: boolean },
+	options: { namespace?: string },
 ): Promise<void> {
-	const isJson = isJsonMode(options)
+	const isJson = isJsonMode()
 
 	try {
 		const session = await ConnectSession.create(options.namespace)
@@ -44,13 +44,13 @@ export async function getTool(
 				outputJson({
 					tool: null,
 					error: msg,
-					hint: `Use smithery tools find --connection ${connection} to browse available tools.`,
+					hint: `Use smithery tool list ${connection} to browse available tools.`,
 				})
 			} else {
 				console.error(chalk.red(msg))
 				console.log(
 					chalk.dim(
-						`Tip: Use smithery tools find --connection ${connection} to browse available tools.`,
+						`Tip: Use smithery tool list ${connection} to browse available tools.`,
 					),
 				)
 			}
@@ -61,7 +61,7 @@ export async function getTool(
 		outputDetail({
 			data,
 			json: isJson,
-			tip: `Use smithery tools call ${connection} '${found.name}' '<args>' to call this tool.`,
+			tip: `Use smithery tool call ${connection} '${found.name}' '<args>' to call this tool.`,
 		})
 	} catch (error) {
 		const msg = errorMessage(error)

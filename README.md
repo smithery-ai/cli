@@ -25,9 +25,10 @@ smithery mcp remove <ids...>            # Remove connections
 Interact with tools from MCP servers connected via `smithery mcp`.
 
 ```bash
-smithery tools find [query]             # Find tools across your connected MCP servers
-smithery tools get <connection/tool>    # Show full details for one tool
-smithery tools call <connection> <tool> [args]  # Call a tool
+smithery tool list [connection]        # List tools from your connected MCP servers
+smithery tool find [query]             # Search tools by name or intent
+smithery tool get <connection> <tool>  # Show full details for one tool
+smithery tool call <connection> <tool> [args]  # Call a tool
 ```
 
 ### Skills
@@ -35,17 +36,17 @@ smithery tools call <connection> <tool> [args]  # Call a tool
 Browse and install skills from the [Smithery Skills Registry](https://smithery.ai/skills).
 
 ```bash
-smithery skills search [query]                        # Search skills
-smithery skills install <skill> --agent <name>        # Install a skill
-smithery skills upvote <skill>                        # Upvote a skill
-smithery skills downvote <skill>                      # Downvote a skill
+smithery skill search [query]                        # Search skills
+smithery skill install <skill> --agent <name>        # Install a skill
+smithery skill upvote <skill>                        # Upvote a skill
+smithery skill downvote <skill>                      # Downvote a skill
 
 # Reviews
-smithery skills review list <skill>                   # List reviews
-smithery skills review add <skill> --up -b "text"     # Add review + vote
-smithery skills review remove <skill>                 # Remove your review
-smithery skills review upvote <skill> <review-id>     # Upvote a review
-smithery skills review downvote <skill> <review-id>   # Downvote a review
+smithery skill review list <skill>                   # List reviews
+smithery skill review add <skill> --up -b "text"     # Add review + vote
+smithery skill review remove <skill>                 # Remove your review
+smithery skill review upvote <skill> <review-id>     # Upvote a review
+smithery skill review downvote <skill> <review-id>   # Downvote a review
 ```
 
 ### Auth
@@ -79,12 +80,12 @@ smithery mcp search "github"
 smithery mcp add https://server.smithery.ai/github --id github
 
 # Find and call tools from your connected MCP servers
-smithery tools find "create issue"
-smithery tools call github create_issue '{"title":"Bug fix","body":"..."}'
+smithery tool find "create issue"
+smithery tool call github create_issue '{"title":"Bug fix","body":"..."}'
 
 # Browse and install skills
-smithery skills search "frontend" --json --page 2
-smithery skills install anthropics/frontend-design --agent claude-code
+smithery skill search "frontend" --json --page 2
+smithery skill install anthropics/frontend-design --agent claude-code
 
 # Publish your MCP server URL
 smithery mcp publish "https://my-mcp-server.com" -n myorg/my-server

@@ -2,18 +2,30 @@ import chalk from "chalk"
 
 // ─── Output mode detection ──────────────────────────────────────────────────
 
+let globalJson: boolean | undefined
+let globalTable: boolean | undefined
+
+/**
+ * Set the global output mode from program-level --json / --table flags.
+ * Called once from the preAction hook.
+ */
+export function setOutputMode(options: {
+	json?: boolean
+	table?: boolean
+}): void {
+	globalJson = options.json
+	globalTable = options.table
+}
+
 /**
  * Resolve whether to use JSON output mode.
  * - --json flag → always JSON
  * - --table flag → always table
  * - Neither → auto-detect: JSON when stdout is piped (non-TTY), table when interactive
  */
-export function isJsonMode(options: {
-	json?: boolean
-	table?: boolean
-}): boolean {
-	if (options.table) return false
-	if (options.json !== undefined) return options.json
+export function isJsonMode(): boolean {
+	if (globalTable) return false
+	if (globalJson !== undefined) return globalJson
 	return !process.stdout.isTTY
 }
 

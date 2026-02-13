@@ -59,8 +59,8 @@ export class ConnectSession {
 		limit?: number
 		cursor?: string
 	}): Promise<{ connections: Connection[]; nextCursor: string | null }> {
-		// If limit/cursor specified, return a single page
-		if (options?.limit || options?.cursor) {
+		// Explicit cursor: return a single page (manual pagination)
+		if (options?.cursor) {
 			const data =
 				await this.smitheryClient.experimental.connect.connections.list(
 					this.namespace,
@@ -69,7 +69,7 @@ export class ConnectSession {
 			return { connections: data.connections, nextCursor: data.nextCursor }
 		}
 
-		// Otherwise fetch all pages
+		// Fetch pages until we have enough results (or all if no limit)
 		const all: Connection[] = []
 		let cursor: string | undefined
 
@@ -81,9 +81,15 @@ export class ConnectSession {
 				)
 			all.push(...data.connections)
 			cursor = data.nextCursor ?? undefined
-		} while (cursor)
+		} while (cursor && (!options?.limit || all.length < options.limit))
 
-		return { connections: all, nextCursor: null }
+		if (options?.limit && all.length > options.limit) {
+			return {
+				connections: all.slice(0, options.limit),
+				nextCursor: cursor ?? null,
+			}
+		}
+		return { connections: all, nextCursor: cursor ?? null }
 	}
 
 	private async getMcpClient(connectionId: string): Promise<Client> {

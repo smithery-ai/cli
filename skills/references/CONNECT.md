@@ -59,29 +59,28 @@ smithery mcp set "my-server" "https://server.smithery.ai/example/server"
 
 This is idempotent - safe to run multiple times.
 
-## Find Tools
+## List Tools
 
-Find all tools across all connections:
+List all tools across all connections:
 ```bash
-smithery tools find --all
+smithery tool list
 ```
 
-Find all tools from a specific connection:
+List tools from a specific connection:
 ```bash
-smithery tools find --connection my-github --all
+smithery tool list my-github
 ```
 
 Options:
-- `--namespace <ns>` - Namespace to search in
-- `--connection <id>` - Restrict to one connection
-- `--all` - Return all matches (disable pagination)
+- `--namespace <ns>` - Namespace to list from
+- `--limit <n>` - Maximum number of tools (default: 10)
+- `--page <n>` - Page number (default: 1)
 
 Output (JSON):
 ```json
 {
   "tools": [
     {
-      "id": "my-github/create_issue",
       "name": "create_issue",
       "connection": "my-github",
       "description": "Create a GitHub issue"
@@ -90,26 +89,28 @@ Output (JSON):
 }
 ```
 
-## Find by Query
+## Find Tools by Query
 
-Find tools by intent across all connections:
+Search tools by name or intent across all connections:
 
 ```bash
-smithery tools find "create issue"
+smithery tool find "create issue"
 ```
 
 Options:
+- `--connection <id>` - Restrict to one connection
 - `--namespace <ns>` - Namespace to search in
 - `--match <mode>` - `fuzzy`, `substring`, or `exact`
 - `--limit <n>` - Max results per page (default: 10)
 - `--page <n>` - Page number (default: 1)
+- `--all` - Return all matches without pagination
 
 ## Get Tool Details
 
 Show one tool in detail (full description + schemas):
 
 ```bash
-smithery tools get my-github/create_issue
+smithery tool get my-github create_issue
 ```
 
 Options:
@@ -121,7 +122,7 @@ Options:
 Call a tool by specifying the connection and tool name:
 
 ```bash
-smithery tools call my-github create_issue '{"repo": "owner/repo", "title": "Bug"}'
+smithery tool call my-github create_issue '{"repo": "owner/repo", "title": "Bug"}'
 ```
 
 Options:
@@ -130,7 +131,7 @@ Options:
 Arguments are passed as JSON. For complex arguments:
 
 ```bash
-smithery tools call my-server query '{
+smithery tool call my-server query '{
   "sql": "SELECT * FROM users",
   "params": ["active"]
 }'
@@ -158,12 +159,12 @@ If `auth_required`, tell your human to visit the authorization URL.
 # 1. Add a connection
 smithery mcp add "https://server.smithery.ai/smithery/github"
 
-# 2. Find available tools
-smithery tools find --all
+# 2. List available tools
+smithery tool list
 
-# 3. Find what you need
-smithery tools find "pull request"
+# 3. Search for what you need
+smithery tool find "pull request"
 
 # 4. Call the tool
-smithery tools call github create_pull_request '{"repo": "...", "title": "..."}'
+smithery tool call github create_pull_request '{"repo": "...", "title": "..."}'
 ```

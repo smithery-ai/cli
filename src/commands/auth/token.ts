@@ -4,10 +4,8 @@ import { isJsonMode, outputDetail } from "../../utils/output"
 
 export async function createToken(options: {
 	policy?: string
-	json?: boolean
-	table?: boolean
 }) {
-	const isJson = isJsonMode(options)
+	const isJson = isJsonMode()
 
 	let policy: Array<Record<string, unknown>> | undefined
 	if (options.policy) {

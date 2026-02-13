@@ -23,7 +23,7 @@ const {
 	}
 })
 
-vi.mock("../connect/api", () => ({
+vi.mock("../mcp/api", () => ({
 	ConnectSession: {
 		create: mockCreateSession,
 	},
@@ -38,7 +38,8 @@ vi.mock("../../utils/output", async (importOriginal) => {
 	}
 })
 
-import { getTool } from "../connect/tool"
+import { setOutputMode } from "../../utils/output"
+import { getTool } from "../mcp/tool"
 
 describe("tools get command", () => {
 	beforeEach(() => {
@@ -46,6 +47,7 @@ describe("tools get command", () => {
 	})
 
 	test("returns full tool details without truncating description", async () => {
+		setOutputMode({ table: true }) // force table mode (non-json)
 		const longDescription =
 			"Creates an insight and pins it to a target dashboard with complete insight metadata."
 
@@ -64,7 +66,7 @@ describe("tools get command", () => {
 			},
 		])
 
-		await getTool("posthog", "add-insight-to-dashboard", { json: false })
+		await getTool("posthog", "add-insight-to-dashboard", {})
 
 		expect(mockCreateSession).toHaveBeenCalledWith(undefined)
 		expect(mockOutputDetail).toHaveBeenCalledWith(
@@ -97,8 +99,9 @@ describe("tools get command", () => {
 			},
 		])
 
+		setOutputMode({ json: true })
 		await expect(
-			getTool("posthog", "add-insight-to-dashboard", { json: true }),
+			getTool("posthog", "add-insight-to-dashboard", {}),
 		).rejects.toThrow("process.exit() was called")
 
 		expect(mockOutputJson).toHaveBeenCalledWith(
@@ -126,7 +129,8 @@ describe("tools get command", () => {
 			},
 		])
 
-		await getTool("posthog", "insights/add-to-dashboard", { json: false })
+		setOutputMode({ table: true })
+		await getTool("posthog", "insights/add-to-dashboard", {})
 
 		expect(mockOutputDetail).toHaveBeenCalledWith(
 			expect.objectContaining({

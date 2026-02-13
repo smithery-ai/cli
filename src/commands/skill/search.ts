@@ -8,8 +8,6 @@ import { installSkill } from "./install.js"
 import { createPublicSkillsClient, getSkillUrl } from "./shared.js"
 
 export interface SearchOptions {
-	json?: boolean
-	table?: boolean
 	interactive?: boolean
 	limit?: number
 	page?: number
@@ -64,7 +62,7 @@ export async function searchSkills(
 	options: SearchOptions = {},
 ): Promise<SkillListResponse | null> {
 	const { interactive = false, limit = 10, page = 1, namespace } = options
-	const json = isJsonMode(options)
+	const json = isJsonMode()
 
 	const searchTerm = interactive
 		? await getSearchTerm(initialQuery)

@@ -5,8 +5,6 @@ export async function listServers(options: {
 	namespace?: string
 	limit?: string
 	cursor?: string
-	json?: boolean
-	table?: boolean
 }): Promise<void> {
 	const session = await ConnectSession.create(options.namespace)
 	const limit = options.limit ? Number.parseInt(options.limit, 10) : undefined
@@ -30,7 +28,7 @@ export async function listServers(options: {
 			{ key: "mcpUrl", header: "URL" },
 			{ key: "status", header: "STATUS" },
 		],
-		json: isJsonMode(options),
+		json: isJsonMode(),
 		jsonData: {
 			servers: data,
 			...(nextCursor ? { nextCursor } : {}),
@@ -39,6 +37,6 @@ export async function listServers(options: {
 		tip:
 			data.length === 0
 				? "No servers connected. Use 'smithery mcp add <mcp-url>' to add one."
-				: "Use smithery tools find --connection <id> --all to view tools for a connection.",
+				: "Use smithery tool list <id> to view tools for a connection.",
 	})
 }

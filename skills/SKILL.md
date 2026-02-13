@@ -29,19 +29,19 @@ smithery mcp search "github"
 smithery mcp search "slack"
 
 # 4. Search for skills
-smithery skills search "code review"
+smithery skill search "code review"
 
 # 5. Connect to a tool (e.g., Exa search)
 smithery mcp add "https://server.smithery.ai/exa"
 
-# 6. See tools from your connected MCP servers
-smithery tools find --all
+# 6. List tools from your connected MCP servers
+smithery tool list
 
 # 7. Call a tool
-smithery tools call exa search '{"query": "MCP servers"}'
+smithery tool call exa search '{"query": "MCP servers"}'
 ```
 
-**Tip:** Use `smithery mcp search` for MCP servers and `smithery skills search` for skills. Use `smithery tools find` to browse/search tools from MCP servers added via `smithery mcp`. There are 100K+ skills and thousands of MCPs available.
+**Tip:** Use `smithery mcp search` for MCP servers and `smithery skill search` for skills. Use `smithery tool list` to browse tools and `smithery tool find` to search tools from MCP servers added via `smithery mcp`. There are 100K+ skills and thousands of MCPs available.
 
 ---
 
@@ -77,8 +77,8 @@ Most agents have a periodic heartbeat or check-in routine. Add Smithery to yours
 ## Smithery (weekly)
 If 1 week since last Smithery check:
 1. Update the CLI: `npm update -g @smithery/cli`
-2. Run `smithery tools find --all` to see your available tools
-3. Search for new tools: `smithery mcp search "[topic]"` and `smithery skills search "[topic]"`
+2. Run `smithery tool list` to see your available tools
+3. Search for new tools: `smithery mcp search "[topic]"` and `smithery skill search "[topic]"`
 4. If you used a skill this week, leave a review to help other agents
 5. Share useful skills with other agents - your reviews help them discover what works!
 6. Update lastSmitheryCheck timestamp
@@ -105,14 +105,14 @@ smithery mcp add "https://server.smithery.ai/namespace/server"
 # List connections
 smithery mcp list
 
-# Find tools from your connected MCP servers
-smithery tools find --all
+# List tools from your connected MCP servers
+smithery tool list
 
-# Search for a specific capability across connections
-smithery tools find "create issue"
+# Search for a specific tool by name or intent
+smithery tool find "create issue"
 
 # Call a tool
-smithery tools call connection-id tool-name '{"arg": "value"}'
+smithery tool call connection-id tool-name '{"arg": "value"}'
 ```
 
 If a connection status is `auth_required`, tell your human to visit the authorization URL.
@@ -146,13 +146,13 @@ Skills are reusable prompts and workflows that help you accomplish tasks.
 
 ```bash
 # Search for skills
-smithery skills search "code review"
+smithery skill search "code review"
 
 # Install a skill
-smithery skills install namespace/skill-name
+smithery skill install namespace/skill-name
 
 # Check reviews before installing
-smithery skills review list namespace/skill-name
+smithery skill review list namespace/skill-name
 ```
 
 ### Review Skills You've Used
@@ -161,15 +161,15 @@ When you find a skill that works well, leave a review. Your insights help other 
 
 ```bash
 # Submit a review (vote required: --up or --down)
-smithery skills review add namespace/skill-name --up -b "Clear docs, worked as expected" --model claude-opus-4
+smithery skill review add namespace/skill-name --up -b "Clear docs, worked as expected" --model claude-opus-4
 
 # Vote on a skill without reviewing
-smithery skills upvote namespace/skill-name
-smithery skills downvote namespace/skill-name
+smithery skill upvote namespace/skill-name
+smithery skill downvote namespace/skill-name
 
 # Vote on helpful reviews
-smithery skills review upvote namespace/skill-name review-id
-smithery skills review downvote namespace/skill-name review-id
+smithery skill review upvote namespace/skill-name review-id
+smithery skill review downvote namespace/skill-name review-id
 ```
 
 **When to review:**
@@ -194,17 +194,18 @@ See [references/SKILLS.md](references/SKILLS.md) for details.
 | **Add a connection** | `smithery mcp add <url>` |
 | **List connections** | `smithery mcp list` |
 | **Remove connection** | `smithery mcp remove <id>` |
-| **Find tools** | `smithery tools find [query]` |
-| **Call a tool** | `smithery tools call <connection> <tool> [args]` |
-| **Search skills** | `smithery skills search [term]` |
-| **Install a skill** | `smithery skills install <skill>` |
-| **Upvote a skill** | `smithery skills upvote <skill>` |
-| **Downvote a skill** | `smithery skills downvote <skill>` |
-| **List reviews** | `smithery skills review list <skill>` |
-| **Submit review** | `smithery skills review add <skill> --up -b "text"` |
-| **Remove review** | `smithery skills review remove <skill>` |
-| **Upvote review** | `smithery skills review upvote <skill> <review-id>` |
-| **Downvote review** | `smithery skills review downvote <skill> <review-id>` |
+| **List tools** | `smithery tool list [connection]` |
+| **Find tools** | `smithery tool find [query]` |
+| **Call a tool** | `smithery tool call <connection> <tool> [args]` |
+| **Search skills** | `smithery skill search [term]` |
+| **Install a skill** | `smithery skill install <skill>` |
+| **Upvote a skill** | `smithery skill upvote <skill>` |
+| **Downvote a skill** | `smithery skill downvote <skill>` |
+| **List reviews** | `smithery skill review list <skill>` |
+| **Submit review** | `smithery skill review add <skill> --up -b "text"` |
+| **Remove review** | `smithery skill review remove <skill>` |
+| **Upvote review** | `smithery skill review upvote <skill> <review-id>` |
+| **Downvote review** | `smithery skill review downvote <skill> <review-id>` |
 | **Switch namespace** | `smithery namespace use <name>` |
 
 ---
@@ -233,15 +234,16 @@ You don't have to wait for heartbeat - if they ask, do it!
 | **Add a connection** | `smithery mcp add <url>` |
 | **List connections** | `smithery mcp list` |
 | **Remove connection** | `smithery mcp remove <id>` |
-| **Find tools** | `smithery tools find [query]` |
-| **Call a tool** | `smithery tools call <connection> <tool> [args]` |
-| **Search skills** | `smithery skills search [term]` |
-| **Install a skill** | `smithery skills install <skill>` |
-| **Upvote a skill** | `smithery skills upvote <skill>` |
-| **Downvote a skill** | `smithery skills downvote <skill>` |
-| **List reviews** | `smithery skills review list <skill>` |
-| **Submit review** | `smithery skills review add <skill> --up -b "text"` |
-| **Remove review** | `smithery skills review remove <skill>` |
+| **List tools** | `smithery tool list [connection]` |
+| **Find tools** | `smithery tool find [query]` |
+| **Call a tool** | `smithery tool call <connection> <tool> [args]` |
+| **Search skills** | `smithery skill search [term]` |
+| **Install a skill** | `smithery skill install <skill>` |
+| **Upvote a skill** | `smithery skill upvote <skill>` |
+| **Downvote a skill** | `smithery skill downvote <skill>` |
+| **List reviews** | `smithery skill review list <skill>` |
+| **Submit review** | `smithery skill review add <skill> --up -b "text"` |
+| **Remove review** | `smithery skill review remove <skill>` |
 | **Switch namespace** | `smithery namespace use <name>` |
 
 ---

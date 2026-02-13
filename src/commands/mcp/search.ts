@@ -117,11 +117,9 @@ export async function findTools(
 		page?: string
 		all?: boolean
 		match?: string
-		json?: boolean
-		table?: boolean
 	},
 ): Promise<void> {
-	const isJson = isJsonMode(options)
+	const isJson = isJsonMode()
 	const normalizedQuery = (query ?? "").trim()
 
 	let limit = DEFAULT_LIMIT
@@ -248,6 +246,6 @@ export async function findTools(
 		tip:
 			data.length === 0
 				? "No tools found. Try a broader query or change --match mode."
-				: "Use smithery tools call <connection> <tool> '<args>' to call a tool.",
+				: "Use smithery tool call <connection> <tool> '<args>' to call a tool.",
 	})
 }

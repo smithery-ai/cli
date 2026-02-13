@@ -2,11 +2,8 @@ import { createSmitheryClient } from "../../lib/smithery-client"
 import { isJsonMode, outputTable } from "../../utils/output"
 import { getNamespace } from "../../utils/smithery-settings"
 
-export async function listNamespaces(options: {
-	json?: boolean
-	table?: boolean
-}): Promise<void> {
-	const isJson = isJsonMode(options)
+export async function listNamespaces(_options: Record<string, unknown> = {}): Promise<void> {
+	const isJson = isJsonMode()
 	const client = await createSmitheryClient()
 	const { namespaces } = await client.namespaces.list()
 	const current = await getNamespace()

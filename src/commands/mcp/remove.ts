@@ -5,7 +5,7 @@ import { ConnectSession } from "./api"
 
 export async function removeServer(
 	serverIds: string[],
-	options: { namespace?: string; json?: boolean; table?: boolean },
+	options: { namespace?: string },
 ): Promise<void> {
 	try {
 		const session = await ConnectSession.create(options.namespace)
@@ -31,7 +31,7 @@ export async function removeServer(
 
 		const result = { removed, failed: failed.length > 0 ? failed : undefined }
 
-		if (isJsonMode(options)) {
+		if (isJsonMode()) {
 			outputJson(result)
 		} else {
 			for (const id of removed) {

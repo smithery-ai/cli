@@ -26,13 +26,15 @@ program
 	)
 	.option("--verbose", "Show detailed logs")
 	.option("--debug", "Show debug logs")
+	.option("--json", "Output as JSON")
+	.option("--table", "Output as human-readable table")
 	.addHelpText(
 		"after",
 		`
 Learn how to use this CLI:
-  smithery skills view smithery-ai/cli`,
+  smithery skill view smithery-ai/cli`,
 	)
-	.hook("preAction", (thisCommand, _actionCommand) => {
+	.hook("preAction", async (thisCommand, _actionCommand) => {
 		const opts = thisCommand.opts()
 		if (opts.verbose) {
 			setVerbose(true)
@@ -40,6 +42,8 @@ Learn how to use this CLI:
 		if (opts.debug) {
 			setDebug(true)
 		}
+		const { setOutputMode } = await import("./utils/output")
+		setOutputMode({ json: opts.json, table: opts.table })
 	})
 
 // ─── Shared action handlers ─────────────────────────────────────────────────
@@ -57,7 +61,7 @@ async function handleSearch(term: string | undefined, options: any) {
 	const { searchServers } = await import("./lib/registry")
 	const { isJsonMode, outputTable, truncate } = await import("./utils/output")
 	const searchTerm = term ?? ""
-	const json = isJsonMode(options)
+	const json = isJsonMode()
 
 	if (json && !searchTerm) {
 		fatal("Search term is required when using --json")
@@ -217,7 +221,7 @@ async function handleUninstall(server: string | undefined, options: any) {
 	await uninstallServer(selectedServer, selectedClient as ValidClient)
 }
 
-const loadConnectCommands = () => import("./commands/connect")
+const loadConnectCommands = () => import("./commands/mcp")
 
 async function handleAddConnection(server: string, options: any) {
 	const { addServer } = await loadConnectCommands()
@@ -410,8 +414,6 @@ async function handleWhoami(options: any) {
 // Helper to register search options on a command
 function withSearchOptions(cmd: InstanceType<typeof Command>) {
 	return cmd
-		.option("--json", "Output results as JSON")
-		.option("--table", "Output as human-readable table")
 		.option("-i, --interactive", "Interactive search mode")
 		.option("--verified", "Only show verified servers")
 		.option("--limit <number>", "Max results per page", "10")
@@ -571,8 +573,6 @@ mcpCmd
 		"--config <json>",
 		"Configuration data as JSON for local install (skips prompts)",
 	)
-	.option("--json", "Output as JSON")
-	.option("--table", "Output as human-readable table")
 	.addHelpText(
 		"after",
 		`
@@ -589,8 +589,7 @@ mcpCmd
 	.option("--namespace <ns>", "Namespace to list from")
 	.option("--limit <n>", "Maximum number of results (default: all)")
 	.option("--cursor <cursor>", "Pagination cursor from previous response")
-	.option("--json", "Output as JSON")
-	.option("--table", "Output as human-readable table")
+
 	.addHelpText(
 		"after",
 		`
@@ -604,8 +603,7 @@ mcpCmd
 	.command("get <id>")
 	.description("Get connection details")
 	.option("--namespace <ns>", "Namespace for the connection")
-	.option("--json", "Output as JSON")
-	.option("--table", "Output as human-readable table")
+
 	.action(handleGetConnection)
 
 const removeCmd = mcpCmd
@@ -617,8 +615,7 @@ const removeCmd = mcpCmd
 		"-c, --client <name>",
 		`AI client for local uninstall (${VALID_CLIENTS.join(", ")})`,
 	)
-	.option("--json", "Output as JSON")
-	.option("--table", "Output as human-readable table")
+
 	.action(handleMcpRemove)
 
 registerAlias(mcpCmd, "rm <ids...>", removeCmd)
@@ -630,8 +627,7 @@ mcpCmd
 	.option("--metadata <json>", "Metadata as JSON object")
 	.option("--headers <json>", "Custom headers as JSON object (stored securely)")
 	.option("--namespace <ns>", "Namespace for the server")
-	.option("--json", "Output as JSON")
-	.option("--table", "Output as human-readable table")
+
 	.action(handleSetConnection)
 
 // Hidden backward-compat aliases for deprecated install/uninstall
@@ -690,14 +686,14 @@ const runCmd = mcpCmd
 	.action(handleRun)
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// Tools command — Find and call tools from MCP servers added via 'smithery mcp'
+// Tool command — Find and call tools from MCP servers added via 'smithery mcp'
 // ═══════════════════════════════════════════════════════════════════════════════
 
-const toolsCmd = program
-	.command("tools")
+const toolCmd = program
+	.command("tool")
 	.description("Find and call tools from MCP servers added via 'smithery mcp'")
 
-toolsCmd
+toolCmd
 	.command("find [query]")
 	.description("Find tools across your connected MCP servers")
 	.option("--connection <id>", "Limit search to a specific connection")
@@ -706,33 +702,52 @@ toolsCmd
 	.option("--limit <n>", "Maximum number of tools to return (default: 10)")
 	.option("--page <n>", "Page number (default: 1)")
 	.option("--all", "Return all matches without pagination")
-	.option("--json", "Output as JSON")
-	.option("--table", "Output as human-readable table")
+
 	.addHelpText(
 		"after",
 		`
 Examples:
-  smithery tools find "create issue"                      Find by intent across connections
-  smithery tools find --connection github --all           Show all tools for one connection
-  smithery tools find notion-fetch --match exact --json   Exact match as JSON`,
+  smithery tool find "create issue"                      Find by intent across connections
+  smithery tool find --connection github --all           Show all tools for one connection
+  smithery tool find notion-fetch --match exact --json   Exact match as JSON`,
 	)
 	.action(handleFindTools)
 
-toolsCmd
-	.command("get <connection> <tool>")
-	.description("Get details for a specific tool")
-	.option("--namespace <ns>", "Namespace for the tool")
-	.option("--json", "Output as JSON")
-	.option("--table", "Output as human-readable table")
+toolCmd
+	.command("list [connection]")
+	.description("List tools from your connected MCP servers")
+	.option("--namespace <ns>", "Namespace to list from")
+	.option("--limit <n>", "Maximum number of tools to return (default: 10)")
+	.option("--page <n>", "Page number (default: 1)")
+
 	.addHelpText(
 		"after",
 		`
 Examples:
-  smithery tools get myserver search     Show tool details and input schema`,
+  smithery tool list                    List tools from all connections
+  smithery tool list myserver           List tools for a specific connection
+  smithery tool list myserver --json    Output as JSON
+
+Tip: Use 'smithery tool find <query>' to search tools by name or intent.`,
+	)
+	.action((connection, options) =>
+		handleFindTools(undefined, { ...options, connection }),
+	)
+
+toolCmd
+	.command("get <connection> <tool>")
+	.description("Get details for a specific tool")
+	.option("--namespace <ns>", "Namespace for the tool")
+
+	.addHelpText(
+		"after",
+		`
+Examples:
+  smithery tool get myserver search     Show tool details and input schema`,
 	)
 	.action(handleGetTool)
 
-toolsCmd
+toolCmd
 	.command("call <connection> <tool> [args]")
 	.description("Call a tool")
 	.option("--namespace <ns>", "Namespace for the tool")
@@ -740,20 +755,20 @@ toolsCmd
 		"after",
 		`
 Examples:
-  smithery tools call myserver search '{"query":"hello"}'
-  smithery tools call exa web_search_exa '{"query":"AI tools"}' | jq '.results'`,
+  smithery tool call myserver search '{"query":"hello"}'
+  smithery tool call exa web_search_exa '{"query":"AI tools"}'`,
 	)
 	.action(handleCallTool)
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// Skills command — Search, view, and install Smithery skills
+// Skill command — Search, view, and install Smithery skills
 // ═══════════════════════════════════════════════════════════════════════════════
 
-const skills = program
-	.command("skills")
+const skillCmd = program
+	.command("skill")
 	.description("Search, view, and install Smithery skills")
 
-skills
+skillCmd
 	.command("agents")
 	.description("List available agents for skill installation")
 	.action(() => {
@@ -768,20 +783,16 @@ skills
 		)
 	})
 
-skills
+skillCmd
 	.command("search <query>")
 	.description("Search for skills in the Smithery registry")
-	.option("--json", "Output results as JSON")
-	.option("--table", "Output as human-readable table")
 	.option("-i, --interactive", "Interactive search mode")
 	.option("--limit <number>", "Maximum number of results to show", "10")
 	.option("--page <number>", "Page number", "1")
 	.option("--namespace <namespace>", "Filter by namespace")
 	.action(async (query, options) => {
-		const { searchSkills } = await import("./commands/skills")
+		const { searchSkills } = await import("./commands/skill")
 		await searchSkills(query, {
-			json: options.json,
-			table: options.table,
 			interactive: options.interactive,
 			limit: Number.parseInt(options.limit, 10),
 			page: Number.parseInt(options.page, 10),
@@ -789,15 +800,15 @@ skills
 		})
 	})
 
-skills
+skillCmd
 	.command("view <identifier>")
 	.description("View a skill's documentation without installing")
 	.action(async (identifier) => {
-		const { viewSkill } = await import("./commands/skills")
+		const { viewSkill } = await import("./commands/skill")
 		await viewSkill(identifier)
 	})
 
-skills
+skillCmd
 	.command("add <skill>")
 	.description("Add a skill to your agent")
 	.option(
@@ -809,50 +820,47 @@ skills
 		"Install globally (user-level) instead of project-level",
 	)
 	.action(async (skill, options) => {
-		const { installSkill } = await import("./commands/skills")
+		const { installSkill } = await import("./commands/skill")
 		await installSkill(skill, options.agent, { global: options.global })
 	})
 
 // Skill voting (verbs instead of flags)
-skills
+skillCmd
 	.command("upvote <skill>")
 	.description("Upvote a skill")
 	.action(async (skill) => {
-		const { voteSkill } = await import("./commands/skills")
+		const { voteSkill } = await import("./commands/skill")
 		await voteSkill(skill, "up")
 	})
 
-skills
+skillCmd
 	.command("downvote <skill>")
 	.description("Downvote a skill")
 	.action(async (skill) => {
-		const { voteSkill } = await import("./commands/skills")
+		const { voteSkill } = await import("./commands/skill")
 		await voteSkill(skill, "down")
 	})
 
-// skills review subcommand
-const skillsReview = skills
+// skill review subcommand
+const skillReview = skillCmd
 	.command("review")
 	.description("Manage skill reviews")
 
-skillsReview
+skillReview
 	.command("list <skill>")
 	.description("List reviews for a skill")
-	.option("--json", "Output as JSON")
-	.option("--table", "Output as human-readable table")
+
 	.option("--limit <number>", "Number of reviews to show", "10")
 	.option("--page <number>", "Page number", "1")
 	.action(async (skill, options) => {
-		const { listReviews } = await import("./commands/skills")
+		const { listReviews } = await import("./commands/skill")
 		await listReviews(skill, {
-			json: options.json,
-			table: options.table,
 			limit: Number.parseInt(options.limit, 10),
 			page: Number.parseInt(options.page, 10),
 		})
 	})
 
-skillsReview
+skillReview
 	.command("add <skill>")
 	.description("Add a review for a skill")
 	.option("-b, --body <text>", "Review text (required)")
@@ -864,7 +872,7 @@ skillsReview
 			console.error(chalk.red("Error: --body is required"))
 			console.error(
 				chalk.dim(
-					'Usage: smithery skills review add <skill> --up|--down -b "review text"',
+					'Usage: smithery skill review add <skill> --up|--down -b "review text"',
 				),
 			)
 			process.exit(1)
@@ -873,7 +881,7 @@ skillsReview
 			console.error(chalk.red("Error: --up or --down is required"))
 			console.error(
 				chalk.dim(
-					'Usage: smithery skills review add <skill> --up|--down -b "review text"',
+					'Usage: smithery skill review add <skill> --up|--down -b "review text"',
 				),
 			)
 			process.exit(1)
@@ -882,7 +890,7 @@ skillsReview
 			console.error(chalk.red("Error: Cannot specify both --up and --down"))
 			process.exit(1)
 		}
-		const { submitReview } = await import("./commands/skills")
+		const { submitReview } = await import("./commands/skill")
 		await submitReview(skill, {
 			review: options.body,
 			model: options.model,
@@ -890,29 +898,29 @@ skillsReview
 		})
 	})
 
-const reviewRemoveCmd = skillsReview
+const reviewRemoveCmd = skillReview
 	.command("remove <skill>")
 	.description("Remove your review for a skill")
 	.action(async (skill) => {
-		const { deleteReview } = await import("./commands/skills")
+		const { deleteReview } = await import("./commands/skill")
 		await deleteReview(skill)
 	})
 
-registerAlias(skillsReview, "rm <skill>", reviewRemoveCmd)
+registerAlias(skillReview, "rm <skill>", reviewRemoveCmd)
 
-skillsReview
+skillReview
 	.command("upvote <skill> <review-id>")
 	.description("Upvote a review")
 	.action(async (skill, reviewId) => {
-		const { voteReview } = await import("./commands/skills")
+		const { voteReview } = await import("./commands/skill")
 		await voteReview(skill, reviewId, "up")
 	})
 
-skillsReview
+skillReview
 	.command("downvote <skill> <review-id>")
 	.description("Downvote a review")
 	.action(async (skill, reviewId) => {
-		const { voteReview } = await import("./commands/skills")
+		const { voteReview } = await import("./commands/skill")
 		await voteReview(skill, reviewId, "down")
 	})
 
@@ -947,8 +955,7 @@ auth
 	.command("token")
 	.description("Mint a restricted service token")
 	.option("--policy <json>", "Policy constraints as JSON array")
-	.option("--json", "Output as JSON")
-	.option("--table", "Output as human-readable table")
+
 	.action(async (options) => {
 		const { createToken } = await import("./commands/auth/token")
 		await createToken(options)
@@ -973,7 +980,7 @@ program
 		"Install globally (user-level) instead of project-level",
 	)
 	.action(async (options) => {
-		const { installSkill } = await import("./commands/skills")
+		const { installSkill } = await import("./commands/skill")
 		await installSkill("smithery-ai/cli", options.agent, {
 			global: options.global,
 		})
@@ -987,8 +994,7 @@ const namespace = program
 namespace
 	.command("list")
 	.description("List available namespaces")
-	.option("--json", "Output as JSON")
-	.option("--table", "Output as human-readable table")
+
 	.action(async (options) => {
 		const { listNamespaces } = await import("./commands/namespace")
 		await listNamespaces(options)
@@ -1063,10 +1069,18 @@ function getCommandPath(cmd: InstanceType<typeof Command>): string {
 program.hook("preAction", async (_thisCommand, actionCommand) => {
 	const { trackEvent } = await import("./utils/analytics")
 	const commandPath = getCommandPath(actionCommand)
-	const opts = actionCommand.opts()
-	const flags = Object.keys(opts).filter((k) => opts[k] !== undefined)
-	const isAgent = flags.includes("json") || !process.stdin.isTTY
-	trackEvent("command_invocation", { command: commandPath, flags, isAgent })
+	const globalOpts = program.opts()
+	const localOpts = actionCommand.opts()
+	const allFlags = [
+		...Object.keys(globalOpts).filter((k) => globalOpts[k] !== undefined),
+		...Object.keys(localOpts).filter((k) => localOpts[k] !== undefined),
+	]
+	const isAgent = allFlags.includes("json") || !process.stdin.isTTY
+	trackEvent("command_invocation", {
+		command: commandPath,
+		flags: allFlags,
+		isAgent,
+	})
 })
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -1078,8 +1092,18 @@ if (process.argv.length <= 2) {
 	program.help()
 }
 
+// Backward compat: accept plural forms
+const COMMAND_ALIASES: Record<string, string> = {
+	tools: "tool",
+	skills: "skill",
+}
+const argv = process.argv.slice()
+if (argv[2] && argv[2] in COMMAND_ALIASES) {
+	argv[2] = COMMAND_ALIASES[argv[2]]
+}
+
 // Parse arguments and run
-program.parseAsync(process.argv).catch((error: unknown) => {
+program.parseAsync(argv).catch((error: unknown) => {
 	if (error instanceof Error) {
 		console.error(chalk.red(`\n✗ ${error.message}`))
 		if (process.argv.includes("--debug") && error.stack) {

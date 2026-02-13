@@ -52,7 +52,7 @@ describe("skills commands use public API", () => {
 	})
 
 	test("skills search creates Smithery client with empty API key", async () => {
-		const { searchSkills } = await import("../skills/search")
+		const { searchSkills } = await import("../skill/search")
 
 		// Run search in JSON mode to avoid interactive prompts
 		await searchSkills("test", { json: true, limit: 5 })
@@ -63,7 +63,7 @@ describe("skills commands use public API", () => {
 
 	test("skills install resolves skill URL with empty API key", async () => {
 		const { execSync } = await import("node:child_process")
-		const { installSkill } = await import("../skills/install")
+		const { installSkill } = await import("../skill/install")
 
 		await installSkill("test-ns/test-skill", "claude-code", {})
 
@@ -79,7 +79,7 @@ describe("skills commands use public API", () => {
 
 	test("skills install passes global flag correctly", async () => {
 		const { execSync } = await import("node:child_process")
-		const { installSkill } = await import("../skills/install")
+		const { installSkill } = await import("../skill/install")
 
 		await installSkill("test-ns/test-skill", "cursor", { global: true })
 
@@ -92,7 +92,7 @@ describe("skills commands use public API", () => {
 
 	test("skills install includes -y flag when both skill and agent provided", async () => {
 		const { execSync } = await import("node:child_process")
-		const { installSkill } = await import("../skills/install")
+		const { installSkill } = await import("../skill/install")
 
 		await installSkill("test-ns/test-skill", "claude-code", {})
 
@@ -103,7 +103,7 @@ describe("skills commands use public API", () => {
 
 	test("skills install runs interactive when no agent provided", async () => {
 		const { execSync } = await import("node:child_process")
-		const { installSkill } = await import("../skills/install")
+		const { installSkill } = await import("../skill/install")
 
 		await installSkill("test-ns/test-skill", undefined, {})
 

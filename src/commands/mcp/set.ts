@@ -13,11 +13,9 @@ export async function setServer(
 		metadata?: string
 		headers?: string
 		namespace?: string
-		json?: boolean
-		table?: boolean
 	},
 ): Promise<void> {
-	const isJson = isJsonMode(options)
+	const isJson = isJsonMode()
 
 	try {
 		const parsedMetadata = parseJsonObject(options.metadata, "Metadata")
@@ -48,7 +46,7 @@ export async function setServer(
 		outputDetail({
 			data: output,
 			json: isJson,
-			tip: `Use smithery tools find --connection ${connection.connectionId} --all to view tools.`,
+			tip: `Use smithery tool list ${connection.connectionId} to view tools.`,
 		})
 	} catch (error) {
 		fatal("Failed to set connection", error)
