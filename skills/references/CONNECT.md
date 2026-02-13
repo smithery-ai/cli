@@ -53,11 +53,11 @@ Options:
 
 ## Update a Connection
 
-Use `update` to modify a connection's URL, name, metadata, or headers:
+Use `update` to modify a connection's name, metadata, or headers:
 
 ```bash
-smithery mcp update "my-server" "https://server.smithery.ai/example/server"
-smithery mcp update "my-server" --name "My Server" --metadata '{"env": "prod"}'
+smithery mcp update "my-server" --name "My Server"
+smithery mcp update "my-server" --metadata '{"env": "prod"}'
 ```
 
 ## List Tools

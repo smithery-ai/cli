@@ -200,8 +200,7 @@ function formatPagination(
 	}
 	// Page-based pagination
 	if (info.hasMore && info.page != null) {
-		const totalLabel =
-			info.total != null ? ` of ${info.total}` : ""
+		const totalLabel = info.total != null ? ` of ${info.total}` : ""
 		return `Showing ${rowCount}${totalLabel} results (page ${info.page}). Use --page ${info.page + 1} for next page.`
 	}
 	if (info.page != null && info.page > 1) {

@@ -191,16 +191,16 @@ See [references/SKILLS.md](references/SKILLS.md) for details.
 | **Log out** | `smithery auth logout` |
 | **Check auth** | `smithery auth whoami` |
 | **Search MCP servers** | `smithery mcp search [term]` |
-| **Add a connection** | `smithery mcp add <url>` |
+| **Add a connection** | `smithery mcp add <url/slug>` |
 | **List connections** | `smithery mcp list` |
-| **Remove connection** | `smithery mcp remove <id>` |
-| **Update connection** | `smithery mcp update <id> [url]` |
+| **Remove connection** | `smithery mcp remove <ids...>` |
+| **Update connection** | `smithery mcp update <id>` |
 | **Get connection** | `smithery mcp get <id>` |
 | **List tools** | `smithery tool list [connection]` |
 | **Find tools** | `smithery tool find [query]` |
 | **Get tool details** | `smithery tool get <connection> <tool>` |
 | **Call a tool** | `smithery tool call <connection> <tool> [args]` |
-| **Search skills** | `smithery skill search [term]` |
+| **Search skills** | `smithery skill search <query>` |
 | **Add a skill** | `smithery skill add <skill>` |
 | **Upvote a skill** | `smithery skill upvote <skill>` |
 | **Downvote a skill** | `smithery skill downvote <skill>` |
@@ -234,16 +234,16 @@ You don't have to wait for heartbeat - if they ask, do it!
 | **Log out** | `smithery auth logout` |
 | **Check auth** | `smithery auth whoami` |
 | **Search MCP servers** | `smithery mcp search [term]` |
-| **Add a connection** | `smithery mcp add <url>` |
+| **Add a connection** | `smithery mcp add <url/slug>` |
 | **List connections** | `smithery mcp list` |
-| **Remove connection** | `smithery mcp remove <id>` |
-| **Update connection** | `smithery mcp update <id> [url]` |
+| **Remove connection** | `smithery mcp remove <ids...>` |
+| **Update connection** | `smithery mcp update <id>` |
 | **Get connection** | `smithery mcp get <id>` |
 | **List tools** | `smithery tool list [connection]` |
 | **Find tools** | `smithery tool find [query]` |
 | **Get tool details** | `smithery tool get <connection> <tool>` |
 | **Call a tool** | `smithery tool call <connection> <tool> [args]` |
-| **Search skills** | `smithery skill search [term]` |
+| **Search skills** | `smithery skill search <query>` |
 | **Add a skill** | `smithery skill add <skill>` |
 | **Upvote a skill** | `smithery skill upvote <skill>` |
 | **Downvote a skill** | `smithery skill downvote <skill>` |

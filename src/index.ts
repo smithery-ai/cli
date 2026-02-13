@@ -248,13 +248,9 @@ async function handleRemoveConnections(ids: string[], options: any) {
 	await removeServer(ids, options)
 }
 
-async function handleUpdateConnection(
-	id: string,
-	mcpUrl: string | undefined,
-	options: any,
-) {
+async function handleUpdateConnection(id: string, options: any) {
 	const { updateServer } = await loadConnectCommands()
-	await updateServer(id, mcpUrl, options)
+	await updateServer(id, options)
 }
 
 async function handleFindTools(query: string | undefined, options: any) {
@@ -624,8 +620,8 @@ const removeCmd = mcpCmd
 registerAlias(mcpCmd, "rm <ids...>", removeCmd, handleMcpRemove)
 
 mcpCmd
-	.command("update <id> [mcp-url]")
-	.description("Update a connection's URL, name, metadata, or headers")
+	.command("update <id>")
+	.description("Update a connection's name, metadata, or headers")
 	.option("--name <name>", "Human-readable name")
 	.option("--metadata <json>", "Metadata as JSON object")
 	.option("--headers <json>", "Custom headers as JSON object (stored securely)")

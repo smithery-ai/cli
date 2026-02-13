@@ -2,12 +2,10 @@ import { fatal } from "../../lib/cli-error"
 import { isJsonMode, outputDetail } from "../../utils/output"
 import { ConnectSession } from "./api"
 import { formatConnectionOutput } from "./format-connection"
-import { normalizeMcpUrl } from "./normalize-url"
 import { parseJsonObject } from "./parse-json"
 
 export async function updateServer(
 	id: string,
-	mcpUrl: string | undefined,
 	options: {
 		name?: string
 		metadata?: string
@@ -26,17 +24,9 @@ export async function updateServer(
 		)
 
 		const session = await ConnectSession.create(options.namespace)
+		const existing = await session.getConnection(id)
 
-		// If no URL provided, fetch from existing connection
-		let resolvedUrl: string
-		if (mcpUrl) {
-			resolvedUrl = normalizeMcpUrl(mcpUrl)
-		} else {
-			const existing = await session.getConnection(id)
-			resolvedUrl = existing.mcpUrl
-		}
-
-		const connection = await session.setConnection(id, resolvedUrl, {
+		const connection = await session.setConnection(id, existing.mcpUrl, {
 			name: options.name,
 			metadata: parsedMetadata,
 			headers: parsedHeaders,
