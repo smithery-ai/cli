@@ -35,8 +35,10 @@ Output (JSON):
 ```json
 {
   "servers": [
-    {"id": "abc123", "name": "GitHub Tools", "status": "connected"}
-  ]
+    {"id": "abc123", "name": "GitHub Tools", "mcpUrl": "https://...", "status": "connected"}
+  ],
+  "total": 1,
+  "hasMore": false
 }
 ```
 
@@ -49,15 +51,14 @@ smithery mcp remove <connection-id>
 Options:
 - `--namespace <ns>` - Namespace for the connection
 
-## Create or Update (Idempotent)
+## Update a Connection
 
-Use `set` to create or update a connection with a specific ID:
+Use `update` to modify a connection's URL, name, metadata, or headers:
 
 ```bash
-smithery mcp set "my-server" "https://server.smithery.ai/example/server"
+smithery mcp update "my-server" "https://server.smithery.ai/example/server"
+smithery mcp update "my-server" --name "My Server" --metadata '{"env": "prod"}'
 ```
-
-This is idempotent - safe to run multiple times.
 
 ## List Tools
 

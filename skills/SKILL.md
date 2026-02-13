@@ -194,8 +194,11 @@ See [references/SKILLS.md](references/SKILLS.md) for details.
 | **Add a connection** | `smithery mcp add <url>` |
 | **List connections** | `smithery mcp list` |
 | **Remove connection** | `smithery mcp remove <id>` |
+| **Update connection** | `smithery mcp update <id> [url]` |
+| **Get connection** | `smithery mcp get <id>` |
 | **List tools** | `smithery tool list [connection]` |
 | **Find tools** | `smithery tool find [query]` |
+| **Get tool details** | `smithery tool get <connection> <tool>` |
 | **Call a tool** | `smithery tool call <connection> <tool> [args]` |
 | **Search skills** | `smithery skill search [term]` |
 | **Add a skill** | `smithery skill add <skill>` |
@@ -234,8 +237,11 @@ You don't have to wait for heartbeat - if they ask, do it!
 | **Add a connection** | `smithery mcp add <url>` |
 | **List connections** | `smithery mcp list` |
 | **Remove connection** | `smithery mcp remove <id>` |
+| **Update connection** | `smithery mcp update <id> [url]` |
+| **Get connection** | `smithery mcp get <id>` |
 | **List tools** | `smithery tool list [connection]` |
 | **Find tools** | `smithery tool find [query]` |
+| **Get tool details** | `smithery tool get <connection> <tool>` |
 | **Call a tool** | `smithery tool call <connection> <tool> [args]` |
 | **Search skills** | `smithery skill search [term]` |
 | **Add a skill** | `smithery skill add <skill>` |
