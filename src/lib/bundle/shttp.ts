@@ -5,6 +5,7 @@ import type { DeployPayload } from "@smithery/api/resources/servers/deployments"
 import chalk from "chalk"
 
 import { buildServer } from "../build.js"
+import type { BuildManifest } from "./index.js"
 import { type ScanResult, scanModule } from "./scan.js"
 
 export interface ShttpBundleOptions {
@@ -13,16 +14,9 @@ export interface ShttpBundleOptions {
 	production?: boolean
 }
 
-export interface ShttpBundleResult {
-	outDir: string
-	payload: DeployPayload
-	moduleFile: string
-	sourcemapFile?: string
-}
-
 export async function buildShttpBundle(
 	options: ShttpBundleOptions = {},
-): Promise<ShttpBundleResult> {
+): Promise<string> {
 	const outDir = options.outDir || ".smithery/shttp"
 	const entryFile = options.entryFile
 
@@ -107,20 +101,23 @@ export async function buildShttpBundle(
 		source: gitInfo,
 	}
 
-	const result: ShttpBundleResult = { outDir, payload, moduleFile }
-
 	const sourcemapFile = `${moduleFile}.map`
-	if (existsSync(sourcemapFile)) {
-		result.sourcemapFile = sourcemapFile
-	}
+	const hasSourcemap = existsSync(sourcemapFile)
 
-	writeFileSync(join(outDir, "manifest.json"), JSON.stringify(payload, null, 2))
+	const manifest: BuildManifest = {
+		payload,
+		artifacts: {
+			module: "module.js",
+			...(hasSourcemap && { sourcemap: "module.js.map" }),
+		},
+	}
+	writeFileSync(join(outDir, "manifest.json"), JSON.stringify(manifest, null, 2))
 
 	console.log(
 		chalk.green("\n✓ Smithery shttp bundle created at ") + chalk.bold(outDir),
 	)
 
-	return result
+	return outDir
 }
 
 function getGitInfo(): { commit?: string; branch?: string } {

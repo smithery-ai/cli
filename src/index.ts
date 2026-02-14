@@ -180,6 +180,7 @@ async function handlePublish(server: string | undefined, options: any) {
 		resume: options.resume,
 		transport: options.transport as "shttp" | "stdio",
 		configSchema: options.configSchema,
+		fromBuild: options.fromBuild,
 	})
 }
 
@@ -472,6 +473,10 @@ function withPublishOptions(cmd: InstanceType<typeof Command>) {
 		.option(
 			"--config-schema <json-or-path>",
 			"JSON Schema for server configuration. Inline JSON or path to .json file",
+		)
+		.option(
+			"--from-build <dir>",
+			"Publish from pre-built artifacts (skips build). Requires --name.",
 		)
 }
 

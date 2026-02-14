@@ -1,3 +1,5 @@
+import { existsSync, readFileSync } from "node:fs"
+import { join, resolve } from "node:path"
 import type { DeployPayload } from "@smithery/api/resources/servers/deployments"
 import { buildShttpBundle } from "./shttp.js"
 import { buildStdioBundle } from "./stdio.js"
@@ -9,21 +11,33 @@ export interface BundleOptions {
 	production?: boolean
 }
 
-export interface BuildBundleResult {
-	outDir: string
+/**
+ * Self-describing manifest written to disk after a build.
+ * This is the single contract between build and publish.
+ */
+export interface BuildManifest {
 	payload: DeployPayload
-	moduleFile: string
-	sourcemapFile?: string
-	mcpbFile?: string
+	artifacts: {
+		module?: string
+		sourcemap?: string
+		bundle?: string
+	}
+}
+
+export interface ResolvedBuildArtifacts {
+	payload: DeployPayload
+	modulePath?: string
+	sourcemapPath?: string
+	bundlePath?: string
 }
 
 /**
  * Build a complete Smithery bundle for deployment.
- * Handles both shttp (remote) and stdio (local) transports.
+ * Returns the output directory containing manifest.json and artifacts.
  */
 export async function buildBundle(
 	options: BundleOptions = {},
-): Promise<BuildBundleResult> {
+): Promise<string> {
 	const transport = options.transport || "shttp"
 
 	if (transport === "stdio") {
@@ -39,4 +53,57 @@ export async function buildBundle(
 		outDir: options.outDir,
 		production: options.production,
 	})
+}
+
+/**
+ * Load and validate a build manifest from an output directory.
+ * Resolves artifact paths relative to the directory.
+ */
+export function loadBuildManifest(buildDir: string): ResolvedBuildArtifacts {
+	const dir = resolve(buildDir)
+	const manifestPath = join(dir, "manifest.json")
+
+	if (!existsSync(manifestPath)) {
+		throw new Error(
+			`No manifest.json found in ${dir}. Run 'smithery build' first.`,
+		)
+	}
+
+	let manifest: BuildManifest
+	try {
+		manifest = JSON.parse(readFileSync(manifestPath, "utf-8"))
+	} catch {
+		throw new Error(`Failed to parse manifest.json in ${dir}`)
+	}
+
+	if (!manifest.payload || !manifest.artifacts) {
+		throw new Error(
+			`Invalid manifest.json in ${dir}. Was it created by an older CLI version?`,
+		)
+	}
+
+	const result: ResolvedBuildArtifacts = { payload: manifest.payload }
+
+	if (manifest.artifacts.module) {
+		result.modulePath = join(dir, manifest.artifacts.module)
+		if (!existsSync(result.modulePath)) {
+			throw new Error(`Module file not found: ${result.modulePath}`)
+		}
+	}
+
+	if (manifest.artifacts.sourcemap) {
+		const p = join(dir, manifest.artifacts.sourcemap)
+		if (existsSync(p)) {
+			result.sourcemapPath = p
+		}
+	}
+
+	if (manifest.artifacts.bundle) {
+		result.bundlePath = join(dir, manifest.artifacts.bundle)
+		if (!existsSync(result.bundlePath)) {
+			throw new Error(`Bundle file not found: ${result.bundlePath}`)
+		}
+	}
+
+	return result
 }

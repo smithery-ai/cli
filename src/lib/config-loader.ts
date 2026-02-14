@@ -27,40 +27,43 @@ export function resolveEntryPoint(providedEntry?: string): string {
 		return resolvedPath
 	}
 
-	// Fall back to package.json
+	// Try package.json "module" field
 	const packageJsonPath = resolve(process.cwd(), "package.json")
-	if (!existsSync(packageJsonPath)) {
-		throw new Error(
-			"No package.json found in current directory. Please run this command from your project root or specify an entry file.",
-		)
+	if (existsSync(packageJsonPath)) {
+		try {
+			const packageContent = readFileSync(packageJsonPath, "utf-8")
+			const packageJson = JSON.parse(packageContent)
+
+			if (packageJson.module && typeof packageJson.module === "string") {
+				const resolvedPath = resolve(process.cwd(), packageJson.module)
+				if (existsSync(resolvedPath)) {
+					return resolvedPath
+				}
+				throw new Error(
+					`Entry file specified in package.json not found at ${resolvedPath}.\n` +
+						"Check that the file exists or update your package.json",
+				)
+			}
+		} catch (error) {
+			if (error instanceof Error && error.message.includes("not found at")) {
+				throw error
+			}
+			// package.json parse error or missing module field — fall through to convention
+		}
 	}
 
-	let packageJson: Record<string, unknown>
-	try {
-		const packageContent = readFileSync(packageJsonPath, "utf-8")
-		packageJson = JSON.parse(packageContent)
-	} catch (error) {
-		throw new Error(`Failed to parse package.json: ${error}`)
+	// Convention fallback: src/index.ts
+	const conventionPath = resolve(process.cwd(), "src/index.ts")
+	if (existsSync(conventionPath)) {
+		return conventionPath
 	}
 
-	if (!packageJson.module || typeof packageJson.module !== "string") {
-		throw new Error(
-			'✗ No entry point found in package.json. Please define the "module" field:\n' +
-				'  "module": "./src/index.ts"\n' +
-				"Or specify an entry file directly.",
-		)
-	}
-
-	const entryPoint = packageJson.module
-	const resolvedPath = resolve(process.cwd(), entryPoint)
-	if (!existsSync(resolvedPath)) {
-		throw new Error(
-			`Entry file specified in package.json not found at ${resolvedPath}.\n` +
-				"Check that the file exists or update your package.json",
-		)
-	}
-
-	return resolvedPath
+	throw new Error(
+		"No entry point found. Provide one of:\n" +
+			"  1. An explicit entry file: smithery build ./server.ts\n" +
+			'  2. A "module" field in package.json\n' +
+			"  3. A file at src/index.ts",
+	)
 }
 
 // Server name validation schema - aligned with create server action (IDENTIFIER_REGEX)

@@ -57,6 +57,7 @@ vi.mock("../../utils/runtime", () => ({
 
 vi.mock("../../lib/bundle/index", () => ({
 	buildBundle: vi.fn(),
+	loadBuildManifest: vi.fn(),
 }))
 
 vi.mock("../../utils/command-prompts", () => ({
@@ -106,7 +107,7 @@ vi.mock("node:fs", () => ({
 }))
 
 import { NotFoundError, PermissionDeniedError, Smithery } from "@smithery/api"
-import { buildBundle } from "../../lib/bundle/index"
+import { buildBundle, loadBuildManifest } from "../../lib/bundle/index"
 import { loadProjectConfig } from "../../lib/config-loader"
 import { resolveNamespace } from "../../lib/namespace"
 import {
@@ -139,12 +140,14 @@ describe("deploy command", () => {
 		// Setup default loadProjectConfig mock return value (no config file)
 		vi.mocked(loadProjectConfig).mockReturnValue(null)
 
-		// Setup default buildBundle mock return value
-		vi.mocked(buildBundle).mockResolvedValue({
-			outDir: "/tmp/build",
+		// Setup default buildBundle mock (returns outDir string)
+		vi.mocked(buildBundle).mockResolvedValue("/tmp/build")
+
+		// Setup default loadBuildManifest mock (returns resolved artifacts)
+		vi.mocked(loadBuildManifest).mockReturnValue({
 			payload: { type: "hosted", stateful: false, hasAuthAdapter: false },
-			moduleFile: "/tmp/build/module.js",
-			sourcemapFile: "/tmp/build/module.js.map",
+			modulePath: "/tmp/build/module.js",
+			sourcemapPath: "/tmp/build/module.js.map",
 		})
 
 		// Setup mock registry
@@ -309,11 +312,10 @@ describe("deploy command", () => {
 	})
 
 	test("--transport stdio: respects transport type and builds stdio bundle", async () => {
-		vi.mocked(buildBundle).mockResolvedValue({
-			outDir: "/tmp/build",
+		vi.mocked(buildBundle).mockResolvedValue("/tmp/build")
+		vi.mocked(loadBuildManifest).mockReturnValue({
 			payload: { type: "stdio", runtime: "node", hasAuthAdapter: false },
-			moduleFile: "/tmp/build/module.js",
-			mcpbFile: "/tmp/build/bundle.mcpb",
+			bundlePath: "/tmp/build/bundle.mcpb",
 		})
 
 		await deploy({ name: "myorg/myserver", transport: "stdio" })
@@ -334,11 +336,11 @@ describe("deploy command", () => {
 	})
 
 	test("--transport shttp: respects transport type and builds shttp bundle", async () => {
-		vi.mocked(buildBundle).mockResolvedValue({
-			outDir: "/tmp/build",
+		vi.mocked(buildBundle).mockResolvedValue("/tmp/build")
+		vi.mocked(loadBuildManifest).mockReturnValue({
 			payload: { type: "hosted", stateful: false, hasAuthAdapter: false },
-			moduleFile: "/tmp/build/module.js",
-			sourcemapFile: "/tmp/build/module.js.map",
+			modulePath: "/tmp/build/module.js",
+			sourcemapPath: "/tmp/build/module.js.map",
 		})
 
 		await deploy({ name: "myorg/myserver", transport: "shttp" })
@@ -383,11 +385,10 @@ describe("deploy command", () => {
 				assets: ["data/**"],
 			},
 		})
-		vi.mocked(buildBundle).mockResolvedValue({
-			outDir: "/tmp/build",
+		vi.mocked(buildBundle).mockResolvedValue("/tmp/build")
+		vi.mocked(loadBuildManifest).mockReturnValue({
 			payload: { type: "stdio", runtime: "node", hasAuthAdapter: false },
-			moduleFile: "/tmp/build/module.js",
-			mcpbFile: "/tmp/build/bundle.mcpb",
+			bundlePath: "/tmp/build/bundle.mcpb",
 		})
 
 		await deploy({ name: "myorg/myserver", transport: "stdio" })
@@ -547,6 +548,66 @@ describe("deploy command", () => {
 		expect(console.error).toHaveBeenCalledWith(
 			expect.stringContaining("Namespace"),
 		)
+	})
+
+	test("--from-build: skips build and loads manifest from directory", async () => {
+		vi.mocked(loadBuildManifest).mockReturnValue({
+			payload: { type: "hosted", stateful: false, hasAuthAdapter: false },
+			modulePath: "/my/prebuilt/module.js",
+			sourcemapPath: "/my/prebuilt/module.js.map",
+		})
+
+		await deploy({ name: "myorg/myserver", fromBuild: "/my/prebuilt" })
+
+		expect(buildBundle).not.toHaveBeenCalled()
+		expect(loadBuildManifest).toHaveBeenCalledWith("/my/prebuilt")
+		expect(mockRegistry.servers.deployments.deploy).toHaveBeenCalledWith(
+			"myserver",
+			expect.objectContaining({
+				namespace: "myorg",
+				payload: expect.stringContaining('"type":"hosted"'),
+				module: expect.anything(),
+			}),
+		)
+	})
+
+	test("--from-build with stdio: uploads bundle artifact", async () => {
+		vi.mocked(loadBuildManifest).mockReturnValue({
+			payload: { type: "stdio", runtime: "node", hasAuthAdapter: false },
+			bundlePath: "/my/prebuilt/server.mcpb",
+		})
+
+		await deploy({ name: "myorg/myserver", fromBuild: "/my/prebuilt" })
+
+		expect(buildBundle).not.toHaveBeenCalled()
+		expect(mockRegistry.servers.deployments.deploy).toHaveBeenCalledWith(
+			"myserver",
+			expect.objectContaining({
+				payload: expect.stringContaining('"type":"stdio"'),
+				bundle: expect.anything(),
+			}),
+		)
+	})
+
+	test("--from-build without --name: exits with error", async () => {
+		await expect(
+			deploy({ fromBuild: "/my/prebuilt" }),
+		).rejects.toThrow("process.exit() was called")
+
+		expect(buildBundle).not.toHaveBeenCalled()
+		expect(loadBuildManifest).not.toHaveBeenCalled()
+	})
+
+	test("--from-build with --url: exits with error", async () => {
+		await expect(
+			deploy({
+				name: "myorg/myserver",
+				fromBuild: "/my/prebuilt",
+				url: "https://example.com/mcp",
+			}),
+		).rejects.toThrow("process.exit() was called")
+
+		expect(buildBundle).not.toHaveBeenCalled()
 	})
 
 	test("404 error: auto-creates server and retries deploy", async () => {

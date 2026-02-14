@@ -13,7 +13,7 @@ import type {
 import chalk from "chalk"
 import cliSpinners from "cli-spinners"
 import ora from "ora"
-import { buildBundle } from "../../lib/bundle/index.js"
+import { buildBundle, loadBuildManifest } from "../../lib/bundle/index.js"
 import { loadProjectConfig } from "../../lib/config-loader.js"
 import { resolveNamespace } from "../../lib/namespace.js"
 import { createSmitheryClientSync } from "../../lib/smithery-client"
@@ -29,6 +29,7 @@ interface DeployOptions {
 	resume?: boolean
 	transport?: "shttp" | "stdio"
 	configSchema?: string // JSON string or path to .json file
+	fromBuild?: string // Path to pre-built artifacts directory
 }
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
@@ -36,6 +37,24 @@ const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
 export async function deploy(options: DeployOptions = {}) {
 	const apiKey = await ensureApiKey(options.key)
 	const registry = createSmitheryClientSync(apiKey)
+
+	// Validate --from-build constraints
+	if (options.fromBuild) {
+		if (options.entryFile || options.url) {
+			console.error(
+				chalk.red(
+					"Error: --from-build cannot be combined with an entry file or URL",
+				),
+			)
+			process.exit(1)
+		}
+		if (!options.name) {
+			console.error(
+				chalk.red("Error: --name is required when using --from-build"),
+			)
+			process.exit(1)
+		}
+	}
 
 	// Map CLI option 'name' to internal 'qualifiedName' for clarity
 	let qualifiedName = options.name
@@ -112,21 +131,17 @@ export async function deploy(options: DeployOptions = {}) {
 		return
 	}
 
-	// Determine deploy type
-	const transport = options.transport || "shttp"
+	// Reject incompatible flag combinations
 	const externalUrl = options.url
 	const isExternal = !!externalUrl
-	const isStdio = transport === "stdio"
 
-	// Reject URL publishing with --transport stdio (incompatible)
-	if (isExternal && isStdio) {
+	if (isExternal && options.transport === "stdio") {
 		console.error(
 			chalk.red("Error: URL publishing cannot be used with --transport stdio"),
 		)
 		process.exit(1)
 	}
 
-	// Reject --config-schema without a URL (only for external URLs)
 	if (options.configSchema && !isExternal) {
 		console.error(
 			chalk.red(
@@ -136,68 +151,66 @@ export async function deploy(options: DeployOptions = {}) {
 		process.exit(1)
 	}
 
-	const deployType = isExternal ? "external" : isStdio ? "stdio" : "hosted"
-	console.log(
-		chalk.cyan(
-			`\nDeploying ${chalk.bold(qualifiedName)} (${deployType}) to Smithery Registry...`,
-		),
-	)
-
-	// Warn if assets are configured but transport is not stdio
-	const projectConfig = loadProjectConfig()
-	if (projectConfig?.build?.assets?.length && !isStdio) {
-		console.log(
-			chalk.yellow(
-				"\nWarning: build.assets is only supported for stdio transport. Assets will be ignored.",
-			),
-		)
-	}
-
 	let payload: DeployPayload
 	let modulePath: string | undefined
 	let sourcemapPath: string | undefined
 	let bundlePath: string | undefined
 
-	// Parse config schema if provided
-	const configSchema = options.configSchema
-		? parseConfigSchema(options.configSchema)
-		: undefined
-
 	if (isExternal) {
-		// External deployments don't need a build
+		// External deployments — no build, no manifest
+		const configSchema = options.configSchema
+			? parseConfigSchema(options.configSchema)
+			: undefined
+
 		payload = {
 			type: "external",
 			upstreamUrl: externalUrl,
 			...(configSchema && { configSchema }),
 		}
 	} else {
-		// Build the bundle (handles both shttp and stdio)
-		const buildResult = await buildBundle({
-			entryFile: options.entryFile,
-			transport,
-			production: true,
-		})
-
-		payload = buildResult.payload
-
-		if (isStdio) {
-			// For stdio, read the mcpb bundle
-			if (!buildResult.mcpbFile || !existsSync(buildResult.mcpbFile)) {
-				throw new Error("MCPB bundle not found after build")
-			}
-			bundlePath = buildResult.mcpbFile
+		// Resolve build directory — either pre-built or build inline
+		let buildDir: string
+		if (options.fromBuild) {
+			buildDir = options.fromBuild
 		} else {
-			// For shttp, read the module and sourcemap
-			if (!existsSync(buildResult.moduleFile)) {
-				throw new Error(`Bundle module not found at ${buildResult.moduleFile}`)
-			}
-			modulePath = buildResult.moduleFile
+			const transport = options.transport || "shttp"
 
-			if (buildResult.sourcemapFile && existsSync(buildResult.sourcemapFile)) {
-				sourcemapPath = buildResult.sourcemapFile
+			// Warn if assets configured but not stdio
+			const projectConfig = loadProjectConfig()
+			if (projectConfig?.build?.assets?.length && transport !== "stdio") {
+				console.log(
+					chalk.yellow(
+						"\nWarning: build.assets is only supported for stdio transport. Assets will be ignored.",
+					),
+				)
 			}
+
+			buildDir = await buildBundle({
+				entryFile: options.entryFile,
+				transport,
+				production: true,
+			})
 		}
+
+		// Always load from manifest — single path for both pre-built and inline
+		const artifacts = loadBuildManifest(buildDir)
+		payload = artifacts.payload
+		modulePath = artifacts.modulePath
+		sourcemapPath = artifacts.sourcemapPath
+		bundlePath = artifacts.bundlePath
 	}
+
+	const deployType =
+		payload.type === "external"
+			? "external"
+			: payload.type === "stdio"
+				? "stdio"
+				: "hosted"
+	console.log(
+		chalk.cyan(
+			`\nDeploying ${chalk.bold(qualifiedName)} (${deployType}) to Smithery Registry...`,
+		),
+	)
 
 	const { namespace, serverName: server } = parseQualifiedName(qualifiedName)
 
