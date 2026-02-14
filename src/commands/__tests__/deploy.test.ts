@@ -590,9 +590,9 @@ describe("deploy command", () => {
 	})
 
 	test("--from-build without --name: exits with error", async () => {
-		await expect(
-			deploy({ fromBuild: "/my/prebuilt" }),
-		).rejects.toThrow("process.exit() was called")
+		await expect(deploy({ fromBuild: "/my/prebuilt" })).rejects.toThrow(
+			"process.exit() was called",
+		)
 
 		expect(buildBundle).not.toHaveBeenCalled()
 		expect(loadBuildManifest).not.toHaveBeenCalled()

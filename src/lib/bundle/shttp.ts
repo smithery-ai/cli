@@ -111,7 +111,10 @@ export async function buildShttpBundle(
 			...(hasSourcemap && { sourcemap: "module.js.map" }),
 		},
 	}
-	writeFileSync(join(outDir, "manifest.json"), JSON.stringify(manifest, null, 2))
+	writeFileSync(
+		join(outDir, "manifest.json"),
+		JSON.stringify(manifest, null, 2),
+	)
 
 	console.log(
 		chalk.green("\n✓ Smithery shttp bundle created at ") + chalk.bold(outDir),

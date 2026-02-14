@@ -1,4 +1,4 @@
-import { createReadStream, existsSync } from "node:fs"
+import { createReadStream } from "node:fs"
 import {
 	NotFoundError,
 	PermissionDeniedError,

@@ -171,7 +171,10 @@ export async function buildStdioBundle(
 			bundle: "server.mcpb",
 		},
 	}
-	writeFileSync(join(outDir, "manifest.json"), JSON.stringify(manifest, null, 2))
+	writeFileSync(
+		join(outDir, "manifest.json"),
+		JSON.stringify(manifest, null, 2),
+	)
 
 	console.log(
 		chalk.green("\n✓ Smithery stdio bundle created at ") + chalk.bold(outDir),
