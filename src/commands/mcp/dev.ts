@@ -12,7 +12,6 @@ import { ensureApiKey } from "../../utils/runtime"
 interface DevOptions {
 	entryFile?: string
 	port?: string
-	key?: string
 	tunnel?: boolean
 	open?: boolean
 	initialMessage?: string
@@ -21,8 +20,7 @@ interface DevOptions {
 
 export async function dev(options: DevOptions = {}): Promise<void> {
 	try {
-		// Ensure API key is available
-		const apiKey = await ensureApiKey(options.key)
+		const apiKey = await ensureApiKey()
 
 		const smitheryDir = join(".smithery")
 		const outFile = join(smitheryDir, "bundle", "module.js")
