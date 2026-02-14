@@ -10,7 +10,7 @@ import { getApiKey } from "../utils/smithery-settings"
  *
  * API key resolution order:
  * 1. Provided apiKey parameter
- * 2. SMITHERY_BEARER_AUTH env var
+ * 2. SMITHERY_API_KEY env var
  * 3. Stored API key from settings
  */
 export async function createSmitheryClient(apiKey?: string): Promise<Smithery> {

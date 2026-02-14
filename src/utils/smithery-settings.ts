@@ -224,9 +224,8 @@ export const getAnalyticsConsent = async (): Promise<boolean> => {
 }
 
 export const getApiKey = async (): Promise<string | undefined> => {
-	// Check environment variable first (used by subprocesses)
-	if (process.env.SMITHERY_BEARER_AUTH) {
-		return process.env.SMITHERY_BEARER_AUTH
+	if (process.env.SMITHERY_API_KEY) {
+		return process.env.SMITHERY_API_KEY
 	}
 	await initializeSettings()
 	return settingsData?.apiKey

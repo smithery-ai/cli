@@ -14,6 +14,7 @@ import chalk from "chalk"
 import { buildServer } from "../build.js"
 import { loadProjectConfig } from "../config-loader.js"
 import { copyBundleAssets } from "./copy-assets.js"
+import type { BuildManifest } from "./index.js"
 import { createMcpbManifest, MCPB_ENTRY_POINT } from "./mcpb-manifest.js"
 import { type ScanResult, scanModule } from "./scan.js"
 
@@ -23,16 +24,9 @@ export interface StdioBundleOptions {
 	production?: boolean
 }
 
-export interface StdioBundleResult {
-	outDir: string
-	payload: DeployPayload
-	moduleFile: string
-	mcpbFile: string
-}
-
 export async function buildStdioBundle(
 	options: StdioBundleOptions = {},
-): Promise<StdioBundleResult> {
+): Promise<string> {
 	const outDir = options.outDir || ".smithery/stdio"
 	const entryFile = options.entryFile
 
@@ -171,13 +165,22 @@ export async function buildStdioBundle(
 		throw new Error("Failed to pack MCPB bundle")
 	}
 
-	writeFileSync(join(outDir, "manifest.json"), JSON.stringify(payload, null, 2))
+	const manifest: BuildManifest = {
+		payload,
+		artifacts: {
+			bundle: "server.mcpb",
+		},
+	}
+	writeFileSync(
+		join(outDir, "manifest.json"),
+		JSON.stringify(manifest, null, 2),
+	)
 
 	console.log(
 		chalk.green("\n✓ Smithery stdio bundle created at ") + chalk.bold(outDir),
 	)
 
-	return { outDir, payload, moduleFile, mcpbFile }
+	return outDir
 }
 
 function getGitInfo(): { commit?: string; branch?: string } {

@@ -93,11 +93,11 @@ Tokens use Biscuit attenuation — they can only be narrowed, never expanded.
 You can also set your API key via environment variable:
 
 ```bash
-export SMITHERY_BEARER_AUTH="sk_your_api_key"
+export SMITHERY_API_KEY="sk_your_api_key"
 ```
 
 Priority order:
-1. `SMITHERY_BEARER_AUTH` environment variable
+1. `SMITHERY_API_KEY` environment variable
 2. Stored API key from `smithery auth login`
 
 ## Storage Location

@@ -18,7 +18,7 @@ for (const k in process.env) {
 			"HOME",
 			"USER",
 			"XDG_CONFIG_HOME",
-			"SMITHERY_BEARER_AUTH",
+			"SMITHERY_API_KEY",
 			"SMITHERY_BASE_URL",
 			"ANALYTICS_ENDPOINT",
 		].includes(k)
