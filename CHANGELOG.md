@@ -5,6 +5,29 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 
+## [4.0.0](https://github.com/smithery-ai/cli/compare/v3.19.0...v4.0.0) (2026-02-14)
+
+
+### ⚠ BREAKING CHANGES
+
+* decouple build from publish, simplify auth and deploy UX ([#623](https://github.com/smithery-ai/cli/issues/623))
+* CLI v4.0.0 — unified mcp noun, agent-friendly output, global flags [SMI-1372] ([#613](https://github.com/smithery-ai/cli/issues/613))
+
+### Features
+
+* CLI v4.0.0 — unified mcp noun, agent-friendly output, global flags [SMI-1372] ([#613](https://github.com/smithery-ai/cli/issues/613)) ([56e0e7b](https://github.com/smithery-ai/cli/commit/56e0e7bf52cc0ffd2e01eb7e80c9a1ccf5432187))
+* decouple build from publish, simplify auth and deploy UX ([#623](https://github.com/smithery-ai/cli/issues/623)) ([36a6944](https://github.com/smithery-ai/cli/commit/36a694416c3b85cf263d09e49de0f9cebdd7997e))
+
+
+### Bug Fixes
+
+* resolve biome lint error and add pre-push hook ([#625](https://github.com/smithery-ai/cli/issues/625)) ([588ccf0](https://github.com/smithery-ai/cli/commit/588ccf09f6944eef37f1aa7a986dec9046d96707))
+
+
+### Refactors
+
+* rename "deployment" to "release" in CLI output ([#624](https://github.com/smithery-ai/cli/issues/624)) ([a3da821](https://github.com/smithery-ai/cli/commit/a3da821aef815efa14abbbc2f06c139b5d450265))
+
 ## [3.19.0](https://github.com/smithery-ai/cli/compare/v3.18.0...v3.19.0) (2026-02-09)
 
 
