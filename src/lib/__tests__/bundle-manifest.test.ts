@@ -86,6 +86,35 @@ describe("loadBuildManifest", () => {
 		)
 	})
 
+	test("manifest with name: includes name in result", () => {
+		vi.mocked(existsSync).mockReturnValue(true)
+		vi.mocked(readFileSync).mockReturnValue(
+			JSON.stringify({
+				name: "my-server",
+				payload: { type: "hosted", stateful: false, hasAuthAdapter: false },
+				artifacts: { module: "module.js" },
+			}),
+		)
+
+		const result = loadBuildManifest("/tmp/build")
+
+		expect(result.name).toBe("my-server")
+	})
+
+	test("manifest without name: name is undefined", () => {
+		vi.mocked(existsSync).mockReturnValue(true)
+		vi.mocked(readFileSync).mockReturnValue(
+			JSON.stringify({
+				payload: { type: "hosted", stateful: false, hasAuthAdapter: false },
+				artifacts: { module: "module.js" },
+			}),
+		)
+
+		const result = loadBuildManifest("/tmp/build")
+
+		expect(result.name).toBeUndefined()
+	})
+
 	test("artifact file missing on disk: throws", () => {
 		vi.mocked(existsSync).mockImplementation((p) => {
 			// manifest.json exists, but module.js does not

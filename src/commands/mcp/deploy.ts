@@ -46,12 +46,6 @@ export async function deploy(options: DeployOptions = {}) {
 			)
 			process.exit(1)
 		}
-		if (!options.name) {
-			console.error(
-				chalk.red("Error: --name is required when using --from-build"),
-			)
-			process.exit(1)
-		}
 	}
 
 	// Map CLI option 'name' to internal 'qualifiedName' for clarity
@@ -62,30 +56,37 @@ export async function deploy(options: DeployOptions = {}) {
 		console.log(chalk.cyan("Deploying to Smithery Registry..."))
 
 		try {
-			// Load project config to get server name from smithery.yaml
-			const projectConfig = loadProjectConfig()
-			const configServerName =
-				projectConfig &&
-				projectConfig.runtime === "typescript" &&
-				typeof projectConfig.name === "string"
-					? projectConfig.name
-					: undefined
+			// Resolve server name from build manifest or smithery.yaml
+			let configServerName: string | undefined
+			if (options.fromBuild) {
+				const artifacts = loadBuildManifest(options.fromBuild)
+				configServerName = artifacts.name
+			} else {
+				const projectConfig = loadProjectConfig()
+				configServerName =
+					projectConfig &&
+					projectConfig.runtime === "typescript" &&
+					typeof projectConfig.name === "string"
+						? projectConfig.name
+						: undefined
+			}
 
 			// Resolve namespace through interactive flow
 			const namespace = await resolveNamespace(registry)
 
-			// If name exists in config, use it directly without prompting
+			// If name exists in config/manifest, use it directly without prompting
 			if (configServerName) {
+				const source = options.fromBuild ? "build manifest" : "smithery.yaml"
 				console.log(
 					chalk.dim(
-						`Using server name "${chalk.cyan(configServerName)}" from smithery.yaml`,
+						`Using server name "${chalk.cyan(configServerName)}" from ${source}`,
 					),
 				)
 				qualifiedName = namespace
 					? `${namespace}/${configServerName}`
 					: configServerName
 			} else {
-				// Prompt for server name if not found in config
+				// Prompt for server name if not found in config/manifest
 				const serverNameInput = await promptForServerNameInput(namespace)
 				qualifiedName = namespace
 					? `${namespace}/${serverNameInput}`
@@ -252,7 +253,7 @@ async function deployToServer(
 	try {
 		result = await registry.servers.deployments.deploy(server, deployParams)
 	} catch (error) {
-		uploadSpinner.fail("Upload failed")
+		uploadSpinner.stop()
 		throw error
 	}
 

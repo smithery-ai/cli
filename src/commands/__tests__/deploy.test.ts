@@ -540,13 +540,25 @@ describe("deploy command", () => {
 		)
 	})
 
-	test("--from-build without --name: exits with error", async () => {
-		await expect(deploy({ fromBuild: "/my/prebuilt" })).rejects.toThrow(
-			"process.exit() was called",
-		)
+	test("--from-build without --name: uses name from manifest", async () => {
+		mockRegistry.namespaces.list.mockResolvedValue({
+			namespaces: [{ name: "myorg" }],
+		})
+		vi.mocked(loadBuildManifest).mockReturnValue({
+			name: "my-server",
+			payload: { type: "hosted", stateful: false, hasAuthAdapter: false },
+			modulePath: "/my/prebuilt/module.js",
+		})
+
+		await deploy({ fromBuild: "/my/prebuilt" })
 
 		expect(buildBundle).not.toHaveBeenCalled()
-		expect(loadBuildManifest).not.toHaveBeenCalled()
+		expect(loadBuildManifest).toHaveBeenCalledWith("/my/prebuilt")
+		expect(promptForServerNameInput).not.toHaveBeenCalled()
+		expect(mockRegistry.servers.deployments.deploy).toHaveBeenCalledWith(
+			"my-server",
+			expect.objectContaining({ namespace: "myorg" }),
+		)
 	})
 
 	test("--from-build with --url: exits with error", async () => {

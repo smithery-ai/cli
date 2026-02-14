@@ -1,6 +1,7 @@
-import { existsSync, readFileSync } from "node:fs"
+import { existsSync, readFileSync, writeFileSync } from "node:fs"
 import { join, resolve } from "node:path"
 import type { DeployPayload } from "@smithery/api/resources/servers/deployments"
+import { loadProjectConfig } from "../config-loader.js"
 import { buildShttpBundle } from "./shttp.js"
 import { buildStdioBundle } from "./stdio.js"
 
@@ -16,6 +17,7 @@ export interface BundleOptions {
  * This is the single contract between build and publish.
  */
 export interface BuildManifest {
+	name?: string
 	payload: DeployPayload
 	artifacts: {
 		module?: string
@@ -25,6 +27,7 @@ export interface BuildManifest {
 }
 
 export interface ResolvedBuildArtifacts {
+	name?: string
 	payload: DeployPayload
 	modulePath?: string
 	sourcemapPath?: string
@@ -40,19 +43,29 @@ export async function buildBundle(
 ): Promise<string> {
 	const transport = options.transport || "shttp"
 
-	if (transport === "stdio") {
-		return buildStdioBundle({
-			entryFile: options.entryFile,
-			outDir: options.outDir,
-			production: options.production,
-		})
+	const outDir =
+		transport === "stdio"
+			? await buildStdioBundle({
+					entryFile: options.entryFile,
+					outDir: options.outDir,
+					production: options.production,
+				})
+			: await buildShttpBundle({
+					entryFile: options.entryFile,
+					outDir: options.outDir,
+					production: options.production,
+				})
+
+	// Inject server name from smithery.yaml into manifest
+	const projectConfig = loadProjectConfig()
+	if (projectConfig?.name) {
+		const manifestPath = join(outDir, "manifest.json")
+		const manifest = JSON.parse(readFileSync(manifestPath, "utf-8"))
+		manifest.name = projectConfig.name
+		writeFileSync(manifestPath, JSON.stringify(manifest, null, 2))
 	}
 
-	return buildShttpBundle({
-		entryFile: options.entryFile,
-		outDir: options.outDir,
-		production: options.production,
-	})
+	return outDir
 }
 
 /**
@@ -82,7 +95,10 @@ export function loadBuildManifest(buildDir: string): ResolvedBuildArtifacts {
 		)
 	}
 
-	const result: ResolvedBuildArtifacts = { payload: manifest.payload }
+	const result: ResolvedBuildArtifacts = {
+		payload: manifest.payload,
+		...(manifest.name && { name: manifest.name }),
+	}
 
 	if (manifest.artifacts.module) {
 		result.modulePath = join(dir, manifest.artifacts.module)
