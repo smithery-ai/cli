@@ -53,7 +53,7 @@ export async function deploy(options: DeployOptions = {}) {
 
 	// If --name is not provided, run interactive flow
 	if (!qualifiedName) {
-		console.log(chalk.cyan("Deploying to Smithery Registry..."))
+		console.log(chalk.cyan("Publishing to Smithery Registry..."))
 
 		try {
 			// Resolve server name from build manifest or smithery.yaml
@@ -108,11 +108,11 @@ export async function deploy(options: DeployOptions = {}) {
 
 	if (options.resume) {
 		console.log(
-			chalk.cyan(`\nResuming latest deployment for ${qualifiedName}...`),
+			chalk.cyan(`\nResuming latest release for ${qualifiedName}...`),
 		)
 		console.log(
 			chalk.dim(
-				`> Track progress at: https://smithery.ai/server/${qualifiedName}/deployments`,
+				`> Track progress at: https://smithery.ai/servers/${qualifiedName}/releases`,
 			),
 		)
 
@@ -197,7 +197,7 @@ export async function deploy(options: DeployOptions = {}) {
 				: "hosted"
 	console.log(
 		chalk.cyan(
-			`\nDeploying ${chalk.bold(qualifiedName)} (${deployType}) to Smithery Registry...`,
+			`\nPublishing ${chalk.bold(qualifiedName)} (${deployType}) to Smithery Registry...`,
 		),
 	)
 
@@ -237,7 +237,7 @@ async function deployToServer(
 	bundleFile?: ReturnType<typeof createReadStream>,
 ) {
 	const uploadSpinner = ora({
-		text: "Uploading deployment...",
+		text: "Uploading release...",
 		spinner: cliSpinners.star,
 		color: "yellow",
 	}).start()
@@ -258,12 +258,12 @@ async function deployToServer(
 	}
 
 	uploadSpinner.stop()
-	console.log(chalk.dim(`✓ Deployment ${result.deploymentId} accepted`))
+	console.log(chalk.dim(`✓ Release ${result.deploymentId} accepted`))
 
 	console.log(chalk.dim("> Waiting for completion..."))
 	console.log(
 		chalk.dim(
-			`> Track progress at: https://smithery.ai/server/${qualifiedName}/deployments`,
+			`> Track progress at: https://smithery.ai/servers/${qualifiedName}/releases`,
 		),
 	)
 
@@ -399,23 +399,23 @@ async function pollDeployment(
 		}
 
 		if (data.status === "SUCCESS") {
-			console.log(chalk.green("\n✓ Deployment successful!"))
-			console.log(chalk.dim(`${chalk.bold("Deployment ID:")} ${deploymentId}`))
+			console.log(chalk.green("\n✓ Release successful!"))
+			console.log(chalk.dim(`${chalk.bold("Release ID:")} ${deploymentId}`))
 			console.log(
 				`  ${chalk.green(chalk.dim("➜"))}  ${chalk.bold(chalk.dim("MCP URL:"))}      ${chalk.cyan(data.mcpUrl)}`,
 			)
 			console.log(
-				`  ${chalk.green("➜")}  ${chalk.bold("Server Page:")} ${chalk.cyan(`https://smithery.ai/server/${serverName}`)}`,
+				`  ${chalk.green("➜")}  ${chalk.bold("Server Page:")} ${chalk.cyan(`https://smithery.ai/servers/${serverName}`)}`,
 			)
 			return
 		}
 
 		if (data.status === "AUTH_REQUIRED") {
-			const authUrl = `https://smithery.ai/server/${serverName}/deployments/`
+			const authUrl = `https://smithery.ai/servers/${serverName}/releases/`
 			console.log(chalk.yellow("\n⚠ OAuth authorization required."))
 			console.log(`Please authorize at: ${chalk.cyan(authUrl)}`)
 			console.log(
-				chalk.dim("Once authorized, deployment will automatically continue."),
+				chalk.dim("Once authorized, release will automatically continue."),
 			)
 			return
 		}
@@ -428,8 +428,8 @@ async function pollDeployment(
 			const errorLog = data.logs?.find(
 				(l: DeploymentGetResponse.Log) => l.level === "error",
 			)
-			const errorMessage = errorLog?.message || "Deployment failed"
-			console.error(chalk.red(`\n✗ Deployment failed: ${errorMessage}`))
+			const errorMessage = errorLog?.message || "Release failed"
+			console.error(chalk.red(`\n✗ Release failed: ${errorMessage}`))
 
 			if (errorMessage.includes("timed out")) {
 				console.error(chalk.yellow("\nTroubleshooting tips:"))
@@ -449,7 +449,7 @@ async function pollDeployment(
 				)
 				console.error(
 					chalk.dim(
-						`  Visit: https://smithery.ai/server/${serverName}/deployments`,
+						`  Visit: https://smithery.ai/servers/${serverName}/releases`,
 					),
 				)
 			}

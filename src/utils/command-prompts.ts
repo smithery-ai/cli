@@ -536,7 +536,7 @@ export async function promptForServerNameInput(
 
 	const chalk = (await import("chalk")).default
 	const message = namespace
-		? `Enter server name ${chalk.dim(`(will be deployed as `)}${chalk.cyan.dim(`${namespace}/<name>`)}${chalk.dim(`)`)}:`
+		? `Enter server name ${chalk.dim(`(will be published as `)}${chalk.cyan.dim(`${namespace}/<name>`)}${chalk.dim(`)`)}:`
 		: "Enter server name:"
 
 	const { serverName } = await inquirer.prompt([
