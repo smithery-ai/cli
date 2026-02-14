@@ -163,22 +163,14 @@ async function handleBuild(entryFile: string | undefined, options: any) {
 }
 
 async function handlePublish(server: string | undefined, options: any) {
-	if (options.transport && !["shttp", "stdio"].includes(options.transport)) {
-		fatal(
-			`Invalid transport type "${options.transport}". Valid options are: shttp, stdio`,
-		)
-	}
-
 	const isUrl = server?.startsWith("http://") || server?.startsWith("https://")
 
 	const { deploy } = await import("./commands/mcp/deploy")
 	await deploy({
 		url: isUrl ? server : undefined,
 		entryFile: isUrl ? undefined : server,
-		key: options.key,
 		name: options.name,
 		resume: options.resume,
-		transport: options.transport as "shttp" | "stdio",
 		configSchema: options.configSchema,
 		fromBuild: options.fromBuild,
 	})
@@ -460,15 +452,9 @@ function withPublishOptions(cmd: InstanceType<typeof Command>) {
 			"-n, --name <name>",
 			"Target server qualified name (e.g., org/name)",
 		)
-		.option("-k, --key <apikey>", "Smithery API key")
 		.option(
 			"--resume",
 			"Resume the latest paused publish (e.g., after OAuth authorization)",
-		)
-		.option(
-			"-t, --transport <type>",
-			"Transport type: shttp or stdio (default: shttp)",
-			"shttp",
 		)
 		.option(
 			"--config-schema <json-or-path>",

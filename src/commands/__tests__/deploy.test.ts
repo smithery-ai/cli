@@ -180,7 +180,7 @@ describe("deploy command", () => {
 	test("--name provided: uses qualified name directly for deploy API", async () => {
 		await deploy({ name: "myorg/myserver" })
 
-		expect(ensureApiKey).toHaveBeenCalledWith(undefined)
+		expect(ensureApiKey).toHaveBeenCalled()
 		expect(mockRegistry.servers.deployments.deploy).toHaveBeenCalledWith(
 			"myserver",
 			expect.objectContaining({
@@ -311,31 +311,7 @@ describe("deploy command", () => {
 		expect(buildBundle).not.toHaveBeenCalled()
 	})
 
-	test("--transport stdio: respects transport type and builds stdio bundle", async () => {
-		vi.mocked(buildBundle).mockResolvedValue("/tmp/build")
-		vi.mocked(loadBuildManifest).mockReturnValue({
-			payload: { type: "stdio", runtime: "node", hasAuthAdapter: false },
-			bundlePath: "/tmp/build/bundle.mcpb",
-		})
-
-		await deploy({ name: "myorg/myserver", transport: "stdio" })
-
-		expect(buildBundle).toHaveBeenCalledWith({
-			entryFile: undefined,
-			transport: "stdio",
-			production: true,
-		})
-		expect(mockRegistry.servers.deployments.deploy).toHaveBeenCalledWith(
-			"myserver",
-			expect.objectContaining({
-				namespace: "myorg",
-				payload: expect.stringContaining('"type":"stdio"'),
-				bundle: expect.any(Readable),
-			}),
-		)
-	})
-
-	test("--transport shttp: respects transport type and builds shttp bundle", async () => {
+	test("inline build: always uses shttp transport", async () => {
 		vi.mocked(buildBundle).mockResolvedValue("/tmp/build")
 		vi.mocked(loadBuildManifest).mockReturnValue({
 			payload: { type: "hosted", stateful: false, hasAuthAdapter: false },
@@ -343,7 +319,7 @@ describe("deploy command", () => {
 			sourcemapPath: "/tmp/build/module.js.map",
 		})
 
-		await deploy({ name: "myorg/myserver", transport: "shttp" })
+		await deploy({ name: "myorg/myserver" })
 
 		expect(buildBundle).toHaveBeenCalledWith({
 			entryFile: undefined,
@@ -360,7 +336,7 @@ describe("deploy command", () => {
 		)
 	})
 
-	test("assets configured with non-stdio transport: logs warning", async () => {
+	test("assets configured: logs warning since publish uses shttp", async () => {
 		const consoleSpy = vi.spyOn(console, "log")
 		vi.mocked(loadProjectConfig).mockReturnValue({
 			build: {
@@ -368,35 +344,10 @@ describe("deploy command", () => {
 			},
 		})
 
-		await deploy({ name: "myorg/myserver", transport: "shttp" })
+		await deploy({ name: "myorg/myserver" })
 
 		expect(consoleSpy).toHaveBeenCalledWith(
-			expect.stringContaining(
-				"build.assets is only supported for stdio transport",
-			),
-		)
-		consoleSpy.mockRestore()
-	})
-
-	test("assets configured with stdio transport: no warning", async () => {
-		const consoleSpy = vi.spyOn(console, "log")
-		vi.mocked(loadProjectConfig).mockReturnValue({
-			build: {
-				assets: ["data/**"],
-			},
-		})
-		vi.mocked(buildBundle).mockResolvedValue("/tmp/build")
-		vi.mocked(loadBuildManifest).mockReturnValue({
-			payload: { type: "stdio", runtime: "node", hasAuthAdapter: false },
-			bundlePath: "/tmp/build/bundle.mcpb",
-		})
-
-		await deploy({ name: "myorg/myserver", transport: "stdio" })
-
-		expect(consoleSpy).not.toHaveBeenCalledWith(
-			expect.stringContaining(
-				"build.assets is only supported for stdio transport",
-			),
+			expect.stringContaining("build.assets is only supported"),
 		)
 		consoleSpy.mockRestore()
 	})

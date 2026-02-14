@@ -23,11 +23,9 @@ import { ensureApiKey } from "../../utils/runtime.js"
 
 interface DeployOptions {
 	entryFile?: string
-	key?: string
 	name?: string // CLI option name, internally mapped to qualifiedName
 	url?: string
 	resume?: boolean
-	transport?: "shttp" | "stdio"
 	configSchema?: string // JSON string or path to .json file
 	fromBuild?: string // Path to pre-built artifacts directory
 }
@@ -35,7 +33,7 @@ interface DeployOptions {
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
 
 export async function deploy(options: DeployOptions = {}) {
-	const apiKey = await ensureApiKey(options.key)
+	const apiKey = await ensureApiKey()
 	const registry = createSmitheryClientSync(apiKey)
 
 	// Validate --from-build constraints
@@ -131,16 +129,8 @@ export async function deploy(options: DeployOptions = {}) {
 		return
 	}
 
-	// Reject incompatible flag combinations
 	const externalUrl = options.url
 	const isExternal = !!externalUrl
-
-	if (isExternal && options.transport === "stdio") {
-		console.error(
-			chalk.red("Error: URL publishing cannot be used with --transport stdio"),
-		)
-		process.exit(1)
-	}
 
 	if (options.configSchema && !isExternal) {
 		console.error(
@@ -173,21 +163,19 @@ export async function deploy(options: DeployOptions = {}) {
 		if (options.fromBuild) {
 			buildDir = options.fromBuild
 		} else {
-			const transport = options.transport || "shttp"
-
-			// Warn if assets configured but not stdio
+			// Warn if assets configured (assets only supported via `build --transport stdio`)
 			const projectConfig = loadProjectConfig()
-			if (projectConfig?.build?.assets?.length && transport !== "stdio") {
+			if (projectConfig?.build?.assets?.length) {
 				console.log(
 					chalk.yellow(
-						"\nWarning: build.assets is only supported for stdio transport. Assets will be ignored.",
+						"\nWarning: build.assets is only supported with `smithery mcp build --transport stdio`. Assets will be ignored.",
 					),
 				)
 			}
 
 			buildDir = await buildBundle({
 				entryFile: options.entryFile,
-				transport,
+				transport: "shttp",
 				production: true,
 			})
 		}

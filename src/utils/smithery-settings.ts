@@ -224,7 +224,11 @@ export const getAnalyticsConsent = async (): Promise<boolean> => {
 }
 
 export const getApiKey = async (): Promise<string | undefined> => {
-	// Check environment variable first (used by subprocesses)
+	// Check environment variables first
+	if (process.env.SMITHERY_API_KEY) {
+		return process.env.SMITHERY_API_KEY
+	}
+	// Backward compat: old env var name
 	if (process.env.SMITHERY_BEARER_AUTH) {
 		return process.env.SMITHERY_BEARER_AUTH
 	}
