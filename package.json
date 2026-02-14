@@ -19,7 +19,7 @@
 		"test:installed": "tsx src/index.ts installed",
 		"extract": "tsx src/extractors/modelcontextprotocol-extractor.ts",
 		"test:uninstall": "tsx src/index.ts uninstall",
-		"prepare": "pnpm run build",
+		"prepare": "git config core.hooksPath .githooks 2>/dev/null; pnpm run build",
 		"check": "biome check",
 		"fmt": "pnpm exec biome check --write --unsafe",
 		"test": "vitest run",
