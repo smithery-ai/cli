@@ -1,0 +1,5 @@
+#!/bin/sh
+
+echo "Running pre-push checks..."
+
+pnpm run check && pnpm run build && pnpm run test

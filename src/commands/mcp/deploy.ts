@@ -107,9 +107,7 @@ export async function deploy(options: DeployOptions = {}) {
 	}
 
 	if (options.resume) {
-		console.log(
-			chalk.cyan(`\nResuming latest release for ${qualifiedName}...`),
-		)
+		console.log(chalk.cyan(`\nResuming latest release for ${qualifiedName}...`))
 		console.log(
 			chalk.dim(
 				`> Track progress at: https://smithery.ai/servers/${qualifiedName}/releases`,
