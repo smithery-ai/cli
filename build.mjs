@@ -83,6 +83,7 @@ const nativePackages = [
 	"jsonc-parser",
 	"keytar",
 	"miniflare",
+	"tabtab",
 ]
 
 // Build main CLI entry point
