@@ -3,6 +3,7 @@
 import { createServer } from "node:http"
 import chalk from "chalk"
 import { Command } from "commander"
+import { getCompletions } from "./completion"
 import { SKILL_AGENTS } from "./config/agents"
 import { VALID_CLIENTS, type ValidClient } from "./config/clients"
 import { DEFAULT_PORT } from "./constants"
@@ -1014,6 +1015,38 @@ namespace
 		await createNamespace(name)
 	})
 
+// Completion command — Shell tab completion
+const completionCmd = program
+	.command("completion")
+	.description("Manage shell tab completion")
+
+completionCmd
+	.command("install")
+	.description("Install shell tab completion")
+	.action(async () => {
+			const tabtab = require("tabtab")
+			await tabtab.install({
+					name: "smithery",
+					completer: "smithery",
+			})
+			const shell = tabtab.shell()
+			const sourceCmd =
+				shell === "fish"
+					? "source ~/.config/fish/config.fish"
+					: shell === "zsh"
+						? "source ~/.zshrc"
+						: "source ~/.bashrc"
+			console.log(chalk.cyan(`\nRun this to activate now:\n\n  ${sourceCmd}\n`))
+	})
+
+completionCmd
+	.command("uninstall")
+	.description("Uninstall shell tab completion")
+	.action(async () => {
+			const tabtab = require("tabtab")
+			await tabtab.uninstall({ name: "smithery" })
+	})
+
 // ═══════════════════════════════════════════════════════════════════════════════
 // Hidden backward-compat aliases
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -1076,6 +1109,22 @@ program.hook("preAction", async (_thisCommand, actionCommand) => {
 // ═══════════════════════════════════════════════════════════════════════════════
 // Entry point
 // ═══════════════════════════════════════════════════════════════════════════════
+
+// Shell completion handler (must run before parseAsync)
+if (process.env.COMP_LINE) {
+	const tabtab = require("tabtab")
+	const env = tabtab.parseEnv(process.env)
+	if (env.complete) {
+		const items = getCompletions(program, env)
+		tabtab.log(
+			items.map((item: { name: string; description: string }) => ({
+				name: item.name,
+				description: item.description,
+			})),
+		)
+		process.exit(0)
+	}
+}
 
 // Show help when no command is provided
 if (process.argv.length <= 2) {
