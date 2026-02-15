@@ -21,6 +21,7 @@ build/
 *.swp
 *.swo
 .DS_Store
+._*
 Thumbs.db
 
 # Temporary files
