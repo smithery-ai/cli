@@ -37,8 +37,13 @@ function getErrorMessage(
 export function createError(error: unknown, context: string): Error {
 	// Handle specific API error types with user-friendly messages
 	if (error instanceof AuthenticationError) {
-		const errorMessage = getErrorMessage(error, "Unauthorized: Invalid API key")
-		return new Error(errorMessage, { cause: error })
+		const serverMessage = error.message || ""
+		const primary = serverMessage
+			? `Authentication failed: ${serverMessage}`
+			: "Authentication failed: Your API key may be expired or invalid."
+		return new Error(`${primary}\nRun "smithery login" to re-authenticate.`, {
+			cause: error,
+		})
 	}
 	if (error instanceof ConflictError) {
 		const errorMessage = getErrorMessage(error, "already exists")
