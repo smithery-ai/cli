@@ -5,6 +5,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 
+## [4.0.1](https://github.com/smithery-ai/cli/compare/v4.0.0...v4.0.1) (2026-02-16)
+
+
+### Bug Fixes
+
+* **SMI-1470:** improve auth error messages for expired tokens ([#630](https://github.com/smithery-ai/cli/issues/630)) ([45c6fc8](https://github.com/smithery-ai/cli/commit/45c6fc8b1c3b2976fb9a979c1c566a9200f21dd8))
+
+
+### Chores
+
+* ignore macOS AppleDouble files (._*) ([#627](https://github.com/smithery-ai/cli/issues/627)) ([7bb82c6](https://github.com/smithery-ai/cli/commit/7bb82c61f21fb46f5891feb16c880e6d590a9a1c))
+
 ## [4.0.0](https://github.com/smithery-ai/cli/compare/v3.19.0...v4.0.0) (2026-02-14)
 
 
