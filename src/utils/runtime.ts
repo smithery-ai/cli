@@ -298,7 +298,9 @@ export async function ensureApiKey(apiKey?: string): Promise<string> {
 		// Handle invalid API key (401 error)
 		if (error instanceof AuthenticationError) {
 			console.error(
-				chalk.red("✗ Invalid API key detected. Please enter a valid API key."),
+				chalk.red(
+					'✗ API key is expired or invalid. Run "smithery login" to re-authenticate.',
+				),
 			)
 
 			// Clear invalid saved key if it was from config (not command line)
@@ -315,7 +317,7 @@ export async function ensureApiKey(apiKey?: string): Promise<string> {
 				if (validationError instanceof AuthenticationError) {
 					console.error(
 						chalk.red(
-							"✗ Invalid API key. Please check your API key and try again.",
+							'✗ API key is invalid. Please check your key or run "smithery login" to get a new one.',
 						),
 					)
 					throw validationError
