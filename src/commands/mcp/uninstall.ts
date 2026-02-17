@@ -2,6 +2,7 @@ import "../../utils/suppress-punycode-warning"
 import chalk from "chalk"
 import type { ValidClient } from "../../config/clients"
 import { getClientConfiguration } from "../../config/clients.js"
+import { fatal } from "../../lib/cli-error"
 import { readConfig, writeConfig } from "../../lib/client-config-io"
 import { deleteConfig } from "../../lib/keychain.js"
 import { promptForRestart } from "../../utils/client"
@@ -43,13 +44,6 @@ export async function uninstallServer(
 
 		await promptForRestart(client)
 	} catch (error) {
-		if (error instanceof Error) {
-			console.error(chalk.red(`Error: ${error.message}`))
-		} else {
-			console.error(
-				chalk.red("An unexpected error occurred during uninstallation"),
-			)
-		}
-		process.exit(1)
+		fatal("Failed to uninstall server", error)
 	}
 }

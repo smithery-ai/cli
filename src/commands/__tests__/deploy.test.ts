@@ -44,10 +44,32 @@ vi.mock("@smithery/api", () => {
 		}
 	}
 
+	class AuthenticationError extends Error {
+		constructor(message?: string) {
+			super(message || "Authentication failed")
+			this.name = "AuthenticationError"
+		}
+	}
+	class BadRequestError extends Error {
+		constructor(message?: string) {
+			super(message || "Bad request")
+			this.name = "BadRequestError"
+		}
+	}
+	class ConflictError extends Error {
+		constructor(message?: string) {
+			super(message || "Conflict")
+			this.name = "ConflictError"
+		}
+	}
+
 	return {
 		Smithery: vi.fn(),
 		PermissionDeniedError,
 		NotFoundError,
+		AuthenticationError,
+		BadRequestError,
+		ConflictError,
 	}
 })
 

@@ -1,9 +1,9 @@
 import "../../utils/suppress-punycode-warning"
-import { APIConnectionTimeoutError } from "@smithery/api"
 import chalk from "chalk"
 import ora from "ora"
 import type { ValidClient } from "../../config/clients"
 import { getClientConfiguration } from "../../config/clients"
+import { fatal } from "../../lib/cli-error"
 import {
 	formatServerConfig,
 	readConfig,
@@ -128,19 +128,6 @@ export async function installServer(
 		verbose(
 			`Installation error: ${error instanceof Error ? error.stack : JSON.stringify(error)}`,
 		)
-		if (error instanceof APIConnectionTimeoutError) {
-			console.error(
-				chalk.red(
-					"Error: Request timed out. Please check your connection and try again.",
-				),
-			)
-		} else if (error instanceof Error) {
-			console.error(chalk.red(`Error: ${error.message}`))
-		} else {
-			console.error(
-				chalk.red("An unexpected error occurred during installation"),
-			)
-		}
-		process.exit(1)
+		fatal("Failed to install server", error)
 	}
 }

@@ -3,6 +3,7 @@ import { join } from "node:path"
 import chalk from "chalk"
 import { DEFAULT_PORT } from "../../constants"
 import { buildServer } from "../../lib/build"
+import { fatal } from "../../lib/cli-error"
 import { setupTunnelAndPlayground } from "../../lib/dev-lifecycle"
 import { createDevServer } from "../../lib/dev-server"
 import { debug } from "../../lib/logger"
@@ -126,7 +127,6 @@ export async function dev(options: DevOptions = {}): Promise<void> {
 			processName: "server",
 		})
 	} catch (error) {
-		console.error(chalk.red("× Dev server failed:"), error)
-		process.exit(1)
+		fatal("Dev server failed", error)
 	}
 }
