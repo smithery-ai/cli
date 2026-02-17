@@ -2,6 +2,7 @@ import {
 	AuthenticationError,
 	BadRequestError,
 	ConflictError,
+	PermissionDeniedError,
 } from "@smithery/api"
 
 /**
@@ -44,6 +45,16 @@ export function createError(error: unknown, context: string): Error {
 		return new Error(`${primary}\nRun "smithery login" to re-authenticate.`, {
 			cause: error,
 		})
+	}
+	if (error instanceof PermissionDeniedError) {
+		const serverMessage = error.message || ""
+		const primary = serverMessage
+			? `Permission denied: ${serverMessage}`
+			: "Permission denied: Your token lacks the required permissions."
+		return new Error(
+			`${primary}\nMint a scoped token with "smithery auth token --policy '<constraints>'" or use an API key.`,
+			{ cause: error },
+		)
 	}
 	if (error instanceof ConflictError) {
 		const errorMessage = getErrorMessage(error, "already exists")
