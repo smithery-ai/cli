@@ -57,7 +57,7 @@ describe("truncate", () => {
 		const long = "a".repeat(100)
 		const result = truncate(long, 20)
 		expect(result.length).toBe(20)
-		expect(result).toBe("a".repeat(19) + "\u2026")
+		expect(result).toBe(`${"a".repeat(19)}\u2026`)
 	})
 
 	test("handles exact length strings", () => {

@@ -1,5 +1,6 @@
 import chalk from "chalk"
 import { VALID_CLIENTS, type ValidClient } from "../config/clients"
+import { fatal } from "../lib/cli-error"
 import { searchServers } from "../lib/registry"
 
 // Re-export parsing utilities from cli-utils for backward compatibility
@@ -157,13 +158,7 @@ async function searchAndSelectServer(apiKey?: string): Promise<string> {
 		])
 		return serverChoice
 	} catch (error) {
-		const ora = (await import("ora")).default
-		const spinner = ora().start()
-		spinner.fail("Failed to search servers")
-		console.error(
-			chalk.red(error instanceof Error ? error.message : String(error)),
-		)
-		process.exit(1)
+		fatal("Failed to search servers", error)
 	}
 }
 
@@ -461,11 +456,7 @@ export async function interactiveServerSearch(
 			}
 		}
 	} catch (error) {
-		console.error(
-			chalk.red("Error searching servers:"),
-			error instanceof Error ? error.message : String(error),
-		)
-		process.exit(1)
+		fatal("Error searching servers", error)
 	}
 }
 

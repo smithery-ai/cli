@@ -1,9 +1,5 @@
 import { createReadStream } from "node:fs"
-import {
-	NotFoundError,
-	PermissionDeniedError,
-	type Smithery,
-} from "@smithery/api"
+import { NotFoundError, type Smithery } from "@smithery/api"
 import type {
 	DeploymentDeployParams,
 	DeploymentGetResponse,
@@ -14,6 +10,7 @@ import chalk from "chalk"
 import cliSpinners from "cli-spinners"
 import ora from "ora"
 import { buildBundle, loadBuildManifest } from "../../lib/bundle/index.js"
+import { fatal } from "../../lib/cli-error"
 import { loadProjectConfig } from "../../lib/config-loader.js"
 import { resolveNamespace } from "../../lib/namespace.js"
 import { createSmitheryClientSync } from "../../lib/smithery-client"
@@ -93,11 +90,7 @@ export async function deploy(options: DeployOptions = {}) {
 					: serverNameInput
 			}
 		} catch (error) {
-			console.error(
-				chalk.red("Error during interactive setup:"),
-				error instanceof Error ? error.message : String(error),
-			)
-			process.exit(1)
+			fatal("Error during interactive setup", error)
 		}
 	}
 
@@ -307,65 +300,52 @@ async function deployWithAutoCreate(
 			bundleFile,
 		)
 	} catch (error) {
-		if (error instanceof PermissionDeniedError) {
-			const errorBody = error.error as { error?: string } | undefined
-			const errorMessage = errorBody?.error || "Forbidden"
-			console.error(chalk.red(`\n✗ Error: ${errorMessage}`))
+		if (!isNotFoundError(error)) {
+			fatal("Deployment failed", error)
+		}
+
+		const errorMessage = getApiErrorDetail(error)
+
+		// Namespace not found — can't auto-create
+		if (errorMessage.toLowerCase().includes("namespace")) {
+			console.error(chalk.red(`\n✗ Error: Namespace "${namespace}" not found.`))
+			console.error(
+				chalk.dim(
+					"   The namespace doesn't exist. Please create it first or use a different namespace.",
+				),
+			)
 			process.exit(1)
 		}
 
-		if (isNotFoundError(error)) {
-			const errorMessage = getApiErrorDetail(error)
-
-			// Namespace not found — can't auto-create
-			if (errorMessage.toLowerCase().includes("namespace")) {
-				console.error(
-					chalk.red(`\n✗ Error: Namespace "${namespace}" not found.`),
-				)
-				console.error(
-					chalk.dim(
-						"   The namespace doesn't exist. Please create it first or use a different namespace.",
-					),
-				)
-				process.exit(1)
-			}
-
-			// Server not found — confirm in interactive mode, auto-create otherwise
-			if (process.stdout.isTTY) {
-				const inquirer = (await import("inquirer")).default
-				const { confirmed } = await inquirer.prompt([
-					{
-						type: "confirm",
-						name: "confirmed",
-						message: `Server "${qualifiedName}" doesn't exist yet. Create it?`,
-						default: true,
-					},
-				])
-				if (!confirmed) return
-			}
-
-			await registry.servers.create(server, { namespace })
-			console.log(chalk.dim(`✓ Created server "${qualifiedName}"`))
-
-			// Retry the deploy with fresh streams
-			const streams = createStreams(modulePath, sourcemapPath, bundlePath)
-			await deployToServer(
-				registry,
-				server,
-				namespace,
-				qualifiedName,
-				payload,
-				streams.moduleFile,
-				streams.sourcemapFile,
-				streams.bundleFile,
-			)
-			return
+		// Server not found — confirm in interactive mode, auto-create otherwise
+		if (process.stdout.isTTY) {
+			const inquirer = (await import("inquirer")).default
+			const { confirmed } = await inquirer.prompt([
+				{
+					type: "confirm",
+					name: "confirmed",
+					message: `Server "${qualifiedName}" doesn't exist yet. Create it?`,
+					default: true,
+				},
+			])
+			if (!confirmed) return
 		}
 
-		if (error instanceof Error) {
-			throw error
-		}
-		throw new Error(JSON.stringify(error))
+		await registry.servers.create(server, { namespace })
+		console.log(chalk.dim(`✓ Created server "${qualifiedName}"`))
+
+		// Retry the deploy with fresh streams
+		const streams = createStreams(modulePath, sourcemapPath, bundlePath)
+		await deployToServer(
+			registry,
+			server,
+			namespace,
+			qualifiedName,
+			payload,
+			streams.moduleFile,
+			streams.sourcemapFile,
+			streams.bundleFile,
+		)
 	}
 }
 
