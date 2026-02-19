@@ -14,6 +14,7 @@ export async function addServer(
 		namespace?: string
 		metadata?: string
 		headers?: string
+		unstableWebhookUrl?: string
 	},
 ): Promise<void> {
 	// If id is set but name is not, default name to id
@@ -33,7 +34,12 @@ export async function addServer(
 			const connection = await session.setConnection(
 				options.id,
 				normalizeMcpUrl(mcpUrl),
-				{ name, metadata: parsedMetadata, headers: parsedHeaders },
+				{
+					name,
+					metadata: parsedMetadata,
+					headers: parsedHeaders,
+					unstableWebhookUrl: options.unstableWebhookUrl,
+				},
 			)
 			const output = formatConnectionOutput(connection)
 			outputDetail({
