@@ -149,7 +149,7 @@ describe("deploy command", () => {
 		servers: {
 			get: ReturnType<typeof vi.fn>
 			create: ReturnType<typeof vi.fn>
-			deployments: {
+			releases: {
 				deploy: ReturnType<typeof vi.fn>
 				get: ReturnType<typeof vi.fn>
 			}
@@ -181,7 +181,7 @@ describe("deploy command", () => {
 			servers: {
 				get: vi.fn().mockResolvedValue({}),
 				create: vi.fn().mockResolvedValue({}),
-				deployments: {
+				releases: {
 					deploy: vi.fn().mockResolvedValue({
 						deploymentId: "test-deployment-id",
 					}),
@@ -203,10 +203,9 @@ describe("deploy command", () => {
 		await deploy({ name: "myorg/myserver" })
 
 		expect(ensureApiKey).toHaveBeenCalled()
-		expect(mockRegistry.servers.deployments.deploy).toHaveBeenCalledWith(
-			"myserver",
+		expect(mockRegistry.servers.releases.deploy).toHaveBeenCalledWith(
+			"myorg/myserver",
 			expect.objectContaining({
-				namespace: "myorg",
 				payload: expect.any(String),
 			}),
 		)
@@ -227,10 +226,10 @@ describe("deploy command", () => {
 		expect(promptForNamespaceSelection).not.toHaveBeenCalled()
 		expect(promptForNamespaceCreation).not.toHaveBeenCalled()
 		expect(promptForServerNameInput).toHaveBeenCalledWith("myorg")
-		expect(mockRegistry.servers.deployments.deploy).toHaveBeenCalledWith(
-			"myserver",
+		expect(mockRegistry.servers.releases.deploy).toHaveBeenCalledWith(
+			"myorg/myserver",
 			expect.objectContaining({
-				namespace: "myorg",
+				payload: expect.any(String),
 			}),
 		)
 	})
@@ -247,10 +246,10 @@ describe("deploy command", () => {
 		expect(mockRegistry.namespaces.list).toHaveBeenCalled()
 		expect(promptForNamespaceSelection).toHaveBeenCalledWith(["org1", "org2"])
 		expect(promptForServerNameInput).toHaveBeenCalledWith("org2")
-		expect(mockRegistry.servers.deployments.deploy).toHaveBeenCalledWith(
-			"myserver",
+		expect(mockRegistry.servers.releases.deploy).toHaveBeenCalledWith(
+			"org2/myserver",
 			expect.objectContaining({
-				namespace: "org2",
+				payload: expect.any(String),
 			}),
 		)
 		expect(mockRegistry.namespaces.set).not.toHaveBeenCalled()
@@ -269,10 +268,10 @@ describe("deploy command", () => {
 		expect(promptForNamespaceCreation).toHaveBeenCalled()
 		expect(mockRegistry.namespaces.set).toHaveBeenCalledWith("neworg")
 		expect(promptForServerNameInput).toHaveBeenCalledWith("neworg")
-		expect(mockRegistry.servers.deployments.deploy).toHaveBeenCalledWith(
-			"myserver",
+		expect(mockRegistry.servers.releases.deploy).toHaveBeenCalledWith(
+			"neworg/myserver",
 			expect.objectContaining({
-				namespace: "neworg",
+				payload: expect.any(String),
 			}),
 		)
 	})
@@ -281,10 +280,9 @@ describe("deploy command", () => {
 		await deploy({ name: "myorg/myserver", url: "https://example.com/mcp" })
 
 		expect(buildBundle).not.toHaveBeenCalled()
-		expect(mockRegistry.servers.deployments.deploy).toHaveBeenCalledWith(
-			"myserver",
+		expect(mockRegistry.servers.releases.deploy).toHaveBeenCalledWith(
+			"myorg/myserver",
 			expect.objectContaining({
-				namespace: "myorg",
 				payload: JSON.stringify({
 					type: "external",
 					upstreamUrl: "https://example.com/mcp",
@@ -309,10 +307,9 @@ describe("deploy command", () => {
 		})
 
 		expect(buildBundle).not.toHaveBeenCalled()
-		expect(mockRegistry.servers.deployments.deploy).toHaveBeenCalledWith(
-			"myserver",
+		expect(mockRegistry.servers.releases.deploy).toHaveBeenCalledWith(
+			"myorg/myserver",
 			expect.objectContaining({
-				namespace: "myorg",
 				payload: JSON.stringify({
 					type: "external",
 					upstreamUrl: "https://example.com/mcp",
@@ -348,10 +345,9 @@ describe("deploy command", () => {
 			transport: "shttp",
 			production: true,
 		})
-		expect(mockRegistry.servers.deployments.deploy).toHaveBeenCalledWith(
-			"myserver",
+		expect(mockRegistry.servers.releases.deploy).toHaveBeenCalledWith(
+			"myorg/myserver",
 			expect.objectContaining({
-				namespace: "myorg",
 				payload: expect.stringContaining('"type":"hosted"'),
 				module: expect.any(Readable),
 			}),
@@ -387,10 +383,10 @@ describe("deploy command", () => {
 
 		expect(loadProjectConfig).toHaveBeenCalled()
 		expect(promptForServerNameInput).not.toHaveBeenCalled()
-		expect(mockRegistry.servers.deployments.deploy).toHaveBeenCalledWith(
-			"my-server-name",
+		expect(mockRegistry.servers.releases.deploy).toHaveBeenCalledWith(
+			"myorg/my-server-name",
 			expect.objectContaining({
-				namespace: "myorg",
+				payload: expect.any(String),
 			}),
 		)
 	})
@@ -408,10 +404,10 @@ describe("deploy command", () => {
 
 		expect(loadProjectConfig).toHaveBeenCalled()
 		expect(promptForServerNameInput).toHaveBeenCalledWith("myorg")
-		expect(mockRegistry.servers.deployments.deploy).toHaveBeenCalledWith(
-			"myserver",
+		expect(mockRegistry.servers.releases.deploy).toHaveBeenCalledWith(
+			"myorg/myserver",
 			expect.objectContaining({
-				namespace: "myorg",
+				payload: expect.any(String),
 			}),
 		)
 	})
@@ -429,10 +425,10 @@ describe("deploy command", () => {
 
 		expect(loadProjectConfig).toHaveBeenCalled()
 		expect(promptForServerNameInput).toHaveBeenCalledWith("myorg")
-		expect(mockRegistry.servers.deployments.deploy).toHaveBeenCalledWith(
-			"myserver",
+		expect(mockRegistry.servers.releases.deploy).toHaveBeenCalledWith(
+			"myorg/myserver",
 			expect.objectContaining({
-				namespace: "myorg",
+				payload: expect.any(String),
 			}),
 		)
 	})
@@ -448,10 +444,10 @@ describe("deploy command", () => {
 
 		expect(loadProjectConfig).toHaveBeenCalled()
 		expect(promptForServerNameInput).toHaveBeenCalledWith("myorg")
-		expect(mockRegistry.servers.deployments.deploy).toHaveBeenCalledWith(
-			"myserver",
+		expect(mockRegistry.servers.releases.deploy).toHaveBeenCalledWith(
+			"myorg/myserver",
 			expect.objectContaining({
-				namespace: "myorg",
+				payload: expect.any(String),
 			}),
 		)
 	})
@@ -472,10 +468,10 @@ describe("deploy command", () => {
 		expect(promptForNamespaceCreation).toHaveBeenCalled()
 		expect(mockRegistry.namespaces.set).toHaveBeenCalledWith("neworg")
 		expect(promptForServerNameInput).not.toHaveBeenCalled()
-		expect(mockRegistry.servers.deployments.deploy).toHaveBeenCalledWith(
-			"my-server-name",
+		expect(mockRegistry.servers.releases.deploy).toHaveBeenCalledWith(
+			"neworg/my-server-name",
 			expect.objectContaining({
-				namespace: "neworg",
+				payload: expect.any(String),
 			}),
 		)
 	})
@@ -487,7 +483,7 @@ describe("deploy command", () => {
 			"Forbidden",
 			new Headers(),
 		)
-		mockRegistry.servers.deployments.deploy.mockRejectedValue(error)
+		mockRegistry.servers.releases.deploy.mockRejectedValue(error)
 
 		await expect(deploy({ name: "otherorg/myserver" })).rejects.toThrow(
 			"process.exit() was called",
@@ -501,7 +497,7 @@ describe("deploy command", () => {
 			"Forbidden",
 			new Headers(),
 		)
-		mockRegistry.servers.deployments.deploy.mockRejectedValue(error)
+		mockRegistry.servers.releases.deploy.mockRejectedValue(error)
 
 		await expect(deploy({ name: "myorg/myserver" })).rejects.toThrow(
 			"process.exit() was called",
@@ -515,7 +511,7 @@ describe("deploy command", () => {
 			"Not found",
 			new Headers(),
 		)
-		mockRegistry.servers.deployments.deploy.mockRejectedValue(error)
+		mockRegistry.servers.releases.deploy.mockRejectedValue(error)
 
 		await expect(deploy({ name: "nonexistent/myserver" })).rejects.toThrow()
 		expect(console.error).toHaveBeenCalledWith(
@@ -534,10 +530,9 @@ describe("deploy command", () => {
 
 		expect(buildBundle).not.toHaveBeenCalled()
 		expect(loadBuildManifest).toHaveBeenCalledWith("/my/prebuilt")
-		expect(mockRegistry.servers.deployments.deploy).toHaveBeenCalledWith(
-			"myserver",
+		expect(mockRegistry.servers.releases.deploy).toHaveBeenCalledWith(
+			"myorg/myserver",
 			expect.objectContaining({
-				namespace: "myorg",
 				payload: expect.stringContaining('"type":"hosted"'),
 				module: expect.anything(),
 			}),
@@ -553,8 +548,8 @@ describe("deploy command", () => {
 		await deploy({ name: "myorg/myserver", fromBuild: "/my/prebuilt" })
 
 		expect(buildBundle).not.toHaveBeenCalled()
-		expect(mockRegistry.servers.deployments.deploy).toHaveBeenCalledWith(
-			"myserver",
+		expect(mockRegistry.servers.releases.deploy).toHaveBeenCalledWith(
+			"myorg/myserver",
 			expect.objectContaining({
 				payload: expect.stringContaining('"type":"stdio"'),
 				bundle: expect.anything(),
@@ -577,9 +572,11 @@ describe("deploy command", () => {
 		expect(buildBundle).not.toHaveBeenCalled()
 		expect(loadBuildManifest).toHaveBeenCalledWith("/my/prebuilt")
 		expect(promptForServerNameInput).not.toHaveBeenCalled()
-		expect(mockRegistry.servers.deployments.deploy).toHaveBeenCalledWith(
-			"my-server",
-			expect.objectContaining({ namespace: "myorg" }),
+		expect(mockRegistry.servers.releases.deploy).toHaveBeenCalledWith(
+			"myorg/my-server",
+			expect.objectContaining({
+				payload: expect.any(String),
+			}),
 		)
 	})
 
@@ -603,16 +600,16 @@ describe("deploy command", () => {
 			new Headers(),
 		)
 		// First deploy fails with 404, retry succeeds
-		mockRegistry.servers.deployments.deploy
+		mockRegistry.servers.releases.deploy
 			.mockRejectedValueOnce(error)
 			.mockResolvedValueOnce({ deploymentId: "retry-id" })
 
 		await deploy({ name: "myorg/nonexistent" })
 
-		expect(mockRegistry.servers.create).toHaveBeenCalledWith("nonexistent", {
-			namespace: "myorg",
-		})
-		expect(mockRegistry.servers.deployments.deploy).toHaveBeenCalledTimes(2)
+		expect(mockRegistry.servers.create).toHaveBeenCalledWith(
+			"myorg/nonexistent",
+		)
+		expect(mockRegistry.servers.releases.deploy).toHaveBeenCalledTimes(2)
 	})
 })
 
