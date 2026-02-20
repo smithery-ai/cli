@@ -7,7 +7,7 @@ import {
 import type {
 	Connection,
 	ConnectionsListResponse,
-} from "@smithery/api/resources/experimental/connect/connections.js"
+} from "@smithery/api/resources/connections/connections.js"
 import { createSmitheryClient } from "../../lib/smithery-client"
 import {
 	getNamespace as getStoredNamespace,
@@ -45,11 +45,9 @@ export class ConnectSession {
 	async listConnectionsByUrl(
 		mcpUrl: string,
 	): Promise<{ connections: Connection[] }> {
-		const data =
-			await this.smitheryClient.experimental.connect.connections.list(
-				this.namespace,
-				{ mcpUrl },
-			)
+		const data = await this.smitheryClient.connections.list(this.namespace, {
+			mcpUrl,
+		})
 		return { connections: data.connections }
 	}
 
@@ -59,11 +57,10 @@ export class ConnectSession {
 	}): Promise<{ connections: Connection[]; nextCursor: string | null }> {
 		// Explicit cursor: return a single page (manual pagination)
 		if (options?.cursor) {
-			const data =
-				await this.smitheryClient.experimental.connect.connections.list(
-					this.namespace,
-					{ limit: options.limit, cursor: options.cursor },
-				)
+			const data = await this.smitheryClient.connections.list(this.namespace, {
+				limit: options.limit,
+				cursor: options.cursor,
+			})
 			return { connections: data.connections, nextCursor: data.nextCursor }
 		}
 
@@ -72,11 +69,9 @@ export class ConnectSession {
 		let cursor: string | undefined
 
 		do {
-			const data =
-				await this.smitheryClient.experimental.connect.connections.list(
-					this.namespace,
-					{ cursor },
-				)
+			const data = await this.smitheryClient.connections.list(this.namespace, {
+				cursor,
+			})
 			all.push(...data.connections)
 			cursor = data.nextCursor ?? undefined
 		} while (cursor && (!options?.limit || all.length < options.limit))
@@ -139,17 +134,18 @@ export class ConnectSession {
 			name?: string
 			metadata?: Record<string, unknown>
 			headers?: Record<string, string>
+			unstableWebhookUrl?: string
 		} = {},
 	): Promise<Connection> {
-		return this.smitheryClient.experimental.connect.connections.create(
-			this.namespace,
-			{
-				mcpUrl,
-				name: options.name,
-				metadata: options.metadata,
-				headers: options.headers,
-			},
-		)
+		return this.smitheryClient.connections.create(this.namespace, {
+			mcpUrl,
+			name: options.name,
+			metadata: options.metadata,
+			headers: options.headers,
+			...(options.unstableWebhookUrl && {
+				unstableWebhookUrl: options.unstableWebhookUrl,
+			}),
+		} as Parameters<typeof this.smitheryClient.connections.create>[1])
 	}
 
 	/**
@@ -163,6 +159,7 @@ export class ConnectSession {
 			name?: string
 			metadata?: Record<string, unknown>
 			headers?: Record<string, string>
+			unstableWebhookUrl?: string
 		} = {},
 	): Promise<Connection> {
 		const params = {
@@ -171,40 +168,31 @@ export class ConnectSession {
 			name: options.name,
 			metadata: options.metadata,
 			headers: options.headers,
-		}
+			...(options.unstableWebhookUrl && {
+				unstableWebhookUrl: options.unstableWebhookUrl,
+			}),
+		} as Parameters<typeof this.smitheryClient.connections.set>[1]
 		try {
-			return await this.smitheryClient.experimental.connect.connections.set(
-				connectionId,
-				params,
-			)
+			return await this.smitheryClient.connections.set(connectionId, params)
 		} catch (error) {
 			if (error instanceof Error && error.message.includes("409")) {
 				await this.deleteConnection(connectionId)
-				return this.smitheryClient.experimental.connect.connections.set(
-					connectionId,
-					params,
-				)
+				return this.smitheryClient.connections.set(connectionId, params)
 			}
 			throw error
 		}
 	}
 
 	async deleteConnection(connectionId: string): Promise<void> {
-		await this.smitheryClient.experimental.connect.connections.delete(
-			connectionId,
-			{
-				namespace: this.namespace,
-			},
-		)
+		await this.smitheryClient.connections.delete(connectionId, {
+			namespace: this.namespace,
+		})
 	}
 
 	async getConnection(connectionId: string): Promise<Connection> {
-		return this.smitheryClient.experimental.connect.connections.get(
-			connectionId,
-			{
-				namespace: this.namespace,
-			},
-		)
+		return this.smitheryClient.connections.get(connectionId, {
+			namespace: this.namespace,
+		})
 	}
 }
 

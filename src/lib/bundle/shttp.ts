@@ -1,7 +1,7 @@
 import { execSync } from "node:child_process"
 import { existsSync, mkdirSync, unlinkSync, writeFileSync } from "node:fs"
 import { join } from "node:path"
-import type { DeployPayload } from "@smithery/api/resources/servers/deployments"
+import type { DeployPayload } from "@smithery/api/resources/servers/releases"
 import chalk from "chalk"
 
 import { buildServer } from "../build.js"

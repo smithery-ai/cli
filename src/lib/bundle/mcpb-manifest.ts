@@ -242,10 +242,12 @@ export function createMcpbManifest(scanResult: ScanResult) {
 		},
 		...(userConfig && { user_config: userConfig }),
 		...(scanResult.serverCard?.tools?.length && {
-			tools: scanResult.serverCard.tools.map((t) => ({
-				name: t.name,
-				description: t.description || "",
-			})),
+			tools: scanResult.serverCard.tools.map(
+				(t: { name: string; description?: string }) => ({
+					name: t.name,
+					description: t.description || "",
+				}),
+			),
 		}),
 		...(scanResult.serverCard?.prompts?.length && {
 			prompts: scanResult.serverCard.prompts.map(formatPromptForManifest),

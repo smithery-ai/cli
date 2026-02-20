@@ -550,6 +550,10 @@ mcpCmd
 		"Create a new connection even if one already exists for this URL",
 	)
 	.option(
+		"--unstableWebhookUrl <url>",
+		"Webhook URL for receiving server-to-client messages (unstable)",
+	)
+	.option(
 		"-c, --client <name>",
 		`Install directly to an AI client's config (${VALID_CLIENTS.join(", ")})`,
 	)
