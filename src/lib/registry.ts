@@ -89,7 +89,7 @@ export const resolveServer = async (
 	)
 
 	try {
-		const result = await smithery.servers.get(serverName, { namespace })
+		const result = await smithery.servers.get(`${namespace}/${serverName}`)
 		verbose("Successfully received server data from Smithery SDK")
 		verbose(`Server data: ${JSON.stringify(result, null, 2)}`)
 

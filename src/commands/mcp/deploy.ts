@@ -1,11 +1,10 @@
 import { createReadStream } from "node:fs"
 import { NotFoundError, type Smithery } from "@smithery/api"
 import type {
-	DeploymentDeployParams,
-	DeploymentGetResponse,
-	DeploymentResumeParams,
 	DeployPayload,
-} from "@smithery/api/resources/servers/deployments"
+	ReleaseDeployParams,
+	ReleaseGetResponse,
+} from "@smithery/api/resources/servers/releases"
 import chalk from "chalk"
 import cliSpinners from "cli-spinners"
 import ora from "ora"
@@ -14,7 +13,7 @@ import { fatal } from "../../lib/cli-error"
 import { loadProjectConfig } from "../../lib/config-loader.js"
 import { resolveNamespace } from "../../lib/namespace.js"
 import { createSmitheryClientSync } from "../../lib/smithery-client"
-import { parseConfigSchema, parseQualifiedName } from "../../utils/cli-utils.js"
+import { parseConfigSchema } from "../../utils/cli-utils.js"
 import { promptForServerNameInput } from "../../utils/command-prompts.js"
 import { ensureApiKey } from "../../utils/runtime.js"
 
@@ -107,15 +106,9 @@ export async function deploy(options: DeployOptions = {}) {
 			),
 		)
 
-		const { namespace, serverName: server } = parseQualifiedName(qualifiedName)
-		const resumeParams: DeploymentResumeParams = {
-			namespace,
-			server,
-		}
-		const resumeResult = await registry.servers.deployments.resume(
-			"latest",
-			resumeParams,
-		)
+		const resumeResult = await registry.servers.releases.resume("latest", {
+			qualifiedName,
+		})
 
 		await pollDeployment(registry, qualifiedName, resumeResult.deploymentId)
 		return
@@ -192,12 +185,8 @@ export async function deploy(options: DeployOptions = {}) {
 		),
 	)
 
-	const { namespace, serverName: server } = parseQualifiedName(qualifiedName)
-
 	await deployWithAutoCreate(
 		registry,
-		server,
-		namespace,
 		qualifiedName,
 		payload,
 		modulePath,
@@ -219,8 +208,6 @@ function getApiErrorDetail(error: unknown): string {
 
 async function deployToServer(
 	registry: Smithery,
-	server: string,
-	namespace: string,
 	qualifiedName: string,
 	payload: DeployPayload,
 	moduleFile?: ReturnType<typeof createReadStream>,
@@ -233,16 +220,15 @@ async function deployToServer(
 		color: "yellow",
 	}).start()
 
-	const deployParams: DeploymentDeployParams = {
-		namespace,
+	const deployParams: ReleaseDeployParams = {
 		payload: JSON.stringify(payload),
 		module: moduleFile,
 		sourcemap: sourcemapFile,
 		bundle: bundleFile,
 	}
-	let result: Awaited<ReturnType<typeof registry.servers.deployments.deploy>>
+	let result: Awaited<ReturnType<typeof registry.servers.releases.deploy>>
 	try {
-		result = await registry.servers.deployments.deploy(server, deployParams)
+		result = await registry.servers.releases.deploy(qualifiedName, deployParams)
 	} catch (error) {
 		uploadSpinner.stop()
 		throw error
@@ -275,8 +261,6 @@ function createStreams(
 
 async function deployWithAutoCreate(
 	registry: Smithery,
-	server: string,
-	namespace: string,
 	qualifiedName: string,
 	payload: DeployPayload,
 	modulePath?: string,
@@ -291,8 +275,6 @@ async function deployWithAutoCreate(
 		)
 		await deployToServer(
 			registry,
-			server,
-			namespace,
 			qualifiedName,
 			payload,
 			moduleFile,
@@ -308,7 +290,8 @@ async function deployWithAutoCreate(
 
 		// Namespace not found — can't auto-create
 		if (errorMessage.toLowerCase().includes("namespace")) {
-			console.error(chalk.red(`\n✗ Error: Namespace "${namespace}" not found.`))
+			const ns = qualifiedName.split("/")[0]
+			console.error(chalk.red(`\n✗ Error: Namespace "${ns}" not found.`))
 			console.error(
 				chalk.dim(
 					"   The namespace doesn't exist. Please create it first or use a different namespace.",
@@ -331,15 +314,13 @@ async function deployWithAutoCreate(
 			if (!confirmed) return
 		}
 
-		await registry.servers.create(server, { namespace })
+		await registry.servers.create(qualifiedName)
 		console.log(chalk.dim(`✓ Created server "${qualifiedName}"`))
 
 		// Retry the deploy with fresh streams
 		const streams = createStreams(modulePath, sourcemapPath, bundlePath)
 		await deployToServer(
 			registry,
-			server,
-			namespace,
 			qualifiedName,
 			payload,
 			streams.moduleFile,
@@ -351,18 +332,14 @@ async function deployWithAutoCreate(
 
 async function pollDeployment(
 	registry: Smithery,
-	serverName: string,
+	qualifiedName: string,
 	deploymentId: string,
 ) {
 	let lastLoggedIndex = 0
 
-	// Parse qualified name into namespace and server name
-	const { namespace, serverName: server } = parseQualifiedName(serverName)
-
 	while (true) {
-		const data = await registry.servers.deployments.get(deploymentId, {
-			namespace,
-			server,
+		const data = await registry.servers.releases.get(deploymentId, {
+			qualifiedName,
 		})
 
 		// Log new logs
@@ -383,13 +360,13 @@ async function pollDeployment(
 				`  ${chalk.green(chalk.dim("➜"))}  ${chalk.bold(chalk.dim("MCP URL:"))}      ${chalk.cyan(data.mcpUrl)}`,
 			)
 			console.log(
-				`  ${chalk.green("➜")}  ${chalk.bold("Server Page:")} ${chalk.cyan(`https://smithery.ai/servers/${serverName}`)}`,
+				`  ${chalk.green("➜")}  ${chalk.bold("Server Page:")} ${chalk.cyan(`https://smithery.ai/servers/${qualifiedName}`)}`,
 			)
 			return
 		}
 
 		if (data.status === "AUTH_REQUIRED") {
-			const authUrl = `https://smithery.ai/servers/${serverName}/releases/`
+			const authUrl = `https://smithery.ai/servers/${qualifiedName}/releases/`
 			console.log(chalk.yellow("\n⚠ OAuth authorization required."))
 			console.log(`Please authorize at: ${chalk.cyan(authUrl)}`)
 			console.log(
@@ -404,7 +381,7 @@ async function pollDeployment(
 			)
 		) {
 			const errorLog = data.logs?.find(
-				(l: DeploymentGetResponse.Log) => l.level === "error",
+				(l: ReleaseGetResponse.Log) => l.level === "error",
 			)
 			const errorMessage = errorLog?.message || "Release failed"
 			console.error(chalk.red(`\n✗ Release failed: ${errorMessage}`))
@@ -427,7 +404,7 @@ async function pollDeployment(
 				)
 				console.error(
 					chalk.dim(
-						`  Visit: https://smithery.ai/servers/${serverName}/releases`,
+						`  Visit: https://smithery.ai/servers/${qualifiedName}/releases`,
 					),
 				)
 			}

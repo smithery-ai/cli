@@ -14,6 +14,7 @@ export async function addServer(
 		headers?: string
 		namespace?: string
 		force?: boolean
+		unstableWebhookUrl?: string
 	},
 ): Promise<void> {
 	const isJson = isJsonMode()
@@ -69,6 +70,7 @@ export async function addServer(
 			name: options.name,
 			metadata: parsedMetadata,
 			headers: parsedHeaders,
+			unstableWebhookUrl: options.unstableWebhookUrl,
 		})
 
 		if (connection.status?.state === "auth_required") {

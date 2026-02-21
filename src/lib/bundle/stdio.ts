@@ -8,7 +8,7 @@ import {
 } from "node:fs"
 import { join } from "node:path"
 import { packExtension } from "@anthropic-ai/mcpb"
-import type { DeployPayload } from "@smithery/api/resources/servers/deployments"
+import type { DeployPayload } from "@smithery/api/resources/servers/releases"
 import chalk from "chalk"
 
 import { buildServer } from "../build.js"

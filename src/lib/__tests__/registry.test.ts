@@ -54,7 +54,7 @@ describe("resolveServer", () => {
 	test("calls SDK with namespace and serverName", async () => {
 		await resolveServer(parseQualifiedName("foo/bar"))
 
-		expect(mockGet).toHaveBeenCalledWith("bar", { namespace: "foo" })
+		expect(mockGet).toHaveBeenCalledWith("foo/bar")
 	})
 
 	test("returns server and first connection", async () => {

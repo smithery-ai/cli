@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 
+## [4.0.2](https://github.com/smithery-ai/cli/compare/v4.0.1...v4.0.2) (2026-02-17)
+
+
+### Bug Fixes
+
+* add CTA for permission denied errors ([#632](https://github.com/smithery-ai/cli/issues/632)) ([e18c52d](https://github.com/smithery-ai/cli/commit/e18c52d9606f9499ef457636add6f024ed80afe8))
+
 ## [4.0.1](https://github.com/smithery-ai/cli/compare/v4.0.0...v4.0.1) (2026-02-16)
 
 
