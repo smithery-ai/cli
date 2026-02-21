@@ -1,14 +1,7 @@
 ---
-name: smithery
-description: Discover, install, and use MCP tools and agent skills. Use when you need to find MCP servers, securely connect to them, call their tools, or search/install skills from the Smithery registry.
-homepage: https://smithery.ai
-metadata:
-  {
-    "openclaw":
-      {
-        "requires": { "bins": ["smithery"] },
-      },
-  }
+name: smithery-ai-cli
+description: Find, connect, and use MCP tools and skills via the Smithery CLI. Use when the user searches for new tools or skills, wants to discover integrations, connect to an MCP, install a skill, or wants to interact with an external service (email, Slack, Discord, GitHub, Jira, Notion, databases, cloud APIs, monitoring, etc.).
+metadata: { "openclaw": { "requires": { "bins": ["smithery"] }, "homepage": "https://smithery.ai" } }
 ---
 
 # Smithery
