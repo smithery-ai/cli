@@ -60,6 +60,9 @@ loaders/
 # Ignore packages
 packages/
 
+# Benchmarks
+skills/benchmark/
+
 # Other
 .todos
 .docs
