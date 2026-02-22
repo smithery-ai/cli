@@ -1,9 +1,7 @@
-import { createRequire } from "node:module"
 import type { ServerConfig } from "../types/registry.js"
 import { maskConfig } from "../utils/cli-utils.js"
+import { lazyImport } from "./lazy-import.js"
 import { verbose } from "./logger.js"
-
-const require = createRequire(import.meta.url)
 
 const SERVICE_NAME = "smithery"
 
@@ -16,11 +14,11 @@ interface Keytar {
 let keytar: Keytar | null = null
 let keytarLoadAttempted = false
 
-function getKeytar(): Keytar | null {
+async function getKeytar(): Promise<Keytar | null> {
 	if (!keytarLoadAttempted) {
 		keytarLoadAttempted = true
 		try {
-			keytar = require("keytar")
+			keytar = await lazyImport<Keytar>("keytar")
 		} catch {
 			verbose("keytar not available - keychain features disabled")
 		}
@@ -46,7 +44,7 @@ export async function saveConfig(
 	qualifiedName: string,
 	config: ServerConfig,
 ): Promise<void> {
-	const kt = getKeytar()
+	const kt = await getKeytar()
 	if (!kt) {
 		verbose(`Keychain not available, skipping save for ${qualifiedName}`)
 		return
@@ -77,7 +75,7 @@ export async function saveConfig(
 export async function getConfig(
 	qualifiedName: string,
 ): Promise<ServerConfig | null> {
-	const kt = getKeytar()
+	const kt = await getKeytar()
 	if (!kt) {
 		verbose(`Keychain not available, skipping read for ${qualifiedName}`)
 		return null
@@ -112,7 +110,7 @@ export async function getConfig(
  * @param qualifiedName - The qualified name of the server (e.g., user/server)
  */
 export async function deleteConfig(qualifiedName: string): Promise<void> {
-	const kt = getKeytar()
+	const kt = await getKeytar()
 	if (!kt) {
 		verbose(`Keychain not available, skipping delete for ${qualifiedName}`)
 		return
@@ -139,7 +137,7 @@ export async function deleteConfig(qualifiedName: string): Promise<void> {
  * Clear all server configurations from OS keychain
  */
 export async function clearAllConfigs(): Promise<void> {
-	const kt = getKeytar()
+	const kt = await getKeytar()
 	if (!kt) {
 		verbose("Keychain not available, skipping clear all configs")
 		return
