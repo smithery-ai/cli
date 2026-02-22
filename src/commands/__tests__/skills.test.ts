@@ -103,7 +103,7 @@ describe("skills commands use public API", () => {
 		expect(command).toMatch(/-y$/)
 	})
 
-	test("skills install runs interactive when no agent provided", async () => {
+	test("skills install passes -y flag even when no agent provided", async () => {
 		const { execSync } = await import("node:child_process")
 		const { installSkill } = await import("../skill/install")
 
@@ -113,7 +113,7 @@ describe("skills commands use public API", () => {
 		expect(command).toContain(
 			"npx -y skills add https://smithery.ai/skills/test-ns/test-skill",
 		)
-		// Should NOT have trailing -y
-		expect(command).not.toMatch(/-y$/)
+		// Should have trailing -y for non-interactive mode
+		expect(command).toMatch(/-y$/)
 	})
 })
