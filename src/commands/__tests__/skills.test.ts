@@ -92,28 +92,15 @@ describe("skills commands use public API", () => {
 		)
 	})
 
-	test("skills install includes -y flag when both skill and agent provided", async () => {
+	test("skills install is interactive without yes option", async () => {
 		const { execSync } = await import("node:child_process")
 		const { installSkill } = await import("../skill/install")
 
 		await installSkill("test-ns/test-skill", "claude-code", {})
 
 		const command = (execSync as ReturnType<typeof vi.fn>).mock.calls[0][0]
-		// Trailing -y should be present for non-interactive mode
-		expect(command).toMatch(/-y$/)
-	})
-
-	test("skills install runs interactive when no agent provided", async () => {
-		const { execSync } = await import("node:child_process")
-		const { installSkill } = await import("../skill/install")
-
-		await installSkill("test-ns/test-skill", undefined, {})
-
-		const command = (execSync as ReturnType<typeof vi.fn>).mock.calls[0][0]
-		expect(command).toContain(
-			"npx -y skills add https://smithery.ai/skills/test-ns/test-skill",
-		)
-		// Should NOT have trailing -y without yes option
+		expect(command).toContain("--agent claude-code")
+		// Should not end with -y (the npx -y is a different flag)
 		expect(command).not.toMatch(/-y$/)
 	})
 
@@ -121,9 +108,27 @@ describe("skills commands use public API", () => {
 		const { execSync } = await import("node:child_process")
 		const { installSkill } = await import("../skill/install")
 
-		await installSkill("test-ns/test-skill", undefined, { yes: true })
+		await installSkill("test-ns/test-skill", "claude-code", { yes: true })
 
 		const command = (execSync as ReturnType<typeof vi.fn>).mock.calls[0][0]
-		expect(command).toMatch(/-y$/)
+		expect(command).toContain("--agent claude-code")
+		expect(command).toContain("-y")
+	})
+
+	test("skills install builds correct command with all options", async () => {
+		const { execSync } = await import("node:child_process")
+		const { installSkill } = await import("../skill/install")
+
+		await installSkill("test-ns/test-skill", "cursor", {
+			global: true,
+			yes: true,
+			copy: true,
+		})
+
+		const command = (execSync as ReturnType<typeof vi.fn>).mock.calls[0][0]
+		expect(command).toContain("--agent cursor")
+		expect(command).toContain("-g")
+		expect(command).toContain("-y")
+		expect(command).toContain("--copy")
 	})
 })

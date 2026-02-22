@@ -815,7 +815,10 @@ skillCmd
 	)
 	.action(async (skill, options) => {
 		const { installSkill } = await import("./commands/skill")
-		await installSkill(skill, options.agent, { global: options.global })
+		await installSkill(skill, options.agent, {
+			global: options.global,
+			yes: !!options.agent,
+		})
 	})
 
 // Skill voting (verbs instead of flags)

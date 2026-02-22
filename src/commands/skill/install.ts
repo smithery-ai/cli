@@ -35,6 +35,8 @@ async function resolveSkillUrl(identifier: string): Promise<string> {
 export interface InstallOptions {
 	global?: boolean
 	yes?: boolean
+	agent?: string
+	copy?: boolean
 }
 
 export async function installSkill(
@@ -51,19 +53,14 @@ export async function installSkill(
 	}
 
 	const { execSync } = await import("node:child_process")
-	const globalFlag = options.global ? " -g" : ""
-	const yesFlag = options.yes ? " -y" : ""
 
-	if (!agent) {
-		const command = `npx -y skills add ${skillUrl}${globalFlag}${yesFlag}`
-		console.log()
-		console.log(pc.cyan(`Running: ${command}`))
-		console.log()
-		execSync(command, { stdio: "inherit" })
-		return
-	}
+	const flags: string[] = []
+	if (agent) flags.push("--agent", agent)
+	if (options.global) flags.push("-g")
+	if (options.yes) flags.push("-y")
+	if (options.copy) flags.push("--copy")
 
-	const command = `npx -y skills add ${skillUrl} --agent ${agent}${globalFlag} -y`
+	const command = `npx -y skills add ${skillUrl}${flags.length ? ` ${flags.join(" ")}` : ""}`
 	console.log()
 	console.log(pc.cyan(`Running: ${command}`))
 	console.log()
