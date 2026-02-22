@@ -47,6 +47,11 @@ vi.spyOn(console, "error").mockImplementation(() => {})
 import { Smithery } from "@smithery/api"
 import { setOutputMode } from "../../utils/output"
 
+async function getCommand(): Promise<string> {
+	const { execSync } = await import("node:child_process")
+	return (execSync as ReturnType<typeof vi.fn>).mock.calls[0][0]
+}
+
 describe("skills commands use public API", () => {
 	beforeEach(() => {
 		vi.clearAllMocks()
@@ -69,66 +74,107 @@ describe("skills commands use public API", () => {
 
 		await installSkill("test-ns/test-skill", "claude-code", {})
 
-		// Verify Smithery was instantiated with empty API key for skill resolution
 		expect(Smithery).toHaveBeenCalledWith({ apiKey: "" })
-
-		// Verify the install command was executed
 		expect(execSync).toHaveBeenCalledWith(
 			expect.stringContaining("npx -y skills add"),
 			expect.any(Object),
 		)
 	})
+})
 
-	test("skills install passes global flag correctly", async () => {
-		const { execSync } = await import("node:child_process")
+describe("installSkill flag mapping", () => {
+	beforeEach(() => {
+		vi.clearAllMocks()
+	})
+
+	test("no agent, no options — interactive, no flags", async () => {
 		const { installSkill } = await import("../skill/install")
+		await installSkill("test-ns/test-skill")
 
-		await installSkill("test-ns/test-skill", "cursor", { global: true })
-
-		// Verify -g flag is included in command
-		expect(execSync).toHaveBeenCalledWith(
-			expect.stringContaining("-g"),
-			expect.any(Object),
+		const command = await getCommand()
+		expect(command).toBe(
+			"npx -y skills add https://smithery.ai/skills/test-ns/test-skill",
 		)
 	})
 
-	test("skills install is interactive without yes option", async () => {
-		const { execSync } = await import("node:child_process")
+	test("with agent, no yes — adds --agent but stays interactive", async () => {
 		const { installSkill } = await import("../skill/install")
-
 		await installSkill("test-ns/test-skill", "claude-code", {})
 
-		const command = (execSync as ReturnType<typeof vi.fn>).mock.calls[0][0]
+		const command = await getCommand()
 		expect(command).toContain("--agent claude-code")
-		// Should not end with -y (the npx -y is a different flag)
 		expect(command).not.toMatch(/-y$/)
 	})
 
-	test("skills install passes -y flag when yes option is set", async () => {
-		const { execSync } = await import("node:child_process")
+	test("with agent and yes — adds --agent and -y", async () => {
 		const { installSkill } = await import("../skill/install")
-
 		await installSkill("test-ns/test-skill", "claude-code", { yes: true })
 
-		const command = (execSync as ReturnType<typeof vi.fn>).mock.calls[0][0]
+		const command = await getCommand()
 		expect(command).toContain("--agent claude-code")
-		expect(command).toContain("-y")
+		expect(command).toMatch(/-y$/)
 	})
 
-	test("skills install builds correct command with all options", async () => {
-		const { execSync } = await import("node:child_process")
+	test("all options — maps every flag", async () => {
 		const { installSkill } = await import("../skill/install")
-
 		await installSkill("test-ns/test-skill", "cursor", {
 			global: true,
 			yes: true,
 			copy: true,
 		})
 
-		const command = (execSync as ReturnType<typeof vi.fn>).mock.calls[0][0]
+		const command = await getCommand()
 		expect(command).toContain("--agent cursor")
 		expect(command).toContain("-g")
 		expect(command).toContain("-y")
 		expect(command).toContain("--copy")
+	})
+})
+
+describe("setup command flow", () => {
+	beforeEach(() => {
+		vi.clearAllMocks()
+	})
+
+	test("setup passes global and yes by default", async () => {
+		const { installSkill } = await import("../skill/install")
+
+		// Mirrors what setup does: installSkill("smithery-ai/cli", undefined, { global: true, yes: true })
+		await installSkill("smithery-ai/cli", undefined, {
+			global: true,
+			yes: true,
+		})
+
+		const command = await getCommand()
+		expect(command).toContain("-g")
+		expect(command).toMatch(/-y$/)
+	})
+})
+
+describe("skill install command flow", () => {
+	beforeEach(() => {
+		vi.clearAllMocks()
+	})
+
+	test("with agent — non-interactive (yes: true)", async () => {
+		const { installSkill } = await import("../skill/install")
+
+		// Mirrors: installSkill(skill, agent, { global, yes: !!agent })
+		await installSkill("test-ns/test-skill", "claude-code", { yes: true })
+
+		const command = await getCommand()
+		expect(command).toContain("--agent claude-code")
+		expect(command).toMatch(/-y$/)
+	})
+
+	test("without agent — interactive (yes: false)", async () => {
+		const { installSkill } = await import("../skill/install")
+
+		// Mirrors: installSkill(skill, undefined, { global, yes: false })
+		await installSkill("test-ns/test-skill", undefined, { yes: false })
+
+		const command = await getCommand()
+		expect(command).not.toMatch(/-y$/)
+		expect(command).not.toContain("--agent")
 	})
 })
