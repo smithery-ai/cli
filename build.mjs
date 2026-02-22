@@ -70,6 +70,7 @@ define.__LAZY_DEPS__ = JSON.stringify({
 	miniflare: packageJson.devDependencies.miniflare,
 	esbuild: packageJson.devDependencies.esbuild,
 	"@ngrok/ngrok": packageJson.devDependencies["@ngrok/ngrok"],
+	keytar: packageJson.devDependencies.keytar,
 })
 
 console.log("✓ Compiled bootstrap files")

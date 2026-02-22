@@ -60,6 +60,7 @@
 		"flexsearch": "^0.7.43",
 		"inquirer": "^8.2.4",
 		"inquirer-autocomplete-prompt": "^2.0.0",
+		"keytar": "^7.9.0",
 		"knip": "^5.80.0",
 		"miniflare": "^4.20260103.0",
 		"picocolors": "^1.1.0",
@@ -91,8 +92,5 @@
 	},
 	"engines": {
 		"node": ">=20.0.0"
-	},
-	"optionalDependencies": {
-		"keytar": "^7.9.0"
 	}
 }
