@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 
+## [4.1.0](https://github.com/smithery-ai/cli/compare/v4.0.2...v4.1.0) (2026-02-22)
+
+
+### Features
+
+* optimize skill trigger description [SMI-1493] ([#636](https://github.com/smithery-ai/cli/issues/636)) ([3e55dde](https://github.com/smithery-ai/cli/commit/3e55ddea506bf6bb2453598461862f2bc97f0f12))
+* **SMI-1512:** Add --unstableWebhookUrl option to smithery mcp add ([#634](https://github.com/smithery-ai/cli/issues/634)) ([944034e](https://github.com/smithery-ai/cli/commit/944034eb7656aae872efd53b6dbb4636eca3c2d6))
+
 ## [4.0.2](https://github.com/smithery-ai/cli/compare/v4.0.1...v4.0.2) (2026-02-17)
 
 
