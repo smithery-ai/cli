@@ -979,7 +979,7 @@ program
 	.action(async (options) => {
 		const { installSkill } = await import("./commands/skill")
 		await installSkill("smithery-ai/cli", options.agent, {
-			global: options.global,
+			global: options.global ?? true,
 		})
 	})
 
