@@ -57,9 +57,7 @@ export async function addServer(
 						),
 					)
 				}
-				console.error(
-					pc.dim(`Use --force to create a new connection anyway.`),
-				)
+				console.error(pc.dim(`Use --force to create a new connection anyway.`))
 				const output = formatConnectionOutput(match)
 				outputDetail({ data: output, json: isJson })
 				return

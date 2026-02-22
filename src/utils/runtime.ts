@@ -3,8 +3,8 @@ import { promisify } from "node:util"
 import { getDefaultEnvironment } from "@modelcontextprotocol/sdk/client/stdio.js"
 import { AuthenticationError } from "@smithery/api"
 import type { ServerGetResponse } from "@smithery/api/resources/servers/servers"
-import pc from "picocolors"
 import inquirer from "inquirer"
+import pc from "picocolors"
 import yoctoSpinner from "yocto-spinner"
 import { verbose } from "../lib/logger"
 import { validateApiKey } from "../lib/registry"
@@ -45,7 +45,9 @@ async function promptForUVInstall(): Promise<boolean> {
 		return false
 	}
 
-	const spinner = yoctoSpinner({ text: "Installing UV package manager..." }).start()
+	const spinner = yoctoSpinner({
+		text: "Installing UV package manager...",
+	}).start()
 	try {
 		if (process.platform === "win32") {
 			await execAsync(
@@ -197,9 +199,7 @@ export async function ensureBunInstalled(
 			const installed = await promptForBunInstall()
 			if (!installed) {
 				console.warn(
-					pc.yellow(
-						"Bun is not installed. The server might fail to launch.",
-					),
+					pc.yellow("Bun is not installed. The server might fail to launch."),
 				)
 			}
 		}

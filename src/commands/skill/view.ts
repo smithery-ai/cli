@@ -65,9 +65,7 @@ async function showAvailableFiles(
 export async function viewSkill(identifier: string): Promise<void> {
 	if (!identifier) {
 		console.error(pc.red("Error: Skill identifier is required"))
-		console.error(
-			pc.dim("Usage: smithery skills view <namespace/slug[/path]>"),
-		)
+		console.error(pc.dim("Usage: smithery skills view <namespace/slug[/path]>"))
 		process.exit(1)
 	}
 

@@ -6,9 +6,7 @@ export async function showNamespace(): Promise<void> {
 
 	if (!namespace) {
 		console.error(
-			pc.yellow(
-				"No namespace set. Run 'smithery namespace use <name>' first.",
-			),
+			pc.yellow("No namespace set. Run 'smithery namespace use <name>' first."),
 		)
 		process.exit(1)
 	}
