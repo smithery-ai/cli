@@ -17,9 +17,9 @@ export async function voteSkill(
 	const { namespace, slug } = parseSkillIdentifierOrDie(skillIdentifier)
 	const client = await requireAuthenticatedSkillsClient()
 
-	const ora = (await import("ora")).default
+	const yoctoSpinner = (await import("yocto-spinner")).default
 	const voteLabel = vote === "up" ? "Upvoting" : "Downvoting"
-	const spinner = ora(`${voteLabel} skill...`).start()
+	const spinner = yoctoSpinner({ text: `${voteLabel} skill...` }).start()
 
 	try {
 		await client.skills.votes.create(slug, {
@@ -27,9 +27,9 @@ export async function voteSkill(
 			vote,
 		})
 
-		spinner.succeed(`Skill ${vote}voted`)
+		spinner.success(`Skill ${vote}voted`)
 	} catch (error) {
-		spinner.fail("Failed to vote on skill")
+		spinner.error("Failed to vote on skill")
 		fatal("Failed to vote on skill", error)
 	}
 }

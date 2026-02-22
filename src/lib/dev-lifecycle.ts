@@ -1,4 +1,7 @@
-import chalk from "chalk"
+import pc from "picocolors"
+
+const brandOrange = (text: string) => `\x1b[38;2;234;88;12m${text}\x1b[39m`
+
 import {
 	createClickableLink,
 	generateCursorDeeplink,
@@ -47,37 +50,37 @@ export async function setupTunnelAndPlayground(
 
 	console.log("")
 	console.log(
-		`  ${chalk.bold.italic.hex("#ea580c")("SMITHERY")} ${chalk.bold.italic.hex("#ea580c")(`v${__SMITHERY_VERSION__}`)} ready`,
+		`  ${pc.bold(pc.italic(brandOrange("SMITHERY")))} ${pc.bold(pc.italic(brandOrange(`v${__SMITHERY_VERSION__}`)))} ready`,
 	)
 	console.log("")
 	console.log(
-		`  ${chalk.green(chalk.dim("➜"))}  ${chalk.bold(chalk.dim("Local:"))}      ${chalk.cyan(`http://localhost:${port}/mcp`)}`,
+		`  ${pc.green(pc.dim("➜"))}  ${pc.bold(pc.dim("Local:"))}      ${pc.cyan(`http://localhost:${port}/mcp`)}`,
 	)
 	console.log(
-		`  ${chalk.green(chalk.dim("➜"))}  ${chalk.bold(chalk.dim("Remote:"))}     ${chalk.cyan(`${url}/mcp`)}`,
+		`  ${pc.green(pc.dim("➜"))}  ${pc.bold(pc.dim("Remote:"))}     ${pc.cyan(`${url}/mcp`)}`,
 	)
 	console.log(
-		`  ${chalk.green("➜")}  ${chalk.bold("Playground")}: ${chalk.cyan(playgroundUrl)}`,
+		`  ${pc.green("➜")}  ${pc.bold("Playground")}: ${pc.cyan(playgroundUrl)}`,
 	)
 	console.log("")
 
 	// Display client links without boxen - OSC 8 escape sequences cause boxen
 	// to miscalculate string width, leading to negative .repeat() values
-	console.log(chalk.dim("  ╭─ Add to Client ─────────────────────────────╮"))
+	console.log(pc.dim("  ╭─ Add to Client ─────────────────────────────╮"))
 	console.log(
-		`  ${chalk.dim("│")} ${chalk.bold("Cursor")}: ${chalk.cyan(clickableCursorLink)}`,
+		`  ${pc.dim("│")} ${pc.bold("Cursor")}: ${pc.cyan(clickableCursorLink)}`,
 	)
 	console.log(
-		`  ${chalk.dim("│")} ${chalk.bold("VS Code")}: ${chalk.cyan(clickableVSCodeLink)}`,
+		`  ${pc.dim("│")} ${pc.bold("VS Code")}: ${pc.cyan(clickableVSCodeLink)}`,
 	)
-	console.log(chalk.dim("  │"))
+	console.log(pc.dim("  │"))
 	console.log(
-		`  ${chalk.dim("│")} ${chalk.dim("Note: If required config needed, attach using URL params")}`,
+		`  ${pc.dim("│")} ${pc.dim("Note: If required config needed, attach using URL params")}`,
 	)
 	console.log(
-		`  ${chalk.dim("│")} ${chalk.dim("e.g.")} ${chalk.dim.cyan("https://server.com/mcp")}${chalk.cyan("?weatherApiKey=abc123")}`,
+		`  ${pc.dim("│")} ${pc.dim("e.g.")} ${pc.dim(pc.cyan("https://server.com/mcp"))}${pc.cyan("?weatherApiKey=abc123")}`,
 	)
-	console.log(chalk.dim("  ╰────────────────────────────────────────────╯"))
+	console.log(pc.dim("  ╰────────────────────────────────────────────╯"))
 
 	console.log("")
 

@@ -1,4 +1,4 @@
-import chalk from "chalk"
+import pc from "picocolors"
 import { VALID_CLIENTS, type ValidClient } from "../config/clients"
 import { fatal } from "../lib/cli-error"
 import { searchServers } from "../lib/registry"
@@ -20,7 +20,7 @@ export async function selectClient(
 		return providedClient as ValidClient
 	}
 
-	console.log(chalk.cyan("*"), `${actionDescription} MCP server`)
+	console.log(pc.cyan("*"), `${actionDescription} MCP server`)
 	console.log()
 
 	const inquirer = (await import("inquirer")).default
@@ -53,7 +53,7 @@ export async function selectClient(
 export function validateClient(client: string): asserts client is ValidClient {
 	if (!VALID_CLIENTS.includes(client)) {
 		console.error(
-			chalk.yellow(
+			pc.yellow(
 				`Invalid client "${client}". Valid options are: ${VALID_CLIENTS.join(", ")}`,
 			),
 		)
@@ -100,18 +100,18 @@ async function searchAndSelectServer(apiKey?: string): Promise<string> {
 	])
 
 	try {
-		const ora = (await import("ora")).default
-		const spinner = ora(`Searching for "${searchTerm}"...`).start()
+		const yoctoSpinner = (await import("yocto-spinner")).default
+		const spinner = yoctoSpinner({ text: `Searching for "${searchTerm}"...` }).start()
 
 		// API key is optional for search - don't prompt
 		const servers = await searchServers(searchTerm, apiKey)
 
 		if (servers.length === 0) {
-			spinner.fail(`No servers found for "${searchTerm}"`)
+			spinner.error(`No servers found for "${searchTerm}"`)
 			process.exit(0)
 		}
 
-		spinner.succeed(
+		spinner.success(
 			`Found ${servers.length} server${servers.length === 1 ? "" : "s"}`,
 		)
 		console.log()
@@ -207,9 +207,9 @@ export async function selectServer(
 	}
 
 	console.log(
-		chalk.cyan("*"),
+		pc.cyan("*"),
 		"Installing MCP server for",
-		chalk.cyan(clientName),
+		pc.cyan(clientName),
 	)
 	console.log()
 
@@ -241,14 +241,14 @@ export async function selectInstalledServer(
 	}
 
 	console.log(
-		chalk.cyan("*"),
+		pc.cyan("*"),
 		"Uninstalling server from",
-		chalk.cyan(clientName),
+		pc.cyan(clientName),
 	)
 	console.log()
 
 	if (installedServers.length === 0) {
-		console.log(chalk.yellow(`No servers installed for ${clientName}`))
+		console.log(pc.yellow(`No servers installed for ${clientName}`))
 		process.exit(0)
 	}
 
@@ -334,22 +334,22 @@ export async function interactiveServerSearch(
 
 	try {
 		while (true) {
-			const ora = (await import("ora")).default
-			const spinner = ora(`Searching for "${searchTerm}"...`).start()
+			const yoctoSpinner = (await import("yocto-spinner")).default
+			const spinner = yoctoSpinner({ text: `Searching for "${searchTerm}"...` }).start()
 
 			const servers = await searchServers(searchTerm, apiKey)
 
 			if (servers.length === 0) {
-				spinner.fail(`No servers found for "${searchTerm}"`)
+				spinner.error(`No servers found for "${searchTerm}"`)
 				return
 			}
 
-			spinner.succeed(
+			spinner.success(
 				`☀ ${servers.length < 10 ? `Found ${servers.length} result${servers.length === 1 ? "" : "s"}:` : `Showing top (${servers.length}) results:`}`,
 			)
 			console.log(
-				chalk.dim(
-					`${chalk.cyan("→ View more")} at smithery.ai/search?q=${searchTerm.replace(/\s+/g, "+")}`,
+				pc.dim(
+					`${pc.cyan("→ View more")} at smithery.ai/search?q=${searchTerm.replace(/\s+/g, "+")}`,
 				),
 			)
 			console.log()
@@ -367,8 +367,8 @@ export async function interactiveServerSearch(
 					message: "Select server for details (or search again):",
 					source: (_: unknown, input: string) => {
 						const options = [
-							{ name: chalk.dim("← Search again"), value: "__SEARCH_AGAIN__" },
-							{ name: chalk.dim("Exit"), value: "__EXIT__" },
+							{ name: pc.dim("← Search again"), value: "__SEARCH_AGAIN__" },
+							{ name: pc.dim("Exit"), value: "__EXIT__" },
 						]
 
 						const filtered = servers
@@ -385,7 +385,7 @@ export async function interactiveServerSearch(
 								const displayName = s.displayName || s.qualifiedName
 								const usageInfo =
 									s.useCount > 0
-										? chalk.dim(` (${s.useCount.toLocaleString()} calls/month)`)
+										? pc.dim(` (${s.useCount.toLocaleString()} calls/month)`)
 										: ""
 								return {
 									name: `${displayName}${usageInfo}`,
@@ -413,21 +413,21 @@ export async function interactiveServerSearch(
 			if (selectedServerData) {
 				const displayName =
 					selectedServerData.displayName || selectedServerData.qualifiedName
-				console.log(`${chalk.bold.cyan(displayName)}`)
+				console.log(`${pc.bold(pc.cyan(displayName))}`)
 				console.log(
-					`${chalk.dim("Qualified name:")} ${selectedServerData.qualifiedName}`,
+					`${pc.dim("Qualified name:")} ${selectedServerData.qualifiedName}`,
 				)
 				if (selectedServerData.description) {
 					console.log(
-						`${chalk.dim("Description:")} ${selectedServerData.description}`,
+						`${pc.dim("Description:")} ${selectedServerData.description}`,
 					)
 				}
 				console.log(
-					`${chalk.dim("Usage:")} ${selectedServerData.useCount.toLocaleString()} calls/month`,
+					`${pc.dim("Usage:")} ${selectedServerData.useCount.toLocaleString()} calls/month`,
 				)
 				console.log()
 				console.log(
-					chalk.dim(
+					pc.dim(
 						`Use 'smithery install ${selectedServerData.qualifiedName}' to install`,
 					),
 				)
@@ -525,9 +525,8 @@ export async function promptForServerNameInput(
 ): Promise<string> {
 	const inquirer = (await import("inquirer")).default
 
-	const chalk = (await import("chalk")).default
 	const message = namespace
-		? `Enter server name ${chalk.dim(`(will be published as `)}${chalk.cyan.dim(`${namespace}/<name>`)}${chalk.dim(`)`)}:`
+		? `Enter server name ${pc.dim(`(will be published as `)}${pc.cyan(pc.dim(`${namespace}/<name>`))}${pc.dim(`)`)}:`
 		: "Enter server name:"
 
 	const { serverName } = await inquirer.prompt([

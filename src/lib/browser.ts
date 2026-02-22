@@ -1,6 +1,6 @@
 import { exec } from "node:child_process"
 import { promisify } from "node:util"
-import chalk from "chalk"
+import pc from "picocolors"
 
 const execAsync = promisify(exec)
 
@@ -29,7 +29,7 @@ export async function openPlayground(tunnelUrl: string): Promise<void> {
 
 		await execAsync(command)
 	} catch (_error) {
-		console.log(chalk.yellow("Could not open browser automatically"))
-		console.log(chalk.gray("Please open the link manually"))
+		console.log(pc.yellow("Could not open browser automatically"))
+		console.log(pc.gray("Please open the link manually"))
 	}
 }

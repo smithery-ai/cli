@@ -1,7 +1,8 @@
 #!/usr/bin/env node
 
 import { createServer } from "node:http"
-import chalk from "chalk"
+import pc from "picocolors"
+const brandOrange = (text: string) => `\x1b[38;2;234;88;12m${text}\x1b[39m`
 import { Command } from "commander"
 import { SKILL_AGENTS } from "./config/agents"
 import { VALID_CLIENTS, type ValidClient } from "./config/clients"
@@ -22,7 +23,7 @@ program
 	.name("smithery")
 	.version(__SMITHERY_VERSION__)
 	.description(
-		`${chalk.bold.italic.hex("#ea580c")("SMITHERY CLI")} ${chalk.bold.italic.hex("#ea580c")(`v${__SMITHERY_VERSION__}`)} — Discover and connect to 100K+ AI tools and skills`,
+		`${pc.bold(pc.italic(brandOrange("SMITHERY CLI")))} ${pc.bold(pc.italic(brandOrange(`v${__SMITHERY_VERSION__}`)))} — Discover and connect to 100K+ AI tools and skills`,
 	)
 	.option("--verbose", "Show detailed logs")
 	.option("--debug", "Show debug logs")
@@ -74,12 +75,12 @@ async function handleSearch(term: string | undefined, options: any) {
 	})
 
 	if (results.length === 0 && !json) {
-		console.log(chalk.yellow("No servers found."))
+		console.log(pc.yellow("No servers found."))
 		return
 	}
 
 	if (!term && !json) {
-		console.log(chalk.bold("Most popular servers:\n"))
+		console.log(pc.bold("Most popular servers:\n"))
 	}
 
 	const data = results.map((server) => ({
@@ -142,10 +143,10 @@ async function handleBuild(entryFile: string | undefined, options: any) {
 
 	if (options.out && /\.(js|cjs|mjs)$/.test(options.out)) {
 		console.warn(
-			chalk.yellow(`⚠ Warning: -o now expects a directory, not a file path.`),
+			pc.yellow(`⚠ Warning: -o now expects a directory, not a file path.`),
 		)
 		console.warn(
-			chalk.yellow(
+			pc.yellow(
 				`  Change "${options.out}" to "${options.out.replace(/\/[^/]+\.(js|cjs|mjs)$/, "")}" instead.`,
 			),
 		)
@@ -289,7 +290,7 @@ async function handleLogin() {
 	const { executeCliAuthFlow } = await import("./lib/cli-auth")
 	const { validateApiKey } = await import("./lib/registry")
 
-	console.log(chalk.cyan("Login to Smithery"))
+	console.log(pc.cyan("Login to Smithery"))
 	console.log()
 
 	try {
@@ -298,15 +299,15 @@ async function handleLogin() {
 		const result = await setApiKey(apiKey)
 
 		if (result.success) {
-			console.log(chalk.green("✓ Successfully logged in"))
-			console.log(chalk.gray("You can now use Smithery CLI commands"))
+			console.log(pc.green("✓ Successfully logged in"))
+			console.log(pc.gray("You can now use Smithery CLI commands"))
 		} else {
-			console.error(chalk.red("✗ Failed to save API key"))
-			console.error(chalk.gray("You may need to log in again next time"))
+			console.error(pc.red("✗ Failed to save API key"))
+			console.error(pc.gray("You may need to log in again next time"))
 		}
 	} catch (error) {
-		console.error(chalk.red("✗ Login failed"))
-		console.error(chalk.gray(errorMessage(error)))
+		console.error(pc.red("✗ Login failed"))
+		console.error(pc.gray(errorMessage(error)))
 		process.exit(1)
 	}
 }
@@ -317,12 +318,12 @@ async function handleLogout() {
 	)
 	const { clearAllConfigs } = await import("./lib/keychain.js")
 
-	console.log(chalk.cyan("Logging out of Smithery..."))
+	console.log(pc.cyan("Logging out of Smithery..."))
 	await clearApiKey()
 	await clearNamespace()
 	await clearAllConfigs()
-	console.log(chalk.green("✓ Successfully logged out"))
-	console.log(chalk.gray("All local credentials have been removed"))
+	console.log(pc.green("✓ Successfully logged out"))
+	console.log(pc.gray("All local credentials have been removed"))
 }
 
 async function handleWhoami(options: any) {
@@ -352,8 +353,8 @@ async function handleWhoami(options: any) {
 		let { apiKey, expiresAt } = await mintApiKey()
 
 		if (!apiKey) {
-			console.log(chalk.yellow("No API key found"))
-			console.log(chalk.gray("Run 'smithery auth login' to authenticate"))
+			console.log(pc.yellow("No API key found"))
+			console.log(pc.gray("Run 'smithery auth login' to authenticate"))
 			process.exit(1)
 		}
 
@@ -383,9 +384,9 @@ async function handleWhoami(options: any) {
 				}
 			})
 			server.listen(4260, "localhost", () => {
-				console.log(chalk.cyan("Server running at http://localhost:4260"))
-				console.log(chalk.gray("GET /whoami to retrieve API key"))
-				console.log(chalk.gray("Press Ctrl+C to stop"))
+				console.log(pc.cyan("Server running at http://localhost:4260"))
+				console.log(pc.gray("GET /whoami to retrieve API key"))
+				console.log(pc.gray("Press Ctrl+C to stop"))
 			})
 			return
 		}
@@ -394,12 +395,12 @@ async function handleWhoami(options: any) {
 			console.log(`SMITHERY_API_KEY=${apiKey}`)
 		} else {
 			const masked = `${apiKey.slice(0, 8)}...${apiKey.slice(-4)}`
-			console.log(chalk.cyan("API Key:"), masked)
-			console.log(chalk.gray("Use --full to display the complete key"))
+			console.log(pc.cyan("API Key:"), masked)
+			console.log(pc.gray("Use --full to display the complete key"))
 		}
 	} catch (_error) {
-		console.log(chalk.yellow("Not logged in"))
-		console.log(chalk.gray("Run 'smithery auth login' to authenticate"))
+		console.log(pc.yellow("Not logged in"))
+		console.log(pc.gray("Run 'smithery auth login' to authenticate"))
 		process.exit(1)
 	}
 }
@@ -478,7 +479,7 @@ function registerAlias(
 	}
 	if (opts?.deprecation) {
 		alias.hook("preAction", () => {
-			console.warn(chalk.yellow(opts.deprecation))
+			console.warn(pc.yellow(opts.deprecation))
 		})
 	}
 	alias.action(action)
@@ -507,7 +508,7 @@ const publishCmd = withPublishOptions(
 			server?.startsWith("http://") || server?.startsWith("https://")
 		if (isUrl && !thisCommand.opts().configSchema) {
 			console.log(
-				chalk.dim(
+				pc.dim(
 					"\nTip: Use --config-schema to define configuration options for your server.",
 				),
 			)
@@ -634,7 +635,7 @@ const mcpInstallCmd = mcpCmd
 	)
 	.hook("preAction", () => {
 		console.warn(
-			chalk.yellow(
+			pc.yellow(
 				"Note: 'mcp install' is deprecated. Use 'smithery mcp add <server> --client <name>' instead.",
 			),
 		)
@@ -649,7 +650,7 @@ const mcpUninstallCmd = mcpCmd
 	)
 	.hook("preAction", () => {
 		console.warn(
-			chalk.yellow(
+			pc.yellow(
 				"Note: 'mcp uninstall' is deprecated. Use 'smithery mcp remove <server> --client <name>' instead.",
 			),
 		)
@@ -763,14 +764,14 @@ skillCmd
 	.command("agents")
 	.description("List available agents for skill installation")
 	.action(() => {
-		console.log(chalk.bold("Available agents:"))
+		console.log(pc.bold("Available agents:"))
 		console.log()
 		for (const agent of SKILL_AGENTS) {
 			console.log(`  ${agent}`)
 		}
 		console.log()
 		console.log(
-			chalk.dim("See https://github.com/vercel-labs/skills for more info"),
+			pc.dim("See https://github.com/vercel-labs/skills for more info"),
 		)
 	})
 
@@ -860,25 +861,25 @@ skillReview
 	.option("--down", "Downvote the skill")
 	.action(async (skill, options) => {
 		if (!options.body) {
-			console.error(chalk.red("Error: --body is required"))
+			console.error(pc.red("Error: --body is required"))
 			console.error(
-				chalk.dim(
+				pc.dim(
 					'Usage: smithery skill review add <skill> --up|--down -b "review text"',
 				),
 			)
 			process.exit(1)
 		}
 		if (!options.up && !options.down) {
-			console.error(chalk.red("Error: --up or --down is required"))
+			console.error(pc.red("Error: --up or --down is required"))
 			console.error(
-				chalk.dim(
+				pc.dim(
 					'Usage: smithery skill review add <skill> --up|--down -b "review text"',
 				),
 			)
 			process.exit(1)
 		}
 		if (options.up && options.down) {
-			console.error(chalk.red("Error: Cannot specify both --up and --down"))
+			console.error(pc.red("Error: Cannot specify both --up and --down"))
 			process.exit(1)
 		}
 		const { submitReview } = await import("./commands/skill")
@@ -1099,12 +1100,12 @@ if (argv[2] && argv[2] in COMMAND_ALIASES) {
 // Parse arguments and run
 program.parseAsync(argv).catch((error: unknown) => {
 	if (error instanceof Error) {
-		console.error(chalk.red(`\n✗ ${error.message}`))
+		console.error(pc.red(`\n✗ ${error.message}`))
 		if (process.argv.includes("--debug") && error.stack) {
-			console.error(chalk.gray(error.stack))
+			console.error(pc.gray(error.stack))
 		}
 	} else {
-		console.error(chalk.red(`\n✗ ${String(error)}`))
+		console.error(pc.red(`\n✗ ${String(error)}`))
 	}
 	process.exit(1)
 })

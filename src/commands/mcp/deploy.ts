@@ -5,9 +5,8 @@ import type {
 	ReleaseDeployParams,
 	ReleaseGetResponse,
 } from "@smithery/api/resources/servers/releases"
-import chalk from "chalk"
-import cliSpinners from "cli-spinners"
-import ora from "ora"
+import pc from "picocolors"
+import yoctoSpinner from "yocto-spinner"
 import { buildBundle, loadBuildManifest } from "../../lib/bundle/index.js"
 import { fatal } from "../../lib/cli-error"
 import { loadProjectConfig } from "../../lib/config-loader.js"
@@ -36,7 +35,7 @@ export async function deploy(options: DeployOptions = {}) {
 	if (options.fromBuild) {
 		if (options.entryFile || options.url) {
 			console.error(
-				chalk.red(
+				pc.red(
 					"Error: --from-build cannot be combined with an entry file or URL",
 				),
 			)
@@ -49,7 +48,7 @@ export async function deploy(options: DeployOptions = {}) {
 
 	// If --name is not provided, run interactive flow
 	if (!qualifiedName) {
-		console.log(chalk.cyan("Publishing to Smithery Registry..."))
+		console.log(pc.cyan("Publishing to Smithery Registry..."))
 
 		try {
 			// Resolve server name from build manifest or smithery.yaml
@@ -74,8 +73,8 @@ export async function deploy(options: DeployOptions = {}) {
 			if (configServerName) {
 				const source = options.fromBuild ? "build manifest" : "smithery.yaml"
 				console.log(
-					chalk.dim(
-						`Using server name "${chalk.cyan(configServerName)}" from ${source}`,
+					pc.dim(
+						`Using server name "${pc.cyan(configServerName)}" from ${source}`,
 					),
 				)
 				qualifiedName = namespace
@@ -94,14 +93,14 @@ export async function deploy(options: DeployOptions = {}) {
 	}
 
 	if (!qualifiedName) {
-		console.error(chalk.red("Error: Server name is required"))
+		console.error(pc.red("Error: Server name is required"))
 		process.exit(1)
 	}
 
 	if (options.resume) {
-		console.log(chalk.cyan(`\nResuming latest release for ${qualifiedName}...`))
+		console.log(pc.cyan(`\nResuming latest release for ${qualifiedName}...`))
 		console.log(
-			chalk.dim(
+			pc.dim(
 				`> Track progress at: https://smithery.ai/servers/${qualifiedName}/releases`,
 			),
 		)
@@ -119,7 +118,7 @@ export async function deploy(options: DeployOptions = {}) {
 
 	if (options.configSchema && !isExternal) {
 		console.error(
-			chalk.red(
+			pc.red(
 				"Error: --config-schema can only be used when publishing a URL",
 			),
 		)
@@ -152,7 +151,7 @@ export async function deploy(options: DeployOptions = {}) {
 			const projectConfig = loadProjectConfig()
 			if (projectConfig?.build?.assets?.length) {
 				console.log(
-					chalk.yellow(
+					pc.yellow(
 						"\nWarning: build.assets is only supported with `smithery mcp build --transport stdio`. Assets will be ignored.",
 					),
 				)
@@ -180,8 +179,8 @@ export async function deploy(options: DeployOptions = {}) {
 				? "stdio"
 				: "hosted"
 	console.log(
-		chalk.cyan(
-			`\nPublishing ${chalk.bold(qualifiedName)} (${deployType}) to Smithery Registry...`,
+		pc.cyan(
+			`\nPublishing ${pc.bold(qualifiedName)} (${deployType}) to Smithery Registry...`,
 		),
 	)
 
@@ -214,9 +213,8 @@ async function deployToServer(
 	sourcemapFile?: ReturnType<typeof createReadStream>,
 	bundleFile?: ReturnType<typeof createReadStream>,
 ) {
-	const uploadSpinner = ora({
+	const uploadSpinner = yoctoSpinner({
 		text: "Uploading release...",
-		spinner: cliSpinners.star,
 		color: "yellow",
 	}).start()
 
@@ -235,11 +233,11 @@ async function deployToServer(
 	}
 
 	uploadSpinner.stop()
-	console.log(chalk.dim(`✓ Release ${result.deploymentId} accepted`))
+	console.log(pc.dim(`✓ Release ${result.deploymentId} accepted`))
 
-	console.log(chalk.dim("> Waiting for completion..."))
+	console.log(pc.dim("> Waiting for completion..."))
 	console.log(
-		chalk.dim(
+		pc.dim(
 			`> Track progress at: https://smithery.ai/servers/${qualifiedName}/releases`,
 		),
 	)
@@ -291,9 +289,9 @@ async function deployWithAutoCreate(
 		// Namespace not found — can't auto-create
 		if (errorMessage.toLowerCase().includes("namespace")) {
 			const ns = qualifiedName.split("/")[0]
-			console.error(chalk.red(`\n✗ Error: Namespace "${ns}" not found.`))
+			console.error(pc.red(`\n✗ Error: Namespace "${ns}" not found.`))
 			console.error(
-				chalk.dim(
+				pc.dim(
 					"   The namespace doesn't exist. Please create it first or use a different namespace.",
 				),
 			)
@@ -315,7 +313,7 @@ async function deployWithAutoCreate(
 		}
 
 		await registry.servers.create(qualifiedName)
-		console.log(chalk.dim(`✓ Created server "${qualifiedName}"`))
+		console.log(pc.dim(`✓ Created server "${qualifiedName}"`))
 
 		// Retry the deploy with fresh streams
 		const streams = createStreams(modulePath, sourcemapPath, bundlePath)
@@ -347,30 +345,30 @@ async function pollDeployment(
 			for (let i = lastLoggedIndex; i < data.logs.length; i++) {
 				const log = data.logs[i]
 				if (log.message === "auth_required") continue
-				const color = log.level === "error" ? chalk.red : chalk.white
-				console.log(`${chalk.dim(`[${log.stage}]`)} ${color(log.message)}`)
+				const color = log.level === "error" ? pc.red : pc.white
+				console.log(`${pc.dim(`[${log.stage}]`)} ${color(log.message)}`)
 			}
 			lastLoggedIndex = data.logs.length
 		}
 
 		if (data.status === "SUCCESS") {
-			console.log(chalk.green("\n✓ Release successful!"))
-			console.log(chalk.dim(`${chalk.bold("Release ID:")} ${deploymentId}`))
+			console.log(pc.green("\n✓ Release successful!"))
+			console.log(pc.dim(`${pc.bold("Release ID:")} ${deploymentId}`))
 			console.log(
-				`  ${chalk.green(chalk.dim("➜"))}  ${chalk.bold(chalk.dim("MCP URL:"))}      ${chalk.cyan(data.mcpUrl)}`,
+				`  ${pc.green(pc.dim("➜"))}  ${pc.bold(pc.dim("MCP URL:"))}      ${pc.cyan(data.mcpUrl)}`,
 			)
 			console.log(
-				`  ${chalk.green("➜")}  ${chalk.bold("Server Page:")} ${chalk.cyan(`https://smithery.ai/servers/${qualifiedName}`)}`,
+				`  ${pc.green("➜")}  ${pc.bold("Server Page:")} ${pc.cyan(`https://smithery.ai/servers/${qualifiedName}`)}`,
 			)
 			return
 		}
 
 		if (data.status === "AUTH_REQUIRED") {
 			const authUrl = `https://smithery.ai/servers/${qualifiedName}/releases/`
-			console.log(chalk.yellow("\n⚠ OAuth authorization required."))
-			console.log(`Please authorize at: ${chalk.cyan(authUrl)}`)
+			console.log(pc.yellow("\n⚠ OAuth authorization required."))
+			console.log(`Please authorize at: ${pc.cyan(authUrl)}`)
 			console.log(
-				chalk.dim("Once authorized, release will automatically continue."),
+				pc.dim("Once authorized, release will automatically continue."),
 			)
 			return
 		}
@@ -384,26 +382,26 @@ async function pollDeployment(
 				(l: ReleaseGetResponse.Log) => l.level === "error",
 			)
 			const errorMessage = errorLog?.message || "Release failed"
-			console.error(chalk.red(`\n✗ Release failed: ${errorMessage}`))
+			console.error(pc.red(`\n✗ Release failed: ${errorMessage}`))
 
 			if (errorMessage.includes("timed out")) {
-				console.error(chalk.yellow("\nTroubleshooting tips:"))
+				console.error(pc.yellow("\nTroubleshooting tips:"))
 				console.error(
-					chalk.dim("  • Verify your MCP server is running and accessible"),
+					pc.dim("  • Verify your MCP server is running and accessible"),
 				)
-				console.error(chalk.dim("  • Check if the server URL is correct"))
+				console.error(pc.dim("  • Check if the server URL is correct"))
 				console.error(
-					chalk.dim("  • Ensure there are no firewall/network issues"),
+					pc.dim("  • Ensure there are no firewall/network issues"),
 				)
 			} else if (
 				errorMessage.includes("auth_required") ||
 				errorMessage.includes("Authentication")
 			) {
 				console.error(
-					chalk.yellow("\nThe server requires OAuth authentication."),
+					pc.yellow("\nThe server requires OAuth authentication."),
 				)
 				console.error(
-					chalk.dim(
+					pc.dim(
 						`  Visit: https://smithery.ai/servers/${qualifiedName}/releases`,
 					),
 				)

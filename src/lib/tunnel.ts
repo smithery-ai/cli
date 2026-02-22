@@ -1,5 +1,6 @@
-import chalk from "chalk"
+import pc from "picocolors"
 import { debug } from "./logger"
+import { lazyImport } from "./lazy-import.js"
 import { createSmitheryClientSync } from "./smithery-client"
 
 async function getTemporaryTunnelToken(apiKey: string): Promise<{
@@ -17,17 +18,17 @@ export async function startTunnel(
 	listener: { url: () => string | null; close: () => Promise<void> }
 	url: string
 }> {
-	debug(chalk.blue(`Starting tunnel for localhost:${port}...`))
+	debug(pc.blue(`Starting tunnel for localhost:${port}...`))
 
 	// Get temporary token from Smithery backend
-	debug(chalk.gray("Getting tunnel credentials..."))
+	debug(pc.gray("Getting tunnel credentials..."))
 	const { authtoken, domain } = await getTemporaryTunnelToken(apiKey)
 
-	// Dynamically import ngrok to prevent loading it during build commands
-	const ngrok = await import("@ngrok/ngrok")
+	// Lazily import ngrok — only installed on first use
+	const ngrok = await lazyImport<typeof import("@ngrok/ngrok")>("@ngrok/ngrok")
 
 	// Start tunnel using ngrok SDK with temporary token
-	const listener = await ngrok.default.forward({
+	const listener = await ngrok.forward({
 		addr: port,
 		authtoken,
 		domain,

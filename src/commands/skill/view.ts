@@ -1,4 +1,4 @@
-import chalk from "chalk"
+import pc from "picocolors"
 
 const DEFAULT_BASE_URL = "https://smithery.ai"
 
@@ -64,9 +64,9 @@ async function showAvailableFiles(
  */
 export async function viewSkill(identifier: string): Promise<void> {
 	if (!identifier) {
-		console.error(chalk.red("Error: Skill identifier is required"))
+		console.error(pc.red("Error: Skill identifier is required"))
 		console.error(
-			chalk.dim("Usage: smithery skills view <namespace/slug[/path]>"),
+			pc.dim("Usage: smithery skills view <namespace/slug[/path]>"),
 		)
 		process.exit(1)
 	}
@@ -76,7 +76,7 @@ export async function viewSkill(identifier: string): Promise<void> {
 		parsed = parseIdentifier(identifier)
 	} catch (error) {
 		console.error(
-			chalk.red(error instanceof Error ? error.message : String(error)),
+			pc.red(error instanceof Error ? error.message : String(error)),
 		)
 		process.exit(1)
 	}
@@ -91,14 +91,14 @@ export async function viewSkill(identifier: string): Promise<void> {
 		if (!response.ok) {
 			if (response.status === 404) {
 				console.error(
-					chalk.red(`File not found: ${path} in skill ${namespace}/${slug}`),
+					pc.red(`File not found: ${path} in skill ${namespace}/${slug}`),
 				)
 				if (hasSubpath) {
 					await showAvailableFiles(baseUrl, namespace, slug)
 				}
 			} else {
 				console.error(
-					chalk.red(
+					pc.red(
 						`Failed to fetch skill file (${response.status}): ${response.statusText}`,
 					),
 				)
@@ -112,14 +112,14 @@ export async function viewSkill(identifier: string): Promise<void> {
 		if (!hasSubpath) {
 			console.log()
 			console.log(
-				chalk.dim(
+				pc.dim(
 					`Tip: View referenced files with: smithery skills view ${namespace}/${slug}/<path>`,
 				),
 			)
 		}
 	} catch (error) {
 		console.error(
-			chalk.red(
+			pc.red(
 				`Error fetching skill: ${error instanceof Error ? error.message : String(error)}`,
 			),
 		)

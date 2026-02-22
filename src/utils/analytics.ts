@@ -1,4 +1,4 @@
-import chalk from "chalk"
+import pc from "picocolors"
 import inquirer from "inquirer"
 import { uuidv7 } from "uuidv7"
 import { ANALYTICS_ENDPOINT } from "../constants"
@@ -74,7 +74,7 @@ export async function checkAnalyticsConsent(): Promise<void> {
 		const initResult = await initializeSettings()
 		if (!initResult.success) {
 			console.warn(
-				chalk.yellow("[Analytics] Failed to initialize settings:"),
+				pc.yellow("[Analytics] Failed to initialize settings:"),
 				initResult.error,
 			)
 			verbose(
@@ -107,7 +107,7 @@ export async function checkAnalyticsConsent(): Promise<void> {
 				const result = await setAnalyticsConsent(EnableAnalytics)
 				if (!result.success) {
 					console.warn(
-						chalk.yellow("[Smithery] Failed to save preference:"),
+						pc.yellow("[Smithery] Failed to save preference:"),
 						result.error,
 					)
 					verbose(
@@ -117,7 +117,7 @@ export async function checkAnalyticsConsent(): Promise<void> {
 			} catch (error) {
 				// Handle potential inquirer errors
 				console.warn(
-					chalk.yellow("[Smithery] Failed to prompt for consent:"),
+					pc.yellow("[Smithery] Failed to prompt for consent:"),
 					error instanceof Error ? error.message : String(error),
 				)
 				verbose(
@@ -130,7 +130,7 @@ export async function checkAnalyticsConsent(): Promise<void> {
 	} catch (error) {
 		// Handle any unexpected errors
 		console.warn(
-			chalk.yellow("[Analytics] Failed to check consent:"),
+			pc.yellow("[Analytics] Failed to check consent:"),
 			error instanceof Error ? error.message : String(error),
 		)
 		verbose(`Analytics consent check error details: ${JSON.stringify(error)}`)

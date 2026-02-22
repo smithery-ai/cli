@@ -1,5 +1,5 @@
 import { existsSync, readFileSync } from "node:fs"
-import chalk from "chalk"
+import pc from "picocolors"
 import { z } from "zod"
 import type { ServerConfig } from "../types/registry"
 
@@ -113,7 +113,7 @@ export function parseServerConfig(configOption: string): ServerConfig {
 		return parseJsonString(configOption) as ServerConfig
 	} catch (error) {
 		const errorMessage = error instanceof Error ? error.message : String(error)
-		console.error(chalk.red(`Error parsing config: ${errorMessage}`))
+		console.error(pc.red(`Error parsing config: ${errorMessage}`))
 		process.exit(1)
 	}
 }
@@ -134,7 +134,7 @@ export function parseConfigSchema(input: string): { [key: string]: unknown } {
 		// If it looks like a file path, try to read it
 		if (input.endsWith(".json")) {
 			if (!existsSync(input)) {
-				console.error(chalk.red(`Config schema file not found: ${input}`))
+				console.error(pc.red(`Config schema file not found: ${input}`))
 				process.exit(1)
 			}
 			jsonString = readFileSync(input, "utf-8")
@@ -146,14 +146,14 @@ export function parseConfigSchema(input: string): { [key: string]: unknown } {
 
 		const result = ConfigSchemaSchema.safeParse(parsed)
 		if (!result.success) {
-			console.error(chalk.red("Invalid config schema: must be a JSON object"))
+			console.error(pc.red("Invalid config schema: must be a JSON object"))
 			process.exit(1)
 		}
 
 		return result.data
 	} catch (error) {
 		const errorMessage = error instanceof Error ? error.message : String(error)
-		console.error(chalk.red(`Error parsing config schema: ${errorMessage}`))
+		console.error(pc.red(`Error parsing config schema: ${errorMessage}`))
 		process.exit(1)
 	}
 }

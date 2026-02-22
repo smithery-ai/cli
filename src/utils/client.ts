@@ -1,6 +1,6 @@
 import { exec } from "node:child_process"
 import { promisify } from "node:util"
-import chalk from "chalk"
+import pc from "picocolors"
 import inquirer from "inquirer"
 
 const execAsync = promisify(exec)
@@ -105,7 +105,7 @@ export function showPostInstallHint(client: string): void {
 	const label = cliClients[client]
 	if (label) {
 		console.log(
-			chalk.cyan(
+			pc.cyan(
 				`ℹ You may need to restart ${label} for changes to take effect.`,
 			),
 		)

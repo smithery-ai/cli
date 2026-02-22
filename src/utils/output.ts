@@ -1,4 +1,4 @@
-import chalk from "chalk"
+import pc from "picocolors"
 
 // ─── Output mode detection ──────────────────────────────────────────────────
 
@@ -79,7 +79,7 @@ export function outputTable(options: {
 
 	if (data.length === 0) {
 		if (tip) {
-			console.log(chalk.dim(tip))
+			console.log(pc.dim(tip))
 		}
 		return
 	}
@@ -95,7 +95,7 @@ export function outputTable(options: {
 		const header = columns
 			.map((col, i) => col.header.padEnd(widths[i]))
 			.join("  ")
-		console.log(chalk.dim(header))
+		console.log(pc.dim(header))
 	}
 
 	for (const row of data) {
@@ -108,13 +108,13 @@ export function outputTable(options: {
 	if (pagination) {
 		const msg = formatPagination(pagination, data.length)
 		if (msg) {
-			console.log(chalk.dim(`\n${msg}`))
+			console.log(pc.dim(`\n${msg}`))
 		}
 	}
 
 	if (tip) {
 		console.log()
-		console.log(chalk.dim(`Tip: ${tip}`))
+		console.log(pc.dim(`Tip: ${tip}`))
 	}
 }
 
@@ -147,12 +147,12 @@ export function outputDetail(options: {
 		const val = data[key]
 		if (val === undefined || val === null) continue
 		const display = typeof val === "object" ? JSON.stringify(val) : String(val)
-		console.log(`${chalk.dim(key.padEnd(maxKeyLen))}  ${display}`)
+		console.log(`${pc.dim(key.padEnd(maxKeyLen))}  ${display}`)
 	}
 
 	if (tip) {
 		console.log()
-		console.log(chalk.dim(`Tip: ${tip}`))
+		console.log(pc.dim(`Tip: ${tip}`))
 	}
 }
 

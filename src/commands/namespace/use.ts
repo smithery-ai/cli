@@ -1,4 +1,4 @@
-import chalk from "chalk"
+import pc from "picocolors"
 import { createSmitheryClient } from "../../lib/smithery-client"
 import { setNamespace } from "../../utils/smithery-settings"
 
@@ -9,9 +9,9 @@ export async function useNamespace(name: string): Promise<void> {
 	const exists = namespaces.some((ns) => ns.name === name)
 
 	if (!exists) {
-		console.error(chalk.red(`Namespace "${name}" not found.`))
+		console.error(pc.red(`Namespace "${name}" not found.`))
 		console.error(
-			chalk.gray(
+			pc.gray(
 				`Available namespaces: ${namespaces.map((ns) => ns.name).join(", ")}`,
 			),
 		)
@@ -20,10 +20,10 @@ export async function useNamespace(name: string): Promise<void> {
 
 	const result = await setNamespace(name)
 	if (!result.success) {
-		console.error(chalk.red("Failed to save namespace setting."))
-		console.error(chalk.gray(result.error))
+		console.error(pc.red("Failed to save namespace setting."))
+		console.error(pc.gray(result.error))
 		process.exit(1)
 	}
 
-	console.log(chalk.green(`Switched to namespace: ${name}`))
+	console.log(pc.green(`Switched to namespace: ${name}`))
 }

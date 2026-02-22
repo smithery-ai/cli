@@ -1,6 +1,6 @@
 import { copyFileSync, existsSync, mkdirSync } from "node:fs"
 import { dirname, join, relative, resolve } from "node:path"
-import fg from "fast-glob"
+import { glob } from "tinyglobby"
 
 export interface CopyAssetsResult {
 	copiedFiles: string[]
@@ -30,7 +30,7 @@ export async function copyBundleAssets(options: {
 	for (const pattern of patterns) {
 		let matchedFiles: string[]
 		try {
-			matchedFiles = await fg(pattern, {
+			matchedFiles = await glob([pattern], {
 				cwd: resolvedBaseDir,
 				dot: true,
 				onlyFiles: true,

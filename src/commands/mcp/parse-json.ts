@@ -1,4 +1,4 @@
-import chalk from "chalk"
+import pc from "picocolors"
 
 export function parseJsonObject<T extends Record<string, unknown>>(
 	json: string | undefined,
@@ -25,7 +25,7 @@ export function parseJsonObject<T extends Record<string, unknown>>(
 		return parsed as T
 	} catch (e) {
 		console.error(
-			chalk.red(
+			pc.red(
 				`Invalid ${name.toLowerCase()} JSON: ${e instanceof Error ? e.message : String(e)}`,
 			),
 		)

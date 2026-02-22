@@ -3,9 +3,9 @@ import { promisify } from "node:util"
 import { getDefaultEnvironment } from "@modelcontextprotocol/sdk/client/stdio.js"
 import { AuthenticationError } from "@smithery/api"
 import type { ServerGetResponse } from "@smithery/api/resources/servers/servers"
-import chalk from "chalk"
+import pc from "picocolors"
 import inquirer from "inquirer"
-import ora from "ora"
+import yoctoSpinner from "yocto-spinner"
 import { verbose } from "../lib/logger"
 import { validateApiKey } from "../lib/registry"
 import { clearApiKey, getApiKey, setApiKey } from "./smithery-settings"
@@ -38,14 +38,14 @@ async function promptForUVInstall(): Promise<boolean> {
 
 	if (!shouldInstall) {
 		console.warn(
-			chalk.yellow(
+			pc.yellow(
 				"UV installation was declined. You can install it manually from https://astral.sh/uv",
 			),
 		)
 		return false
 	}
 
-	const spinner = ora("Installing UV package manager...").start()
+	const spinner = yoctoSpinner({ text: "Installing UV package manager..." }).start()
 	try {
 		if (process.platform === "win32") {
 			await execAsync(
@@ -59,10 +59,10 @@ async function promptForUVInstall(): Promise<boolean> {
 			}
 		}
 
-		spinner.succeed("✓ UV installed successfully")
+		spinner.success("✓ UV installed successfully")
 		return true
 	} catch (_error) {
-		spinner.fail(
+		spinner.error(
 			"Failed to install UV. You can install it manually from https://astral.sh/uv",
 		)
 		return false
@@ -103,7 +103,7 @@ async function promptForBunInstall(): Promise<boolean> {
 
 	if (!shouldInstall) {
 		console.warn(
-			chalk.yellow(
+			pc.yellow(
 				"Bun installation was declined. You can install it manually from https://bun.sh",
 			),
 		)
@@ -127,11 +127,11 @@ async function promptForBunInstall(): Promise<boolean> {
 				await execAsync("curl -fsSL https://bun.sh/install | bash")
 			}
 		}
-		console.log(chalk.green("Bun installed successfully!"))
+		console.log(pc.green("Bun installed successfully!"))
 		return true
 	} catch (error) {
 		console.error(
-			chalk.red("Failed to install Bun:"),
+			pc.red("Failed to install Bun:"),
 			error instanceof Error ? error.message : String(error),
 		)
 		console.log("Please install Bun manually from https://bun.sh")
@@ -175,7 +175,7 @@ export async function ensureUVInstalled(connection: Connection): Promise<void> {
 			const installed = await promptForUVInstall()
 			if (!installed) {
 				console.warn(
-					chalk.yellow("UV is not installed. The server might fail to launch."),
+					pc.yellow("UV is not installed. The server might fail to launch."),
 				)
 			}
 		}
@@ -197,7 +197,7 @@ export async function ensureBunInstalled(
 			const installed = await promptForBunInstall()
 			if (!installed) {
 				console.warn(
-					chalk.yellow(
+					pc.yellow(
 						"Bun is not installed. The server might fail to launch.",
 					),
 				)
@@ -236,7 +236,7 @@ export function checkAndNotifyRemoteServer(server: {
 	if (remote) {
 		verbose("Remote server detected, showing security notice")
 		console.log(
-			`${chalk.yellow("*")} ${chalk.dim("Installing remote server. Please ensure you trust the server author, especially when sharing sensitive data.")}`,
+			`${pc.yellow("*")} ${pc.dim("Installing remote server. Please ensure you trust the server author, especially when sharing sensitive data.")}`,
 		)
 	}
 
@@ -252,7 +252,7 @@ async function promptForApiKey(): Promise<string> {
 		{
 			type: "password",
 			name: "apiKey",
-			message: `Please enter your Smithery API key ${chalk.cyan("(get one for free from")} ${chalk.blue.underline("https://smithery.ai/account/api-keys")}${chalk.cyan(")")}:`,
+			message: `Please enter your Smithery API key ${pc.cyan("(get one for free from")} ${pc.blue(pc.underline("https://smithery.ai/account/api-keys"))}${pc.cyan(")")}:`,
 			mask: "*",
 			validate: (input: string) => {
 				if (!input.trim()) {
@@ -298,7 +298,7 @@ export async function ensureApiKey(apiKey?: string): Promise<string> {
 		// Handle invalid API key (401 error)
 		if (error instanceof AuthenticationError) {
 			console.error(
-				chalk.red(
+				pc.red(
 					'✗ API key is expired or invalid. Run "smithery login" to re-authenticate.',
 				),
 			)
@@ -316,7 +316,7 @@ export async function ensureApiKey(apiKey?: string): Promise<string> {
 			} catch (validationError) {
 				if (validationError instanceof AuthenticationError) {
 					console.error(
-						chalk.red(
+						pc.red(
 							'✗ API key is invalid. Please check your key or run "smithery login" to get a new one.',
 						),
 					)

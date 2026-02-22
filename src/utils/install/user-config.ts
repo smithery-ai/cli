@@ -4,7 +4,7 @@ type Connection =
 	| ServerGetResponse.StdioConnection
 	| ServerGetResponse.HTTPConnection
 
-import type ora from "ora"
+import type yoctoSpinner from "yocto-spinner"
 import { getConfig } from "../../lib/keychain"
 import { verbose } from "../../lib/logger"
 import {
@@ -15,8 +15,8 @@ import type { JSONSchema, ServerConfig } from "../../types/registry"
 import { promptForExistingConfig } from "../command-prompts"
 import { collectConfigValues } from "./prompt-user-config.js"
 
-// Type for ora spinner instance
-export type OraSpinner = ReturnType<ReturnType<typeof ora>["start"]>
+// Type for yocto-spinner instance
+export type OraSpinner = ReturnType<typeof yoctoSpinner>
 
 /**
  * Converts a value to the specified type

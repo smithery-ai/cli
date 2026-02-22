@@ -4,7 +4,7 @@ type Connection =
 	| ServerGetResponse.StdioConnection
 	| ServerGetResponse.HTTPConnection
 
-import chalk from "chalk"
+import pc from "picocolors"
 import inquirer from "inquirer"
 import type { JSONSchema, ServerConfig } from "../../types/registry"
 import { validateAndFormatConfig } from "./user-config.js"
@@ -123,7 +123,7 @@ export async function collectConfigValues(
 	} catch (error) {
 		const errorMessage =
 			error instanceof Error ? error.message : "Unknown configuration error"
-		console.error(chalk.red("Configuration error:"), errorMessage)
+		console.error(pc.red("Configuration error:"), errorMessage)
 		return collectedConfig
 	}
 }
@@ -145,7 +145,7 @@ async function promptForConfigValue(
 	required: Set<string>,
 ): Promise<unknown> {
 	const requiredText = required.has(key)
-		? chalk.red(" (required)")
+		? pc.red(" (required)")
 		: " (press enter to skip)"
 
 	const promptType = key.toLowerCase().includes("key")

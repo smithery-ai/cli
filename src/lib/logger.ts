@@ -1,4 +1,4 @@
-import chalk from "chalk"
+import pc from "picocolors"
 
 let isVerbose = false
 let isDebug = false
@@ -13,12 +13,12 @@ export function setDebug(value: boolean): void {
 
 export function verbose(message: string): void {
 	if (isVerbose) {
-		console.log(chalk.gray(`[verbose] ${message}`))
+		console.log(pc.gray(`[verbose] ${message}`))
 	}
 }
 
 export function debug(message: string): void {
 	if (isDebug) {
-		console.debug(chalk.blue(`[debug] ${message}`))
+		console.debug(pc.blue(`[debug] ${message}`))
 	}
 }

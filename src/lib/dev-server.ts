@@ -1,17 +1,10 @@
 import { readFile } from "node:fs/promises"
 import { dirname } from "node:path"
-import { Log, LogLevel, Miniflare } from "miniflare"
+import { lazyImport } from "./lazy-import.js"
 
 export interface DevServerOptions {
 	port: number
 	modulePath: string
-}
-
-class SmitheryLog extends Log {
-	protected log(message: string): void {
-		const transformed = message.replace(/^\[.*?:(.*?)\] /, "$1 ")
-		console.log(transformed)
-	}
 }
 
 async function getModuleSourceOptions(modulePath: string) {
@@ -31,6 +24,16 @@ async function getModuleSourceOptions(modulePath: string) {
 }
 
 export async function createDevServer(options: DevServerOptions) {
+	const { Log, LogLevel, Miniflare } =
+		await lazyImport<typeof import("miniflare")>("miniflare")
+
+	class SmitheryLog extends Log {
+		protected log(message: string): void {
+			const transformed = message.replace(/^\[.*?:(.*?)\] /, "$1 ")
+			console.log(transformed)
+		}
+	}
+
 	const sourceOptions = await getModuleSourceOptions(options.modulePath)
 
 	const mf = new Miniflare({

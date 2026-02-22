@@ -4,8 +4,8 @@ import * as _entry from "virtual:user-module"
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js"
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js"
 import type { ServerModule } from "@smithery/sdk"
-import chalk from "chalk"
-import _ from "lodash"
+import pc from "picocolors"
+import { set } from "es-toolkit/compat"
 import { uuidv7 } from "uuidv7"
 import type * as z from "zod"
 
@@ -32,7 +32,7 @@ const formatLog = (
 	msg?: string,
 ) => {
 	const time = new Date().toISOString().split("T")[1].split(".")[0]
-	const timestamp = chalk.dim(time)
+	const timestamp = pc.dim(time)
 	const levelStr = color(level)
 
 	if (typeof msgOrObj === "string") {
@@ -40,18 +40,18 @@ const formatLog = (
 	}
 	const message = msg || ""
 	const data = JSON.stringify(msgOrObj, null, 2)
-	return `${timestamp} ${levelStr} ${message}\n${chalk.dim(data)}`
+	return `${timestamp} ${levelStr} ${message}\n${pc.dim(data)}`
 }
 
 const logger: Logger = {
 	info: (msgOrObj: unknown, msg?: string) =>
-		console.error(formatLog("INFO", chalk.blue, msgOrObj, msg)),
+		console.error(formatLog("INFO", pc.blue, msgOrObj, msg)),
 	error: (msgOrObj: unknown, msg?: string) =>
-		console.error(formatLog("ERROR", chalk.red, msgOrObj, msg)),
+		console.error(formatLog("ERROR", pc.red, msgOrObj, msg)),
 	warn: (msgOrObj: unknown, msg?: string) =>
-		console.error(formatLog("WARN", chalk.yellow, msgOrObj, msg)),
+		console.error(formatLog("WARN", pc.yellow, msgOrObj, msg)),
 	debug: (msgOrObj: unknown, msg?: string) =>
-		console.error(formatLog("DEBUG", chalk.cyan, msgOrObj, msg)),
+		console.error(formatLog("DEBUG", pc.cyan, msgOrObj, msg)),
 } as Logger
 
 /**
@@ -80,8 +80,8 @@ function parseCliConfig<T = Record<string, unknown>>(
 			// If parsing fails, use the raw string value
 		}
 
-		// Use lodash's set method to handle nested paths
-		_.set(config, pathParts, parsedValue)
+		// Set nested path on config object
+		set(config, pathParts, parsedValue)
 	}
 
 	// Validate config against schema if provided

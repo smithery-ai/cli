@@ -1,4 +1,4 @@
-import chalk from "chalk"
+import pc from "picocolors"
 import { fatal } from "../../lib/cli-error"
 import {
 	createPublicSkillsClient,
@@ -55,7 +55,7 @@ export async function installSkill(
 	if (!agent) {
 		const command = `npx -y skills add ${skillUrl}${globalFlag}`
 		console.log()
-		console.log(chalk.cyan(`Running: ${command}`))
+		console.log(pc.cyan(`Running: ${command}`))
 		console.log()
 		execSync(command, { stdio: "inherit" })
 		return
@@ -63,7 +63,7 @@ export async function installSkill(
 
 	const command = `npx -y skills add ${skillUrl} --agent ${agent}${globalFlag} -y`
 	console.log()
-	console.log(chalk.cyan(`Running: ${command}`))
+	console.log(pc.cyan(`Running: ${command}`))
 	console.log()
 	execSync(command, { stdio: "inherit" })
 }

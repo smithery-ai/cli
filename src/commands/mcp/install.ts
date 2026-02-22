@@ -1,6 +1,6 @@
 import "../../utils/suppress-punycode-warning"
-import chalk from "chalk"
-import ora from "ora"
+import pc from "picocolors"
+import yoctoSpinner from "yocto-spinner"
 import type { ValidClient } from "../../config/clients"
 import { getClientConfiguration } from "../../config/clients"
 import { fatal } from "../../lib/cli-error"
@@ -49,13 +49,13 @@ export async function installServer(
 	const clientConfig = getClientConfiguration(client)
 
 	/* resolve server */
-	const spinner = ora(`Resolving ${qualifiedName}...`).start()
+	const spinner = yoctoSpinner({ text: `Resolving ${qualifiedName}...` }).start()
 	try {
 		const { server, connection } = await resolveServer(
 			parseQualifiedName(qualifiedName),
 		)
-		spinner.succeed(
-			chalk.dim(`Successfully resolved ${chalk.cyan(qualifiedName)}`),
+		spinner.success(
+			pc.dim(`Successfully resolved ${pc.cyan(qualifiedName)}`),
 		)
 
 		// Resolve transport type (single source of truth)
@@ -118,13 +118,13 @@ export async function installServer(
 
 		console.log()
 		console.log(
-			chalk.green(`✓ ${qualifiedName} successfully installed for ${client}`),
+			pc.green(`✓ ${qualifiedName} successfully installed for ${client}`),
 		)
 		showPostInstallHint(client)
 		await promptForRestart(client)
 		process.exit(0)
 	} catch (error) {
-		spinner.fail(`Failed to install ${qualifiedName}`)
+		spinner.error(`Failed to install ${qualifiedName}`)
 		verbose(
 			`Installation error: ${error instanceof Error ? error.stack : JSON.stringify(error)}`,
 		)

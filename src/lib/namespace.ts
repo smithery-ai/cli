@@ -1,7 +1,6 @@
 import type { Smithery } from "@smithery/api"
-import chalk from "chalk"
-import cliSpinners from "cli-spinners"
-import ora from "ora"
+import pc from "picocolors"
+import yoctoSpinner from "yocto-spinner"
 import {
 	promptForNamespaceCreation,
 	promptForNamespaceSelection,
@@ -40,14 +39,13 @@ async function createNamespace(client: Smithery, name: string): Promise<void> {
  */
 export async function resolveNamespace(client: Smithery): Promise<string> {
 	// Get user's namespaces
-	const spinner = ora({
+	const spinner = yoctoSpinner({
 		text: "Fetching namespaces...",
-		spinner: cliSpinners.star,
 		color: "yellow",
 	}).start()
 	const userNamespaces = await getUserNamespaces(client)
-	spinner.succeed(
-		chalk.dim(
+	spinner.success(
+		pc.dim(
 			`Found ${userNamespaces.length} namespace${userNamespaces.length === 1 ? "" : "s"}`,
 		),
 	)
@@ -55,20 +53,20 @@ export async function resolveNamespace(client: Smithery): Promise<string> {
 	if (userNamespaces.length === 0) {
 		// No namespaces - prompt to create one (make it clear they will claim it)
 		console.log(
-			chalk.yellow(
+			pc.yellow(
 				"No namespaces found. You will create and claim a new namespace...",
 			),
 		)
 		const newNamespaceName = await promptForNamespaceCreation()
 		await createNamespace(client, newNamespaceName)
 		console.log(
-			chalk.green(`✓ Created and claimed namespace: ${newNamespaceName}`),
+			pc.green(`✓ Created and claimed namespace: ${newNamespaceName}`),
 		)
 		return newNamespaceName
 	} else if (userNamespaces.length === 1) {
 		// Single namespace - use it automatically
 		const namespace = userNamespaces[0]
-		console.log(chalk.dim(`Using namespace: ${chalk.cyan(namespace)}`))
+		console.log(pc.dim(`Using namespace: ${pc.cyan(namespace)}`))
 		return namespace
 	} else {
 		// Multiple namespaces - prompt to select

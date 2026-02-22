@@ -1,6 +1,6 @@
 import { existsSync } from "node:fs"
 import { join } from "node:path"
-import chalk from "chalk"
+import pc from "picocolors"
 import { DEFAULT_PORT } from "../../constants"
 import { buildServer } from "../../lib/build"
 import { fatal } from "../../lib/cli-error"
@@ -55,7 +55,7 @@ export async function dev(options: DevOptions = {}): Promise<void> {
 
 			// Display a user-friendly message on first start
 			if (isFirstBuild) {
-				console.log(chalk.dim("> Starting local development server..."))
+				console.log(pc.dim("> Starting local development server..."))
 			}
 
 			// Start new server with Miniflare wrapper
@@ -67,7 +67,7 @@ export async function dev(options: DevOptions = {}): Promise<void> {
 			// Start tunnel and open playground on first successful start
 			if (isFirstBuild) {
 				console.log(
-					chalk.dim(`> Server starting on port ${chalk.green(finalPort)}`),
+					pc.dim(`> Server starting on port ${pc.green(finalPort)}`),
 				)
 				if (shouldSetupTunnel) {
 					setupTunnelAndPlayground(finalPort, apiKey, options.open !== false)
@@ -76,7 +76,7 @@ export async function dev(options: DevOptions = {}): Promise<void> {
 							isFirstBuild = false
 						})
 						.catch((error) => {
-							console.error(chalk.red("× Failed to start tunnel:"), error)
+							console.error(pc.red("× Failed to start tunnel:"), error)
 						})
 				} else {
 					isFirstBuild = false
@@ -98,7 +98,7 @@ export async function dev(options: DevOptions = {}): Promise<void> {
 
 		// Handle cleanup on exit
 		const cleanup = async () => {
-			console.log(chalk.yellow("\no/ Shutting down server..."))
+			console.log(pc.yellow("\no/ Shutting down server..."))
 
 			// Stop watching
 			if (buildContext && "dispose" in buildContext) {
@@ -114,9 +114,9 @@ export async function dev(options: DevOptions = {}): Promise<void> {
 			if (tunnelListener) {
 				try {
 					await tunnelListener.close()
-					debug(chalk.green("Tunnel closed"))
+					debug(pc.green("Tunnel closed"))
 				} catch (_error) {
-					debug(chalk.yellow("Tunnel already closed"))
+					debug(pc.yellow("Tunnel already closed"))
 				}
 			}
 		}

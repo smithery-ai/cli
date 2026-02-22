@@ -1,5 +1,5 @@
 import "../../utils/suppress-punycode-warning"
-import chalk from "chalk"
+import pc from "picocolors"
 import type { ValidClient } from "../../config/clients"
 import { getClientConfiguration } from "../../config/clients.js"
 import { fatal } from "../../lib/cli-error"
@@ -17,7 +17,7 @@ export async function uninstallServer(
 		const clientConfig = getClientConfiguration(client)
 		if (clientConfig.install.method === "command") {
 			console.log(
-				chalk.yellow(`Uninstallation is currently not supported for ${client}`),
+				pc.yellow(`Uninstallation is currently not supported for ${client}`),
 			)
 			return
 		}
@@ -27,7 +27,7 @@ export async function uninstallServer(
 
 		/* check if server exists in config */
 		if (!config.mcpServers[qualifiedName]) {
-			console.log(chalk.red(`${qualifiedName} is not installed for ${client}`))
+			console.log(pc.red(`${qualifiedName} is not installed for ${client}`))
 			return
 		}
 
@@ -39,7 +39,7 @@ export async function uninstallServer(
 		await deleteConfig(qualifiedName)
 
 		console.log(
-			chalk.green(`✓ ${qualifiedName} successfully uninstalled from ${client}`),
+			pc.green(`✓ ${qualifiedName} successfully uninstalled from ${client}`),
 		)
 
 		await promptForRestart(client)

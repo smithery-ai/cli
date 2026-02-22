@@ -9,7 +9,7 @@ import {
 import { join } from "node:path"
 import { packExtension } from "@anthropic-ai/mcpb"
 import type { DeployPayload } from "@smithery/api/resources/servers/releases"
-import chalk from "chalk"
+import pc from "picocolors"
 
 import { buildServer } from "../build.js"
 import { loadProjectConfig } from "../config-loader.js"
@@ -34,7 +34,7 @@ export async function buildStdioBundle(
 		mkdirSync(outDir, { recursive: true })
 	}
 
-	console.log(chalk.cyan("\nBuilding stdio bundle for Smithery deploy..."))
+	console.log(pc.cyan("\nBuilding stdio bundle for Smithery deploy..."))
 
 	const moduleFile = join(outDir, MCPB_ENTRY_POINT)
 
@@ -48,7 +48,7 @@ export async function buildStdioBundle(
 		sourceMaps: true,
 	})
 
-	console.log(chalk.cyan("\nScanning server capabilities..."))
+	console.log(pc.cyan("\nScanning server capabilities..."))
 	const scanModuleFile = join(outDir, `scan-${Date.now()}.cjs`)
 	await buildServer({
 		entryFile,
@@ -64,15 +64,15 @@ export async function buildStdioBundle(
 	try {
 		scanResult = await scanModule(scanModuleFile)
 	} catch (e) {
-		console.error(chalk.red("\n✗ Failed to scan server capabilities"))
-		console.error(chalk.dim(`  ${e instanceof Error ? e.message : e}`))
+		console.error(pc.red("\n✗ Failed to scan server capabilities"))
+		console.error(pc.dim(`  ${e instanceof Error ? e.message : e}`))
 		console.error(
-			chalk.yellow(
+			pc.yellow(
 				"\nYour server requires configuration to run. Export a createSandboxServer function:",
 			),
 		)
 		console.error(
-			chalk.dim(`
+			pc.dim(`
   // In your server entry file:
   import { createServer } from "./server"
 
@@ -86,12 +86,12 @@ export async function buildStdioBundle(
 `),
 		)
 		console.error(
-			chalk.dim(
+			pc.dim(
 				"This allows Smithery to scan your server's tools/resources without real credentials.",
 			),
 		)
 		console.error(
-			chalk.dim("Learn more: https://smithery.ai/docs/deploy#sandbox-server\n"),
+			pc.dim("Learn more: https://smithery.ai/docs/deploy#sandbox-server\n"),
 		)
 		throw new Error("Server scan failed - cannot generate server card")
 	} finally {
@@ -114,28 +114,28 @@ export async function buildStdioBundle(
 	// Copy assets if configured
 	const projectConfig = loadProjectConfig()
 	if (projectConfig?.build?.assets?.length) {
-		console.log(chalk.cyan("\nCopying assets..."))
+		console.log(pc.cyan("\nCopying assets..."))
 		const { copiedFiles, warnings } = await copyBundleAssets({
 			patterns: projectConfig.build.assets,
 			baseDir: process.cwd(),
 			outDir,
 		})
 		if (copiedFiles.length > 0) {
-			console.log(chalk.dim(`  Copied ${copiedFiles.length} asset(s)`))
+			console.log(pc.dim(`  Copied ${copiedFiles.length} asset(s)`))
 		}
 		for (const warning of warnings) {
-			console.log(chalk.yellow(`  Warning: ${warning}`))
+			console.log(pc.yellow(`  Warning: ${warning}`))
 		}
 	} else {
 		// todo: add link to docs about assets
 		console.log(
-			chalk.dim(
+			pc.dim(
 				'\nℹ Tip: Add "assets" to smithery.yaml to bundle non-code files (e.g., templates, data)',
 			),
 		)
 	}
 
-	console.log(chalk.cyan("\nPacking MCPB bundle..."))
+	console.log(pc.cyan("\nPacking MCPB bundle..."))
 
 	const mcpbManifest = createMcpbManifest(scanResult)
 
@@ -177,7 +177,7 @@ export async function buildStdioBundle(
 	)
 
 	console.log(
-		chalk.green("\n✓ Smithery stdio bundle created at ") + chalk.bold(outDir),
+		pc.green("\n✓ Smithery stdio bundle created at ") + pc.bold(outDir),
 	)
 
 	return outDir

@@ -10,10 +10,10 @@ vi.mock("@smithery/api", () => ({
 	Smithery: vi.fn(),
 }))
 
-vi.mock("ora", () => ({
+vi.mock("yocto-spinner", () => ({
 	default: vi.fn(() => ({
 		start: vi.fn().mockReturnThis(),
-		succeed: vi.fn().mockReturnThis(),
+		success: vi.fn().mockReturnThis(),
 	})),
 }))
 

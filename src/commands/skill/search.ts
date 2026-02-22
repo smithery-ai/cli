@@ -1,6 +1,6 @@
 import type { Smithery } from "@smithery/api"
 import type { SkillListResponse } from "@smithery/api/resources/skills"
-import chalk from "chalk"
+import pc from "picocolors"
 import { SKILL_AGENTS } from "../../config/agents.js"
 import { fatal } from "../../lib/cli-error"
 import { isJsonMode, outputTable, truncate } from "../../utils/output"
@@ -48,7 +48,7 @@ function formatSkillDisplay(skill: SkillListResponse): string {
 	const qualifiedName = `${skill.namespace}/${skill.slug}`
 	const statsDisplay = stats ? ` • ${stats}` : ""
 
-	return `${displayName}${statsDisplay} • ${chalk.dim(qualifiedName)}`
+	return `${displayName}${statsDisplay} • ${pc.dim(qualifiedName)}`
 }
 
 /**
@@ -178,26 +178,26 @@ async function interactiveSearch(
 			queryParams.q = searchTerm
 		}
 
-		const ora = (await import("ora")).default
+		const yoctoSpinner = (await import("yocto-spinner")).default
 		const searchMsg = queryParams.namespace
 			? `Searching in ${queryParams.namespace}${searchTerm ? ` for "${searchTerm}"` : ""}...`
 			: `Searching for "${searchTerm}"...`
-		const spinner = ora(searchMsg).start()
+		const spinner = yoctoSpinner({ text: searchMsg }).start()
 
 		const response = await client.skills.list(queryParams)
 		const skills = response.skills
 
 		if (skills.length === 0) {
-			spinner.fail(`No skills found for "${searchTerm}"`)
+			spinner.error(`No skills found for "${searchTerm}"`)
 			return null
 		}
 
-		spinner.succeed(
+		spinner.success(
 			`☀ ${skills.length < limit ? `Found ${skills.length} result${skills.length === 1 ? "" : "s"}:` : `Showing top ${skills.length} results:`}`,
 		)
 		console.log(
-			chalk.dim(
-				`${chalk.cyan("→ View more")} at smithery.ai/skills?q=${searchTerm.replace(/\s+/g, "+")}`,
+			pc.dim(
+				`${pc.cyan("→ View more")} at smithery.ai/skills?q=${searchTerm.replace(/\s+/g, "+")}`,
 			),
 		)
 		console.log()
@@ -214,8 +214,8 @@ async function interactiveSearch(
 				message: "Select skill for details (or search again):",
 				source: (_: unknown, input: string) => {
 					const options = [
-						{ name: chalk.dim("← Search again"), value: "__SEARCH_AGAIN__" },
-						{ name: chalk.dim("Exit"), value: "__EXIT__" },
+						{ name: pc.dim("← Search again"), value: "__SEARCH_AGAIN__" },
+						{ name: pc.dim("Exit"), value: "__EXIT__" },
 					]
 
 					const filtered = skills
@@ -251,13 +251,13 @@ async function interactiveSearch(
 			const displayName =
 				selectedSkillData.displayName ||
 				`${selectedSkillData.namespace}/${selectedSkillData.slug}`
-			console.log(`${chalk.bold.cyan(displayName)}`)
+			console.log(`${pc.bold(pc.cyan(displayName))}`)
 			console.log(
-				`${chalk.dim("Qualified name:")} ${selectedSkillData.namespace}/${selectedSkillData.slug}`,
+				`${pc.dim("Qualified name:")} ${selectedSkillData.namespace}/${selectedSkillData.slug}`,
 			)
 			if (selectedSkillData.description) {
 				console.log(
-					`${chalk.dim("Description:")} ${selectedSkillData.description}`,
+					`${pc.dim("Description:")} ${selectedSkillData.description}`,
 				)
 			}
 			if (
@@ -265,21 +265,21 @@ async function interactiveSearch(
 				selectedSkillData.categories.length > 0
 			) {
 				console.log(
-					`${chalk.dim("Categories:")} ${selectedSkillData.categories.join(", ")}`,
+					`${pc.dim("Categories:")} ${selectedSkillData.categories.join(", ")}`,
 				)
 			}
 			if (selectedSkillData.externalStars) {
 				console.log(
-					`${chalk.dim("Stars:")} ${selectedSkillData.externalStars.toLocaleString()}`,
+					`${pc.dim("Stars:")} ${selectedSkillData.externalStars.toLocaleString()}`,
 				)
 			}
 			console.log()
 
 			const skillIdentifier = `${selectedSkillData.namespace}/${selectedSkillData.slug}`
-			console.log(chalk.bold("To install this skill, run:"))
+			console.log(pc.bold("To install this skill, run:"))
 			console.log()
 			console.log(
-				chalk.cyan(
+				pc.cyan(
 					`  smithery skills install ${skillIdentifier} --agent <agent-name>`,
 				),
 			)
