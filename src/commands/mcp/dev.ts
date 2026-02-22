@@ -66,9 +66,7 @@ export async function dev(options: DevOptions = {}): Promise<void> {
 
 			// Start tunnel and open playground on first successful start
 			if (isFirstBuild) {
-				console.log(
-					pc.dim(`> Server starting on port ${pc.green(finalPort)}`),
-				)
+				console.log(pc.dim(`> Server starting on port ${pc.green(finalPort)}`))
 				if (shouldSetupTunnel) {
 					setupTunnelAndPlayground(finalPort, apiKey, options.open !== false)
 						.then(({ listener }) => {

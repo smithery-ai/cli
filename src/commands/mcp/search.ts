@@ -1,5 +1,5 @@
-import pc from "picocolors"
 import FlexSearch from "flexsearch"
+import pc from "picocolors"
 import { isJsonMode, outputJson, outputTable } from "../../utils/output"
 import { type Connection, ConnectSession, type ToolInfo } from "./api"
 import { formatToolRow, TOOL_TABLE_COLUMNS } from "./tool-table"

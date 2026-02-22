@@ -4,8 +4,8 @@ type Connection =
 	| ServerGetResponse.StdioConnection
 	| ServerGetResponse.HTTPConnection
 
-import pc from "picocolors"
 import inquirer from "inquirer"
+import pc from "picocolors"
 import type { JSONSchema, ServerConfig } from "../../types/registry"
 import { validateAndFormatConfig } from "./user-config.js"
 

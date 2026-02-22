@@ -1,6 +1,6 @@
 import pc from "picocolors"
-import { debug } from "./logger"
 import { lazyImport } from "./lazy-import.js"
+import { debug } from "./logger"
 import { createSmitheryClientSync } from "./smithery-client"
 
 async function getTemporaryTunnelToken(apiKey: string): Promise<{

@@ -118,9 +118,7 @@ export async function deploy(options: DeployOptions = {}) {
 
 	if (options.configSchema && !isExternal) {
 		console.error(
-			pc.red(
-				"Error: --config-schema can only be used when publishing a URL",
-			),
+			pc.red("Error: --config-schema can only be used when publishing a URL"),
 		)
 		process.exit(1)
 	}
@@ -390,16 +388,12 @@ async function pollDeployment(
 					pc.dim("  • Verify your MCP server is running and accessible"),
 				)
 				console.error(pc.dim("  • Check if the server URL is correct"))
-				console.error(
-					pc.dim("  • Ensure there are no firewall/network issues"),
-				)
+				console.error(pc.dim("  • Ensure there are no firewall/network issues"))
 			} else if (
 				errorMessage.includes("auth_required") ||
 				errorMessage.includes("Authentication")
 			) {
-				console.error(
-					pc.yellow("\nThe server requires OAuth authentication."),
-				)
+				console.error(pc.yellow("\nThe server requires OAuth authentication."))
 				console.error(
 					pc.dim(
 						`  Visit: https://smithery.ai/servers/${qualifiedName}/releases`,

@@ -49,14 +49,14 @@ export async function installServer(
 	const clientConfig = getClientConfiguration(client)
 
 	/* resolve server */
-	const spinner = yoctoSpinner({ text: `Resolving ${qualifiedName}...` }).start()
+	const spinner = yoctoSpinner({
+		text: `Resolving ${qualifiedName}...`,
+	}).start()
 	try {
 		const { server, connection } = await resolveServer(
 			parseQualifiedName(qualifiedName),
 		)
-		spinner.success(
-			pc.dim(`Successfully resolved ${pc.cyan(qualifiedName)}`),
-		)
+		spinner.success(pc.dim(`Successfully resolved ${pc.cyan(qualifiedName)}`))
 
 		// Resolve transport type (single source of truth)
 		const transport = resolveTransport(connection, client)

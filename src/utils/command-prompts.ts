@@ -101,7 +101,9 @@ async function searchAndSelectServer(apiKey?: string): Promise<string> {
 
 	try {
 		const yoctoSpinner = (await import("yocto-spinner")).default
-		const spinner = yoctoSpinner({ text: `Searching for "${searchTerm}"...` }).start()
+		const spinner = yoctoSpinner({
+			text: `Searching for "${searchTerm}"...`,
+		}).start()
 
 		// API key is optional for search - don't prompt
 		const servers = await searchServers(searchTerm, apiKey)
@@ -206,11 +208,7 @@ export async function selectServer(
 		return providedServer
 	}
 
-	console.log(
-		pc.cyan("*"),
-		"Installing MCP server for",
-		pc.cyan(clientName),
-	)
+	console.log(pc.cyan("*"), "Installing MCP server for", pc.cyan(clientName))
 	console.log()
 
 	const inputMethod = await chooseServerInputMethod()
@@ -240,11 +238,7 @@ export async function selectInstalledServer(
 		return providedServer
 	}
 
-	console.log(
-		pc.cyan("*"),
-		"Uninstalling server from",
-		pc.cyan(clientName),
-	)
+	console.log(pc.cyan("*"), "Uninstalling server from", pc.cyan(clientName))
 	console.log()
 
 	if (installedServers.length === 0) {
@@ -335,7 +329,9 @@ export async function interactiveServerSearch(
 	try {
 		while (true) {
 			const yoctoSpinner = (await import("yocto-spinner")).default
-			const spinner = yoctoSpinner({ text: `Searching for "${searchTerm}"...` }).start()
+			const spinner = yoctoSpinner({
+				text: `Searching for "${searchTerm}"...`,
+			}).start()
 
 			const servers = await searchServers(searchTerm, apiKey)
 

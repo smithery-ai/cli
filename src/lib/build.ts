@@ -1,12 +1,13 @@
 import { existsSync, mkdirSync, statSync } from "node:fs"
 import { dirname } from "node:path"
-import pc from "picocolors"
 import type * as esbuild from "esbuild"
+import pc from "picocolors"
 import { lazyImport } from "./lazy-import.js"
 
 const loadEsbuild = () => lazyImport<typeof import("esbuild")>("esbuild")
 
 const brandOrange = (text: string) => `\x1b[38;2;234;88;12m${text}\x1b[39m`
+
 import { resolveEntryPoint } from "./config-loader.js"
 
 // TypeScript declarations for global constants injected at build time

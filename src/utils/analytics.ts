@@ -1,5 +1,5 @@
-import pc from "picocolors"
 import inquirer from "inquirer"
+import pc from "picocolors"
 import { uuidv7 } from "uuidv7"
 import { ANALYTICS_ENDPOINT } from "../constants"
 import { verbose } from "../lib/logger"

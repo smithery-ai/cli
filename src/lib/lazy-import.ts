@@ -72,9 +72,7 @@ export async function lazyImport<T = unknown>(packageName: string): Promise<T> {
 		spinner.error(`Failed to install ${packageName}`)
 		const msg = e instanceof Error ? e.message : String(e)
 		if (msg.includes("EACCES") || msg.includes("permission denied")) {
-			throw new Error(
-				`Permission denied. Try: sudo npm install -g ${spec}`,
-			)
+			throw new Error(`Permission denied. Try: sudo npm install -g ${spec}`)
 		}
 		throw new Error(`Failed to install "${packageName}": ${msg}`)
 	}
