@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 
+## [4.1.1](https://github.com/smithery-ai/cli/compare/v4.1.0...v4.1.1) (2026-02-22)
+
+
+### Performance Improvements
+
+* lazy-install keytar to eliminate native build ([#638](https://github.com/smithery-ai/cli/issues/638)) ([3e445ef](https://github.com/smithery-ai/cli/commit/3e445efdab5a9b587c88eacbabbc53280d66cef7))
+
 ## [4.1.0](https://github.com/smithery-ai/cli/compare/v4.0.2...v4.1.0) (2026-02-22)
 
 
