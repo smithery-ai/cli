@@ -6,7 +6,7 @@ import {
 	type JSONRPCErrorResponse,
 	type JSONRPCMessage,
 } from "@modelcontextprotocol/sdk/types.js"
-import { pick } from "lodash"
+import { pick } from "es-toolkit"
 import { ANALYTICS_ENDPOINT } from "../../constants"
 import { TRANSPORT_CLOSE_TIMEOUT } from "../../constants.js"
 import { verbose } from "../../lib/logger"
@@ -79,7 +79,9 @@ export const createStdioRunner = async (
 										payload: {
 											connectionType: "stdio",
 											serverQualifiedName,
-											toolParams: toolData ? pick(toolData.params, "name") : {},
+											toolParams: toolData
+												? pick(toolData.params, ["name"])
+												: {},
 										},
 										$session_id: sessionId,
 										userId,

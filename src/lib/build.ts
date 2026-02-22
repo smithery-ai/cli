@@ -1,7 +1,13 @@
 import { existsSync, mkdirSync, statSync } from "node:fs"
 import { dirname } from "node:path"
-import chalk from "chalk"
-import * as esbuild from "esbuild"
+import type * as esbuild from "esbuild"
+import pc from "picocolors"
+import { lazyImport } from "./lazy-import.js"
+
+const loadEsbuild = () => lazyImport<typeof import("esbuild")>("esbuild")
+
+const brandOrange = (text: string) => `\x1b[38;2;234;88;12m${text}\x1b[39m`
+
 import { resolveEntryPoint } from "./config-loader.js"
 
 // TypeScript declarations for global constants injected at build time
@@ -68,8 +74,8 @@ async function esbuildServer(
 	const transportDisplay = isStdio ? "stdio" : "shttp"
 
 	console.log(
-		chalk.dim(
-			`${chalk.bold.italic.hex("#ea580c")("SMITHERY")} ${chalk.bold.italic.hex("#ea580c")(`v${__SMITHERY_VERSION__}`)} Building MCP server for ${chalk.cyan(transportDisplay)}...`,
+		pc.dim(
+			`${pc.bold(pc.italic(brandOrange("SMITHERY")))} ${pc.bold(pc.italic(brandOrange(`v${__SMITHERY_VERSION__}`)))} Building MCP server for ${pc.cyan(transportDisplay)}...`,
 		),
 	)
 
@@ -147,14 +153,14 @@ async function esbuildServer(
 					let serverStarted = false
 					build.onEnd((result) => {
 						if (result.errors.length > 0) {
-							console.error(chalk.red("✗ Build error:"), result.errors)
+							console.error(pc.red("✗ Build error:"), result.errors)
 							options.onRebuild?.(false, [])
 							return
 						}
 						if (!serverStarted) {
-							console.log(chalk.dim(chalk.green("✓ Initial build complete")))
+							console.log(pc.dim(pc.green("✓ Initial build complete")))
 						} else {
-							console.log(chalk.dim(chalk.green("✓ Built successfully")))
+							console.log(pc.dim(pc.green("✓ Built successfully")))
 						}
 						const outputs = result.outputFiles?.map((f) => f.path) || [outFile]
 						options.onRebuild?.(true, outputs)
@@ -164,23 +170,25 @@ async function esbuildServer(
 			},
 		]
 
-		const buildContext = await esbuild.context({ ...buildConfig, plugins })
+		const esb = await loadEsbuild()
+		const buildContext = await esb.context({ ...buildConfig, plugins })
 		await buildContext.watch()
 		return buildContext
 	}
 
 	// Single build
 	try {
-		const result = await esbuild.build(buildConfig)
+		const esb = await loadEsbuild()
+		const result = await esb.build(buildConfig)
 		if (result.errors.length > 0) {
-			console.log(chalk.red("✗ Build failed"))
+			console.log(pc.red("✗ Build failed"))
 			console.error(result.errors)
 			process.exit(1)
 		}
 
 		const endTime = performance.now()
 		const duration = Math.round(endTime - startTime)
-		console.log(chalk.green(`✓ Built MCP server in ${duration}ms`))
+		console.log(pc.green(`✓ Built MCP server in ${duration}ms`))
 
 		// Display file size info for the output file
 		if (existsSync(outFile)) {
@@ -195,13 +203,13 @@ async function esbuildServer(
 						: `${(bytes / (1024 * 1024)).toFixed(2)} MB`
 			const buildMode = shouldMinify ? "" : " (not minified)"
 			console.log(
-				`\n  ${relativePath}  ${chalk.yellow(fileSize)}  ${chalk.gray("(entry point)")}${buildMode}\n`,
+				`\n  ${relativePath}  ${pc.yellow(fileSize)}  ${pc.gray("(entry point)")}${buildMode}\n`,
 			)
 		}
 
 		return result
 	} catch (error) {
-		console.log(chalk.red("✗ Build failed"))
+		console.log(pc.red("✗ Build failed"))
 		console.error(error)
 		process.exit(1)
 	}

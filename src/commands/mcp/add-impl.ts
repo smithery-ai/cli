@@ -1,4 +1,4 @@
-import chalk from "chalk"
+import pc from "picocolors"
 import { fatal } from "../../lib/cli-error"
 import { isJsonMode, outputDetail } from "../../utils/output"
 import { ConnectSession } from "./api"
@@ -38,7 +38,7 @@ export async function addServer(
 				const match = existing[0]
 				const status = match.status?.state ?? "unknown"
 				console.error(
-					chalk.yellow(
+					pc.yellow(
 						`Connection already exists for this URL: ${match.name} (${match.connectionId}, status: ${status})`,
 					),
 				)
@@ -47,19 +47,17 @@ export async function addServer(
 						?.authorizationUrl
 					if (authUrl) {
 						console.error(
-							chalk.yellow(`Authorization required. Run: open "${authUrl}"`),
+							pc.yellow(`Authorization required. Run: open "${authUrl}"`),
 						)
 					}
 				} else if (status === "connected") {
 					console.error(
-						chalk.yellow(
+						pc.yellow(
 							`Use "smithery tool list ${match.connectionId}" to interact with it.`,
 						),
 					)
 				}
-				console.error(
-					chalk.dim(`Use --force to create a new connection anyway.`),
-				)
+				console.error(pc.dim(`Use --force to create a new connection anyway.`))
 				const output = formatConnectionOutput(match)
 				outputDetail({ data: output, json: isJson })
 				return
@@ -78,7 +76,7 @@ export async function addServer(
 				?.authorizationUrl
 			if (authUrl) {
 				console.error(
-					chalk.yellow(`Authorization required. Run: open "${authUrl}"`),
+					pc.yellow(`Authorization required. Run: open "${authUrl}"`),
 				)
 			}
 		}

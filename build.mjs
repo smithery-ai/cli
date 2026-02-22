@@ -65,6 +65,13 @@ const packageJson = JSON.parse(readFileSync("package.json", "utf-8"))
 // Inject version as global constant
 define.__SMITHERY_VERSION__ = JSON.stringify(packageJson.version)
 
+// Inject lazy dependency versions so they stay in sync with package.json
+define.__LAZY_DEPS__ = JSON.stringify({
+	miniflare: packageJson.devDependencies.miniflare,
+	esbuild: packageJson.devDependencies.esbuild,
+	"@ngrok/ngrok": packageJson.devDependencies["@ngrok/ngrok"],
+})
+
 console.log("✓ Compiled bootstrap files")
 
 // Packages with native binaries that cannot be bundled - they must be required at runtime.

@@ -1,4 +1,4 @@
-import chalk from "chalk"
+import pc from "picocolors"
 import { errorMessage } from "../../lib/cli-error"
 import { isJsonMode, outputDetail, outputJson } from "../../utils/output"
 import type { ToolInfo } from "./api"
@@ -47,9 +47,9 @@ export async function getTool(
 					hint: `Use smithery tool list ${connection} to browse available tools.`,
 				})
 			} else {
-				console.error(chalk.red(msg))
+				console.error(pc.red(msg))
 				console.log(
-					chalk.dim(
+					pc.dim(
 						`Tip: Use smithery tool list ${connection} to browse available tools.`,
 					),
 				)
@@ -68,7 +68,7 @@ export async function getTool(
 		if (isJson) {
 			outputJson({ tool: null, error: `Failed to get tool: ${msg}` })
 		} else {
-			console.error(chalk.red(`Failed to get tool: ${msg}`))
+			console.error(pc.red(`Failed to get tool: ${msg}`))
 		}
 		process.exit(1)
 	}

@@ -1,8 +1,7 @@
 import { exec } from "node:child_process"
 import { promisify } from "node:util"
-import chalk from "chalk"
-import cliSpinners from "cli-spinners"
-import ora from "ora"
+import pc from "picocolors"
+import yoctoSpinner from "yocto-spinner"
 import { verbose } from "./logger.js"
 
 const execAsync = promisify(exec)
@@ -264,27 +263,26 @@ export async function executeCliAuthFlow(
 	verbose(`Starting CLI auth flow with endpoint: ${SMITHERY_URL}`)
 
 	// Step 1: Create session
-	const sessionSpinner = ora({
+	const sessionSpinner = yoctoSpinner({
 		text: "Preparing authentication...",
-		spinner: cliSpinners.dots,
 		color: "cyan",
 	}).start()
 
 	let session: CliAuthSession
 	try {
 		session = await createAuthSession(SMITHERY_URL)
-		sessionSpinner?.succeed("Authentication ready")
+		sessionSpinner?.success("Authentication ready")
 	} catch (error) {
-		sessionSpinner?.fail("Failed to start authentication")
+		sessionSpinner?.error("Failed to start authentication")
 		throw error
 	}
 
 	// Step 2: Display URL and open browser
 	console.log()
-	console.log(chalk.cyan("Opening browser for authentication..."))
+	console.log(pc.cyan("Opening browser for authentication..."))
 	console.log()
-	console.log(chalk.bold("  If your browser doesn't open, visit:"))
-	console.log(chalk.blue.underline(`  ${session.authUrl}`))
+	console.log(pc.bold("  If your browser doesn't open, visit:"))
+	console.log(pc.blue(pc.underline(`  ${session.authUrl}`)))
 	console.log()
 
 	// Try to open browser (non-blocking)
@@ -296,18 +294,17 @@ export async function executeCliAuthFlow(
 	}
 
 	// Step 3: Poll for completion
-	const pollSpinner = ora({
+	const pollSpinner = yoctoSpinner({
 		text: "Waiting for you to authorize in browser...",
-		spinner: cliSpinners.dots,
 		color: "yellow",
 	}).start()
 
 	try {
 		const apiKey = await pollForApiKey(session.sessionId, SMITHERY_URL, options)
-		pollSpinner.succeed("Authorization received")
+		pollSpinner.success("Authorization received")
 		return apiKey
 	} catch (error) {
-		pollSpinner.fail("Authorization failed")
+		pollSpinner.error("Authorization failed")
 		throw error
 	}
 }

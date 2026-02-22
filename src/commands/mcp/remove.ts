@@ -1,4 +1,4 @@
-import chalk from "chalk"
+import pc from "picocolors"
 import { errorMessage, fatal } from "../../lib/cli-error"
 import { isJsonMode, outputJson } from "../../utils/output"
 import { ConnectSession } from "./api"
@@ -22,9 +22,9 @@ export async function removeServer(
 		}
 
 		if (failed.length > 0 && removed.length === 0) {
-			console.error(chalk.red(`Failed to remove connections:`))
+			console.error(pc.red(`Failed to remove connections:`))
 			for (const f of failed) {
-				console.error(chalk.red(`  ${f.id}: ${f.error}`))
+				console.error(pc.red(`  ${f.id}: ${f.error}`))
 			}
 			process.exit(1)
 		}
@@ -35,10 +35,10 @@ export async function removeServer(
 			outputJson(result)
 		} else {
 			for (const id of removed) {
-				console.log(`${chalk.green("✓")} Removed ${id}`)
+				console.log(`${pc.green("✓")} Removed ${id}`)
 			}
 			for (const f of result.failed ?? []) {
-				console.log(`${chalk.red("✗")} ${f.id}: ${f.error}`)
+				console.log(`${pc.red("✗")} ${f.id}: ${f.error}`)
 			}
 		}
 	} catch (error) {

@@ -1,5 +1,5 @@
 import type { ReviewItem } from "@smithery/api/resources/skills/reviews.js"
-import chalk from "chalk"
+import pc from "picocolors"
 import { fatal } from "../../lib/cli-error"
 import { isJsonMode } from "../../utils/output"
 import {
@@ -11,18 +11,18 @@ import {
 function formatReview(review: ReviewItem, index?: number): string {
 	const prefix = index !== undefined ? `${index + 1}. ` : ""
 	const agent = review.agentModel
-		? chalk.dim(` (${review.agentModel})`)
+		? pc.dim(` (${review.agentModel})`)
 		: review.agentClient
-			? chalk.dim(` (${review.agentClient})`)
+			? pc.dim(` (${review.agentClient})`)
 			: ""
 	const date = new Date(review.createdAt).toLocaleDateString()
 	const votes =
 		review.upvotes > 0 || review.downvotes > 0
-			? chalk.dim(` [+${review.upvotes}/-${review.downvotes}]`)
+			? pc.dim(` [+${review.upvotes}/-${review.downvotes}]`)
 			: ""
-	const id = chalk.dim(` id:${review.id}`)
+	const id = pc.dim(` id:${review.id}`)
 
-	let output = `${prefix}${chalk.cyan("Review")}${agent}${votes}${id} ${chalk.dim(`- ${date}`)}`
+	let output = `${prefix}${pc.cyan("Review")}${agent}${votes}${id} ${pc.dim(`- ${date}`)}`
 	if (review.review) {
 		output += `\n   ${review.review}`
 	}
@@ -78,9 +78,9 @@ export async function listReviews(
 		}
 
 		if (reviews.length === 0) {
-			console.log(chalk.yellow(`No reviews yet for ${skillIdentifier}`))
+			console.log(pc.yellow(`No reviews yet for ${skillIdentifier}`))
 			console.log(
-				chalk.dim(
+				pc.dim(
 					`Be the first to review: smithery skills review ${skillIdentifier}`,
 				),
 			)
@@ -90,8 +90,8 @@ export async function listReviews(
 		const totalCount = pagination.totalCount ?? reviews.length
 
 		console.log(
-			chalk.bold(
-				`Reviews for ${chalk.cyan(skillIdentifier)} (${totalCount} review${totalCount === 1 ? "" : "s"})`,
+			pc.bold(
+				`Reviews for ${pc.cyan(skillIdentifier)} (${totalCount} review${totalCount === 1 ? "" : "s"})`,
 			),
 		)
 		console.log()
@@ -105,11 +105,11 @@ export async function listReviews(
 		const currentPage = pagination.currentPage ?? page
 		if (totalPages > 1) {
 			console.log(
-				chalk.dim(`Page ${currentPage} of ${totalPages} (${totalCount} total)`),
+				pc.dim(`Page ${currentPage} of ${totalPages} (${totalCount} total)`),
 			)
 			if (currentPage < totalPages) {
 				console.log(
-					chalk.dim(
+					pc.dim(
 						`View more: smithery skills reviews ${skillIdentifier} --page ${currentPage + 1}`,
 					),
 				)
@@ -151,26 +151,26 @@ export async function submitReview(
 		fatal(`Review is too long (${reviewText.length}/1000 characters)`)
 	}
 
-	const ora = (await import("ora")).default
+	const yoctoSpinner = (await import("yocto-spinner")).default
 
 	try {
-		const spinner = ora("Submitting review...").start()
+		const spinner = yoctoSpinner({ text: "Submitting review..." }).start()
 		const result = await client.skills.reviews.create(slug, {
 			namespace,
 			review: reviewText,
 			agentModel: options.model,
 			vote: options.vote,
 		})
-		spinner.succeed(`Review submitted and skill ${options.vote}voted`)
+		spinner.success(`Review submitted and skill ${options.vote}voted`)
 
 		console.log()
-		console.log(chalk.cyan("Your review:"))
+		console.log(pc.cyan("Your review:"))
 		if (result.review) {
 			console.log(result.review)
 		}
 		console.log()
 		console.log(
-			chalk.dim(
+			pc.dim(
 				`View all reviews: smithery skills review list ${skillIdentifier}`,
 			),
 		)
@@ -189,14 +189,14 @@ export async function deleteReview(skillIdentifier: string): Promise<void> {
 	const { namespace, slug } = parseSkillIdentifierOrDie(skillIdentifier)
 	const client = await requireAuthenticatedSkillsClient()
 
-	const ora = (await import("ora")).default
-	const spinner = ora("Deleting review...").start()
+	const yoctoSpinner = (await import("yocto-spinner")).default
+	const spinner = yoctoSpinner({ text: "Deleting review..." }).start()
 
 	try {
 		await client.skills.reviews.delete(slug, { namespace })
-		spinner.succeed("Review deleted")
+		spinner.success("Review deleted")
 	} catch (error) {
-		spinner.fail("Failed to delete review")
+		spinner.error("Failed to delete review")
 		fatal("Failed to delete review", error)
 	}
 }
@@ -219,9 +219,9 @@ export async function voteReview(
 	const { namespace, slug } = parseSkillIdentifierOrDie(skillIdentifier)
 	const client = await requireAuthenticatedSkillsClient()
 
-	const ora = (await import("ora")).default
+	const yoctoSpinner = (await import("yocto-spinner")).default
 	const voteLabel = vote === "up" ? "Upvoting" : "Downvoting"
-	const spinner = ora(`${voteLabel} review...`).start()
+	const spinner = yoctoSpinner({ text: `${voteLabel} review...` }).start()
 
 	try {
 		await client.skills.reviews.vote(reviewId, {
@@ -230,9 +230,9 @@ export async function voteReview(
 			vote,
 		})
 
-		spinner.succeed(`Review ${vote}voted`)
+		spinner.success(`Review ${vote}voted`)
 	} catch (error) {
-		spinner.fail("Failed to vote")
+		spinner.error("Failed to vote")
 		fatal("Failed to vote on review", error)
 	}
 }

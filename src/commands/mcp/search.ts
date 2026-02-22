@@ -1,5 +1,5 @@
-import chalk from "chalk"
 import FlexSearch from "flexsearch"
+import pc from "picocolors"
 import { isJsonMode, outputJson, outputTable } from "../../utils/output"
 import { type Connection, ConnectSession, type ToolInfo } from "./api"
 import { formatToolRow, TOOL_TABLE_COLUMNS } from "./tool-table"
@@ -103,7 +103,7 @@ function outputFindError(message: string, isJson: boolean): never {
 	if (isJson) {
 		outputJson({ tools: [], error: message })
 	} else {
-		console.error(chalk.red(message))
+		console.error(pc.red(message))
 	}
 	process.exit(1)
 }

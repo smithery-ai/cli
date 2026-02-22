@@ -109,11 +109,11 @@ vi.mock("../../lib/namespace", async () => {
 	}
 })
 
-vi.mock("ora", () => ({
+vi.mock("yocto-spinner", () => ({
 	default: vi.fn(() => ({
 		start: vi.fn().mockReturnThis(),
-		succeed: vi.fn().mockReturnThis(),
-		fail: vi.fn().mockReturnThis(),
+		success: vi.fn().mockReturnThis(),
+		error: vi.fn().mockReturnThis(),
 		stop: vi.fn().mockReturnThis(),
 	})),
 }))

@@ -1,4 +1,4 @@
-import chalk from "chalk"
+import pc from "picocolors"
 
 export interface ProcessLifecycleOptions {
 	cleanupFn: () => Promise<void>
@@ -24,12 +24,10 @@ export function setupProcessLifecycle(options: ProcessLifecycleOptions): void {
 		isExiting = true
 
 		if (showExitMessage) {
-			console.log(chalk.gray(" Received exit signal, shutting down..."))
+			console.log(pc.gray(" Received exit signal, shutting down..."))
 		}
 		await cleanupFn()
-		console.log(
-			chalk.blue("🚀 Run 'smithery mcp publish' to publish on Smithery"),
-		)
+		console.log(pc.blue("🚀 Run 'smithery mcp publish' to publish on Smithery"))
 		process.exit(0)
 	}
 
@@ -43,5 +41,5 @@ export function setupProcessLifecycle(options: ProcessLifecycleOptions): void {
 	process.stdin.on("error", handleExit)
 
 	// Show user instructions
-	console.log(chalk.gray(`Press Ctrl+C to stop the ${processName}`))
+	console.log(pc.gray(`Press Ctrl+C to stop the ${processName}`))
 }

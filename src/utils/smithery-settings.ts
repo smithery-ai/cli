@@ -1,7 +1,7 @@
 import { promises as fs } from "node:fs"
 import { homedir, platform } from "node:os"
 import { join } from "node:path"
-import chalk from "chalk"
+import pc from "picocolors"
 import { v4 as uuidv4 } from "uuid"
 import { verbose } from "../lib/logger"
 
@@ -262,7 +262,7 @@ export const setApiKey = async (apiKey: string): Promise<SettingsResult> => {
 	// Add feedback for save failures
 	if (!result.success) {
 		console.warn(
-			chalk.yellow(
+			pc.yellow(
 				"Warning: Could not save API key to config. You may need to enter it again next time.",
 			),
 		)

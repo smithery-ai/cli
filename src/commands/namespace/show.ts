@@ -1,4 +1,4 @@
-import chalk from "chalk"
+import pc from "picocolors"
 import { getNamespace } from "../../utils/smithery-settings"
 
 export async function showNamespace(): Promise<void> {
@@ -6,9 +6,7 @@ export async function showNamespace(): Promise<void> {
 
 	if (!namespace) {
 		console.error(
-			chalk.yellow(
-				"No namespace set. Run 'smithery namespace use <name>' first.",
-			),
+			pc.yellow("No namespace set. Run 'smithery namespace use <name>' first."),
 		)
 		process.exit(1)
 	}

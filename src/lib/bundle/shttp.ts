@@ -2,7 +2,7 @@ import { execSync } from "node:child_process"
 import { existsSync, mkdirSync, unlinkSync, writeFileSync } from "node:fs"
 import { join } from "node:path"
 import type { DeployPayload } from "@smithery/api/resources/servers/releases"
-import chalk from "chalk"
+import pc from "picocolors"
 
 import { buildServer } from "../build.js"
 import type { BuildManifest } from "./index.js"
@@ -24,7 +24,7 @@ export async function buildShttpBundle(
 		mkdirSync(outDir, { recursive: true })
 	}
 
-	console.log(chalk.cyan("\nBuilding shttp bundle for Smithery deploy..."))
+	console.log(pc.cyan("\nBuilding shttp bundle for Smithery deploy..."))
 
 	const moduleFile = join(outDir, "module.js")
 
@@ -38,7 +38,7 @@ export async function buildShttpBundle(
 		sourceMaps: true,
 	})
 
-	console.log(chalk.cyan("\nScanning server capabilities..."))
+	console.log(pc.cyan("\nScanning server capabilities..."))
 	const scanModuleFile = join(outDir, `scan-${Date.now()}.cjs`)
 	await buildServer({
 		entryFile,
@@ -54,15 +54,15 @@ export async function buildShttpBundle(
 	try {
 		scanResult = await scanModule(scanModuleFile)
 	} catch (e) {
-		console.error(chalk.red("\n✗ Failed to scan server capabilities"))
-		console.error(chalk.dim(`  ${e instanceof Error ? e.message : e}`))
+		console.error(pc.red("\n✗ Failed to scan server capabilities"))
+		console.error(pc.dim(`  ${e instanceof Error ? e.message : e}`))
 		console.error(
-			chalk.yellow(
+			pc.yellow(
 				"\nYour server requires configuration to run. Export a createSandboxServer function:",
 			),
 		)
 		console.error(
-			chalk.dim(`
+			pc.dim(`
   // In your server entry file:
   import { createServer } from "./server"
 
@@ -76,12 +76,12 @@ export async function buildShttpBundle(
 `),
 		)
 		console.error(
-			chalk.dim(
+			pc.dim(
 				"This allows Smithery to scan your server's tools/resources without real credentials.",
 			),
 		)
 		console.error(
-			chalk.dim("Learn more: https://smithery.ai/docs/deploy#sandbox-server\n"),
+			pc.dim("Learn more: https://smithery.ai/docs/deploy#sandbox-server\n"),
 		)
 		throw new Error("Server scan failed - cannot generate server card")
 	} finally {
@@ -117,7 +117,7 @@ export async function buildShttpBundle(
 	)
 
 	console.log(
-		chalk.green("\n✓ Smithery shttp bundle created at ") + chalk.bold(outDir),
+		pc.green("\n✓ Smithery shttp bundle created at ") + pc.bold(outDir),
 	)
 
 	return outDir
