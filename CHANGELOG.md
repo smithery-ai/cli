@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 
+## [4.1.2](https://github.com/smithery-ai/cli/compare/v4.1.1...v4.1.2) (2026-02-22)
+
+
+### Bug Fixes
+
+* make setup command non-interactive by default ([#640](https://github.com/smithery-ai/cli/issues/640)) ([7a92c51](https://github.com/smithery-ai/cli/commit/7a92c519c0b78554211788cef53e75edb8fc96ed))
+
 ## [4.1.1](https://github.com/smithery-ai/cli/compare/v4.1.0...v4.1.1) (2026-02-22)
 
 
