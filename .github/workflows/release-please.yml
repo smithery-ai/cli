@@ -56,8 +56,6 @@ jobs:
 
       - run: pnpm install --frozen-lockfile
 
-      - run: pnpm add -D @biomejs/cli-linux-x64
-
       - run: pnpm run build
         env:
           ANALYTICS_ENDPOINT: ${{ secrets.ANALYTICS_ENDPOINT }}
@@ -103,7 +101,6 @@ jobs:
           node-version: 20
           cache: 'pnpm'
       - run: pnpm install
-      - run: pnpm add -D @biomejs/cli-linux-x64
       - run: pnpm run check
 
   preview-publish:
@@ -125,8 +122,6 @@ jobs:
           registry-url: 'https://registry.npmjs.org'
 
       - run: pnpm install --frozen-lockfile
-
-      - run: pnpm add -D @biomejs/cli-linux-x64
 
       - name: Set preview version from tag
         run: |

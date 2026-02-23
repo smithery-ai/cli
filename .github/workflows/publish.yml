@@ -24,8 +24,6 @@ jobs:
 
       - run: pnpm install --frozen-lockfile
 
-      - run: pnpm add -D @biomejs/cli-linux-x64
-
       - run: pnpm run build
         env:
           ANALYTICS_ENDPOINT: ${{ secrets.ANALYTICS_ENDPOINT }}
