@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 
+## [4.1.4](https://github.com/smithery-ai/cli/compare/v4.1.3...v4.1.4) (2026-02-23)
+
+
+### Refactors
+
+* replace jsonc-parser with bundlable comment-json ([#648](https://github.com/smithery-ai/cli/issues/648)) ([2877d18](https://github.com/smithery-ai/cli/commit/2877d1801ab7d8a520e70869331935a632de6e52))
+
 ## [4.1.3](https://github.com/smithery-ai/cli/compare/v4.1.2...v4.1.3) (2026-02-23)
 
 
