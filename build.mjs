@@ -82,12 +82,7 @@ console.log("✓ Compiled bootstrap files")
 // - esbuild: platform-specific binaries for bundling
 // - @ngrok/ngrok: native binary for tunneling
 // - miniflare: has complex native deps (workerd) that must resolve at runtime
-const nativePackages = [
-	"@ngrok/ngrok",
-	"esbuild",
-	"keytar",
-	"miniflare",
-]
+const nativePackages = ["@ngrok/ngrok", "esbuild", "keytar", "miniflare"]
 
 // Build main CLI entry point
 await esbuild.build({
