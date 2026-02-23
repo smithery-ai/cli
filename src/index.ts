@@ -288,6 +288,21 @@ async function handleMcpRemove(ids: string[], options: any) {
 	await handleRemoveConnections(ids, options)
 }
 
+async function handleSecretsList(server: string) {
+	const { listSecrets } = await import("./commands/mcp/secrets")
+	await listSecrets(server)
+}
+
+async function handleSecretsSet(server: string, options: any) {
+	const { setSecret } = await import("./commands/mcp/secrets")
+	await setSecret(server, options)
+}
+
+async function handleSecretsDelete(server: string, name: string) {
+	const { deleteSecret } = await import("./commands/mcp/secrets")
+	await deleteSecret(server, name)
+}
+
 async function handleLogin() {
 	const { executeCliAuthFlow } = await import("./lib/cli-auth")
 	const { validateApiKey } = await import("./lib/registry")
@@ -678,6 +693,49 @@ const runCmd = mcpCmd
 	.command("run <server>", { hidden: true })
 	.option("--config <json>", "Provide configuration as JSON")
 	.action(handleRun)
+
+// ─── Secrets (hidden — not GA) ──────────────────────────────────────────────
+
+const secretsCmd = mcpCmd
+	.command("secrets", { hidden: true })
+	.description("Manage secrets for published MCP servers")
+
+secretsCmd
+	.command("list <server>")
+	.description("List secret names for a server")
+	.addHelpText(
+		"after",
+		`
+Examples:
+  smithery mcp secrets list my-org/my-server
+  smithery mcp secrets list my-org/my-server --json`,
+	)
+	.action(handleSecretsList)
+
+secretsCmd
+	.command("set <server>")
+	.description("Set a secret for a server")
+	.option("--name <name>", "Secret name")
+	.option("--value <value>", "Secret value")
+	.addHelpText(
+		"after",
+		`
+Examples:
+  smithery mcp secrets set my-org/my-server --name API_KEY --value sk-xxx
+  smithery mcp secrets set my-org/my-server`,
+	)
+	.action(handleSecretsSet)
+
+secretsCmd
+	.command("delete <server> <name>")
+	.description("Delete a secret from a server")
+	.addHelpText(
+		"after",
+		`
+Examples:
+  smithery mcp secrets delete my-org/my-server API_KEY`,
+	)
+	.action(handleSecretsDelete)
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // Tool command — Find and call tools from MCP servers added via 'smithery mcp'
