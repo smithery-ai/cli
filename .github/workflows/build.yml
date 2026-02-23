@@ -51,7 +51,6 @@ jobs:
           cache: 'pnpm'
 
       - run: pnpm install
-      - run: pnpm add -D @biomejs/cli-linux-x64  # biome platform binary for linux ci
       - run: pnpm run check
 
   build:
