@@ -63,7 +63,7 @@ export async function lazyImport<T = unknown>(packageName: string): Promise<T> {
 	const spinner = yoctoSpinner({ text: `Installing ${spec}...` }).start()
 
 	try {
-		execSync(`npm install --no-save ${spec}`, {
+		execSync(`npm install --no-save --no-package-lock --omit=dev ${spec}`, {
 			cwd: cliRoot,
 			stdio: ["pipe", "pipe", "pipe"],
 		})
