@@ -116,6 +116,31 @@ export class ConnectSession {
 		}))
 	}
 
+	/**
+	 * Create an MCP client with events extension capability negotiated.
+	 * Unlike getMcpClient, this always creates a fresh client (not cached)
+	 * since it uses different capabilities.
+	 */
+	async getEventsClient(connectionId: string): Promise<Client> {
+		const { transport } = await createSmitheryConnection({
+			client: this
+				.smitheryClient as unknown as CreateConnectionOptions["client"],
+			namespace: this.namespace,
+			connectionId,
+		})
+
+		const mcpClient = new Client(
+			{ name: "smithery-cli", version: "1.0.0" },
+			{
+				capabilities: {
+					extensions: { "ai.smithery/events": {} },
+				} as Record<string, unknown>,
+			},
+		)
+		await mcpClient.connect(transport)
+		return mcpClient
+	}
+
 	async callTool(
 		connectionId: string,
 		toolName: string,

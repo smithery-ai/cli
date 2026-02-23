@@ -813,6 +813,61 @@ Examples:
 	.action(handleCallTool)
 
 // ═══════════════════════════════════════════════════════════════════════════════
+// Event command (hidden/alpha) — Subscribe to event streams from MCP servers
+// ═══════════════════════════════════════════════════════════════════════════════
+
+const eventCmd = program
+	.command("event", { hidden: true })
+	.description("Subscribe to event streams from MCP servers")
+
+eventCmd
+	.command("topics <connection>")
+	.description("List available event topics for a connection")
+	.option("--namespace <ns>", "Namespace for the connection")
+	.action(async (connection: string, options: any) => {
+		const { listTopics } = await import("./commands/event")
+		await listTopics(connection, options)
+	})
+
+eventCmd
+	.command("subscribe <connection> <topic> [args]")
+	.description("Subscribe to events from a topic")
+	.option("--namespace <ns>", "Namespace for the connection")
+	.addHelpText(
+		"after",
+		`
+Examples:
+  smithery event subscribe myserver slack/message.created
+  smithery event subscribe myserver slack/message.created '{"channel":"C0123456"}'`,
+	)
+	.action(
+		async (
+			connection: string,
+			topic: string,
+			args: string | undefined,
+			options: any,
+		) => {
+			const { subscribeEvents } = await import("./commands/event")
+			await subscribeEvents(connection, topic, args, options)
+		},
+	)
+
+eventCmd
+	.command("unsubscribe <connection> <topic>")
+	.description("Unsubscribe from an event topic")
+	.option("--namespace <ns>", "Namespace for the connection")
+	.addHelpText(
+		"after",
+		`
+Examples:
+  smithery event unsubscribe myserver slack/message.created`,
+	)
+	.action(async (connection: string, topic: string, options: any) => {
+		const { unsubscribeEvents } = await import("./commands/event")
+		await unsubscribeEvents(connection, topic, options)
+	})
+
+// ═══════════════════════════════════════════════════════════════════════════════
 // Skill command — Search, view, and install Smithery skills
 // ═══════════════════════════════════════════════════════════════════════════════
 
@@ -1155,6 +1210,7 @@ if (process.argv.length <= 2) {
 const COMMAND_ALIASES: Record<string, string> = {
 	tools: "tool",
 	skills: "skill",
+	events: "event",
 }
 const argv = process.argv.slice()
 if (argv[2] && argv[2] in COMMAND_ALIASES) {
