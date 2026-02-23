@@ -1,7 +1,7 @@
 import { execFileSync } from "node:child_process"
 import fs from "node:fs"
 import path from "node:path"
-import { applyEdits, modify, parse as parseJsonc } from "jsonc-parser"
+import { parse as parseJsonc, stringify as stringifyJsonc } from "comment-json"
 import * as YAML from "yaml"
 import {
 	type ClientDefinition,
@@ -221,8 +221,7 @@ export function readConfig(client: string): ClientMCPConfig {
 
 		const format = clientConfig.install.format
 		if (configPath.endsWith(".jsonc") || format === "jsonc") {
-			rawConfig =
-				parseJsonc(fileContent, [], { allowTrailingComma: true }) || {}
+			rawConfig = (parseJsonc(fileContent) as Record<string, unknown>) || {}
 		} else if (format === "yaml") {
 			const parsed = YAML.parse(fileContent)
 			rawConfig =
@@ -481,40 +480,35 @@ function writeConfigJsonc(
 
 	const topLevelKey = clientConfig.format?.topLevelKey ?? "mcpServers"
 
-	// Parse existing config to find servers that need to be removed
+	// Parse existing config preserving comments
 	const existingConfig = parseJsonc(content) as Record<string, unknown>
-	const existingServers = existingConfig[topLevelKey] as
-		| Record<string, unknown>
-		| undefined
+	const existingServers = (existingConfig[topLevelKey] ?? {}) as Record<
+		string,
+		unknown
+	>
 	const newServerNames = new Set(Object.keys(config.mcpServers))
 
 	// Remove servers that exist in file but not in new config
-	if (existingServers) {
-		for (const serverName of Object.keys(existingServers)) {
-			if (!newServerNames.has(serverName)) {
-				verbose(`Removing server: ${serverName}`)
-				const edits = modify(content, [topLevelKey, serverName], undefined, {
-					formattingOptions: { tabSize: 2, insertSpaces: true },
-				})
-				content = applyEdits(content, edits)
-			}
+	for (const serverName of Object.keys(existingServers)) {
+		if (!newServerNames.has(serverName)) {
+			verbose(`Removing server: ${serverName}`)
+			delete existingServers[serverName]
 		}
 	}
 
-	// Transform and apply each server config using modify() to preserve comments
+	// Transform and apply each server config, preserving comments on untouched entries
 	for (const [serverName, serverConfig] of Object.entries(config.mcpServers)) {
 		const transformed = toClientFormat(serverConfig, clientConfig)
 		if (transformed !== null) {
 			verbose(`Adding/updating server: ${serverName}`)
-			const edits = modify(content, [topLevelKey, serverName], transformed, {
-				formattingOptions: { tabSize: 2, insertSpaces: true },
-			})
-			content = applyEdits(content, edits)
+			existingServers[serverName] = transformed
 		}
 	}
 
+	existingConfig[topLevelKey] = existingServers
+
 	verbose(`Writing JSONC config to file: ${configPath}`)
-	fs.writeFileSync(configPath, content)
+	fs.writeFileSync(configPath, stringifyJsonc(existingConfig, null, 2))
 	verbose(`JSONC config successfully written`)
 }
 
