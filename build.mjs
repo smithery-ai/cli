@@ -82,13 +82,9 @@ console.log("✓ Compiled bootstrap files")
 // - esbuild: platform-specific binaries for bundling
 // - @ngrok/ngrok: native binary for tunneling
 // - miniflare: has complex native deps (workerd) that must resolve at runtime
-// - cross-spawn: has pnpm symlink resolution issues with path-key
-// - jsonc-parser: uses AMD-style dynamic requires that can't be bundled
 const nativePackages = [
 	"@ngrok/ngrok",
-	"cross-spawn",
 	"esbuild",
-	"jsonc-parser",
 	"keytar",
 	"miniflare",
 ]

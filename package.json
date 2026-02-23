@@ -40,10 +40,6 @@
 	"bin": {
 		"smithery": "dist/index.js"
 	},
-	"dependencies": {
-		"cross-spawn": "^7.0.6",
-		"jsonc-parser": "^3.3.1"
-	},
 	"devDependencies": {
 		"@anthropic-ai/mcpb": "^1.1.1",
 		"@biomejs/biome": "2.3.10",
@@ -61,6 +57,7 @@
 		"flexsearch": "^0.7.43",
 		"inquirer": "^8.2.4",
 		"inquirer-autocomplete-prompt": "^2.0.0",
+		"jsonc-parser": "^3.3.1",
 		"keytar": "^7.9.0",
 		"knip": "^5.80.0",
 		"miniflare": "^4.20260103.0",

@@ -7,13 +7,6 @@ settings:
 importers:
 
   .:
-    dependencies:
-      cross-spawn:
-        specifier: ^7.0.6
-        version: 7.0.6
-      jsonc-parser:
-        specifier: ^3.3.1
-        version: 3.3.1
     devDependencies:
       '@anthropic-ai/mcpb':
         specifier: ^1.1.1
@@ -63,6 +56,9 @@ importers:
       inquirer-autocomplete-prompt:
         specifier: ^2.0.0
         version: 2.0.1(inquirer@8.2.7(@types/node@20.19.27))
+      jsonc-parser:
+        specifier: ^3.3.1
+        version: 3.3.1
       keytar:
         specifier: ^7.9.0
         version: 7.9.0
