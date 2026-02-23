@@ -5,6 +5,19 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 
+## [4.1.3](https://github.com/smithery-ai/cli/compare/v4.1.2...v4.1.3) (2026-02-23)
+
+
+### Bug Fixes
+
+* prevent platform mismatch in lazy dependency install ([#643](https://github.com/smithery-ai/cli/issues/643)) ([96ea3bf](https://github.com/smithery-ai/cli/commit/96ea3bf0b00d3258c03344da6d968f8dcce0416e))
+* remove explicit biome linux binary from CI ([#645](https://github.com/smithery-ai/cli/issues/645)) ([51e872d](https://github.com/smithery-ai/cli/commit/51e872d1b67547d7c29f1dab65b89911c1075a18))
+
+
+### Performance Improvements
+
+* zero runtime dependencies ([#646](https://github.com/smithery-ai/cli/issues/646)) ([9d0a636](https://github.com/smithery-ai/cli/commit/9d0a6365052ebe145f112beb949aad50ebaf0477))
+
 ## [4.1.2](https://github.com/smithery-ai/cli/compare/v4.1.1...v4.1.2) (2026-02-22)
 
 
