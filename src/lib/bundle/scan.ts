@@ -68,32 +68,24 @@ function generateMockConfig(zodSchema: unknown): unknown {
 	return generateMockFromJsonSchema(jsonSchema)
 }
 
-const EventTopicSchema = z.object({
-	topic: z.string(),
-	name: z.string(),
-	description: z.string().optional(),
-	inputSchema: z.record(z.string(), z.unknown()).optional(),
-	eventSchema: z.record(z.string(), z.unknown()).optional(),
-})
-
-const ListEventTopicsResultSchema = z.object({
-	topics: z.array(EventTopicSchema),
-	nextCursor: z.string().optional(),
-})
+interface ListEventTopicsResult {
+	topics: ServerCard.EventTopic[]
+	nextCursor?: string
+}
 
 async function listEventTopics(client: Client) {
 	const capabilities = client.getServerCapabilities()
 	if (!capabilities?.experimental?.["ai.smithery/events"]) {
-		return { eventTopics: [] }
+		return { eventTopics: [] as ServerCard.EventTopic[] }
 	}
 
-	const eventTopics: z.infer<typeof EventTopicSchema>[] = []
+	const eventTopics: ServerCard.EventTopic[] = []
 	let cursor: string | undefined
 	do {
-		// biome-ignore lint/suspicious/noExplicitAny: custom JSON-RPC method not in SDK types
-		const result = await (client.request as any)(
+		// biome-ignore lint/suspicious/noExplicitAny: custom JSON-RPC method not in MCP SDK's ClientRequest union
+		const result: ListEventTopicsResult = await (client.request as any)(
 			{ method: "ai.smithery/events/topics/list", params: { cursor } },
-			ListEventTopicsResultSchema,
+			z.object({}).passthrough(),
 		)
 		eventTopics.push(...result.topics)
 		cursor = result.nextCursor
