@@ -32,64 +32,26 @@ export async function subscribeEvents(
 		const session = await ConnectSession.create(options.namespace)
 		const mcpClient = await session.getEventsClient(connection)
 
-		// Register notification handler for incoming events
-		mcpClient.fallbackNotificationHandler = async (notification) => {
-			if (notification.method === "ai.smithery/events/event") {
-				const params = notification.params as {
-					topic: string
-					data: unknown
-				}
-				if (isJson) {
-					console.log(
-						JSON.stringify({
-							topic: params.topic,
-							data: params.data,
-						}),
-					)
-				} else {
-					console.log(
-						`${pc.dim("event")} ${pc.cyan(params.topic)} ${JSON.stringify(params.data)}`,
-					)
-				}
-			}
-		}
-
-		// Subscribe to the topic
-		await mcpClient.request(
-			{
-				method: "ai.smithery/events/subscribe",
-				params: {
-					topic,
-					...(parsedArgs ? { arguments: parsedArgs } : {}),
+		try {
+			await mcpClient.request(
+				{
+					method: "ai.smithery/events/subscribe",
+					params: {
+						topic,
+						...(parsedArgs ? { arguments: parsedArgs } : {}),
+					},
 				},
-			},
-			EmptyResultSchema,
-		)
-
-		if (!isJson) {
-			console.log(
-				pc.green(`Subscribed to ${pc.bold(topic)}. Listening for events...`),
+				EmptyResultSchema,
 			)
-			console.log(pc.dim("Press Ctrl+C to stop."))
-			console.log()
-		}
 
-		// Keep the process alive until interrupted
-		const cleanup = async () => {
-			if (!isJson) {
-				console.log(
-					pc.dim("\nDisconnecting (subscription remains active on server)..."),
-				)
+			if (isJson) {
+				outputJson({ topic, subscribed: true })
+			} else {
+				console.log(pc.green(`Subscribed to ${pc.bold(topic)}.`))
 			}
+		} finally {
 			await mcpClient.close()
-			process.exit(0)
 		}
-
-		process.on("SIGINT", cleanup)
-		process.on("SIGTERM", cleanup)
-
-		// Keep alive — the process stays open because the MCP transport keeps the connection open
-		await new Promise(() => {})
 	} catch (error) {
 		const msg = errorMessage(error)
 		if (isJson) {
