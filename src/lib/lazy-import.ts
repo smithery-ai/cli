@@ -1,8 +1,9 @@
-import { execSync } from "node:child_process"
+import { execFile } from "node:child_process"
 import { existsSync } from "node:fs"
 import { createRequire } from "node:module"
 import { dirname, join } from "node:path"
 import { fileURLToPath, pathToFileURL } from "node:url"
+import { promisify } from "node:util"
 import pc from "picocolors"
 
 // Injected at build time from package.json devDependencies
@@ -64,10 +65,12 @@ export async function lazyImport<T = unknown>(packageName: string): Promise<T> {
 	const spinner = yoctoSpinner({ text: `Installing ${spec}...` }).start()
 
 	try {
-		execSync(`npm install --save-prod --no-package-lock --omit=dev ${spec}`, {
-			cwd: cliRoot,
-			stdio: ["pipe", "pipe", "pipe"],
-		})
+		const execFileAsync = promisify(execFile)
+		await execFileAsync(
+			"npm",
+			["install", "--save-prod", "--no-package-lock", "--omit=dev", spec],
+			{ cwd: cliRoot },
+		)
 		spinner.success(`Installed ${packageName}`)
 	} catch (e) {
 		spinner.error(`Failed to install ${packageName}`)
