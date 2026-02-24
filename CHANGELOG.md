@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 
+## [4.1.8](https://github.com/smithery-ai/cli/compare/v4.1.7...v4.1.8) (2026-02-24)
+
+
+### Bug Fixes
+
+* use async exec for lazy install so spinner animates ([#660](https://github.com/smithery-ai/cli/issues/660)) ([82617d4](https://github.com/smithery-ai/cli/commit/82617d4d1984f5555e9c9fa0cd7783d46d3fa7f1))
+
 ## [4.1.7](https://github.com/smithery-ai/cli/compare/v4.1.6...v4.1.7) (2026-02-24)
 
 
