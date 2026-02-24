@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 
+## [4.1.6](https://github.com/smithery-ai/cli/compare/v4.1.5...v4.1.6) (2026-02-24)
+
+
+### Chores
+
+* **SMI-1539:** add event command for MCP event subscriptions ([#652](https://github.com/smithery-ai/cli/issues/652)) ([6da0b63](https://github.com/smithery-ai/cli/commit/6da0b639d8f225f5c76eae86aaa3e0b9c0b2a72a))
+* **SMI-1540:** scan event topics during publish ([#654](https://github.com/smithery-ai/cli/issues/654)) ([54b8ef0](https://github.com/smithery-ai/cli/commit/54b8ef0675b429e99fc3910e3f5d2087fe634809))
+
 ## [4.1.5](https://github.com/smithery-ai/cli/compare/v4.1.4...v4.1.5) (2026-02-24)
 
 
