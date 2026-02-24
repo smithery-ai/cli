@@ -119,6 +119,47 @@ export async function scanModule(modulePath: string): Promise<ScanResult> {
 		client.listPrompts().catch(() => ({ prompts: [] })),
 	])
 
+	// Query event topics if server supports the ai.smithery/events extension
+	const eventTopics: Array<{
+		topic: string
+		name: string
+		description?: string
+		inputSchema?: Record<string, unknown>
+		eventSchema?: Record<string, unknown>
+	}> = []
+
+	try {
+		const capabilities = client.getServerCapabilities()
+		if (capabilities?.experimental?.["ai.smithery/events"]) {
+			let cursor: string | undefined
+			do {
+				// eslint-disable-next-line @typescript-eslint/no-explicit-any
+				const result = await (client.request as any)(
+					{
+						method: "ai.smithery/events/topics/list",
+						params: { cursor },
+					},
+					z.object({
+						topics: z.array(
+							z.object({
+								topic: z.string(),
+								name: z.string(),
+								description: z.string().optional(),
+								inputSchema: z.record(z.string(), z.unknown()).optional(),
+								eventSchema: z.record(z.string(), z.unknown()).optional(),
+							}),
+						),
+						nextCursor: z.string().optional(),
+					}),
+				)
+				eventTopics.push(...result.topics)
+				cursor = result.nextCursor
+			} while (cursor)
+		}
+	} catch {
+		// Server doesn't support events — ignore
+	}
+
 	await client.close()
 
 	const serverCard: ServerCard = {
@@ -129,6 +170,7 @@ export async function scanModule(modulePath: string): Promise<ScanResult> {
 		tools: toolsResult.tools as Tool[],
 		resources: resourcesResult.resources as Resource[],
 		prompts: promptsResult.prompts as Prompt[],
+		...(eventTopics.length > 0 && { eventTopics }),
 	}
 
 	return {
