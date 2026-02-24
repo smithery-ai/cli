@@ -68,6 +68,40 @@ function generateMockConfig(zodSchema: unknown): unknown {
 	return generateMockFromJsonSchema(jsonSchema)
 }
 
+const EventTopicSchema = z.object({
+	topic: z.string(),
+	name: z.string(),
+	description: z.string().optional(),
+	inputSchema: z.record(z.string(), z.unknown()).optional(),
+	eventSchema: z.record(z.string(), z.unknown()).optional(),
+})
+
+const ListEventTopicsResultSchema = z.object({
+	topics: z.array(EventTopicSchema),
+	nextCursor: z.string().optional(),
+})
+
+async function listEventTopics(client: Client) {
+	const capabilities = client.getServerCapabilities()
+	if (!capabilities?.experimental?.["ai.smithery/events"]) {
+		return { eventTopics: [] }
+	}
+
+	const eventTopics: z.infer<typeof EventTopicSchema>[] = []
+	let cursor: string | undefined
+	do {
+		// biome-ignore lint/suspicious/noExplicitAny: custom JSON-RPC method not in SDK types
+		const result = await (client.request as any)(
+			{ method: "ai.smithery/events/topics/list", params: { cursor } },
+			ListEventTopicsResultSchema,
+		)
+		eventTopics.push(...result.topics)
+		cursor = result.nextCursor
+	} while (cursor)
+
+	return { eventTopics }
+}
+
 export interface ScanResult {
 	serverCard?: ServerCard
 	configSchema?: Record<string, unknown>
@@ -113,52 +147,13 @@ export async function scanModule(modulePath: string): Promise<ScanResult> {
 	await server.connect(serverTransport)
 	await client.connect(clientTransport)
 
-	const [toolsResult, resourcesResult, promptsResult] = await Promise.all([
-		client.listTools().catch(() => ({ tools: [] })),
-		client.listResources().catch(() => ({ resources: [] })),
-		client.listPrompts().catch(() => ({ prompts: [] })),
-	])
-
-	// Query event topics if server supports the ai.smithery/events extension
-	const eventTopics: Array<{
-		topic: string
-		name: string
-		description?: string
-		inputSchema?: Record<string, unknown>
-		eventSchema?: Record<string, unknown>
-	}> = []
-
-	try {
-		const capabilities = client.getServerCapabilities()
-		if (capabilities?.experimental?.["ai.smithery/events"]) {
-			let cursor: string | undefined
-			do {
-				// eslint-disable-next-line @typescript-eslint/no-explicit-any
-				const result = await (client.request as any)(
-					{
-						method: "ai.smithery/events/topics/list",
-						params: { cursor },
-					},
-					z.object({
-						topics: z.array(
-							z.object({
-								topic: z.string(),
-								name: z.string(),
-								description: z.string().optional(),
-								inputSchema: z.record(z.string(), z.unknown()).optional(),
-								eventSchema: z.record(z.string(), z.unknown()).optional(),
-							}),
-						),
-						nextCursor: z.string().optional(),
-					}),
-				)
-				eventTopics.push(...result.topics)
-				cursor = result.nextCursor
-			} while (cursor)
-		}
-	} catch {
-		// Server doesn't support events — ignore
-	}
+	const [toolsResult, resourcesResult, promptsResult, eventTopicsResult] =
+		await Promise.all([
+			client.listTools().catch(() => ({ tools: [] })),
+			client.listResources().catch(() => ({ resources: [] })),
+			client.listPrompts().catch(() => ({ prompts: [] })),
+			listEventTopics(client).catch(() => ({ eventTopics: [] })),
+		])
 
 	await client.close()
 
@@ -170,7 +165,9 @@ export async function scanModule(modulePath: string): Promise<ScanResult> {
 		tools: toolsResult.tools as Tool[],
 		resources: resourcesResult.resources as Resource[],
 		prompts: promptsResult.prompts as Prompt[],
-		...(eventTopics.length > 0 && { eventTopics }),
+		...(eventTopicsResult.eventTopics.length > 0 && {
+			eventTopics: eventTopicsResult.eventTopics,
+		}),
 	}
 
 	return {
