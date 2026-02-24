@@ -1,7 +1,8 @@
 import { execSync } from "node:child_process"
 import { existsSync } from "node:fs"
+import { createRequire } from "node:module"
 import { dirname, join } from "node:path"
-import { fileURLToPath } from "node:url"
+import { fileURLToPath, pathToFileURL } from "node:url"
 import pc from "picocolors"
 
 // Injected at build time from package.json devDependencies
@@ -78,5 +79,10 @@ export async function lazyImport<T = unknown>(packageName: string): Promise<T> {
 	}
 
 	// Attempt 2: retry after install
-	return (await import(packageName)) as T
+	// Use createRequire to resolve the package path, then import via file URL.
+	// This bypasses Node's ESM resolution cache which may have cached the
+	// earlier MODULE_NOT_FOUND error for this bare specifier.
+	const esmRequire = createRequire(import.meta.url)
+	const resolvedPath = esmRequire.resolve(packageName)
+	return (await import(pathToFileURL(resolvedPath).href)) as T
 }
