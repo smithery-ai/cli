@@ -5,6 +5,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 
+## [4.1.5](https://github.com/smithery-ai/cli/compare/v4.1.4...v4.1.5) (2026-02-24)
+
+
+### Bug Fixes
+
+* bypass ESM resolution cache in lazy import retry ([#655](https://github.com/smithery-ai/cli/issues/655)) ([27e3ac4](https://github.com/smithery-ai/cli/commit/27e3ac4759572b69eeff49950bac600d97451c17))
+
+
+### Chores
+
+* add hidden mcp secrets subcommands ([#650](https://github.com/smithery-ai/cli/issues/650)) ([35c9b0a](https://github.com/smithery-ai/cli/commit/35c9b0aa82549e4d642f983539ddd875a2b215fa))
+
 ## [4.1.4](https://github.com/smithery-ai/cli/compare/v4.1.3...v4.1.4) (2026-02-23)
 
 
