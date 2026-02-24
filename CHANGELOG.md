@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 
+## [4.1.7](https://github.com/smithery-ai/cli/compare/v4.1.6...v4.1.7) (2026-02-24)
+
+
+### Bug Fixes
+
+* use --save-prod for lazy install to prevent silent no-op ([#658](https://github.com/smithery-ai/cli/issues/658)) ([f4c6614](https://github.com/smithery-ai/cli/commit/f4c6614b03066334e1ca71d1d5e07525d724e344))
+
 ## [4.1.6](https://github.com/smithery-ai/cli/compare/v4.1.5...v4.1.6) (2026-02-24)
 
 
