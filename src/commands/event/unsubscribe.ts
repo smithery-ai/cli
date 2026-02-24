@@ -1,10 +1,8 @@
 import pc from "picocolors"
-import { z } from "zod"
 import { errorMessage } from "../../lib/cli-error"
+import { EmptyEventResultSchema } from "../../lib/events"
 import { isJsonMode, outputJson } from "../../utils/output"
 import { ConnectSession } from "../mcp/api"
-
-const EmptyResultSchema = z.object({}).passthrough()
 
 export async function unsubscribeEvents(
 	connection: string,
@@ -23,7 +21,7 @@ export async function unsubscribeEvents(
 					method: "ai.smithery/events/unsubscribe",
 					params: { topic },
 				},
-				EmptyResultSchema,
+				EmptyEventResultSchema,
 			)
 
 			if (isJson) {

@@ -1,10 +1,8 @@
 import pc from "picocolors"
-import { z } from "zod"
 import { errorMessage } from "../../lib/cli-error"
+import { EmptyEventResultSchema } from "../../lib/events"
 import { isJsonMode, outputJson } from "../../utils/output"
 import { ConnectSession } from "../mcp/api"
-
-const EmptyResultSchema = z.object({}).passthrough()
 
 export async function subscribeEvents(
 	connection: string,
@@ -41,7 +39,7 @@ export async function subscribeEvents(
 						...(parsedArgs ? { arguments: parsedArgs } : {}),
 					},
 				},
-				EmptyResultSchema,
+				EmptyEventResultSchema,
 			)
 
 			if (isJson) {

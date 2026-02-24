@@ -1,6 +1,6 @@
 import pc from "picocolors"
-import { z } from "zod"
 import { errorMessage } from "../../lib/cli-error"
+import { listEventTopics } from "../../lib/events"
 import {
 	isJsonMode,
 	outputJson,
@@ -8,19 +8,6 @@ import {
 	truncate,
 } from "../../utils/output"
 import { ConnectSession } from "../mcp/api"
-
-const TopicsListResultSchema = z.object({
-	topics: z.array(
-		z.object({
-			topic: z.string(),
-			name: z.string().optional(),
-			description: z.string().optional(),
-			inputSchema: z.record(z.string(), z.unknown()).optional(),
-			eventSchema: z.record(z.string(), z.unknown()).optional(),
-		}),
-	),
-	nextCursor: z.string().optional(),
-})
 
 export async function listTopics(
 	connection: string,
@@ -33,15 +20,8 @@ export async function listTopics(
 		const mcpClient = await session.getEventsClient(connection)
 
 		try {
-			const result = await mcpClient.request(
-				{
-					method: "ai.smithery/events/topics/list",
-					params: {},
-				},
-				TopicsListResultSchema,
-			)
+			const { eventTopics: topics } = await listEventTopics(mcpClient)
 
-			const topics = result.topics
 			if (topics.length === 0) {
 				if (isJson) {
 					outputJson({ topics: [] })
