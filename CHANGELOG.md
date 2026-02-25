@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 
+## [4.2.1](https://github.com/smithery-ai/cli/compare/v4.2.0...v4.2.1) (2026-02-25)
+
+
+### Chores
+
+* **SMI-1552:** add events poll command and update SDK to 0.52.0 ([#670](https://github.com/smithery-ai/cli/issues/670)) ([cfe076d](https://github.com/smithery-ai/cli/commit/cfe076d84c54ea51d2c4d90a22668c41fd1aa557))
+* use positional args for secret set command ([#665](https://github.com/smithery-ai/cli/issues/665)) ([79c310e](https://github.com/smithery-ai/cli/commit/79c310e0a878d0bf82a873459ca79f7692e1d3f2))
+
 ## [4.2.0](https://github.com/smithery-ai/cli/compare/v4.1.8...v4.2.0) (2026-02-25)
 
 
