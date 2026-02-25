@@ -899,6 +899,16 @@ Examples:
 		await unsubscribeEvents(connection, topic, options)
 	})
 
+eventCmd
+	.command("poll <connection>")
+	.description("Poll for queued events from a connection")
+	.option("--namespace <ns>", "Namespace for the connection")
+	.option("--limit <n>", "Maximum events to return (1-100, default 100)")
+	.action(async (connection: string, options: any) => {
+		const { pollEvents } = await import("./commands/event")
+		await pollEvents(connection, options)
+	})
+
 // ═══════════════════════════════════════════════════════════════════════════════
 // Skill command — Search, view, and install Smithery skills
 // ═══════════════════════════════════════════════════════════════════════════════
