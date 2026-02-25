@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 
+## [4.2.0](https://github.com/smithery-ai/cli/compare/v4.1.8...v4.2.0) (2026-02-25)
+
+
+### Features
+
+* add search param and register mcp logs command ([#663](https://github.com/smithery-ai/cli/issues/663)) ([a5406fa](https://github.com/smithery-ai/cli/commit/a5406faa5eb9f165e25ca9dac1955d1346adbdca))
+
 ## [4.1.8](https://github.com/smithery-ai/cli/compare/v4.1.7...v4.1.8) (2026-02-24)
 
 
