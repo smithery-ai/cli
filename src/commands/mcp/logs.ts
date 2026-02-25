@@ -31,9 +31,7 @@ export async function listLogs(
 			if (logCount > 0) parts.push(`${logCount} log${logCount > 1 ? "s" : ""}`)
 			if (exceptionCount > 0)
 				parts.push(
-					pc.red(
-						`${exceptionCount} error${exceptionCount > 1 ? "s" : ""}`,
-					),
+					pc.red(`${exceptionCount} error${exceptionCount > 1 ? "s" : ""}`),
 				)
 
 			return {
