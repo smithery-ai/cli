@@ -219,6 +219,19 @@ export class ConnectSession {
 			namespace: this.namespace,
 		})
 	}
+
+	async pollEvents(connectionId: string, options?: { limit?: number }) {
+		return this.smitheryClient.get<{
+			data: Array<{
+				id: number
+				payload: Record<string, unknown>
+				createdAt: string
+			}>
+			done: boolean
+		}>(`/connect/${this.namespace}/${connectionId}/events`, {
+			query: options?.limit ? { limit: options.limit } : undefined,
+		})
+	}
 }
 
 async function getCurrentNamespace(): Promise<string> {
