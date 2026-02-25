@@ -288,6 +288,11 @@ async function handleMcpRemove(ids: string[], options: any) {
 	await handleRemoveConnections(ids, options)
 }
 
+async function handleLogs(server: string, options: any) {
+	const { listLogs } = await import("./commands/mcp/logs")
+	await listLogs(server, options)
+}
+
 async function handleSecretsList(server: string) {
 	const { listSecrets } = await import("./commands/mcp/secrets")
 	await listSecrets(server)
@@ -693,6 +698,31 @@ const runCmd = mcpCmd
 	.command("run <server>", { hidden: true })
 	.option("--config <json>", "Provide configuration as JSON")
 	.action(handleRun)
+
+// ─── Logs (hidden — not GA) ─────────────────────────────────────────────────
+
+mcpCmd
+	.command("logs <server>", { hidden: true })
+	.description("View runtime logs for a published server")
+	.option(
+		"--from <datetime>",
+		"Start of time range (UTC, e.g. 2026-02-24 09:00:00)",
+	)
+	.option(
+		"--to <datetime>",
+		"End of time range (UTC, e.g. 2026-02-24 10:00:00)",
+	)
+	.option("--limit <n>", "Max invocations to return (default: 20)")
+	.option("--search <text>", "Filter logs by text")
+	.addHelpText(
+		"after",
+		`
+Examples:
+  smithery mcp logs my-org/my-server
+  smithery mcp logs my-org/my-server --search "error"
+  smithery mcp logs my-org/my-server --from "2026-02-24 09:00:00" --limit 50`,
+	)
+	.action(handleLogs)
 
 // ─── Secrets (hidden — not GA) ──────────────────────────────────────────────
 
