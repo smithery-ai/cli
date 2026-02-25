@@ -704,8 +704,14 @@ const runCmd = mcpCmd
 mcpCmd
 	.command("logs <server>", { hidden: true })
 	.description("View runtime logs for a published server")
-	.option("--from <datetime>", "Start of time range (UTC, e.g. 2026-02-24 09:00:00)")
-	.option("--to <datetime>", "End of time range (UTC, e.g. 2026-02-24 10:00:00)")
+	.option(
+		"--from <datetime>",
+		"Start of time range (UTC, e.g. 2026-02-24 09:00:00)",
+	)
+	.option(
+		"--to <datetime>",
+		"End of time range (UTC, e.g. 2026-02-24 10:00:00)",
+	)
 	.option("--limit <n>", "Max invocations to return (default: 20)")
 	.option("--search <text>", "Filter logs by text")
 	.addHelpText(
