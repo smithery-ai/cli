@@ -298,9 +298,13 @@ async function handleSecretsList(server: string) {
 	await listSecrets(server)
 }
 
-async function handleSecretsSet(server: string, options: any) {
+async function handleSecretsSet(
+	server: string,
+	name: string | undefined,
+	value: string | undefined,
+) {
 	const { setSecret } = await import("./commands/mcp/secrets")
-	await setSecret(server, options)
+	await setSecret(server, { name, value })
 }
 
 async function handleSecretsDelete(server: string, name: string) {
@@ -743,15 +747,13 @@ Examples:
 	.action(handleSecretsList)
 
 secretsCmd
-	.command("set <server>")
+	.command("set <server> [name] [value]")
 	.description("Set a secret for a server")
-	.option("--name <name>", "Secret name")
-	.option("--value <value>", "Secret value")
 	.addHelpText(
 		"after",
 		`
 Examples:
-  smithery mcp secrets set my-org/my-server --name API_KEY --value sk-xxx
+  smithery mcp secrets set my-org/my-server API_KEY sk-xxx
   smithery mcp secrets set my-org/my-server`,
 	)
 	.action(handleSecretsSet)

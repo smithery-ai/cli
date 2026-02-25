@@ -41,7 +41,7 @@ export async function setSecret(
 	if (!name || !value) {
 		if (!process.stdin.isTTY) {
 			fatal(
-				"Missing --name and/or --value flags (required in non-interactive mode)",
+				"Missing name and/or value arguments (required in non-interactive mode)",
 			)
 		}
 
