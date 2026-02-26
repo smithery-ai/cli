@@ -1159,7 +1159,9 @@ ${JSON.stringify(constraintJsonSchema, null, 2)}
 Examples:
   smithery auth token
   smithery auth token --policy '{"resources": "connections", "operations": "read", "ttl": "30m"}'
-  smithery auth token --policy '{"namespaces": "prod"}' --policy '{"resources": "skills", "ttl": "2h"}'`,
+  smithery auth token --policy '{"namespaces": "prod"}' --policy '{"resources": "skills", "ttl": "2h"}'
+
+For more examples, run: smithery skill view smithery-ai/cli/references/AUTH.md`,
 	)
 	.action(async (options) => {
 		const { createToken } = await import("./commands/auth/token")
