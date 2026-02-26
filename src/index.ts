@@ -1117,12 +1117,12 @@ auth
 		(value: string, previous: Array<Record<string, unknown>>) => {
 			const policyError = (message: string): never => {
 				const hint =
-					"\nRun `smithery auth token --help` to see the policy JSON schema."
+					"Run `smithery auth token --help` to see the policy JSON schema."
 				if (process.argv.includes("--json")) {
-					console.log(JSON.stringify({ error: message }))
+					console.log(JSON.stringify({ error: message, hint }))
 					process.exit(1)
 				}
-				fatal(`${message}${hint}`)
+				fatal(`${message}\n${hint}`)
 			}
 
 			let parsed: unknown
