@@ -1,3 +1,5 @@
+import { SmitheryAuthorizationError } from "@smithery/api/mcp"
+import pc from "picocolors"
 import { errorMessage } from "../../lib/cli-error"
 import { isJsonMode, outputJson } from "../../utils/output"
 import { ConnectSession } from "./api"
@@ -97,6 +99,23 @@ export async function callTool(
 
 		console.log(output)
 	} catch (e) {
+		if (e instanceof SmitheryAuthorizationError) {
+			if (isJsonMode()) {
+				outputJson({
+					result: null,
+					isError: true,
+					error: `Connection "${connection}" requires authorization.`,
+					authorizationUrl: e.authorizationUrl,
+				})
+			} else {
+				console.error(
+					pc.yellow(
+						`Connection "${connection}" requires authorization. Authorize at:\n${e.authorizationUrl}`,
+					),
+				)
+			}
+			process.exit(1)
+		}
 		outputJson({
 			result: null,
 			isError: true,

@@ -200,6 +200,16 @@ export async function findTools(
 		}
 	}
 
+	if (!isJson && issues.length > 0) {
+		for (const issue of issues) {
+			const authUrl = issue.status?.authorizationUrl as string | undefined
+			console.error(pc.yellow(issue.error))
+			if (authUrl) {
+				console.error(pc.yellow(`Authorize at: ${authUrl}`))
+			}
+		}
+	}
+
 	if (allTools.length === 0) {
 		outputTable({
 			data: [],
@@ -209,7 +219,10 @@ export async function findTools(
 				tools: [],
 				...(issues.length > 0 ? { connectionIssues: issues } : {}),
 			},
-			tip: "No tools found. Your connections may not have any tools, or may be disconnected.",
+			tip:
+				issues.length > 0
+					? undefined
+					: "No tools found. Your connections may not have any tools, or may be disconnected.",
 		})
 		return
 	}
