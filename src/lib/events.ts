@@ -23,22 +23,22 @@ export type EventTopic = z.infer<typeof EventTopicSchema>
  * Paginates through all pages automatically.
  */
 export async function listEventTopics(client: Client) {
-	const capabilities = client.getServerCapabilities()
-	if (!capabilities?.experimental?.["ai.smithery/events"]) {
-		return { eventTopics: [] }
-	}
-
 	const eventTopics: EventTopic[] = []
 	let cursor: string | undefined
-	do {
-		// biome-ignore lint/suspicious/noExplicitAny: custom JSON-RPC method not in SDK types
-		const result = await (client.request as any)(
-			{ method: "ai.smithery/events/topics/list", params: { cursor } },
-			ListEventTopicsResultSchema,
-		)
-		eventTopics.push(...result.topics)
-		cursor = result.nextCursor
-	} while (cursor)
+	try {
+		do {
+			// biome-ignore lint/suspicious/noExplicitAny: custom JSON-RPC method not in SDK types
+			const result = await (client.request as any)(
+				{ method: "ai.smithery/events/topics/list", params: { cursor } },
+				ListEventTopicsResultSchema,
+			)
+			eventTopics.push(...result.topics)
+			cursor = result.nextCursor
+		} while (cursor)
+	} catch {
+		// Server does not support events extension
+		return { eventTopics: [] }
+	}
 
 	return { eventTopics }
 }
