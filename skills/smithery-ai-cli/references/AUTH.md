@@ -1,6 +1,6 @@
 # Authentication
 
-Smithery uses OAuth for authentication. Your human must confirm login via browser.
+Your human must confirm login via browser.
 
 ## Login Flow
 
@@ -129,8 +129,6 @@ smithery auth token --policy '{"rpcReqMatch": {"method": "^tools/list$"}}'
 smithery auth token --policy '{"metadata": {"connectionId": "my-connection-id"}, "rpcReqMatch": {"method": "tools/call", "params.name": "^search$"}}'
 ```
 
-Tokens use Biscuit attenuation — they can only be narrowed, never expanded.
-
 ## Environment Variables
 
 You can also set your API key via environment variable:
@@ -142,15 +140,6 @@ export SMITHERY_API_KEY="sk_your_api_key"
 Priority order:
 1. `SMITHERY_API_KEY` environment variable
 2. Stored API key from `smithery auth login`
-
-## Storage Location
-
-API keys are stored in:
-- macOS: `~/Library/Application Support/smithery/settings.json`
-- Linux: `~/.config/smithery/settings.json`
-- Windows: `%APPDATA%\smithery\settings.json`
-
-Override with `SMITHERY_CONFIG_PATH` environment variable.
 
 ## Troubleshooting
 
