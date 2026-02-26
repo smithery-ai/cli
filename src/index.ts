@@ -1110,7 +1110,10 @@ auth
 	.command("token")
 	.description("Mint a restricted service token")
 	.option("--policy <json>", "Policy constraints as JSON array")
-
+	.option(
+		"--prompt <text>",
+		"Natural language description of token permissions (experimental)",
+	)
 	.action(async (options) => {
 		const { createToken } = await import("./commands/auth/token")
 		await createToken(options)
