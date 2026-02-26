@@ -88,6 +88,27 @@ Constraint fields (all optional):
 - `namespaces` - Namespace name(s) to restrict to (string or array)
 - `ttl` - Duration string (`"30m"`, `"1h"`) or seconds (max 24h, default 1h)
 - `metadata` - Key-value pairs for fine-grained access control (object or array of objects)
+- `rpcReqMatch` - MCP JSON-RPC request matching rules (object of dot-path keys to regex values, all must match)
+
+### RPC-level filtering with `rpcReqMatch`
+
+`rpcReqMatch` restricts which MCP JSON-RPC requests the token can make. Keys are dot-paths into the JSON-RPC request body (e.g. `method`, `params.name`). Values are regex patterns. All entries must match (AND).
+
+Common use cases:
+
+```bash
+# Only allow calling a specific tool
+smithery auth token --policy '{"rpcReqMatch": {"method": "tools/call", "params.name": "^get_weather$"}}'
+
+# Allow calling any tool whose name starts with "read_"
+smithery auth token --policy '{"rpcReqMatch": {"method": "tools/call", "params.name": "^read_"}}'
+
+# Only allow listing tools (no calling)
+smithery auth token --policy '{"rpcReqMatch": {"method": "^tools/list$"}}'
+
+# Restrict to resource reads only
+smithery auth token --policy '{"rpcReqMatch": {"method": "^resources/(list|read)$"}}'
+```
 
 Tokens use Biscuit attenuation — they can only be narrowed, never expanded.
 
