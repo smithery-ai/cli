@@ -1,13 +1,21 @@
 // @ts-expect-error - virtual:user-module is a placeholder replaced at upload time
-import * as userModule from "virtual:user-module"
+import * as _userModule from "virtual:user-module"
 import { WebStandardStreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/webStandardStreamableHttp.js"
-import type { Session, StatelessServerContext } from "@smithery/sdk"
+import type {
+	ServerModule,
+	Session,
+	StatelessServerContext,
+} from "@smithery/sdk"
 
+const userModule = _userModule as ServerModule
 const createServer = userModule.default
 const stateful = userModule.stateful ?? false
+const createAuthAdapter = userModule.createAuthAdapter
+const handleHttp = userModule.handleHttp
 
 interface McpSessionStub {
 	fetch(request: Request): Promise<Response>
+	rpc(message: unknown): Promise<void>
 }
 
 interface McpSessionId {
@@ -112,6 +120,19 @@ export class McpSession {
 		if (!this.initialized) this.initialized = true
 		return response
 	}
+
+	async rpc(message: unknown): Promise<void> {
+		if (!this.transport) return
+		const request = new Request("http://internal/rpc", {
+			method: "POST",
+			body: JSON.stringify(message),
+			headers: {
+				"Content-Type": "application/json",
+				"Mcp-Session-Id": this.ctx.id.toString(),
+			},
+		})
+		await this.transport.handleRequest(request)
+	}
 }
 
 // Stateless handler - new server/transport per request, no session
@@ -158,6 +179,69 @@ async function handleStateful(
 	return env.MCP_SESSION.get(id).fetch(request)
 }
 
+const AUTH_PATH = "/__smithery/auth"
+
+function isAuthRequest(request: Request) {
+	return (
+		request.method === "POST" && new URL(request.url).pathname === AUTH_PATH
+	)
+}
+
+function jsonResponse(data: unknown, status = 200) {
+	return new Response(JSON.stringify(data), {
+		status,
+		headers: { "Content-Type": "application/json" },
+	})
+}
+
+async function handleAuthRequest(
+	request: Request,
+	adapter: Awaited<ReturnType<NonNullable<typeof createAuthAdapter>>>,
+) {
+	try {
+		const body = (await request.json()) as {
+			action: string
+			payload: Record<string, unknown>
+		}
+
+		switch (body.action) {
+			case "getAuthorizationUrl":
+				return jsonResponse({
+					ok: true,
+					value: await adapter.getAuthorizationUrl(
+						body.payload as Parameters<typeof adapter.getAuthorizationUrl>[0],
+					),
+				})
+			case "exchangeCode":
+				return jsonResponse({
+					ok: true,
+					value: await adapter.exchangeCode(
+						body.payload as Parameters<typeof adapter.exchangeCode>[0],
+					),
+				})
+			case "refreshToken":
+				return jsonResponse({
+					ok: true,
+					value: await adapter.refreshToken(
+						body.payload as Parameters<typeof adapter.refreshToken>[0],
+					),
+				})
+			default:
+				return jsonResponse(
+					{
+						ok: false,
+						error: "unknown_action",
+						message: `Unknown action: ${body.action}`,
+					},
+					400,
+				)
+		}
+	} catch (error) {
+		const message = error instanceof Error ? error.message : "Unknown error"
+		return jsonResponse({ ok: false, error: "adapter_error", message }, 500)
+	}
+}
+
 async function loggedFetch(request: Request, env: Record<string, unknown>) {
 	const url = new URL(request.url)
 	const sessionId = request.headers.get("mcp-session-id")
@@ -166,14 +250,54 @@ async function loggedFetch(request: Request, env: Record<string, unknown>) {
 	)
 
 	const startTime = Date.now()
-	const response = stateful
-		? await handleStateful(
-				request,
-				env as unknown as { MCP_SESSION: McpSessionNamespace },
-			)
-		: await handleStateless(request, env as Record<string, string | undefined>)
-	const duration = Date.now() - startTime
+	const resolvedEnv = env as Record<string, string | undefined>
 
+	let response: Response
+
+	// 1. Auth requests
+	if (createAuthAdapter && isAuthRequest(request)) {
+		try {
+			const adapter = await createAuthAdapter({ env: resolvedEnv })
+			response = await handleAuthRequest(request, adapter)
+		} catch (error) {
+			const message = error instanceof Error ? error.message : "Unknown error"
+			response = jsonResponse(
+				{ ok: false, error: "adapter_init_failed", message },
+				500,
+			)
+		}
+	}
+	// 2. HTTP handler for non-root paths
+	else if (handleHttp && url.pathname !== "/" && url.pathname !== AUTH_PATH) {
+		if (stateful) {
+			const mcpSessionNs = env as unknown as {
+				MCP_SESSION: McpSessionNamespace
+			}
+			response = await handleHttp(request, {
+				env: resolvedEnv,
+				sessions: {
+					async send(targetSessionId: string, message: unknown) {
+						const doId = mcpSessionNs.MCP_SESSION.idFromString(targetSessionId)
+						const stub = mcpSessionNs.MCP_SESSION.get(doId)
+						await stub.rpc(message)
+					},
+				},
+			})
+		} else {
+			response = await handleHttp(request, { env: resolvedEnv })
+		}
+	}
+	// 3. Default: MCP protocol handling
+	else {
+		response = stateful
+			? await handleStateful(
+					request,
+					env as unknown as { MCP_SESSION: McpSessionNamespace },
+				)
+			: await handleStateless(request, resolvedEnv)
+	}
+
+	const duration = Date.now() - startTime
 	console.log(`[MCP] ${response.status} (${duration}ms)`)
 	return response
 }

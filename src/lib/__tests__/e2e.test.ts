@@ -178,6 +178,29 @@ describeE2E("CLI E2E MCP Server", { timeout: 60000 }, () => {
 			expect(val2).toBe(1)
 		})
 
+		test("auth path falls through to MCP when no createAuthAdapter export", async () => {
+			const res = await fetch(`${serverUrl}/__smithery/auth`, {
+				method: "POST",
+				headers: {
+					"Content-Type": "application/json",
+					Accept: "application/json, text/event-stream",
+				},
+				body: JSON.stringify({
+					jsonrpc: "2.0",
+					id: 1,
+					method: "initialize",
+					params: {
+						protocolVersion: "2024-11-05",
+						capabilities: {},
+						clientInfo: { name: "test-client", version: "1.0.0" },
+					},
+				}),
+			})
+
+			// Should be handled by MCP (not auth handler), since no createAuthAdapter
+			expect(res.status).toBe(200)
+		})
+
 		test("config from URL query params with dot-notation", async () => {
 			// Test that query params are parsed into config with dot-notation support
 			const urlWithConfig = `${serverUrl}?apiKey=test-key-123&timeout=5000&nested.value=deep`
@@ -312,6 +335,145 @@ describeE2E("CLI E2E MCP Server", { timeout: 60000 }, () => {
 			// Each session starts fresh
 			expect(valA).toBe(1)
 			expect(valB).toBe(1)
+		})
+	})
+
+	describe("auth server", () => {
+		let devServer: Awaited<ReturnType<typeof createDevServer>>
+		const port = 9102
+		const serverUrl = `http://127.0.0.1:${port}`
+		const outFile = join(OUT_DIR, "auth-server/module.js")
+
+		beforeAll(async () => {
+			await buildServer({
+				entryFile: join(FIXTURES, "auth-server/src/index.ts"),
+				outFile,
+				transport: "shttp",
+				minify: false,
+			})
+
+			devServer = await createDevServer({
+				port,
+				modulePath: outFile,
+			})
+		}, 30000)
+
+		afterAll(async () => {
+			await devServer?.close()
+		})
+
+		test("handles getAuthorizationUrl auth request", async () => {
+			const res = await fetch(`${serverUrl}/__smithery/auth`, {
+				method: "POST",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify({
+					action: "getAuthorizationUrl",
+					payload: {
+						callbackUrl: "https://example.com/callback",
+						state: "test-state",
+						config: {},
+					},
+				}),
+			})
+
+			expect(res.status).toBe(200)
+			const body = await res.json()
+			expect(body.ok).toBe(true)
+			expect(body.value.authorizationUrl).toContain("example.com/auth")
+			expect(body.value.authorizationUrl).toContain("test-state")
+		})
+
+		test("handles exchangeCode auth request", async () => {
+			const res = await fetch(`${serverUrl}/__smithery/auth`, {
+				method: "POST",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify({
+					action: "exchangeCode",
+					payload: {
+						code: "abc123",
+						callbackUrl: "https://example.com/callback",
+						config: {},
+					},
+				}),
+			})
+
+			expect(res.status).toBe(200)
+			const body = await res.json()
+			expect(body.ok).toBe(true)
+			expect(body.value.accessToken).toBe("test-access-token-abc123")
+		})
+
+		test("returns 400 for unknown auth action", async () => {
+			const res = await fetch(`${serverUrl}/__smithery/auth`, {
+				method: "POST",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify({
+					action: "unknownAction",
+					payload: {},
+				}),
+			})
+
+			expect(res.status).toBe(400)
+			const body = await res.json()
+			expect(body.ok).toBe(false)
+			expect(body.error).toBe("unknown_action")
+		})
+
+		test("root path still routes to MCP", async () => {
+			const { json: initJson } = await mcpRequest(serverUrl, "initialize", {
+				protocolVersion: "2024-11-05",
+				capabilities: {},
+				clientInfo: { name: "test-client", version: "1.0.0" },
+			})
+			expect(initJson.result.serverInfo.name).toBe("test-auth-server")
+		})
+	})
+
+	describe("http handler server", () => {
+		let devServer: Awaited<ReturnType<typeof createDevServer>>
+		const port = 9103
+		const serverUrl = `http://127.0.0.1:${port}`
+		const outFile = join(OUT_DIR, "http-handler-server/module.js")
+
+		beforeAll(async () => {
+			await buildServer({
+				entryFile: join(FIXTURES, "http-handler-server/src/index.ts"),
+				outFile,
+				transport: "shttp",
+				minify: false,
+			})
+
+			devServer = await createDevServer({
+				port,
+				modulePath: outFile,
+			})
+		}, 30000)
+
+		afterAll(async () => {
+			await devServer?.close()
+		})
+
+		test("subpath routes to handleHttp", async () => {
+			const res = await fetch(`${serverUrl}/webhook/events`, {
+				method: "POST",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify({ event: "test" }),
+			})
+
+			expect(res.status).toBe(200)
+			const body = await res.json()
+			expect(body.handled).toBe(true)
+			expect(body.path).toBe("/webhook/events")
+			expect(body.method).toBe("POST")
+		})
+
+		test("root path still routes to MCP", async () => {
+			const { json: initJson } = await mcpRequest(serverUrl, "initialize", {
+				protocolVersion: "2024-11-05",
+				capabilities: {},
+				clientInfo: { name: "test-client", version: "1.0.0" },
+			})
+			expect(initJson.result.serverInfo.name).toBe("test-http-handler-server")
 		})
 	})
 
