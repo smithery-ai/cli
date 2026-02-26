@@ -78,12 +78,7 @@ export interface ScanResult {
 }
 
 export async function scanModule(modulePath: string): Promise<ScanResult> {
-	const module = (await import(pathToFileURL(modulePath).href)) as {
-		default: ServerModule
-		stateful?: boolean
-		createAuthAdapter?: unknown
-	}
-	const serverModule = module.default
+	const module = (await import(pathToFileURL(modulePath).href)) as ServerModule
 	const stateful = module.stateful ?? false
 	const hasAuthAdapter = typeof module.createAuthAdapter === "function"
 
@@ -95,13 +90,13 @@ export async function scanModule(modulePath: string): Promise<ScanResult> {
 	}
 
 	let server: Server
-	if (serverModule.createSandboxServer) {
-		server = await serverModule.createSandboxServer({ session })
+	if (module.createSandboxServer) {
+		server = await module.createSandboxServer({ session })
 	} else {
-		const config = serverModule.configSchema
-			? generateMockConfig(serverModule.configSchema as z.ZodType)
+		const config = module.configSchema
+			? generateMockConfig(module.configSchema as z.ZodType)
 			: undefined
-		server = await serverModule.default({
+		server = await module.default({
 			config,
 			session,
 			env: process.env,
@@ -140,11 +135,8 @@ export async function scanModule(modulePath: string): Promise<ScanResult> {
 
 	return {
 		serverCard,
-		configSchema: serverModule.configSchema
-			? (zodSchemaToJsonSchema(serverModule.configSchema) as Record<
-					string,
-					unknown
-				>)
+		configSchema: module.configSchema
+			? (zodSchemaToJsonSchema(module.configSchema) as Record<string, unknown>)
 			: undefined,
 		stateful,
 		hasAuthAdapter,
