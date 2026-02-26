@@ -1,4 +1,4 @@
-import { SmitheryAuthorizationError } from "@smithery/api/mcp"
+import { SmitheryAuthorizationError as MCPAuthorizationError } from "@smithery/api/mcp"
 import pc from "picocolors"
 import { errorMessage } from "../../lib/cli-error"
 import { isJsonMode, outputDetail, outputJson } from "../../utils/output"
@@ -65,7 +65,7 @@ export async function getTool(
 			tip: `Use smithery tool call ${connection} '${found.name}' '<args>' to call this tool.`,
 		})
 	} catch (error) {
-		if (error instanceof SmitheryAuthorizationError) {
+		if (error instanceof MCPAuthorizationError) {
 			if (isJson) {
 				outputJson({
 					tool: null,

@@ -1,4 +1,4 @@
-import { SmitheryAuthorizationError } from "@smithery/api/mcp"
+import { SmitheryAuthorizationError as MCPAuthorizationError } from "@smithery/api/mcp"
 import pc from "picocolors"
 import { errorMessage } from "../../lib/cli-error"
 import { listEventTopics } from "../../lib/events"
@@ -59,7 +59,7 @@ export async function listTopics(
 			await mcpClient.close()
 		}
 	} catch (error) {
-		if (error instanceof SmitheryAuthorizationError) {
+		if (error instanceof MCPAuthorizationError) {
 			if (isJson) {
 				outputJson({
 					topics: [],
