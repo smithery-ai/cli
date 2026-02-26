@@ -92,13 +92,32 @@ Constraint fields (all optional):
 
 ### RPC-level filtering with `rpcReqMatch`
 
-`rpcReqMatch` restricts which MCP JSON-RPC requests the token can make. Keys are dot-paths into the JSON-RPC request body (e.g. `method`, `params.name`). Values are regex patterns. All entries must match (AND).
+`rpcReqMatch` restricts which MCP JSON-RPC requests the token can make. Keys are dot-paths into the JSON-RPC request body. Values are regex patterns. All entries must match (AND).
 
-Common use cases:
+The MCP JSON-RPC request body has this structure:
+
+```json
+{
+  "method": "tools/call",
+  "params": {
+    "name": "search",
+    "arguments": { "query": "weather" }
+  }
+}
+```
+
+Matchable fields include:
+- `method` - The MCP method (e.g. `tools/call`, `tools/list`, `resources/read`, `resources/list`)
+- `params.name` - The tool or resource name
+- `params.arguments.<key>` - Specific argument values
+
+**Note:** Connection/server IDs are NOT part of the JSON-RPC request body — they are handled at the transport layer. To restrict which connections a token can access, use the `metadata` constraint field instead.
+
+Examples:
 
 ```bash
-# Only allow calling a specific tool
-smithery auth token --policy '{"rpcReqMatch": {"method": "tools/call", "params.name": "^get_weather$"}}'
+# Only allow calling a specific tool by name
+smithery auth token --policy '{"rpcReqMatch": {"method": "tools/call", "params.name": "^search$"}}'
 
 # Allow calling any tool whose name starts with "read_"
 smithery auth token --policy '{"rpcReqMatch": {"method": "tools/call", "params.name": "^read_"}}'
