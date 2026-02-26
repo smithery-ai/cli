@@ -1115,24 +1115,36 @@ auth
 		"--policy <json>",
 		"Policy constraint as JSON object (repeatable)",
 		(value: string, previous: Array<Record<string, unknown>>) => {
+			const policyError = (message: string): never => {
+				const hint =
+					"\nRun `smithery auth token --help` to see the policy JSON schema."
+				if (process.argv.includes("--json")) {
+					console.log(JSON.stringify({ error: message }))
+					process.exit(1)
+				}
+				fatal(`${message}${hint}`)
+			}
+
 			let parsed: unknown
 			try {
 				parsed = JSON.parse(value)
 			} catch {
-				fatal(`Invalid JSON in --policy: ${value}`)
+				policyError(`Invalid JSON in --policy: ${value}`)
 			}
 			if (
 				typeof parsed !== "object" ||
 				parsed === null ||
 				Array.isArray(parsed)
 			) {
-				fatal(
+				policyError(
 					"--policy must be a JSON object, not an array or primitive. Specify --policy multiple times for multiple constraints.",
 				)
 			}
 			const result = ConstraintSchema.safeParse(parsed)
 			if (!result.success) {
-				fatal(`Invalid policy constraint:\n${z.prettifyError(result.error)}`)
+				policyError(
+					`Invalid policy constraint:\n${z.prettifyError(result.error)}`,
+				)
 			}
 			return [...previous, parsed as Record<string, unknown>]
 		},
