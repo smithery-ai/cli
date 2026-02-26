@@ -70,21 +70,24 @@ Create scoped service tokens for machine-to-machine use:
 # Mint a default token (1h TTL)
 smithery auth token
 
-# Mint a restricted token with a policy
-smithery auth token --policy '[{"resources": ["connections"], "operations": ["read"], "ttl": "30m"}]'
+# Mint a restricted token with one constraint
+smithery auth token --policy '{"resources": "connections", "operations": "read", "ttl": "30m"}'
+
+# Mint a token with multiple constraints (repeat --policy)
+smithery auth token --policy '{"namespaces": "prod", "operations": "read"}' --policy '{"resources": "skills", "ttl": "2h"}'
 
 # Output as JSON
 smithery auth token --json
 ```
 
-Policy constraints (all optional):
+Each `--policy` value is a single JSON constraint object. Specify `--policy` multiple times to add more constraints. Run `smithery auth token --help` to see the full JSON schema.
+
+Constraint fields (all optional):
 - `resources` - `"connections"`, `"servers"`, `"namespaces"`, `"skills"` (string or array)
 - `operations` - `"read"`, `"write"`, `"execute"` (string or array)
 - `namespaces` - Namespace name(s) to restrict to (string or array)
 - `ttl` - Duration string (`"30m"`, `"1h"`) or seconds (max 24h, default 1h)
-- `metadata` - Key-value pairs for fine-grained access control
-
-A single constraint object is automatically wrapped in an array.
+- `metadata` - Key-value pairs for fine-grained access control (object or array of objects)
 
 Tokens use Biscuit attenuation — they can only be narrowed, never expanded.
 

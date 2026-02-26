@@ -21,8 +21,8 @@ importers:
         specifier: ^1.5.1
         version: 1.7.0
       '@smithery/api':
-        specifier: 0.52.0
-        version: 0.52.0(@modelcontextprotocol/sdk@1.25.3(hono@4.11.1)(zod@4.2.1))
+        specifier: https://pkg.stainless.com/s/smithery-typescript/dcc357964db6ea3404dbe29530696bdc49237335/dist.tar.gz
+        version: https://pkg.stainless.com/s/smithery-typescript/dcc357964db6ea3404dbe29530696bdc49237335/dist.tar.gz(@modelcontextprotocol/sdk@1.25.3(hono@4.11.1)(zod@4.2.1))
       '@smithery/sdk':
         specifier: ^4.0.1
         version: 4.0.1(@modelcontextprotocol/sdk@1.25.3(hono@4.11.1)(zod@4.2.1))(zod@4.2.1)
@@ -881,8 +881,9 @@ packages:
     resolution: {integrity: sha512-P1Cz1dWaFfR4IR+U13mqqiGsLFf1KbayybWwdd2vfctdV6hDpUkgCY0nKOLLTMSoRd/jJNjtbqzf13K8DCCXQw==}
     engines: {node: '>=18'}
 
-  '@smithery/api@0.52.0':
-    resolution: {integrity: sha512-PRN27yr4J0GT2X29f1prw4gIC+52D9Aa80yr76wfPzdcYXEwBz0XVia/SDhbYuyS0WKdeSTdisTRZ2EqXQtGEg==}
+  '@smithery/api@https://pkg.stainless.com/s/smithery-typescript/dcc357964db6ea3404dbe29530696bdc49237335/dist.tar.gz':
+    resolution: {integrity: sha512-saVSB6nArKjvWZGKSFVG9rmDtdTuedrbWWk8osPObDiNVWUD6/mVf2ozhFuP3CEfEodkkgXB8l+FlAzToyQgnw==, tarball: https://pkg.stainless.com/s/smithery-typescript/dcc357964db6ea3404dbe29530696bdc49237335/dist.tar.gz}
+    version: 0.52.0
     peerDependencies:
       '@modelcontextprotocol/sdk': '>=1.0.0'
     peerDependenciesMeta:
@@ -2785,7 +2786,7 @@ snapshots:
 
   '@sindresorhus/is@7.2.0': {}
 
-  '@smithery/api@0.52.0(@modelcontextprotocol/sdk@1.25.3(hono@4.11.1)(zod@4.2.1))':
+  '@smithery/api@https://pkg.stainless.com/s/smithery-typescript/dcc357964db6ea3404dbe29530696bdc49237335/dist.tar.gz(@modelcontextprotocol/sdk@1.25.3(hono@4.11.1)(zod@4.2.1))':
     optionalDependencies:
       '@modelcontextprotocol/sdk': 1.25.3(hono@4.11.1)(zod@4.2.1)
 

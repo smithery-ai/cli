@@ -6,6 +6,7 @@ import pc from "picocolors"
 const brandOrange = (text: string) => `\x1b[38;2;234;88;12m${text}\x1b[39m`
 
 import { Command } from "commander"
+import { constraintJsonSchema } from "./commands/auth/token"
 import { SKILL_AGENTS } from "./config/agents"
 import { VALID_CLIENTS, type ValidClient } from "./config/clients"
 import { DEFAULT_PORT } from "./constants"
@@ -1109,8 +1110,42 @@ const whoamiCmd = auth
 auth
 	.command("token")
 	.description("Mint a restricted service token")
-	.option("--policy <json>", "Policy constraints as JSON array")
+	.option(
+		"--policy <json>",
+		"Policy constraint as JSON object (repeatable)",
+		(value: string, previous: Array<Record<string, unknown>>) => {
+			let parsed: unknown
+			try {
+				parsed = JSON.parse(value)
+			} catch {
+				fatal(`Invalid JSON in --policy: ${value}`)
+			}
+			if (
+				typeof parsed !== "object" ||
+				parsed === null ||
+				Array.isArray(parsed)
+			) {
+				fatal(
+					"--policy must be a JSON object, not an array or primitive. Specify --policy multiple times for multiple constraints.",
+				)
+			}
+			return [...previous, parsed as Record<string, unknown>]
+		},
+		[] as Array<Record<string, unknown>>,
+	)
+	.addHelpText(
+		"after",
+		`
+Each --policy value is a JSON constraint object. Specify multiple times for multiple constraints.
 
+Policy JSON Schema:
+${JSON.stringify(constraintJsonSchema, null, 2)}
+
+Examples:
+  smithery auth token
+  smithery auth token --policy '{"resources": "connections", "operations": "read", "ttl": "30m"}'
+  smithery auth token --policy '{"namespaces": "prod"}' --policy '{"resources": "skills", "ttl": "2h"}'`,
+	)
 	.action(async (options) => {
 		const { createToken } = await import("./commands/auth/token")
 		await createToken(options)
