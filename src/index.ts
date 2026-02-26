@@ -6,7 +6,8 @@ import pc from "picocolors"
 const brandOrange = (text: string) => `\x1b[38;2;234;88;12m${text}\x1b[39m`
 
 import { Command } from "commander"
-import { constraintJsonSchema } from "./commands/auth/token"
+import { z } from "zod"
+import { ConstraintSchema, constraintJsonSchema } from "./commands/auth/token"
 import { SKILL_AGENTS } from "./config/agents"
 import { VALID_CLIENTS, type ValidClient } from "./config/clients"
 import { DEFAULT_PORT } from "./constants"
@@ -1128,6 +1129,10 @@ auth
 				fatal(
 					"--policy must be a JSON object, not an array or primitive. Specify --policy multiple times for multiple constraints.",
 				)
+			}
+			const result = ConstraintSchema.safeParse(parsed)
+			if (!result.success) {
+				fatal(`Invalid policy constraint:\n${z.prettifyError(result.error)}`)
 			}
 			return [...previous, parsed as Record<string, unknown>]
 		},
