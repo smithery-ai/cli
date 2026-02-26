@@ -5,6 +5,19 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 
+## [4.3.0](https://github.com/smithery-ai/cli/compare/v4.2.1...v4.3.0) (2026-02-26)
+
+
+### Features
+
+* improve auth token --policy UX with JSON schema and repeatable constraints ([#675](https://github.com/smithery-ai/cli/issues/675)) ([b95bd6f](https://github.com/smithery-ai/cli/commit/b95bd6f8c32780c6a13b8cbddc4eacb932243482))
+
+
+### Bug Fixes
+
+* list event topics without requiring MCP handshake ([#671](https://github.com/smithery-ai/cli/issues/671)) ([760bd8a](https://github.com/smithery-ai/cli/commit/760bd8adc3e1971864e062fd66977951d18732ca))
+* warn on auth-required connections instead of silently failing ([#673](https://github.com/smithery-ai/cli/issues/673)) ([4fe8a8c](https://github.com/smithery-ai/cli/commit/4fe8a8cd53427527179a2fb869d8a63c1cd86936))
+
 ## [4.2.1](https://github.com/smithery-ai/cli/compare/v4.2.0...v4.2.1) (2026-02-25)
 
 
