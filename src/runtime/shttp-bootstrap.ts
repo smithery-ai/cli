@@ -7,42 +7,7 @@ import type {
 	StatelessServerContext,
 } from "@smithery/sdk"
 
-// TODO: Remove local AuthAdapter/handleHttp types once @smithery/sdk 4.1.0 is published
-// (SDK 4.1.0 adds these to ServerModule directly)
-interface AuthAdapter {
-	getAuthorizationUrl(args: {
-		callbackUrl: string
-		state: string
-		codeChallenge?: string
-		config: unknown
-	}): Promise<{ authorizationUrl: string }>
-
-	exchangeCode(args: {
-		code: string
-		callbackUrl: string
-		codeVerifier?: string
-		config: unknown
-	}): Promise<{
-		accessToken: string
-		refreshToken?: string
-		expiresIn?: number
-	}>
-
-	refreshToken(args: { refreshToken: string; config: unknown }): Promise<{
-		accessToken: string
-		refreshToken?: string
-		expiresIn?: number
-	}>
-}
-
-type HandleHttpFn = (request: Request, context: unknown) => Promise<Response>
-
-const userModule = _userModule as ServerModule & {
-	createAuthAdapter?: (context: {
-		env: Record<string, string | undefined>
-	}) => Promise<AuthAdapter>
-	handleHttp?: HandleHttpFn
-}
+const userModule = _userModule as ServerModule
 const createServer = userModule.default
 const stateful = userModule.stateful ?? false
 const createAuthAdapter = userModule.createAuthAdapter

@@ -46,7 +46,7 @@
 		"@modelcontextprotocol/sdk": "^1.25.3",
 		"@ngrok/ngrok": "^1.5.1",
 		"@smithery/api": "0.53.0",
-		"@smithery/sdk": "^4.0.1",
+		"@smithery/sdk": "^4.1.0",
 		"@types/inquirer": "^8.2.4",
 		"@types/inquirer-autocomplete-prompt": "^3.0.3",
 		"@types/node": "^20.19.27",

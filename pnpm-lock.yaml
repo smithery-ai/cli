@@ -24,8 +24,8 @@ importers:
         specifier: 0.53.0
         version: 0.53.0(@modelcontextprotocol/sdk@1.25.3(hono@4.11.1)(zod@4.2.1))
       '@smithery/sdk':
-        specifier: ^4.0.1
-        version: 4.0.1(@modelcontextprotocol/sdk@1.25.3(hono@4.11.1)(zod@4.2.1))(zod@4.2.1)
+        specifier: ^4.1.0
+        version: 4.1.0(@modelcontextprotocol/sdk@1.25.3(hono@4.11.1)(zod@4.2.1))(zod@4.2.1)
       '@types/inquirer':
         specifier: ^8.2.4
         version: 8.2.12
@@ -889,8 +889,8 @@ packages:
       '@modelcontextprotocol/sdk':
         optional: true
 
-  '@smithery/sdk@4.0.1':
-    resolution: {integrity: sha512-u5lZYSzXLP72AJuOro4WLfcmn9X8exE75zcl9CbUb5Ydi/uIiMUr3vu8qzZ6/hXYI51wpiclQ8J4OYEKKOtYGQ==}
+  '@smithery/sdk@4.1.0':
+    resolution: {integrity: sha512-DF9XZNpHuvvrk3jHu44ABkWrUeICykIFrXzOtk9AlSdfbxjH3wdk9t0TglN24gxHP9EoaHagkJaDNC/NoWxXgA==}
     peerDependencies:
       '@modelcontextprotocol/sdk': ^1.25.1
       zod: ^4
@@ -2789,7 +2789,7 @@ snapshots:
     optionalDependencies:
       '@modelcontextprotocol/sdk': 1.25.3(hono@4.11.1)(zod@4.2.1)
 
-  '@smithery/sdk@4.0.1(@modelcontextprotocol/sdk@1.25.3(hono@4.11.1)(zod@4.2.1))(zod@4.2.1)':
+  '@smithery/sdk@4.1.0(@modelcontextprotocol/sdk@1.25.3(hono@4.11.1)(zod@4.2.1))(zod@4.2.1)':
     dependencies:
       '@modelcontextprotocol/sdk': 1.25.3(hono@4.11.1)(zod@4.2.1)
       zod: 4.2.1
