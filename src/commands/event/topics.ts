@@ -1,5 +1,5 @@
 import pc from "picocolors"
-import { errorMessage } from "../../lib/cli-error"
+import { errorMessage, handleMCPAuthError } from "../../lib/cli-error"
 import { listEventTopics } from "../../lib/events"
 import {
 	isJsonMode,
@@ -58,6 +58,10 @@ export async function listTopics(
 			await mcpClient.close()
 		}
 	} catch (error) {
+		handleMCPAuthError(error, connection, {
+			json: isJson,
+			jsonData: { topics: [] },
+		})
 		const msg = errorMessage(error)
 		if (isJson) {
 			outputJson({ topics: [], error: `Failed to list topics: ${msg}` })

@@ -1,5 +1,5 @@
 import pc from "picocolors"
-import { errorMessage } from "../../lib/cli-error"
+import { errorMessage, handleMCPAuthError } from "../../lib/cli-error"
 import { EmptyEventResultSchema } from "../../lib/events"
 import { isJsonMode, outputJson } from "../../utils/output"
 import { ConnectSession } from "../mcp/api"
@@ -33,6 +33,7 @@ export async function unsubscribeEvents(
 			await mcpClient.close()
 		}
 	} catch (error) {
+		handleMCPAuthError(error, connection, { json: isJson })
 		const msg = errorMessage(error)
 		if (isJson) {
 			outputJson({ error: `Failed to unsubscribe: ${msg}` })

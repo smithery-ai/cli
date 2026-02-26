@@ -1,4 +1,4 @@
-import { errorMessage } from "../../lib/cli-error"
+import { errorMessage, handleMCPAuthError } from "../../lib/cli-error"
 import { isJsonMode, outputJson } from "../../utils/output"
 import { ConnectSession } from "./api"
 
@@ -97,6 +97,10 @@ export async function callTool(
 
 		console.log(output)
 	} catch (e) {
+		handleMCPAuthError(e, connection, {
+			json: isJsonMode(),
+			jsonData: { result: null, isError: true },
+		})
 		outputJson({
 			result: null,
 			isError: true,
