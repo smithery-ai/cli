@@ -125,8 +125,8 @@ smithery auth token --policy '{"rpcReqMatch": {"method": "tools/call", "params.n
 # Only allow listing tools (no calling)
 smithery auth token --policy '{"rpcReqMatch": {"method": "^tools/list$"}}'
 
-# Restrict to resource reads only
-smithery auth token --policy '{"rpcReqMatch": {"method": "^resources/(list|read)$"}}'
+# Restrict to a specific connection and only allow calling the "search" tool
+smithery auth token --policy '{"metadata": {"connectionId": "my-connection-id"}, "rpcReqMatch": {"method": "tools/call", "params.name": "^search$"}}'
 ```
 
 Tokens use Biscuit attenuation — they can only be narrowed, never expanded.
