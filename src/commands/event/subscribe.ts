@@ -1,6 +1,5 @@
-import { SmitheryAuthorizationError as MCPAuthorizationError } from "@smithery/api/mcp"
 import pc from "picocolors"
-import { errorMessage } from "../../lib/cli-error"
+import { errorMessage, handleMCPAuthError } from "../../lib/cli-error"
 import { EmptyEventResultSchema } from "../../lib/events"
 import { isJsonMode, outputJson } from "../../utils/output"
 import { ConnectSession } from "../mcp/api"
@@ -52,21 +51,7 @@ export async function subscribeEvents(
 			await mcpClient.close()
 		}
 	} catch (error) {
-		if (error instanceof MCPAuthorizationError) {
-			if (isJson) {
-				outputJson({
-					error: `Connection "${connection}" requires authorization.`,
-					authorizationUrl: error.authorizationUrl,
-				})
-			} else {
-				console.error(
-					pc.yellow(
-						`Connection "${connection}" requires authorization. Authorize at:\n${error.authorizationUrl}`,
-					),
-				)
-			}
-			process.exit(1)
-		}
+		handleMCPAuthError(error, connection, { json: isJson })
 		const msg = errorMessage(error)
 		if (isJson) {
 			outputJson({ error: `Failed to subscribe: ${msg}` })

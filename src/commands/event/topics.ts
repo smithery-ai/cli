@@ -1,6 +1,5 @@
-import { SmitheryAuthorizationError as MCPAuthorizationError } from "@smithery/api/mcp"
 import pc from "picocolors"
-import { errorMessage } from "../../lib/cli-error"
+import { errorMessage, handleMCPAuthError } from "../../lib/cli-error"
 import { listEventTopics } from "../../lib/events"
 import {
 	isJsonMode,
@@ -59,22 +58,10 @@ export async function listTopics(
 			await mcpClient.close()
 		}
 	} catch (error) {
-		if (error instanceof MCPAuthorizationError) {
-			if (isJson) {
-				outputJson({
-					topics: [],
-					error: `Connection "${connection}" requires authorization.`,
-					authorizationUrl: error.authorizationUrl,
-				})
-			} else {
-				console.error(
-					pc.yellow(
-						`Connection "${connection}" requires authorization. Authorize at:\n${error.authorizationUrl}`,
-					),
-				)
-			}
-			process.exit(1)
-		}
+		handleMCPAuthError(error, connection, {
+			json: isJson,
+			jsonData: { topics: [] },
+		})
 		const msg = errorMessage(error)
 		if (isJson) {
 			outputJson({ topics: [], error: `Failed to list topics: ${msg}` })

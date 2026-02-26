@@ -1,6 +1,5 @@
-import { SmitheryAuthorizationError as MCPAuthorizationError } from "@smithery/api/mcp"
 import pc from "picocolors"
-import { errorMessage } from "../../lib/cli-error"
+import { errorMessage, handleMCPAuthError } from "../../lib/cli-error"
 import { isJsonMode, outputDetail, outputJson } from "../../utils/output"
 import type { ToolInfo } from "./api"
 import { ConnectSession } from "./api"
@@ -65,22 +64,10 @@ export async function getTool(
 			tip: `Use smithery tool call ${connection} '${found.name}' '<args>' to call this tool.`,
 		})
 	} catch (error) {
-		if (error instanceof MCPAuthorizationError) {
-			if (isJson) {
-				outputJson({
-					tool: null,
-					error: `Connection "${connection}" requires authorization.`,
-					authorizationUrl: error.authorizationUrl,
-				})
-			} else {
-				console.error(
-					pc.yellow(
-						`Connection "${connection}" requires authorization. Authorize at:\n${error.authorizationUrl}`,
-					),
-				)
-			}
-			process.exit(1)
-		}
+		handleMCPAuthError(error, connection, {
+			json: isJson,
+			jsonData: { tool: null },
+		})
 		const msg = errorMessage(error)
 		if (isJson) {
 			outputJson({ tool: null, error: `Failed to get tool: ${msg}` })
