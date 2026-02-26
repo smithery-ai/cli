@@ -45,7 +45,7 @@
 		"@biomejs/biome": "2.3.10",
 		"@modelcontextprotocol/sdk": "^1.25.3",
 		"@ngrok/ngrok": "^1.5.1",
-		"@smithery/api": "https://pkg.stainless.com/s/smithery-typescript/dcc357964db6ea3404dbe29530696bdc49237335/dist.tar.gz",
+		"@smithery/api": "0.53.0",
 		"@smithery/sdk": "^4.0.1",
 		"@types/inquirer": "^8.2.4",
 		"@types/inquirer-autocomplete-prompt": "^3.0.3",

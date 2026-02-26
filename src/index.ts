@@ -1136,8 +1136,6 @@ auth
 	.addHelpText(
 		"after",
 		`
-Each --policy value is a JSON constraint object. Specify multiple times for multiple constraints.
-
 Policy JSON Schema:
 ${JSON.stringify(constraintJsonSchema, null, 2)}
 
