@@ -800,7 +800,7 @@ Examples:
 	.action(handleFindTools)
 
 toolCmd
-	.command("list [connection]")
+	.command("list [connection] [prefix]")
 	.description("List tools from your connected MCP servers")
 	.option("--namespace <ns>", "Namespace to list from")
 	.option("--limit <n>", "Maximum number of tools to return (default: 10)")
@@ -809,15 +809,20 @@ toolCmd
 	.addHelpText(
 		"after",
 		`
+Arguments:
+  connection   Connection ID to list tools from (omit to list from all)
+  prefix       Only show tools whose name starts with this prefix (e.g. "issues.")
+
 Examples:
-  smithery tool list                    List tools from all connections
-  smithery tool list myserver           List tools for a specific connection
-  smithery tool list myserver --json    Output as JSON
+  smithery tool list                              List tools from all connections
+  smithery tool list myserver                     List tools for a specific connection
+  smithery tool list myserver issues.             List tools starting with "issues."
+  smithery tool list myserver issues. --json      Prefix-filtered output as JSON
 
 Tip: Use 'smithery tool find <query>' to search tools by name or intent.`,
 	)
-	.action((connection, options) =>
-		handleFindTools(undefined, { ...options, connection }),
+	.action((connection, prefix, options) =>
+		handleFindTools(undefined, { ...options, connection, prefix }),
 	)
 
 toolCmd
@@ -855,12 +860,25 @@ const eventCmd = program
 	.description("Subscribe to event streams from MCP servers")
 
 eventCmd
-	.command("topics <connection>")
+	.command("topics <connection> [prefix]")
 	.description("List available event topics for a connection")
 	.option("--namespace <ns>", "Namespace for the connection")
-	.action(async (connection: string, options: any) => {
+	.addHelpText(
+		"after",
+		`
+Arguments:
+  connection   Connection ID to list topics from
+  prefix       Only show topics whose identifier starts with this prefix (e.g. "user.")
+
+Examples:
+  smithery event topics myserver                  List all topics
+  smithery event topics myserver user.            List topics starting with "user."
+  smithery event topics myserver user. --json     Prefix-filtered output as JSON`,
+	)
+	// biome-ignore lint/suspicious/noExplicitAny: commander.js passes options as any
+	.action(async (connection: string, prefix: string | undefined, options: any) => {
 		const { listTopics } = await import("./commands/event")
-		await listTopics(connection, options)
+		await listTopics(connection, { ...options, prefix })
 	})
 
 eventCmd

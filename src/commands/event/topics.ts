@@ -11,7 +11,7 @@ import { ConnectSession } from "../mcp/api"
 
 export async function listTopics(
 	connection: string,
-	options: { namespace?: string },
+	options: { namespace?: string; prefix?: string },
 ): Promise<void> {
 	const isJson = isJsonMode()
 
@@ -20,13 +20,25 @@ export async function listTopics(
 		const mcpClient = await session.getEventsClient(connection)
 
 		try {
-			const { eventTopics: topics } = await listEventTopics(mcpClient)
+			const { eventTopics } = await listEventTopics(mcpClient)
+
+			const topics = options.prefix
+				? eventTopics.filter((t) =>
+						t.topic.toLowerCase().startsWith(options.prefix!.toLowerCase()),
+					)
+				: eventTopics
 
 			if (topics.length === 0) {
 				if (isJson) {
-					outputJson({ topics: [] })
+					outputJson({
+						topics: [],
+						...(options.prefix ? { prefix: options.prefix } : {}),
+					})
 				} else {
-					console.log(pc.yellow("No event topics found for this connection."))
+					const msg = options.prefix
+						? `No event topics found matching prefix "${options.prefix}".`
+						: "No event topics found for this connection."
+					console.log(pc.yellow(msg))
 				}
 				return
 			}
@@ -51,7 +63,10 @@ export async function listTopics(
 					{ key: "hasInputSchema", header: "PARAMS" },
 				],
 				json: isJson,
-				jsonData: { topics },
+				jsonData: {
+					topics,
+					...(options.prefix ? { prefix: options.prefix } : {}),
+				},
 				tip: `Use smithery event subscribe ${connection} <topic> to subscribe to events.`,
 			})
 		} finally {
