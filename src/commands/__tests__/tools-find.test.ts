@@ -95,6 +95,88 @@ describe("tools find command", () => {
 		)
 	})
 
+	test("filters tools by name prefix", async () => {
+		mockGetConnection.mockResolvedValue({
+			connectionId: "github-abc",
+			name: "github-abc",
+			status: { state: "connected" },
+		})
+		mockListToolsForConnection.mockResolvedValue([
+			{
+				connectionId: "github-abc",
+				connectionName: "github-abc",
+				name: "issues.create",
+				description: "Create an issue",
+				inputSchema: { type: "object" },
+			},
+			{
+				connectionId: "github-abc",
+				connectionName: "github-abc",
+				name: "issues.list",
+				description: "List issues",
+				inputSchema: { type: "object" },
+			},
+			{
+				connectionId: "github-abc",
+				connectionName: "github-abc",
+				name: "pulls.create",
+				description: "Create a pull request",
+				inputSchema: { type: "object" },
+			},
+		])
+
+		await findTools(undefined, {
+			connection: "github-abc",
+			prefix: "issues.",
+			all: true,
+		})
+
+		expect(mockOutputTable).toHaveBeenCalledWith(
+			expect.objectContaining({
+				jsonData: expect.objectContaining({
+					total: 2,
+					prefix: "issues.",
+					tools: expect.arrayContaining([
+						expect.objectContaining({ name: "issues.create" }),
+						expect.objectContaining({ name: "issues.list" }),
+					]),
+				}),
+			}),
+		)
+	})
+
+	test("prefix with no matches returns empty result", async () => {
+		mockGetConnection.mockResolvedValue({
+			connectionId: "github-abc",
+			name: "github-abc",
+			status: { state: "connected" },
+		})
+		mockListToolsForConnection.mockResolvedValue([
+			{
+				connectionId: "github-abc",
+				connectionName: "github-abc",
+				name: "pulls.create",
+				description: "Create a PR",
+				inputSchema: { type: "object" },
+			},
+		])
+
+		await findTools(undefined, {
+			connection: "github-abc",
+			prefix: "issues.",
+			all: true,
+		})
+
+		expect(mockOutputTable).toHaveBeenCalledWith(
+			expect.objectContaining({
+				jsonData: expect.objectContaining({
+					total: 0,
+					tools: [],
+				}),
+			}),
+		)
+	})
+
 	test("supports listing behavior via find --all without a query", async () => {
 		mockListConnections.mockResolvedValue({
 			connections: [

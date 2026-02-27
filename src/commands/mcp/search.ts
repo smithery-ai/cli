@@ -117,6 +117,7 @@ export async function findTools(
 		page?: string
 		all?: boolean
 		match?: string
+		prefix?: string
 	},
 ): Promise<void> {
 	const isJson = isJsonMode()
@@ -227,8 +228,14 @@ export async function findTools(
 		return
 	}
 
+	const candidates = options.prefix
+		? allTools.filter((tool) =>
+				tool.name.toLowerCase().startsWith(options.prefix!.toLowerCase()),
+			)
+		: allTools
+
 	const matches = matchTools(
-		allTools,
+		candidates,
 		normalizedQuery,
 		mode,
 		limit,
@@ -249,6 +256,7 @@ export async function findTools(
 			tools: data,
 			total: matches.length,
 			mode,
+			...(options.prefix ? { prefix: options.prefix } : {}),
 			...(normalizedQuery ? { query: normalizedQuery } : {}),
 			...(options.all
 				? { all: true, page: 1, hasMore: false }
