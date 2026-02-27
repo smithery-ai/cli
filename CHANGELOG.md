@@ -5,6 +5,19 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 
+## [4.4.0](https://github.com/smithery-ai/cli/compare/v4.3.0...v4.4.0) (2026-02-27)
+
+
+### Features
+
+* surface tool annotations in tool list output ([#679](https://github.com/smithery-ai/cli/issues/679)) ([b949eb2](https://github.com/smithery-ai/cli/commit/b949eb2c46935b0ecc5c24586c9629ab2636da4e))
+
+
+### Chores
+
+* **SMI-1567:** add prefix filtering to tool list and event topics ([#678](https://github.com/smithery-ai/cli/issues/678)) ([cdb28e8](https://github.com/smithery-ai/cli/commit/cdb28e88b5c5e1f74fb12613b485615ba6a6ee80))
+* update dev bootstrap for SDK v4.1.0 ([#676](https://github.com/smithery-ai/cli/issues/676)) ([7a105de](https://github.com/smithery-ai/cli/commit/7a105de0d0a9fb315dd4f36f5155b4f37dd13a3a))
+
 ## [4.3.0](https://github.com/smithery-ai/cli/compare/v4.2.1...v4.3.0) (2026-02-26)
 
 
