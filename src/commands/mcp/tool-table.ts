@@ -7,6 +7,7 @@ export function formatToolRow(tool: ToolInfo) {
 		connection: tool.connectionId,
 		description: tool.description ?? "",
 		inputSchema: tool.inputSchema,
+		...(tool.annotations ? { annotations: tool.annotations } : {}),
 	}
 }
 
