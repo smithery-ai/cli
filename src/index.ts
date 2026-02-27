@@ -876,10 +876,12 @@ Examples:
   smithery event topics myserver user. --json     Prefix-filtered output as JSON`,
 	)
 	// biome-ignore lint/suspicious/noExplicitAny: commander.js passes options as any
-	.action(async (connection: string, prefix: string | undefined, options: any) => {
-		const { listTopics } = await import("./commands/event")
-		await listTopics(connection, { ...options, prefix })
-	})
+	.action(
+		async (connection: string, prefix: string | undefined, options: any) => {
+			const { listTopics } = await import("./commands/event")
+			await listTopics(connection, { ...options, prefix })
+		},
+	)
 
 eventCmd
 	.command("subscribe <connection> <topic> [args]")
