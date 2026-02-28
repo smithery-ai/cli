@@ -143,13 +143,16 @@ export async function findTools(
 			const connection = await session.getConnection(options.connection)
 			connections = [connection]
 		} catch {
+			if (!isJson) {
+				console.error(pc.red(`Connection "${options.connection}" not found`))
+			}
 			outputTable({
 				data: [],
 				columns: [],
 				json: isJson,
 				jsonData: {
 					tools: [],
-					error: `Server "${options.connection}" not found`,
+					error: `Connection "${options.connection}" not found`,
 					hint: "smithery mcp list - List all connections",
 				},
 				tip: "smithery mcp list - List all connections",
