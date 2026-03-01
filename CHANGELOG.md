@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 
+## [4.4.1](https://github.com/smithery-ai/cli/compare/v4.4.0...v4.4.1) (2026-03-01)
+
+
+### Bug Fixes
+
+* disable minification for shttp bundles to improve debuggability ([#685](https://github.com/smithery-ai/cli/issues/685)) ([64de162](https://github.com/smithery-ai/cli/commit/64de162f99549dc7c9087e41621f2bd31fbb42e2))
+* show error message when tool list gets invalid connection name ([#681](https://github.com/smithery-ai/cli/issues/681)) ([50ecb00](https://github.com/smithery-ai/cli/commit/50ecb009c7f004eccf6e1a49bd6af22ef3d574f2))
+
 ## [4.4.0](https://github.com/smithery-ai/cli/compare/v4.3.0...v4.4.0) (2026-02-27)
 
 
