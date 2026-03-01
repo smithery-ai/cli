@@ -60,33 +60,39 @@ smithery mcp update "my-server" --name "My Server"
 smithery mcp update "my-server" --metadata '{"env": "prod"}'
 ```
 
-## List Tools
+## Browse Tools
 
-List all tools across all connections:
-```bash
-smithery tool list
-```
+Tools are displayed as a tree. A connection is always required.
 
-List tools from a specific connection:
 ```bash
+# See root-level groups and tools
 smithery tool list my-github
+
+# Drill into a group by passing its name as a prefix
+smithery tool list my-github issues.
+
+# Keep drilling deeper
+smithery tool list my-github issues.labels.
 ```
+
+Groups (prefixes shared by multiple tools) are collapsed and show a tool count.
+Leaf tools are shown with their description.
 
 Options:
 - `--namespace <ns>` - Namespace to list from
-- `--limit <n>` - Maximum number of tools (default: 10)
+- `--limit <n>` - Maximum entries to show (default: 10)
 - `--page <n>` - Page number (default: 1)
 
 Output (JSON):
 ```json
 {
+  "connection": "my-github",
   "tools": [
-    {
-      "name": "create_issue",
-      "connection": "my-github",
-      "description": "Create a GitHub issue"
-    }
-  ]
+    { "type": "group", "name": "issues.", "count": 4 },
+    { "type": "group", "name": "pulls.", "count": 2 },
+    { "type": "tool", "name": "search", "description": "Search across repos" }
+  ],
+  "total": 3
 }
 ```
 
@@ -160,12 +166,15 @@ If `auth_required`, tell your human to visit the authorization URL.
 # 1. Add a connection
 smithery mcp add "https://server.smithery.ai/smithery/github"
 
-# 2. List available tools
-smithery tool list
+# 2. Browse root-level tool groups
+smithery tool list github
 
-# 3. Search for what you need
-smithery tool find "pull request"
+# 3. Drill into a group
+smithery tool list github issues.
 
-# 4. Call the tool
-smithery tool call github create_pull_request '{"repo": "...", "title": "..."}'
+# 4. Get details on a specific tool
+smithery tool get github issues.create
+
+# 5. Call the tool
+smithery tool call github issues.create '{"repo": "owner/repo", "title": "Bug report"}'
 ```

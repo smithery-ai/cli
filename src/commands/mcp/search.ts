@@ -2,7 +2,14 @@ import FlexSearch from "flexsearch"
 import pc from "picocolors"
 import { isJsonMode, outputJson, outputTable } from "../../utils/output"
 import { type Connection, ConnectSession, type ToolInfo } from "./api"
-import { formatToolRow, TOOL_TABLE_COLUMNS } from "./tool-table"
+import {
+	formatGroupRow,
+	formatListToolRow,
+	formatToolRow,
+	type GroupEntry,
+	TOOL_LIST_COLUMNS,
+	TOOL_TABLE_COLUMNS,
+} from "./tool-table"
 
 const DEFAULT_LIMIT = 10
 const DEFAULT_PAGE = 1
@@ -106,6 +113,45 @@ function outputFindError(message: string, isJson: boolean): never {
 		console.error(pc.red(message))
 	}
 	process.exit(1)
+}
+
+function groupToolsAtLevel(
+	tools: ToolInfo[],
+	prefix: string,
+): { groups: GroupEntry[]; leafTools: ToolInfo[] } {
+	const groupMembers = new Map<string, ToolInfo[]>()
+	const leafTools: ToolInfo[] = []
+
+	for (const tool of tools) {
+		const relative = prefix ? tool.name.slice(prefix.length) : tool.name
+		const dotIndex = relative.indexOf(".")
+
+		if (dotIndex === -1) {
+			leafTools.push(tool)
+		} else {
+			const groupPrefix = prefix + relative.slice(0, dotIndex + 1)
+			const members = groupMembers.get(groupPrefix)
+			if (members) {
+				members.push(tool)
+			} else {
+				groupMembers.set(groupPrefix, [tool])
+			}
+		}
+	}
+
+	const groups: GroupEntry[] = []
+	for (const [groupPrefix, members] of groupMembers) {
+		if (members.length === 1) {
+			// Single-tool group — show the tool directly instead of a folder
+			leafTools.push(members[0])
+		} else {
+			groups.push({ prefix: groupPrefix, count: members.length })
+		}
+	}
+
+	groups.sort((a, b) => a.prefix.localeCompare(b.prefix))
+
+	return { groups, leafTools }
 }
 
 export async function findTools(
@@ -231,14 +277,75 @@ export async function findTools(
 		return
 	}
 
-	const candidates = options.prefix
-		? allTools.filter((tool) =>
-				tool.name.toLowerCase().startsWith(options.prefix!.toLowerCase()),
-			)
-		: allTools
+	const isListMode = "prefix" in options
 
+	if (isListMode) {
+		const prefix = options.prefix ?? ""
+		const candidates = prefix
+			? allTools.filter((tool) =>
+					tool.name.toLowerCase().startsWith(prefix.toLowerCase()),
+				)
+			: allTools
+
+		const { groups, leafTools } = groupToolsAtLevel(candidates, prefix)
+
+		const tableRows = [
+			...groups.map(formatGroupRow),
+			...leafTools.map(formatListToolRow),
+		]
+		const jsonEntries = [
+			...groups.map((g) => ({
+				type: "group" as const,
+				name: g.prefix,
+				count: g.count,
+			})),
+			...leafTools.map((t) => ({
+				type: "tool" as const,
+				name: t.name,
+				description: t.description ?? "",
+				inputSchema: t.inputSchema,
+				...(t.annotations ? { annotations: t.annotations } : {}),
+			})),
+		]
+
+		const total = tableRows.length
+		const offset = (page - 1) * limit
+		const visibleRows = options.all
+			? tableRows
+			: tableRows.slice(offset, offset + limit)
+		const visibleJson = options.all
+			? jsonEntries
+			: jsonEntries.slice(offset, offset + limit)
+		const hasMore = options.all ? false : offset + limit < total
+
+		outputTable({
+			data: visibleRows,
+			columns: TOOL_LIST_COLUMNS,
+			json: isJson,
+			jsonData: {
+				connection: options.connection,
+				tools: visibleJson,
+				total,
+				...(prefix ? { prefix } : {}),
+				...(options.all
+					? { all: true, page: 1, hasMore: false }
+					: { page, hasMore }),
+				...(issues.length > 0 ? { connectionIssues: issues } : {}),
+			},
+			pagination: options.all ? { total } : { page, hasMore, total },
+			tip:
+				total === 0
+					? prefix
+						? `No tools found with prefix "${prefix}".`
+						: "No tools found."
+					: `Use smithery tool list ${options.connection} <prefix> to browse deeper.`,
+		})
+		return
+	}
+
+	// Find mode: flat results across connections
 	const matches = matchTools(
-		candidates,
+		allTools,
 		normalizedQuery,
 		mode,
 		limit,
@@ -259,7 +366,6 @@ export async function findTools(
 			tools: data,
 			total: matches.length,
 			mode,
-			...(options.prefix ? { prefix: options.prefix } : {}),
 			...(normalizedQuery ? { query: normalizedQuery } : {}),
 			...(options.all
 				? { all: true, page: 1, hasMore: false }
