@@ -95,7 +95,7 @@ describe("tools find command", () => {
 		)
 	})
 
-	test("filters tools by name prefix", async () => {
+	test("groups tools at root level", async () => {
 		mockGetConnection.mockResolvedValue({
 			connectionId: "github-abc",
 			name: "github-abc",
@@ -123,6 +123,88 @@ describe("tools find command", () => {
 				description: "Create a pull request",
 				inputSchema: { type: "object" },
 			},
+			{
+				connectionId: "github-abc",
+				connectionName: "github-abc",
+				name: "search",
+				description: "Search across repos",
+				inputSchema: { type: "object" },
+			},
+		])
+
+		await findTools(undefined, {
+			connection: "github-abc",
+			prefix: undefined,
+			all: true,
+		})
+
+		expect(mockOutputTable).toHaveBeenCalledWith(
+			expect.objectContaining({
+				jsonData: expect.objectContaining({
+					connection: "github-abc",
+					total: 3,
+					tools: [
+						{ type: "group", name: "issues.", count: 2 },
+						{
+							type: "tool",
+							name: "search",
+							description: "Search across repos",
+							inputSchema: { type: "object" },
+						},
+						{
+							type: "tool",
+							name: "pulls.create",
+							description: "Create a pull request",
+							inputSchema: { type: "object" },
+						},
+					],
+				}),
+			}),
+		)
+	})
+
+	test("drills into prefix showing leaf tools and subgroups", async () => {
+		mockGetConnection.mockResolvedValue({
+			connectionId: "github-abc",
+			name: "github-abc",
+			status: { state: "connected" },
+		})
+		mockListToolsForConnection.mockResolvedValue([
+			{
+				connectionId: "github-abc",
+				connectionName: "github-abc",
+				name: "issues.create",
+				description: "Create an issue",
+				inputSchema: { type: "object" },
+			},
+			{
+				connectionId: "github-abc",
+				connectionName: "github-abc",
+				name: "issues.list",
+				description: "List issues",
+				inputSchema: { type: "object" },
+			},
+			{
+				connectionId: "github-abc",
+				connectionName: "github-abc",
+				name: "issues.labels.add",
+				description: "Add a label",
+				inputSchema: { type: "object" },
+			},
+			{
+				connectionId: "github-abc",
+				connectionName: "github-abc",
+				name: "issues.labels.remove",
+				description: "Remove a label",
+				inputSchema: { type: "object" },
+			},
+			{
+				connectionId: "github-abc",
+				connectionName: "github-abc",
+				name: "pulls.create",
+				description: "Create a PR",
+				inputSchema: { type: "object" },
+			},
 		])
 
 		await findTools(undefined, {
@@ -134,12 +216,24 @@ describe("tools find command", () => {
 		expect(mockOutputTable).toHaveBeenCalledWith(
 			expect.objectContaining({
 				jsonData: expect.objectContaining({
-					total: 2,
+					connection: "github-abc",
+					total: 3,
 					prefix: "issues.",
-					tools: expect.arrayContaining([
-						expect.objectContaining({ name: "issues.create" }),
-						expect.objectContaining({ name: "issues.list" }),
-					]),
+					tools: [
+						{ type: "group", name: "issues.labels.", count: 2 },
+						{
+							type: "tool",
+							name: "issues.create",
+							description: "Create an issue",
+							inputSchema: { type: "object" },
+						},
+						{
+							type: "tool",
+							name: "issues.list",
+							description: "List issues",
+							inputSchema: { type: "object" },
+						},
+					],
 				}),
 			}),
 		)
@@ -170,6 +264,7 @@ describe("tools find command", () => {
 		expect(mockOutputTable).toHaveBeenCalledWith(
 			expect.objectContaining({
 				jsonData: expect.objectContaining({
+					connection: "github-abc",
 					total: 0,
 					tools: [],
 				}),
