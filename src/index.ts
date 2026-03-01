@@ -801,29 +801,48 @@ Examples:
 
 toolCmd
 	.command("list [connection] [prefix]")
-	.description("List tools from your connected MCP servers")
+	.description("List tools from a connected MCP server")
 	.option("--namespace <ns>", "Namespace to list from")
-	.option("--limit <n>", "Maximum number of tools to return (default: 10)")
+	.option("--limit <n>", "Maximum number of entries to return (default: 10)")
 	.option("--page <n>", "Page number (default: 1)")
 
 	.addHelpText(
 		"after",
 		`
 Arguments:
-  connection   Connection ID to list tools from (omit to list from all)
-  prefix       Only show tools whose name starts with this prefix (e.g. "issues.")
+  connection   Connection ID to list tools from (required)
+  prefix       Only show tools under this prefix (e.g. "issues.")
+
+Tools are displayed as a tree. Groups (prefixes shared by multiple tools) are
+collapsed and shown with a tool count. Drill into a group by passing its name
+as the prefix.
 
 Examples:
-  smithery tool list                              List tools from all connections
-  smithery tool list myserver                     List tools for a specific connection
-  smithery tool list myserver issues.             List tools starting with "issues."
-  smithery tool list myserver issues. --json      Prefix-filtered output as JSON
+  smithery tool list myserver                     Show root-level groups and tools
+  smithery tool list myserver issues.             Drill into the "issues." group
+  smithery tool list myserver issues.labels.      Drill deeper
 
 Tip: Use 'smithery tool find <query>' to search tools by name or intent.`,
 	)
-	.action((connection, prefix, options) =>
-		handleFindTools(undefined, { ...options, connection, prefix }),
-	)
+	.action(async (connection, prefix, options) => {
+		if (!connection) {
+			const { isJsonMode, outputJson } = await import("./utils/output")
+			const pc = (await import("picocolors")).default
+			const msg =
+				"Connection ID is required. Use smithery mcp list to find your connection IDs."
+			if (isJsonMode()) {
+				outputJson({ tools: [], error: msg })
+			} else {
+				console.error(pc.red(msg))
+				console.error(
+					pc.dim("\n  smithery tool list <connection>"),
+				)
+			}
+			process.exit(1)
+			return
+		}
+		return handleFindTools(undefined, { ...options, connection, prefix })
+	})
 
 toolCmd
 	.command("get <connection> <tool>")

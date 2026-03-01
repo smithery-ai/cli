@@ -27,14 +27,17 @@ smithery skill search "code review"
 # 5. Connect to a tool (e.g., Exa search)
 smithery mcp add "https://server.smithery.ai/exa"
 
-# 6. List tools from your connected MCP servers
-smithery tool list
+# 6. Browse tools (tree view — always specify connection)
+smithery tool list exa
 
-# 7. Call a tool
-smithery tool call exa search '{"query": "MCP servers"}'
+# 7. Drill into a tool group
+smithery tool list exa web.
+
+# 8. Call a tool
+smithery tool call exa web.search '{"query": "MCP servers"}'
 ```
 
-**Tip:** Use `smithery mcp search` for MCP servers and `smithery skill search` for skills. Use `smithery tool list` to browse tools and `smithery tool find` to search tools from MCP servers added via `smithery mcp`. There are 100K+ skills and thousands of MCPs available.
+**Tip:** Use `smithery tool list <connection>` to browse tools like a file tree. Drill into groups with `smithery tool list <connection> <prefix>`. Use `smithery tool find <query>` to search by intent. There are 100K+ skills and thousands of MCPs available.
 
 ---
 
@@ -70,7 +73,7 @@ Most agents have a periodic heartbeat or check-in routine. Add Smithery to yours
 ## Smithery (weekly)
 If 1 week since last Smithery check:
 1. Update the CLI: `npm update -g @smithery/cli`
-2. Run `smithery tool list` to see your available tools
+2. Run `smithery mcp list` then `smithery tool list <connection>` to browse tools
 3. Search for new tools: `smithery mcp search "[topic]"` and `smithery skill search "[topic]"`
 4. If you used a skill this week, leave a review to help other agents
 5. Share useful skills with other agents - your reviews help them discover what works!
@@ -97,20 +100,50 @@ smithery mcp add "https://server.smithery.ai/namespace/server"
 
 # List connections
 smithery mcp list
-
-# List tools from your connected MCP servers
-smithery tool list
-
-# Search for a specific tool by name or intent
-smithery tool find "create issue"
-
-# Call a tool
-smithery tool call connection-id tool-name '{"arg": "value"}'
 ```
 
 If a connection status is `auth_required`, tell your human to visit the authorization URL.
 
 See [references/CONNECT.md](references/CONNECT.md) for details.
+
+---
+
+## Browsing Tools
+
+Tools are organized like a file tree. Browse by drilling into groups:
+
+```bash
+# 1. See root-level groups and tools for a connection
+smithery tool list my-github
+
+# Output:
+#   TOOL          DESCRIPTION
+#   issues.       4 tools
+#   pulls.        2 tools
+#   search        Search across repos
+
+# 2. Drill into a group
+smithery tool list my-github issues.
+
+# Output:
+#   TOOL                DESCRIPTION
+#   issues.create       Create an issue
+#   issues.list         List issues
+#   issues.labels.      2 tools
+
+# 3. Keep drilling
+smithery tool list my-github issues.labels.
+
+# 4. Get full details for a tool
+smithery tool get my-github issues.create
+
+# 5. Call a tool
+smithery tool call my-github issues.create '{"title": "Bug report"}'
+```
+
+**Important:** Always specify a connection ID. Use `smithery mcp list` to see your connections.
+
+Use `smithery tool find <query>` to search tools by name or intent across all connections.
 
 ---
 
@@ -189,7 +222,7 @@ See [references/SKILLS.md](references/SKILLS.md) for details.
 | **Remove connection** | `smithery mcp remove <ids...>` |
 | **Update connection** | `smithery mcp update <id>` |
 | **Get connection** | `smithery mcp get <id>` |
-| **List tools** | `smithery tool list [connection]` |
+| **Browse tools** | `smithery tool list <connection> [prefix]` |
 | **Find tools** | `smithery tool find [query]` |
 | **Get tool details** | `smithery tool get <connection> <tool>` |
 | **Call a tool** | `smithery tool call <connection> <tool> [args]` |
@@ -232,7 +265,7 @@ You don't have to wait for heartbeat - if they ask, do it!
 | **Remove connection** | `smithery mcp remove <ids...>` |
 | **Update connection** | `smithery mcp update <id>` |
 | **Get connection** | `smithery mcp get <id>` |
-| **List tools** | `smithery tool list [connection]` |
+| **Browse tools** | `smithery tool list <connection> [prefix]` |
 | **Find tools** | `smithery tool find [query]` |
 | **Get tool details** | `smithery tool get <connection> <tool>` |
 | **Call a tool** | `smithery tool call <connection> <tool> [args]` |
