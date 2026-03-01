@@ -33,7 +33,7 @@ export async function buildShttpBundle(
 		outFile: moduleFile,
 		transport: "shttp",
 		production: options.production ?? true,
-		minify: true,
+		minify: false,
 		bundleMode: "user-module",
 		sourceMaps: true,
 	})
