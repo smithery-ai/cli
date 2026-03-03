@@ -98,12 +98,13 @@ describe("outputDetail", () => {
 
 	afterEach(() => {
 		consoleLogSpy.mockRestore()
+		setOutputMode({})
 	})
 
 	test("outputs JSON with tip as hint field", () => {
+		setOutputMode({ json: true })
 		outputDetail({
 			data: { name: "test", value: 42 },
-			json: true,
 			tip: "Use --help for more info.",
 		})
 
@@ -117,9 +118,9 @@ describe("outputDetail", () => {
 	})
 
 	test("outputs JSON without tip", () => {
+		setOutputMode({ json: true })
 		outputDetail({
 			data: { name: "test" },
-			json: true,
 		})
 
 		const output = consoleLogSpy.mock.calls[0][0] as string
@@ -128,9 +129,9 @@ describe("outputDetail", () => {
 	})
 
 	test("renders key-value pairs in table mode", () => {
+		setOutputMode({ table: true })
 		outputDetail({
 			data: { name: "test-server", status: "connected" },
-			json: false,
 		})
 
 		// Should have called console.log for each key
@@ -138,9 +139,9 @@ describe("outputDetail", () => {
 	})
 
 	test("skips null and undefined values in table mode", () => {
+		setOutputMode({ table: true })
 		outputDetail({
 			data: { name: "test", empty: null, missing: undefined },
-			json: false,
 		})
 
 		// Only "name" should be printed
