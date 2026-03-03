@@ -808,21 +808,25 @@ toolCmd
 	.option("--namespace <ns>", "Namespace to list from")
 	.option("--limit <n>", "Maximum number of entries to return (default: 10)")
 	.option("--page <n>", "Page number (default: 1)")
-	.option("--all", "List all tools flat, without grouping (useful with | grep)")
+	.option("--flat", "List tools without grouping (respects prefix filter)")
 
 	.addHelpText(
 		"after",
 		`
 Tools are displayed as a tree. Groups (prefixes shared by multiple tools) are
 collapsed and shown with a tool count. Drill into a group by passing its name
-as the prefix. Use --all to flatten the tree and list every tool individually.
+as the prefix.
+
+Use --flat to skip grouping and list matching tools individually. When a prefix
+is given, --flat lists all tools under that prefix without nesting.
 
 Examples:
-  smithery tool list github                     Show root-level groups and tools
-  smithery tool list github issues.             Drill into the "issues." group
-  smithery tool list github issues.labels.      Drill deeper
-  smithery tool list github --all               List all tools (flat, no grouping)
-  smithery tool list github --all | grep label  Search all tools with grep
+  smithery tool list github                           Browse root-level groups
+  smithery tool list github issues.                   Drill into "issues." group
+  smithery tool list github issues.labels.            Drill deeper
+  smithery tool list github --flat                    All tools, no grouping
+  smithery tool list github issues. --flat            All issue tools, no grouping
+  smithery tool list github --flat | grep label       Search with grep
 
 Tip: Use 'smithery tool find <connection> <query>' to search by name or intent.`,
 	)

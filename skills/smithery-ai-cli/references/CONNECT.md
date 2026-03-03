@@ -78,21 +78,25 @@ smithery tool list my-github issues.labels.
 Groups (prefixes shared by multiple tools) are collapsed and show a tool count.
 Leaf tools are shown with their description.
 
-Use `--all` to flatten the tree and list every tool individually:
+Use `--flat` to skip grouping and list tools individually. When combined with
+a prefix, `--flat` lists all tools under that prefix without nesting:
 
 ```bash
 # List all tools without grouping
-smithery tool list my-github --all
+smithery tool list my-github --flat
+
+# All issue tools, flat
+smithery tool list my-github issues. --flat
 
 # Search with grep (piped output is JSONL — one record per line)
-smithery tool list my-github --all | grep label
+smithery tool list my-github --flat | grep label
 ```
 
 Options:
 - `--namespace <ns>` - Namespace to list from
 - `--limit <n>` - Maximum entries to show (default: 10)
 - `--page <n>` - Page number (default: 1)
-- `--all` - List all tools flat, without grouping (useful with `| grep`)
+- `--flat` - List tools without grouping (respects prefix filter)
 
 Output (JSON):
 ```json
