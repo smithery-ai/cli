@@ -145,7 +145,12 @@ function groupToolsAtLevel(
 			// Single-tool group — show the tool directly instead of a folder
 			leafTools.push(members[0])
 		} else {
-			groups.push({ prefix: groupPrefix, count: members.length })
+			const first = members.find((m) => m.description)
+			groups.push({
+				prefix: groupPrefix,
+				count: members.length,
+				preview: first?.description,
+			})
 		}
 	}
 
@@ -158,7 +163,7 @@ export async function findTools(
 	query: string | undefined,
 	options: {
 		namespace?: string
-		connection?: string
+		connection: string
 		limit?: string
 		page?: string
 		all?: boolean
@@ -184,39 +189,23 @@ export async function findTools(
 	const session = await ConnectSession.create(options.namespace)
 
 	let connections: Connection[] = []
-	if (options.connection) {
-		try {
-			const connection = await session.getConnection(options.connection)
-			connections = [connection]
-		} catch {
-			if (!isJson) {
-				console.error(pc.red(`Connection "${options.connection}" not found`))
-			}
-			outputTable({
-				data: [],
-				columns: [],
-				json: isJson,
-				jsonData: {
-					tools: [],
-					error: `Connection "${options.connection}" not found`,
-					hint: "smithery mcp list - List all connections",
-				},
-				tip: "smithery mcp list - List all connections",
-			})
-			return
+	try {
+		const connection = await session.getConnection(options.connection)
+		connections = [connection]
+	} catch {
+		if (!isJson) {
+			console.error(pc.red(`Connection "${options.connection}" not found`))
 		}
-	} else {
-		const listed = await session.listConnections()
-		connections = listed.connections
-	}
-
-	if (connections.length === 0) {
 		outputTable({
 			data: [],
 			columns: [],
 			json: isJson,
-			jsonData: { tools: [] },
-			tip: "No connections found. Use smithery mcp add <url> to add one.",
+			jsonData: {
+				tools: [],
+				error: `Connection "${options.connection}" not found`,
+				hint: "smithery mcp list - List all connections",
+			},
+			tip: "smithery mcp list - List all connections",
 		})
 		return
 	}
@@ -334,6 +323,7 @@ export async function findTools(
 				type: "group" as const,
 				name: g.prefix,
 				count: g.count,
+				...(g.preview ? { preview: g.preview } : {}),
 			})),
 			...leafTools.map((t) => ({
 				type: "tool" as const,
@@ -349,6 +339,8 @@ export async function findTools(
 		const visibleRows = tableRows.slice(offset, offset + limit)
 		const visibleJson = jsonEntries.slice(offset, offset + limit)
 		const hasMore = offset + limit < total
+
+		const hasVisibleGroups = visibleJson.some((e) => e.type === "group")
 
 		outputTable({
 			data: visibleRows,
@@ -369,7 +361,9 @@ export async function findTools(
 					? prefix
 						? `No tools found with prefix "${prefix}".`
 						: "No tools found."
-					: `Use smithery tool list ${options.connection} <prefix> to browse deeper.`,
+					: hasVisibleGroups
+						? `Use smithery tool list ${options.connection} <prefix> to browse deeper.`
+						: `Use smithery tool call ${options.connection} <tool> '<args>' to call a tool.`,
 		})
 		return
 	}

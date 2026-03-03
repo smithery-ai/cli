@@ -14,12 +14,16 @@ export function formatToolRow(tool: ToolInfo) {
 export interface GroupEntry {
 	prefix: string
 	count: number
+	preview?: string
 }
 
 export function formatGroupRow(group: GroupEntry) {
+	const countLabel = `${group.count} ${group.count === 1 ? "tool" : "tools"}`
 	return {
 		name: group.prefix,
-		description: `${group.count} ${group.count === 1 ? "tool" : "tools"}`,
+		description: group.preview
+			? `${countLabel} — ${group.preview}`
+			: countLabel,
 	}
 }
 

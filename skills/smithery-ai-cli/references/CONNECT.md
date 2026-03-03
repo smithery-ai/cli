@@ -109,14 +109,13 @@ Output (JSON):
 
 ## Find Tools by Query
 
-Search tools by name or intent across all connections:
+Search tools by name or intent within a connection:
 
 ```bash
-smithery tool find "create issue"
+smithery tool find my-github "create issue"
 ```
 
 Options:
-- `--connection <id>` - Restrict to one connection
 - `--namespace <ns>` - Namespace to search in
 - `--match <mode>` - `fuzzy`, `substring`, or `exact`
 - `--limit <n>` - Max results per page (default: 10)
@@ -183,9 +182,12 @@ smithery tool list github
 # 3. Drill into a group
 smithery tool list github issues.
 
-# 4. Get details on a specific tool
+# 4. Search by intent
+smithery tool find github "create issue"
+
+# 5. Get details on a specific tool
 smithery tool get github issues.create
 
-# 5. Call the tool
+# 6. Call the tool
 smithery tool call github issues.create '{"repo": "owner/repo", "title": "Bug report"}'
 ```

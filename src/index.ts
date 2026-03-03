@@ -724,9 +724,9 @@ const toolCmd = program
 	.description("Find and call tools from MCP servers added via 'smithery mcp'")
 
 toolCmd
-	.command("find [query]")
-	.description("Find tools across your connected MCP servers")
-	.option("--connection <id>", "Limit search to a specific connection")
+	.command("find <connection> [query]")
+	.showHelpAfterError()
+	.description("Search tools by name or intent")
 	.option("--namespace <ns>", "Namespace to search in")
 	.option("--match <mode>", "Match mode: fuzzy, substring, or exact")
 	.option("--limit <n>", "Maximum number of tools to return (default: 10)")
@@ -737,57 +737,42 @@ toolCmd
 		"after",
 		`
 Examples:
-  smithery tool find "create issue"                      Find by intent across connections
-  smithery tool find --connection github --all           Show all tools for one connection
-  smithery tool find notion-fetch --match exact --json   Exact match as JSON`,
+  smithery tool find github "create issue"               Search by intent
+  smithery tool find github --all                        List all tools flat
+  smithery tool find github fetch --match exact --json   Exact match as JSON`,
 	)
-	.action(handleFindTools)
+	.action((connection, query, options) =>
+		handleFindTools(query, { ...options, connection }),
+	)
 
 toolCmd
-	.command("list [connection] [prefix]")
-	.description("List tools from a connected MCP server")
+	.command("list <connection> [prefix]")
+	.showHelpAfterError()
+	.description("Browse tools from a connection")
 	.option("--namespace <ns>", "Namespace to list from")
 	.option("--limit <n>", "Maximum number of entries to return (default: 10)")
 	.option("--page <n>", "Page number (default: 1)")
-	.option("--all", "Return all entries without pagination")
+	.option("--all", "List all tools flat, without grouping (useful with | grep)")
 
 	.addHelpText(
 		"after",
 		`
-Arguments:
-  connection   Connection ID to list tools from (required)
-  prefix       Only show tools under this prefix (e.g. "issues.")
-
 Tools are displayed as a tree. Groups (prefixes shared by multiple tools) are
 collapsed and shown with a tool count. Drill into a group by passing its name
 as the prefix. Use --all to flatten the tree and list every tool individually.
 
 Examples:
-  smithery tool list myserver                     Show root-level groups and tools
-  smithery tool list myserver issues.             Drill into the "issues." group
-  smithery tool list myserver issues.labels.      Drill deeper
-  smithery tool list myserver --all               List all tools (flat, no grouping)
-  smithery tool list myserver --all | grep label  Search all tools with grep
+  smithery tool list github                     Show root-level groups and tools
+  smithery tool list github issues.             Drill into the "issues." group
+  smithery tool list github issues.labels.      Drill deeper
+  smithery tool list github --all               List all tools (flat, no grouping)
+  smithery tool list github --all | grep label  Search all tools with grep
 
-Tip: Use 'smithery tool find <query>' to search tools by name or intent.`,
+Tip: Use 'smithery tool find <connection> <query>' to search by name or intent.`,
 	)
-	.action(async (connection, prefix, options) => {
-		if (!connection) {
-			const { isJsonMode, outputJson } = await import("./utils/output")
-			const pc = (await import("picocolors")).default
-			const msg =
-				"Connection ID is required. Use smithery mcp list to find your connection IDs."
-			if (isJsonMode()) {
-				outputJson({ tools: [], error: msg })
-			} else {
-				console.error(pc.red(msg))
-				console.error(pc.dim("\n  smithery tool list <connection>"))
-			}
-			process.exit(1)
-			return
-		}
-		return handleFindTools(undefined, { ...options, connection, prefix })
-	})
+	.action((connection, prefix, options) =>
+		handleFindTools(undefined, { ...options, connection, prefix }),
+	)
 
 toolCmd
 	.command("get <connection> <tool>")
