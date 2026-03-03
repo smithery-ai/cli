@@ -23,6 +23,9 @@ export interface ToolInfo extends Tool {
 
 // Use Awaited to get the concrete type from createSmitheryClient
 type SmitheryClient = Awaited<ReturnType<typeof createSmitheryClient>>
+type ListConnectionsParams = Parameters<
+	SmitheryClient["connections"]["list"]
+>[1]
 
 /**
  * Session for Connect operations that reuses clients within a command.
@@ -54,13 +57,17 @@ export class ConnectSession {
 	async listConnections(options?: {
 		limit?: number
 		cursor?: string
+		metadata?: Record<string, unknown>
 	}): Promise<{ connections: Connection[]; nextCursor: string | null }> {
+		const metadataQuery = toMetadataQuery(options?.metadata)
+
 		// Explicit cursor: return a single page (manual pagination)
 		if (options?.cursor) {
 			const data = await this.smitheryClient.connections.list(this.namespace, {
 				limit: options.limit,
 				cursor: options.cursor,
-			})
+				...metadataQuery,
+			} as ListConnectionsParams)
 			return { connections: data.connections, nextCursor: data.nextCursor }
 		}
 
@@ -71,7 +78,8 @@ export class ConnectSession {
 		do {
 			const data = await this.smitheryClient.connections.list(this.namespace, {
 				cursor,
-			})
+				...metadataQuery,
+			} as ListConnectionsParams)
 			all.push(...data.connections)
 			cursor = data.nextCursor ?? undefined
 		} while (cursor && (!options?.limit || all.length < options.limit))
@@ -232,6 +240,18 @@ export class ConnectSession {
 			query: options?.limit ? { limit: options.limit } : undefined,
 		})
 	}
+}
+
+function toMetadataQuery(
+	metadata: Record<string, unknown> | undefined,
+): Record<string, string> {
+	if (!metadata) return {}
+	const query: Record<string, string> = {}
+	for (const [key, value] of Object.entries(metadata)) {
+		query[`metadata.${key}`] =
+			typeof value === "string" ? value : JSON.stringify(value)
+	}
+	return query
 }
 
 async function getCurrentNamespace(): Promise<string> {

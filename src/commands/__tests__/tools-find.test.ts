@@ -311,11 +311,72 @@ describe("tools find command", () => {
 				jsonData: expect.objectContaining({
 					flat: true,
 					total: 2,
+					page: 1,
 					hasMore: false,
 					tools: expect.arrayContaining([
 						expect.objectContaining({ name: "experiment-get" }),
 						expect.objectContaining({ name: "experiment-results-get" }),
 					]),
+				}),
+			}),
+		)
+	})
+
+	test("paginates flat list output with --limit and --page", async () => {
+		mockGetConnection.mockResolvedValue({
+			connectionId: "github-abc",
+			name: "github-abc",
+			status: { state: "connected" },
+		})
+		mockListToolsForConnection.mockResolvedValue([
+			{
+				connectionId: "github-abc",
+				connectionName: "github-abc",
+				name: "issues.create",
+				description: "Create issue",
+				inputSchema: { type: "object" },
+			},
+			{
+				connectionId: "github-abc",
+				connectionName: "github-abc",
+				name: "issues.list",
+				description: "List issues",
+				inputSchema: { type: "object" },
+			},
+			{
+				connectionId: "github-abc",
+				connectionName: "github-abc",
+				name: "pulls.create",
+				description: "Create pull request",
+				inputSchema: { type: "object" },
+			},
+		])
+
+		await findTools(undefined, {
+			connection: "github-abc",
+			flat: true,
+			prefix: undefined,
+			limit: "1",
+			page: "2",
+		})
+
+		expect(mockOutputTable).toHaveBeenCalledWith(
+			expect.objectContaining({
+				jsonData: expect.objectContaining({
+					flat: true,
+					total: 3,
+					page: 2,
+					hasMore: true,
+					tools: [
+						expect.objectContaining({
+							name: "issues.list",
+						}),
+					],
+				}),
+				pagination: expect.objectContaining({
+					page: 2,
+					hasMore: true,
+					total: 3,
 				}),
 			}),
 		)

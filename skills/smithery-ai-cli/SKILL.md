@@ -124,5 +124,5 @@ smithery auth token --policy '{
 When output is piped, Smithery commands emit JSONL (one JSON object per line):
 
 ```bash
-smithery tool list github --flat | grep label
+smithery tool list github --flat --limit 1000 | grep label
 ```
