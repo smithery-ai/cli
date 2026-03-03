@@ -1,23 +1,19 @@
 import { beforeEach, describe, expect, test, vi } from "vitest"
 
 const {
-	mockListConnections,
 	mockGetConnection,
 	mockListToolsForConnection,
 	mockCreateSession,
 	mockOutputTable,
 } = vi.hoisted(() => {
-	const listConnections = vi.fn()
 	const getConnection = vi.fn()
 	const listToolsForConnection = vi.fn()
 	const createSession = vi.fn(async () => ({
-		listConnections,
 		getConnection,
 		listToolsForConnection,
 	}))
 
 	return {
-		mockListConnections: listConnections,
 		mockGetConnection: getConnection,
 		mockListToolsForConnection: listToolsForConnection,
 		mockCreateSession: createSession,
@@ -143,7 +139,12 @@ describe("tools find command", () => {
 					connection: "github-abc",
 					total: 3,
 					tools: [
-						{ type: "group", name: "issues.", count: 2 },
+						{
+							type: "group",
+							name: "issues.",
+							count: 2,
+							preview: "Create an issue",
+						},
 						{
 							type: "tool",
 							name: "search",
@@ -218,7 +219,12 @@ describe("tools find command", () => {
 					total: 3,
 					prefix: "issues.",
 					tools: [
-						{ type: "group", name: "issues.labels.", count: 2 },
+						{
+							type: "group",
+							name: "issues.labels.",
+							count: 2,
+							preview: "Add a label",
+						},
 						{
 							type: "tool",
 							name: "issues.create",
@@ -269,37 +275,32 @@ describe("tools find command", () => {
 		)
 	})
 
-	test("supports listing behavior via find --all without a query", async () => {
-		mockListConnections.mockResolvedValue({
-			connections: [
-				{ connectionId: "posthog-QeNO", name: "posthog-QeNO" },
-				{ connectionId: "notion-zgHR", name: "notion-zgHR" },
-			],
-			nextCursor: null,
+	test("supports --all flag to list tools flat without grouping", async () => {
+		mockGetConnection.mockResolvedValue({
+			connectionId: "posthog-QeNO",
+			name: "posthog-QeNO",
+			status: { state: "connected" },
 		})
-		mockListToolsForConnection
-			.mockResolvedValueOnce([
-				{
-					connectionId: "posthog-QeNO",
-					connectionName: "posthog-QeNO",
-					name: "experiment-get",
-					description: "Get experiment details",
-					inputSchema: { type: "object" },
-				},
-			])
-			.mockResolvedValueOnce([
-				{
-					connectionId: "notion-zgHR",
-					connectionName: "notion-zgHR",
-					name: "notion-fetch",
-					description: "Fetch Notion page",
-					inputSchema: { type: "object" },
-				},
-			])
+		mockListToolsForConnection.mockResolvedValue([
+			{
+				connectionId: "posthog-QeNO",
+				connectionName: "posthog-QeNO",
+				name: "experiment-get",
+				description: "Get experiment details",
+				inputSchema: { type: "object" },
+			},
+			{
+				connectionId: "posthog-QeNO",
+				connectionName: "posthog-QeNO",
+				name: "experiment-results-get",
+				description: "Get experiment results",
+				inputSchema: { type: "object" },
+			},
+		])
 
-		await findTools(undefined, { all: true })
+		await findTools(undefined, { connection: "posthog-QeNO", all: true })
 
-		expect(mockListConnections).toHaveBeenCalled()
+		expect(mockGetConnection).toHaveBeenCalledWith("posthog-QeNO")
 		expect(mockOutputTable).toHaveBeenCalledWith(
 			expect.objectContaining({
 				json: true,
@@ -309,7 +310,7 @@ describe("tools find command", () => {
 					hasMore: false,
 					tools: expect.arrayContaining([
 						expect.objectContaining({ name: "experiment-get" }),
-						expect.objectContaining({ name: "notion-fetch" }),
+						expect.objectContaining({ name: "experiment-results-get" }),
 					]),
 				}),
 			}),
