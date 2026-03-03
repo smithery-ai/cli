@@ -155,9 +155,11 @@ describe("outputTable", () => {
 
 	afterEach(() => {
 		consoleLogSpy.mockRestore()
+		setOutputMode({})
 	})
 
-	test("outputs JSON with jsonData when in json mode", () => {
+	test("outputs JSON blob with jsonData when --json flag set", () => {
+		setOutputMode({ json: true })
 		outputTable({
 			data: [{ name: "a" }],
 			columns: [{ key: "name", header: "NAME" }],
@@ -171,7 +173,34 @@ describe("outputTable", () => {
 		expect(parsed.total).toBe(1)
 	})
 
+	test("outputs JSONL records when piped (no --json flag)", () => {
+		// Simulate non-TTY (piped) environment
+		const origIsTTY = process.stdout.isTTY
+		process.stdout.isTTY = undefined as unknown as boolean
+		try {
+			// json: true comes from isJsonMode() auto-detection, not --json flag
+			outputTable({
+				data: [{ name: "a" }, { name: "b" }],
+				columns: [{ key: "name", header: "NAME" }],
+				json: true,
+				jsonData: { tools: [{ name: "a" }, { name: "b" }], total: 2 },
+			})
+
+			// Each record on its own line
+			expect(consoleLogSpy).toHaveBeenCalledTimes(2)
+			expect(JSON.parse(consoleLogSpy.mock.calls[0][0] as string)).toEqual({
+				name: "a",
+			})
+			expect(JSON.parse(consoleLogSpy.mock.calls[1][0] as string)).toEqual({
+				name: "b",
+			})
+		} finally {
+			process.stdout.isTTY = origIsTTY
+		}
+	})
+
 	test("includes hint in JSON output", () => {
+		setOutputMode({ json: true })
 		outputTable({
 			data: [],
 			columns: [],
@@ -185,6 +214,7 @@ describe("outputTable", () => {
 	})
 
 	test("includes pagination in JSON output", () => {
+		setOutputMode({ json: true })
 		outputTable({
 			data: [{ name: "a" }],
 			columns: [{ key: "name", header: "NAME" }],
@@ -198,6 +228,7 @@ describe("outputTable", () => {
 	})
 
 	test("wraps raw arrays in results key for JSON", () => {
+		setOutputMode({ json: true })
 		outputTable({
 			data: [{ name: "a" }],
 			columns: [{ key: "name", header: "NAME" }],

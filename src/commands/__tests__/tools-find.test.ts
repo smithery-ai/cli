@@ -135,7 +135,6 @@ describe("tools find command", () => {
 		await findTools(undefined, {
 			connection: "github-abc",
 			prefix: undefined,
-			all: true,
 		})
 
 		expect(mockOutputTable).toHaveBeenCalledWith(
@@ -210,7 +209,6 @@ describe("tools find command", () => {
 		await findTools(undefined, {
 			connection: "github-abc",
 			prefix: "issues.",
-			all: true,
 		})
 
 		expect(mockOutputTable).toHaveBeenCalledWith(
@@ -258,7 +256,6 @@ describe("tools find command", () => {
 		await findTools(undefined, {
 			connection: "github-abc",
 			prefix: "issues.",
-			all: true,
 		})
 
 		expect(mockOutputTable).toHaveBeenCalledWith(

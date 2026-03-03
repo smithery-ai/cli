@@ -287,6 +287,42 @@ export async function findTools(
 				)
 			: allTools
 
+		// --all: flatten output so `tool list --all | grep` works naturally
+		if (options.all) {
+			const data = candidates.map(formatListToolRow)
+			const jsonEntries = candidates.map((t) => ({
+				type: "tool" as const,
+				name: t.name,
+				description: t.description ?? "",
+				inputSchema: t.inputSchema,
+				...(t.annotations ? { annotations: t.annotations } : {}),
+			}))
+
+			outputTable({
+				data,
+				columns: TOOL_LIST_COLUMNS,
+				json: isJson,
+				jsonData: {
+					connection: options.connection,
+					tools: jsonEntries,
+					total: candidates.length,
+					...(prefix ? { prefix } : {}),
+					all: true,
+					page: 1,
+					hasMore: false,
+					...(issues.length > 0 ? { connectionIssues: issues } : {}),
+				},
+				pagination: { total: candidates.length },
+				tip:
+					candidates.length === 0
+						? prefix
+							? `No tools found with prefix "${prefix}".`
+							: "No tools found."
+						: `Use smithery tool call ${options.connection} <tool> '<args>' to call a tool.`,
+			})
+			return
+		}
+
 		const { groups, leafTools } = groupToolsAtLevel(candidates, prefix)
 
 		const tableRows = [
@@ -310,13 +346,9 @@ export async function findTools(
 
 		const total = tableRows.length
 		const offset = (page - 1) * limit
-		const visibleRows = options.all
-			? tableRows
-			: tableRows.slice(offset, offset + limit)
-		const visibleJson = options.all
-			? jsonEntries
-			: jsonEntries.slice(offset, offset + limit)
-		const hasMore = options.all ? false : offset + limit < total
+		const visibleRows = tableRows.slice(offset, offset + limit)
+		const visibleJson = jsonEntries.slice(offset, offset + limit)
+		const hasMore = offset + limit < total
 
 		outputTable({
 			data: visibleRows,
@@ -327,12 +359,11 @@ export async function findTools(
 				tools: visibleJson,
 				total,
 				...(prefix ? { prefix } : {}),
-				...(options.all
-					? { all: true, page: 1, hasMore: false }
-					: { page, hasMore }),
+				page,
+				hasMore,
 				...(issues.length > 0 ? { connectionIssues: issues } : {}),
 			},
-			pagination: options.all ? { total } : { page, hasMore, total },
+			pagination: { page, hasMore, total },
 			tip:
 				total === 0
 					? prefix
