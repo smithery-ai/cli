@@ -78,10 +78,21 @@ smithery tool list my-github issues.labels.
 Groups (prefixes shared by multiple tools) are collapsed and show a tool count.
 Leaf tools are shown with their description.
 
+Use `--all` to flatten the tree and list every tool individually:
+
+```bash
+# List all tools without grouping
+smithery tool list my-github --all
+
+# Search with grep (piped output is JSONL — one record per line)
+smithery tool list my-github --all | grep label
+```
+
 Options:
 - `--namespace <ns>` - Namespace to list from
 - `--limit <n>` - Maximum entries to show (default: 10)
 - `--page <n>` - Page number (default: 1)
+- `--all` - List all tools flat, without grouping (useful with `| grep`)
 
 Output (JSON):
 ```json
@@ -117,7 +128,7 @@ Options:
 Show one tool in detail (full description + schemas):
 
 ```bash
-smithery tool get my-github create_issue
+smithery tool get my-github issues.create
 ```
 
 Options:
@@ -129,7 +140,7 @@ Options:
 Call a tool by specifying the connection and tool name:
 
 ```bash
-smithery tool call my-github create_issue '{"repo": "owner/repo", "title": "Bug"}'
+smithery tool call my-github issues.create '{"repo": "owner/repo", "title": "Bug"}'
 ```
 
 Options:

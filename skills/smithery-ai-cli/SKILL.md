@@ -134,12 +134,26 @@ smithery tool list my-github issues.
 # 3. Keep drilling
 smithery tool list my-github issues.labels.
 
-# 4. Get full details for a tool
-smithery tool get my-github issues.create
+# 4. Search by name or intent
+smithery tool find "create issue"
 
 # 5. Call a tool
 smithery tool call my-github issues.create '{"title": "Bug report"}'
 ```
+
+### Flat listing with grep
+
+Use `--all` to list every tool without grouping, then pipe to grep:
+
+```bash
+# List all tools flat
+smithery tool list my-github --all
+
+# Search with grep
+smithery tool list my-github --all | grep label
+```
+
+When piped, output is JSONL (one JSON record per line) for easy filtering with `grep`, `jq`, etc.
 
 **Important:** Always specify a connection ID. Use `smithery mcp list` to see your connections.
 
@@ -223,6 +237,7 @@ See [references/SKILLS.md](references/SKILLS.md) for details.
 | **Update connection** | `smithery mcp update <id>` |
 | **Get connection** | `smithery mcp get <id>` |
 | **Browse tools** | `smithery tool list <connection> [prefix]` |
+| **List all tools** | `smithery tool list <connection> --all` |
 | **Find tools** | `smithery tool find [query]` |
 | **Get tool details** | `smithery tool get <connection> <tool>` |
 | **Call a tool** | `smithery tool call <connection> <tool> [args]` |
@@ -266,6 +281,7 @@ You don't have to wait for heartbeat - if they ask, do it!
 | **Update connection** | `smithery mcp update <id>` |
 | **Get connection** | `smithery mcp get <id>` |
 | **Browse tools** | `smithery tool list <connection> [prefix]` |
+| **List all tools** | `smithery tool list <connection> --all` |
 | **Find tools** | `smithery tool find [query]` |
 | **Get tool details** | `smithery tool get <connection> <tool>` |
 | **Call a tool** | `smithery tool call <connection> <tool> [args]` |
