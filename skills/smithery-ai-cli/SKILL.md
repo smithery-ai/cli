@@ -92,7 +92,7 @@ smithery tool list github issues.
 smithery tool find github "create issue"
 
 # List all tools flat (useful with grep)
-smithery tool list github --all | grep label
+smithery tool list github --flat | grep label
 
 # Get tool details
 smithery tool get github issues.create
@@ -148,7 +148,7 @@ See [references/SKILLS.md](references/SKILLS.md) for details.
 | **Remove connection** | `smithery mcp remove <ids...>` |
 | **Update connection** | `smithery mcp update <id>` |
 | **Browse tools** | `smithery tool list <connection> [prefix]` |
-| **Browse all flat** | `smithery tool list <connection> --all` |
+| **Browse flat** | `smithery tool list <connection> --flat` |
 | **Find tools** | `smithery tool find <connection> [query]` |
 | **Tool details** | `smithery tool get <connection> <tool>` |
 | **Call tool** | `smithery tool call <connection> <tool> [args]` |

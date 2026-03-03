@@ -167,6 +167,7 @@ export async function findTools(
 		limit?: string
 		page?: string
 		all?: boolean
+		flat?: boolean
 		match?: string
 		prefix?: string
 	},
@@ -276,8 +277,8 @@ export async function findTools(
 				)
 			: allTools
 
-		// --all: flatten output so `tool list --all | grep` works naturally
-		if (options.all) {
+		// --flat: flatten output so `tool list --flat | grep` works naturally
+		if (options.flat) {
 			const data = candidates.map(formatListToolRow)
 			const jsonEntries = candidates.map((t) => ({
 				type: "tool" as const,
@@ -296,7 +297,7 @@ export async function findTools(
 					tools: jsonEntries,
 					total: candidates.length,
 					...(prefix ? { prefix } : {}),
-					all: true,
+					flat: true,
 					page: 1,
 					hasMore: false,
 					...(issues.length > 0 ? { connectionIssues: issues } : {}),

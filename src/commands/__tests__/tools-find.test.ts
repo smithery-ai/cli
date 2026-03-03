@@ -275,7 +275,7 @@ describe("tools find command", () => {
 		)
 	})
 
-	test("supports --all flag to list tools flat without grouping", async () => {
+	test("supports --flat flag to list tools without grouping", async () => {
 		mockGetConnection.mockResolvedValue({
 			connectionId: "posthog-QeNO",
 			name: "posthog-QeNO",
@@ -298,14 +298,18 @@ describe("tools find command", () => {
 			},
 		])
 
-		await findTools(undefined, { connection: "posthog-QeNO", all: true })
+		await findTools(undefined, {
+			connection: "posthog-QeNO",
+			prefix: undefined,
+			flat: true,
+		})
 
 		expect(mockGetConnection).toHaveBeenCalledWith("posthog-QeNO")
 		expect(mockOutputTable).toHaveBeenCalledWith(
 			expect.objectContaining({
 				json: true,
 				jsonData: expect.objectContaining({
-					all: true,
+					flat: true,
 					total: 2,
 					hasMore: false,
 					tools: expect.arrayContaining([
