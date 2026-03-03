@@ -1191,7 +1191,15 @@ Examples:
   smithery auth token --policy '{"resources": "connections", "operations": "read", "ttl": "30m"}'
   smithery auth token --policy '{"namespaces": "prod"}' --policy '{"resources": "skills", "ttl": "2h"}'
 
-For more examples, run: smithery skill view smithery-ai/cli/references/AUTH.md`,
+rpcReqMatch restricts which MCP JSON-RPC requests a token can make.
+Keys are dot-paths into the request body; values are regex patterns (all must match).
+
+  smithery auth token --policy '{"rpcReqMatch": {"method": "tools/call", "params.name": "^search$"}}'
+  smithery auth token --policy '{"rpcReqMatch": {"method": "^tools/list$"}}'
+  smithery auth token --policy '{"metadata": {"connectionId": "my-github"}, "rpcReqMatch": {"method": "tools/call", "params.name": "^issues\\\\."}}'
+
+Note: Connection IDs are not in the JSON-RPC body — use metadata to restrict by connection,
+and combine with rpcReqMatch to also restrict which tools can be called (as shown above).`,
 	)
 	.action(async (options) => {
 		const { createToken } = await import("./commands/auth/token")

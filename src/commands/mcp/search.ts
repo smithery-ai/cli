@@ -208,7 +208,7 @@ export async function findTools(
 			},
 			tip: "smithery mcp list - List all connections",
 		})
-		return
+		process.exit(1)
 	}
 
 	const allTools: ToolInfo[] = []
