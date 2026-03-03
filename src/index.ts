@@ -29,7 +29,7 @@ interface CliOptions {
 	limit?: string
 	page?: string
 	config?: string
-	port?: number
+	port?: string
 	tunnel?: boolean
 	open?: boolean
 	prompt?: string
@@ -51,6 +51,10 @@ interface CliOptions {
 	up?: boolean
 	down?: boolean
 	model?: string
+}
+
+interface ToolFindOptions extends CliOptions {
+	connection: string
 }
 
 // Configure the CLI
@@ -105,8 +109,8 @@ async function handleSearch(term: string | undefined, options: CliOptions) {
 
 	const results = await searchServers(searchTerm, apiKey, {
 		verified: options.verified,
-		pageSize: parseInt(options.limit, 10),
-		page: parseInt(options.page, 10),
+		pageSize: parseInt(options.limit ?? "10", 10),
+		page: parseInt(options.page ?? "1", 10),
 	})
 
 	if (results.length === 0 && !json) {
@@ -126,8 +130,8 @@ async function handleSearch(term: string | undefined, options: CliOptions) {
 		connectionUrl: `https://server.smithery.ai/${server.qualifiedName}`,
 	}))
 
-	const page = parseInt(options.page, 10) || 1
-	const limit = parseInt(options.limit, 10) || 10
+	const page = parseInt(options.page ?? "1", 10) || 1
+	const limit = parseInt(options.limit ?? "10", 10) || 10
 	const hasMore = results.length >= limit
 
 	outputTable({
@@ -170,11 +174,13 @@ async function handleDev(entryFile: string | undefined, options: CliOptions) {
 }
 
 async function handleBuild(entryFile: string | undefined, options: CliOptions) {
-	if (!["shttp", "stdio"].includes(options.transport)) {
+	const transportRaw = options.transport ?? "shttp"
+	if (!["shttp", "stdio"].includes(transportRaw)) {
 		fatal(
-			`Invalid transport type "${options.transport}". Valid options are: shttp, stdio`,
+			`Invalid transport type "${transportRaw}". Valid options are: shttp, stdio`,
 		)
 	}
+	const transport = transportRaw as "shttp" | "stdio"
 
 	if (options.out && /\.(js|cjs|mjs)$/.test(options.out)) {
 		console.warn(
@@ -192,7 +198,7 @@ async function handleBuild(entryFile: string | undefined, options: CliOptions) {
 	await buildBundle({
 		entryFile,
 		outDir: options.out,
-		transport: options.transport as "shttp" | "stdio",
+		transport,
 		production: true,
 	})
 }
@@ -284,7 +290,10 @@ async function handleUpdateConnection(id: string, options: CliOptions) {
 	await updateServer(id, options)
 }
 
-async function handleFindTools(query: string | undefined, options: CliOptions) {
+async function handleFindTools(
+	query: string | undefined,
+	options: ToolFindOptions,
+) {
 	const { findTools } = await loadConnectCommands()
 	await findTools(query, options)
 }
@@ -527,11 +536,11 @@ function withPublishOptions(cmd: InstanceType<typeof Command>) {
 }
 
 /** Register a hidden backward-compat alias that copies options and action from a source command. */
-function registerAlias(
+function registerAlias<TArgs extends unknown[]>(
 	parent: InstanceType<typeof Command>,
 	name: string,
 	sourceCmd: InstanceType<typeof Command>,
-	action: (...args: unknown[]) => void,
+	action: (...args: TArgs) => void | Promise<void>,
 	opts?: { deprecation?: string },
 ) {
 	const alias = parent.command(name, { hidden: true })
@@ -543,7 +552,7 @@ function registerAlias(
 			console.warn(pc.yellow(opts.deprecation))
 		})
 	}
-	alias.action(action)
+	alias.action((...args) => action(...(args as TArgs)))
 	return alias
 }
 
@@ -1126,10 +1135,15 @@ const reviewRemoveCmd = skillReview
 		await deleteReview(skill)
 	})
 
-registerAlias(skillReview, "rm <skill>", reviewRemoveCmd, async (skill) => {
-	const { deleteReview } = await import("./commands/skill")
-	await deleteReview(skill)
-})
+registerAlias(
+	skillReview,
+	"rm <skill>",
+	reviewRemoveCmd,
+	async (skill: string) => {
+		const { deleteReview } = await import("./commands/skill")
+		await deleteReview(skill)
+	},
+)
 
 skillReview
 	.command("upvote <skill> <review-id>")
