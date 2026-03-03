@@ -60,7 +60,6 @@ export async function getTool(
 		const data = getToolOutput(found)
 		outputDetail({
 			data,
-			json: isJson,
 			tip: `Use smithery tool call ${connection} '${found.name}' '<args>' to call this tool.`,
 		})
 	} catch (error) {

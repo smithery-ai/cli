@@ -795,7 +795,9 @@ toolCmd
 Examples:
   smithery tool find github "create issue"               Search by intent
   smithery tool find github --all                        List all tools flat
-  smithery tool find github fetch --match exact --json   Exact match as JSON`,
+  smithery tool find github fetch --match exact --json   Exact match as JSON
+
+Use 'smithery mcp list' to see available connections.`,
 	)
 	.action((connection, query, options) =>
 		handleFindTools(query, { ...options, connection }),
@@ -823,12 +825,11 @@ is given, --flat lists all tools under that prefix without nesting.
 Examples:
   smithery tool list github                           Browse root-level groups
   smithery tool list github issues.                   Drill into "issues." group
-  smithery tool list github issues.labels.            Drill deeper
-  smithery tool list github --flat                    All tools, no grouping
   smithery tool list github issues. --flat            All issue tools, no grouping
   smithery tool list github --flat | grep label       Search with grep
 
-Tip: Use 'smithery tool find <connection> <query>' to search by name or intent.`,
+Use 'smithery mcp list' to see available connections.
+Use 'smithery tool find <connection> <query>' to search by name or intent.`,
 	)
 	.action((connection, prefix, options) =>
 		handleFindTools(undefined, { ...options, connection, prefix }),
@@ -836,14 +837,14 @@ Tip: Use 'smithery tool find <connection> <query>' to search by name or intent.`
 
 toolCmd
 	.command("get <connection> <tool>")
-	.description("Get details for a specific tool")
+	.description("Get input/output schema for a tool")
 	.option("--namespace <ns>", "Namespace for the tool")
 
 	.addHelpText(
 		"after",
 		`
 Examples:
-  smithery tool get myserver search     Show tool details and input schema`,
+  smithery tool get myserver search     Show input/output schema`,
 	)
 	.action(handleGetTool)
 

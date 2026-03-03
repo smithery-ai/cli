@@ -149,12 +149,11 @@ export function outputTable(options: {
  */
 export function outputDetail(options: {
 	data: Record<string, unknown>
-	json: boolean
 	tip?: string
 }): void {
-	const { data, json, tip } = options
+	const { data, tip } = options
 
-	if (json) {
+	if (isJsonMode()) {
 		if (tip) {
 			console.log(JSON.stringify({ ...data, hint: tip }))
 		} else {

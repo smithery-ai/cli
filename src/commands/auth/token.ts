@@ -2,7 +2,7 @@ import type { Constraint } from "@smithery/api/resources/tokens"
 import { z } from "zod"
 import { fatal } from "../../lib/cli-error"
 import { createSmitheryClient } from "../../lib/smithery-client"
-import { isJsonMode, outputDetail } from "../../utils/output"
+import { outputDetail } from "../../utils/output"
 
 export const ConstraintSchema = z
 	.object({
@@ -57,7 +57,6 @@ export const constraintJsonSchema = z.toJSONSchema(ConstraintSchema)
 export async function createToken(options: {
 	policy: Array<Record<string, unknown>>
 }) {
-	const isJson = isJsonMode()
 	const policy = options.policy.length > 0 ? options.policy : undefined
 
 	try {
@@ -69,7 +68,6 @@ export async function createToken(options: {
 				token: result.token,
 				expiresAt: result.expiresAt,
 			},
-			json: isJson,
 			tip: "Set SMITHERY_API_KEY=<token> to use this token.",
 		})
 	} catch (error) {

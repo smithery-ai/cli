@@ -1,5 +1,5 @@
 import { fatal } from "../../lib/cli-error"
-import { isJsonMode, outputDetail } from "../../utils/output"
+import { outputDetail } from "../../utils/output"
 import { addServer as addServerImpl } from "./add-impl"
 import { ConnectSession } from "./api"
 import { formatConnectionOutput } from "./format-connection"
@@ -22,7 +22,6 @@ export async function addServer(
 
 	if (options.id) {
 		// Upsert with explicit ID
-		const isJson = isJsonMode()
 		try {
 			const parsedMetadata = parseJsonObject(options.metadata, "Metadata")
 			const parsedHeaders = parseJsonObject<Record<string, string>>(
@@ -44,7 +43,6 @@ export async function addServer(
 			const output = formatConnectionOutput(connection)
 			outputDetail({
 				data: output,
-				json: isJson,
 				tip: `Use smithery tool list ${connection.connectionId} to view tools.`,
 			})
 		} catch (error) {

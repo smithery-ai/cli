@@ -71,7 +71,6 @@ describe("tools get command", () => {
 		expect(mockCreateSession).toHaveBeenCalledWith(undefined)
 		expect(mockOutputDetail).toHaveBeenCalledWith(
 			expect.objectContaining({
-				json: false,
 				data: expect.objectContaining({
 					name: "add-insight-to-dashboard",
 					connection: "posthog",
