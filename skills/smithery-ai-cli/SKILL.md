@@ -86,20 +86,21 @@ Never pass a full API key to untrusted code.
 Read more: [Token Scoping](https://smithery.ai/docs/use/token-scoping.md).
 
 Policy mental model:
-- A token policy is an array of constraints
+- A token policy is one or more constraints
+- In the CLI, pass one JSON object per `--policy` flag
 - Fields inside one constraint are AND-ed (more fields = narrower)
 - Lists and multiple constraints are OR-ed (more entries = wider)
 
 Canonical user-scoped token:
 
 ```bash
-smithery auth token --policy '[{
+smithery auth token --policy '{
   "namespaces": "my-app",
   "resources": "connections",
   "operations": ["read", "execute"],
   "metadata": { "userId": "user-123" },
   "ttl": "1h"
-}]'
+}'
 ```
 
 ### Request-level Tool Restrictions (`rpcReqMatch`, experimental)
@@ -112,7 +113,7 @@ Important: connection IDs are not in the JSON-RPC body, so combine:
 Canonical combined restriction:
 
 ```bash
-smithery auth token --policy '[{
+smithery auth token --policy '{
   "resources": "connections",
   "operations": "execute",
   "metadata": { "connectionId": "my-github" },
@@ -121,7 +122,7 @@ smithery auth token --policy '[{
     "params.name": "^issues\\."
   },
   "ttl": "30m"
-}]'
+}'
 ```
 
 ### Piped Output
@@ -131,15 +132,3 @@ When output is piped, Smithery commands emit JSONL (one JSON object per line):
 ```bash
 smithery tool list github --flat | grep label
 ```
-
-## Command Index
-
-| Need | Command | Help |
-|------|---------|------|
-| Search servers | `smithery mcp search "slack"` | `smithery mcp search --help` |
-| Add/list/update/remove connection | `smithery mcp add|list|update|remove` | `smithery mcp --help` |
-| Browse/find/get/call tools | `smithery tool list|find|get|call` | `smithery tool --help` |
-| Mint scoped token | `smithery auth token` | `smithery auth token --help` |
-| Manage namespaces | `smithery namespace list|create|use|show` | `smithery namespace --help` |
-| Discover/install skills | `smithery skill search|add` | `smithery skill --help` |
-| Leave skill review | `smithery skill review add` | `smithery skill review add --help` |
