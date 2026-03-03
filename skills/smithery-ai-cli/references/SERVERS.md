@@ -37,7 +37,7 @@ Output:
 Add an MCP server connection:
 
 ```bash
-smithery mcp add "https://server.smithery.ai/namespace/server-name"
+smithery mcp add "https://[slug].run.tools"
 ```
 
 Options:
@@ -81,7 +81,7 @@ Note: `install` is deprecated. Use `smithery mcp add <url>` to add connections i
 smithery mcp search "slack"
 
 # 2. Connect to the server
-smithery mcp add "https://server.smithery.ai/smithery/slack"
+smithery mcp add "https://slack.run.tools"
 
 # 3. Verify connection
 smithery mcp list

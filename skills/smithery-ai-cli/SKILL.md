@@ -21,7 +21,7 @@ smithery auth login
 smithery mcp search "github"
 
 # 4. Connect to a server
-smithery mcp add "https://server.smithery.ai/smithery/github"
+smithery mcp add "https://github.run.tools"
 
 # 5. Browse tools
 smithery tool list github
@@ -59,7 +59,7 @@ See [references/AUTH.md](references/AUTH.md) for details.
 
 ```bash
 # Add a connection
-smithery mcp add "https://server.smithery.ai/namespace/server"
+smithery mcp add "https://[slug].run.tools"
 
 # List connections
 smithery mcp list
