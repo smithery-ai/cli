@@ -358,7 +358,7 @@ async function handleWhoami(options: any) {
 		const apiKey = await getApiKey()
 
 		if (!apiKey) {
-			console.log(pc.yellow("No API key found"))
+			console.log(pc.yellow("No token found"))
 			console.log(pc.gray("Run 'smithery auth login' to authenticate"))
 			process.exit(1)
 		}
@@ -367,8 +367,8 @@ async function handleWhoami(options: any) {
 			console.log(`SMITHERY_API_KEY=${apiKey}`)
 		} else {
 			const masked = `${apiKey.slice(0, 8)}...${apiKey.slice(-4)}`
-			console.log(pc.cyan("API Key:"), masked)
-			console.log(pc.gray("Use --full to display the complete key"))
+			console.log(pc.cyan("Token:"), masked)
+			console.log(pc.gray("Use --full to display the complete token"))
 		}
 	} catch (_error) {
 		console.log(pc.yellow("Not logged in"))
@@ -1064,8 +1064,8 @@ auth
 
 const whoamiCmd = auth
 	.command("whoami")
-	.description("Display the currently logged in API key")
-	.option("--full", "Show the full API key instead of masking it")
+	.description("Display the currently logged in token")
+	.option("--full", "Show the full token instead of masking it")
 	.action(handleWhoami)
 
 auth
