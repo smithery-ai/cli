@@ -79,8 +79,13 @@ export function outputTable(options: {
 		// JSONL mode: one record per line, grep-friendly
 		if (format === "jsonl") {
 			const records = extractRecords(jsonData) ?? data
-			for (const record of records) {
-				console.log(JSON.stringify(record))
+			if (records.length === 0 && jsonData != null && typeof jsonData === "object") {
+				// Emit metadata (error, hint, etc.) as a single line
+				console.log(JSON.stringify(jsonData))
+			} else {
+				for (const record of records) {
+					console.log(JSON.stringify(record))
+				}
 			}
 			return
 		}

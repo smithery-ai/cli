@@ -200,6 +200,30 @@ describe("outputTable", () => {
 		}
 	})
 
+	test("emits error metadata in JSONL mode when records are empty", () => {
+		const origIsTTY = process.stdout.isTTY
+		process.stdout.isTTY = undefined as unknown as boolean
+		try {
+			outputTable({
+				data: [],
+				columns: [],
+				json: true,
+				jsonData: {
+					tools: [],
+					error: "Connection not found",
+					hint: "smithery mcp list",
+				},
+			})
+
+			expect(consoleLogSpy).toHaveBeenCalledTimes(1)
+			const parsed = JSON.parse(consoleLogSpy.mock.calls[0][0] as string)
+			expect(parsed.error).toBe("Connection not found")
+			expect(parsed.hint).toBe("smithery mcp list")
+		} finally {
+			process.stdout.isTTY = origIsTTY
+		}
+	})
+
 	test("includes hint in JSON output", () => {
 		setOutputMode({ json: true })
 		outputTable({

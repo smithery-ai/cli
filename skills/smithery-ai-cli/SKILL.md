@@ -6,12 +6,15 @@ metadata: { "openclaw": { "requires": { "bins": ["smithery"] }, "homepage": "htt
 
 # Smithery
 
-The marketplace for AI agents. Connect to 100K+ skills and thousands of MCP tools instantly.
+The marketplace for AI agents. Connect to 100K+ tools and skills instantly.
+
+Use `smithery --help` and `<command> --help` for flags, arguments, and full examples.
+This skill focuses on concepts and canonical workflows.
 
 ## Quick Start
 
 ```bash
-# 1. Install the CLI
+# 1. Install
 npm install -g @smithery/cli
 
 # 2. Authenticate (requires human to confirm in browser)
@@ -20,153 +23,123 @@ smithery auth login
 # 3. Search for MCP servers
 smithery mcp search "github"
 
-# 4. Connect to a server
-smithery mcp add "https://github.run.tools"
+# 4. Connect to a server (URL or qualified name both work)
+smithery mcp add "https://github.run.tools" --id github
 
-# 5. Browse tools
+# 5. Browse tools (tree view — drill into groups by passing the prefix)
 smithery tool list github
-
-# 6. Drill into a tool group
 smithery tool list github issues.
+
+# 6. Inspect tool input/output JSON schema
+smithery tool get github issues.create
 
 # 7. Call a tool
 smithery tool call github issues.create '{"repo": "owner/repo", "title": "Bug"}'
 ```
 
----
+## Core Concepts
 
-## Authentication
+### Namespaces
 
-Every agent needs to authenticate with their human:
+A namespace is the workspace boundary for Smithery resources. Servers, connections, and skills all live in a namespace.
+Use one namespace per app/environment (for example, `my-app-dev`, `my-app-prod`), then set it as your active context.
+Read more: [Namespaces](https://smithery.ai/docs/concepts/namespaces.md).
+
+Canonical flow:
 
 ```bash
-smithery auth login
+smithery namespace list
+smithery namespace create my-app-prod
+smithery namespace use my-app-prod
 ```
 
-This will display an authorization URL. **Tell your human**: "Please open this URL to authorize Smithery: [url]"
+For namespace-specific flags and overrides, run `smithery namespace --help` and `smithery mcp --help`.
 
-The CLI polls until your human confirms in the browser. Verify with:
+### Connect (MCP Connections)
+
+A connection is a managed, long-lived MCP session.
+Smithery Connect handles OAuth flow, credential storage, token refresh, and session lifecycle.
+Read more: [Connect](https://smithery.ai/docs/use/connect.md).
+
+Connection status model:
+- `connected`: ready to list/call tools
+- `auth_required`: human must open authorization URL
+- `error`: inspect details and retry/fix config
+
+Canonical flow (single user-scoped connection):
 
 ```bash
-smithery auth whoami
+smithery mcp add https://github.run.tools \
+  --id user-123-github \
+  --metadata '{"userId":"user-123"}'
+
+smithery mcp list --metadata '{"userId":"user-123"}'
+smithery tool list user-123-github
 ```
 
-See [references/AUTH.md](references/AUTH.md) for details.
+If CLI shows `auth_required`, tell your human to open the URL and then retry.
 
----
+### Token Scoping
 
-## Connect to MCP Servers
+Service tokens are restricted credentials for browser/mobile/agent usage.
+Never pass a full API key to untrusted code.
+Read more: [Token Scoping](https://smithery.ai/docs/use/token-scoping.md).
+
+Policy mental model:
+- A token policy is an array of constraints
+- Fields inside one constraint are AND-ed (more fields = narrower)
+- Lists and multiple constraints are OR-ed (more entries = wider)
+
+Canonical user-scoped token:
 
 ```bash
-# Add a connection
-smithery mcp add "https://[slug].run.tools"
-
-# List connections
-smithery mcp list
+smithery auth token --policy '[{
+  "namespaces": "my-app",
+  "resources": "connections",
+  "operations": ["read", "execute"],
+  "metadata": { "userId": "user-123" },
+  "ttl": "1h"
+}]'
 ```
 
-If a connection status is `auth_required`, tell your human to visit the authorization URL.
+### Request-level Tool Restrictions (`rpcReqMatch`, experimental)
 
-See [references/CONNECT.md](references/CONNECT.md) for full options.
+Use `rpcReqMatch` to restrict specific MCP JSON-RPC requests (regex by request path).
+Important: connection IDs are not in the JSON-RPC body, so combine:
+- `metadata` for connection-level restriction
+- `rpcReqMatch` for method/tool restriction
 
----
-
-## Browsing Tools
-
-Browse tools by drilling into groups:
+Canonical combined restriction:
 
 ```bash
-# See root-level groups and tools
-smithery tool list github
+smithery auth token --policy '[{
+  "resources": "connections",
+  "operations": "execute",
+  "metadata": { "connectionId": "my-github" },
+  "rpcReqMatch": {
+    "method": "tools/call",
+    "params.name": "^issues\\."
+  },
+  "ttl": "30m"
+}]'
+```
 
-# Output:
-#   TOOL          DESCRIPTION
-#   issues.       4 tools
-#   pulls.        2 tools
-#   search        Search across repos
+### Piped Output
 
-# Drill into a group
-smithery tool list github issues.
+When output is piped, Smithery commands emit JSONL (one JSON object per line):
 
-# Search by name or intent
-smithery tool find github "create issue"
-
-# List all tools flat (useful with grep)
+```bash
 smithery tool list github --flat | grep label
-
-# Get tool details
-smithery tool get github issues.create
-
-# Call a tool
-smithery tool call github issues.create '{"title": "Bug report"}'
 ```
 
-When piped, output is JSONL (one JSON record per line) for easy filtering with `grep`, `jq`, etc.
+## Command Index
 
-See [references/CONNECT.md](references/CONNECT.md) for full browse/find/call options.
-
----
-
-## Discover MCP Servers
-
-```bash
-smithery mcp search "database"
-smithery mcp search "slack" --json
-```
-
-See [references/SERVERS.md](references/SERVERS.md) for details.
-
----
-
-## Skills
-
-Skills are reusable prompts and workflows that help you accomplish tasks.
-
-```bash
-# Search for skills
-smithery skill search "code review"
-
-# Add a skill
-smithery skill add namespace/skill-name
-
-# Submit a review (vote required: --up or --down)
-smithery skill review add namespace/skill-name --up -b "Clear docs, worked as expected" --model claude-opus-4
-```
-
-See [references/SKILLS.md](references/SKILLS.md) for details.
-
----
-
-## Reference
-
-| Action | Command |
-|--------|---------|
-| **Auth** | `smithery auth login / logout / whoami` |
-| **Search servers** | `smithery mcp search [term]` |
-| **Add connection** | `smithery mcp add <url/slug>` |
-| **List connections** | `smithery mcp list` |
-| **Remove connection** | `smithery mcp remove <ids...>` |
-| **Update connection** | `smithery mcp update <id>` |
-| **Browse tools** | `smithery tool list <connection> [prefix]` |
-| **Browse flat** | `smithery tool list <connection> --flat` |
-| **Find tools** | `smithery tool find <connection> [query]` |
-| **Tool details** | `smithery tool get <connection> <tool>` |
-| **Call tool** | `smithery tool call <connection> <tool> [args]` |
-| **Search skills** | `smithery skill search <query>` |
-| **Add skill** | `smithery skill add <skill>` |
-| **Upvote skill** | `smithery skill upvote <skill>` |
-| **Review skill** | `smithery skill review add <skill> --up -b "text"` |
-| **Switch namespace** | `smithery namespace use <name>` |
-
----
-
-## Files
-
-| File | Description |
-|------|-------------|
-| [references/AUTH.md](references/AUTH.md) | Authentication and API keys |
-| [references/CONNECT.md](references/CONNECT.md) | Connect, browse, find, and call tools |
-| [references/SERVERS.md](references/SERVERS.md) | MCP server discovery |
-| [references/SKILLS.md](references/SKILLS.md) | Skills search and reviews |
-| [references/DEVELOPMENT.md](references/DEVELOPMENT.md) | Build and publish |
-| [references/NAMESPACES.md](references/NAMESPACES.md) | Namespace management |
+| Need | Command | Help |
+|------|---------|------|
+| Search servers | `smithery mcp search "slack"` | `smithery mcp search --help` |
+| Add/list/update/remove connection | `smithery mcp add|list|update|remove` | `smithery mcp --help` |
+| Browse/find/get/call tools | `smithery tool list|find|get|call` | `smithery tool --help` |
+| Mint scoped token | `smithery auth token` | `smithery auth token --help` |
+| Manage namespaces | `smithery namespace list|create|use|show` | `smithery namespace --help` |
+| Discover/install skills | `smithery skill search|add` | `smithery skill --help` |
+| Leave skill review | `smithery skill review add` | `smithery skill review add --help` |
