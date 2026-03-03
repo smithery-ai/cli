@@ -5,7 +5,7 @@ Use MCP servers in the cloud without local installation. Connect to any server a
 ## Add a Connection
 
 ```bash
-smithery mcp add "https://server.smithery.ai/namespace/server-name"
+smithery mcp add "https://[slug].run.tools"
 ```
 
 Options:
@@ -16,7 +16,7 @@ Options:
 
 Example with options:
 ```bash
-smithery mcp add "https://server.smithery.ai/example/github" \
+smithery mcp add "https://github.run.tools" \
   --id "my-github" \
   --name "GitHub Tools" \
   --metadata '{"env": "production"}'
@@ -178,7 +178,7 @@ If `auth_required`, tell your human to visit the authorization URL.
 
 ```bash
 # 1. Add a connection
-smithery mcp add "https://server.smithery.ai/smithery/github"
+smithery mcp add "https://github.run.tools"
 
 # 2. Browse root-level tool groups
 smithery tool list github
