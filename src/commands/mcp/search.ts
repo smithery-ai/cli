@@ -279,8 +279,12 @@ export async function findTools(
 
 		// --flat: flatten output so `tool list --flat | grep` works naturally
 		if (options.flat) {
-			const data = candidates.map(formatListToolRow)
-			const jsonEntries = candidates.map((t) => ({
+			const total = candidates.length
+			const offset = (page - 1) * limit
+			const visibleCandidates = candidates.slice(offset, offset + limit)
+			const hasMore = offset + limit < total
+			const data = visibleCandidates.map(formatListToolRow)
+			const jsonEntries = visibleCandidates.map((t) => ({
 				type: "tool" as const,
 				name: t.name,
 				description: t.description ?? "",
@@ -295,16 +299,16 @@ export async function findTools(
 				jsonData: {
 					connection: options.connection,
 					tools: jsonEntries,
-					total: candidates.length,
+					total,
 					...(prefix ? { prefix } : {}),
 					flat: true,
-					page: 1,
-					hasMore: false,
+					page,
+					hasMore,
 					...(issues.length > 0 ? { connectionIssues: issues } : {}),
 				},
-				pagination: { total: candidates.length },
+				pagination: { page, hasMore, total },
 				tip:
-					candidates.length === 0
+					total === 0
 						? prefix
 							? `No tools found with prefix "${prefix}".`
 							: "No tools found."

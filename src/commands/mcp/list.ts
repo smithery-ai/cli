@@ -3,15 +3,22 @@ import { fatal } from "../../lib/cli-error"
 import { readConfig } from "../../lib/client-config-io"
 import { isJsonMode, outputTable } from "../../utils/output"
 import { ConnectSession } from "./api"
+import { parseJsonObject } from "./parse-json"
 
 export async function listServers(options: {
 	namespace?: string
+	metadata?: string
 	limit?: string
 	cursor?: string
 }): Promise<void> {
 	const session = await ConnectSession.create(options.namespace)
 	const limit = options.limit ? Number.parseInt(options.limit, 10) : undefined
+	const metadata = parseJsonObject<Record<string, unknown>>(
+		options.metadata,
+		"Metadata",
+	)
 	const { connections, nextCursor } = await session.listConnections({
+		metadata,
 		limit,
 		cursor: options.cursor,
 	})
