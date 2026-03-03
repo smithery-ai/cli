@@ -366,7 +366,6 @@ async function handleWhoami(options: any) {
 				{
 					resources: ["connections", "servers", "namespaces", "skills"],
 					operations: ["read", "write", "execute"],
-					namespaces: "*",
 					metadata: { userId: "root-whoami" },
 					ttl: 3600,
 				},
