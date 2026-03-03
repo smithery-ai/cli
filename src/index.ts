@@ -749,6 +749,7 @@ toolCmd
 	.option("--namespace <ns>", "Namespace to list from")
 	.option("--limit <n>", "Maximum number of entries to return (default: 10)")
 	.option("--page <n>", "Page number (default: 1)")
+	.option("--all", "Return all entries without pagination")
 
 	.addHelpText(
 		"after",
@@ -759,12 +760,14 @@ Arguments:
 
 Tools are displayed as a tree. Groups (prefixes shared by multiple tools) are
 collapsed and shown with a tool count. Drill into a group by passing its name
-as the prefix.
+as the prefix. Use --all to flatten the tree and list every tool individually.
 
 Examples:
   smithery tool list myserver                     Show root-level groups and tools
   smithery tool list myserver issues.             Drill into the "issues." group
   smithery tool list myserver issues.labels.      Drill deeper
+  smithery tool list myserver --all               List all tools (flat, no grouping)
+  smithery tool list myserver --all | grep label  Search all tools with grep
 
 Tip: Use 'smithery tool find <query>' to search tools by name or intent.`,
 	)
@@ -778,9 +781,7 @@ Tip: Use 'smithery tool find <query>' to search tools by name or intent.`,
 				outputJson({ tools: [], error: msg })
 			} else {
 				console.error(pc.red(msg))
-				console.error(
-					pc.dim("\n  smithery tool list <connection>"),
-				)
+				console.error(pc.dim("\n  smithery tool list <connection>"))
 			}
 			process.exit(1)
 			return
