@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 
+import { createServer } from "node:http"
 import pc from "picocolors"
 
 const brandOrange = (text: string) => `\x1b[38;2;234;88;12m${text}\x1b[39m`
@@ -20,6 +21,41 @@ import { getApiKey, setApiKey } from "./utils/smithery-settings"
 declare const __SMITHERY_VERSION__: string
 
 const program = new Command()
+
+interface CliOptions {
+	[key: string]: unknown
+	interactive?: boolean
+	verified?: boolean
+	limit?: string
+	page?: string
+	config?: string
+	port?: string
+	tunnel?: boolean
+	open?: boolean
+	prompt?: string
+	minify?: boolean
+	transport?: string
+	out?: string
+	name?: string
+	resume?: boolean
+	configSchema?: string
+	fromBuild?: string
+	client?: string
+	server?: boolean
+	full?: boolean
+	namespace?: string
+	agent?: string
+	global?: boolean
+	yes?: boolean
+	body?: string
+	up?: boolean
+	down?: boolean
+	model?: string
+}
+
+interface ToolFindOptions extends CliOptions {
+	connection: string
+}
 
 // Configure the CLI
 program
@@ -53,7 +89,7 @@ Learn how to use this CLI:
 // ─── Shared action handlers ─────────────────────────────────────────────────
 // Extracted to avoid duplication between canonical commands and hidden aliases.
 
-async function handleSearch(term: string | undefined, options: any) {
+async function handleSearch(term: string | undefined, options: CliOptions) {
 	const apiKey = await getApiKey()
 
 	if (options.interactive) {
@@ -73,8 +109,8 @@ async function handleSearch(term: string | undefined, options: any) {
 
 	const results = await searchServers(searchTerm, apiKey, {
 		verified: options.verified,
-		pageSize: parseInt(options.limit, 10),
-		page: parseInt(options.page, 10),
+		pageSize: parseInt(options.limit ?? "10", 10),
+		page: parseInt(options.page ?? "1", 10),
 	})
 
 	if (results.length === 0 && !json) {
@@ -94,8 +130,8 @@ async function handleSearch(term: string | undefined, options: any) {
 		connectionUrl: `https://server.smithery.ai/${server.qualifiedName}`,
 	}))
 
-	const page = parseInt(options.page, 10) || 1
-	const limit = parseInt(options.limit, 10) || 10
+	const page = parseInt(options.page ?? "1", 10) || 1
+	const limit = parseInt(options.limit ?? "10", 10) || 10
 	const hasMore = results.length >= limit
 
 	outputTable({
@@ -116,7 +152,7 @@ async function handleSearch(term: string | undefined, options: any) {
 	})
 }
 
-async function handleRun(server: string, options: any) {
+async function handleRun(server: string, options: CliOptions) {
 	const { parseServerConfig } = await import("./utils/command-prompts")
 	const config: ServerConfig = options.config
 		? parseServerConfig(options.config)
@@ -125,7 +161,7 @@ async function handleRun(server: string, options: any) {
 	await run(server, config)
 }
 
-async function handleDev(entryFile: string | undefined, options: any) {
+async function handleDev(entryFile: string | undefined, options: CliOptions) {
 	const { dev } = await import("./commands/mcp/dev")
 	await dev({
 		entryFile,
@@ -137,12 +173,14 @@ async function handleDev(entryFile: string | undefined, options: any) {
 	})
 }
 
-async function handleBuild(entryFile: string | undefined, options: any) {
-	if (!["shttp", "stdio"].includes(options.transport)) {
+async function handleBuild(entryFile: string | undefined, options: CliOptions) {
+	const transportRaw = options.transport ?? "shttp"
+	if (!["shttp", "stdio"].includes(transportRaw)) {
 		fatal(
-			`Invalid transport type "${options.transport}". Valid options are: shttp, stdio`,
+			`Invalid transport type "${transportRaw}". Valid options are: shttp, stdio`,
 		)
 	}
+	const transport = transportRaw as "shttp" | "stdio"
 
 	if (options.out && /\.(js|cjs|mjs)$/.test(options.out)) {
 		console.warn(
@@ -160,12 +198,12 @@ async function handleBuild(entryFile: string | undefined, options: any) {
 	await buildBundle({
 		entryFile,
 		outDir: options.out,
-		transport: options.transport as "shttp" | "stdio",
+		transport,
 		production: true,
 	})
 }
 
-async function handlePublish(server: string | undefined, options: any) {
+async function handlePublish(server: string | undefined, options: CliOptions) {
 	const isUrl = server?.startsWith("http://") || server?.startsWith("https://")
 
 	const { deploy } = await import("./commands/mcp/deploy")
@@ -179,7 +217,7 @@ async function handlePublish(server: string | undefined, options: any) {
 	})
 }
 
-async function handleInstall(server: string | undefined, options: any) {
+async function handleInstall(server: string | undefined, options: CliOptions) {
 	const { selectClient, selectServer, parseServerConfig } = await import(
 		"./utils/command-prompts"
 	)
@@ -196,7 +234,10 @@ async function handleInstall(server: string | undefined, options: any) {
 	await installServer(selectedServer, selectedClient as ValidClient, config)
 }
 
-async function handleUninstall(server: string | undefined, options: any) {
+async function handleUninstall(
+	server: string | undefined,
+	options: CliOptions,
+) {
 	const { readConfig } = await import("./lib/client-config-io")
 	const { selectClient, selectInstalledServer } = await import(
 		"./utils/command-prompts"
@@ -219,12 +260,12 @@ async function handleUninstall(server: string | undefined, options: any) {
 
 const loadConnectCommands = () => import("./commands/mcp")
 
-async function handleAddConnection(server: string, options: any) {
+async function handleAddConnection(server: string, options: CliOptions) {
 	const { addServer } = await loadConnectCommands()
 	await addServer(server, options)
 }
 
-async function handleListConnections(options: any) {
+async function handleListConnections(options: CliOptions) {
 	if (options.client) {
 		const { listClientServers } = await import("./commands/mcp/list")
 		await listClientServers(options.client)
@@ -234,22 +275,25 @@ async function handleListConnections(options: any) {
 	await listServers(options)
 }
 
-async function handleGetConnection(id: string, options: any) {
+async function handleGetConnection(id: string, options: CliOptions) {
 	const { getServer } = await loadConnectCommands()
 	await getServer(id, options)
 }
 
-async function handleRemoveConnections(ids: string[], options: any) {
+async function handleRemoveConnections(ids: string[], options: CliOptions) {
 	const { removeServer } = await loadConnectCommands()
 	await removeServer(ids, options)
 }
 
-async function handleUpdateConnection(id: string, options: any) {
+async function handleUpdateConnection(id: string, options: CliOptions) {
 	const { updateServer } = await loadConnectCommands()
 	await updateServer(id, options)
 }
 
-async function handleFindTools(query: string | undefined, options: any) {
+async function handleFindTools(
+	query: string | undefined,
+	options: ToolFindOptions,
+) {
 	const { findTools } = await loadConnectCommands()
 	await findTools(query, options)
 }
@@ -257,7 +301,7 @@ async function handleFindTools(query: string | undefined, options: any) {
 async function handleGetTool(
 	connection: string,
 	toolName: string,
-	options: any,
+	options: CliOptions,
 ) {
 	const { getTool } = await loadConnectCommands()
 	await getTool(connection, toolName, options)
@@ -267,13 +311,13 @@ async function handleCallTool(
 	connection: string,
 	toolName: string,
 	args: string | undefined,
-	options: any,
+	options: CliOptions,
 ) {
 	const { callTool } = await loadConnectCommands()
 	await callTool(connection, toolName, args, options)
 }
 
-async function handleMcpAdd(server: string, options: any) {
+async function handleMcpAdd(server: string, options: CliOptions) {
 	if (options.client) {
 		await handleInstall(server, options)
 		return
@@ -281,7 +325,7 @@ async function handleMcpAdd(server: string, options: any) {
 	await handleAddConnection(server, options)
 }
 
-async function handleMcpRemove(ids: string[], options: any) {
+async function handleMcpRemove(ids: string[], options: CliOptions) {
 	if (options.client) {
 		await handleUninstall(ids[0], options)
 		return
@@ -289,7 +333,7 @@ async function handleMcpRemove(ids: string[], options: any) {
 	await handleRemoveConnections(ids, options)
 }
 
-async function handleLogs(server: string, options: any) {
+async function handleLogs(server: string, options: CliOptions) {
 	const { listLogs } = await import("./commands/mcp/logs")
 	await listLogs(server, options)
 }
@@ -353,22 +397,76 @@ async function handleLogout() {
 	console.log(pc.gray("All local credentials have been removed"))
 }
 
-async function handleWhoami(options: any) {
+async function handleWhoami(options: CliOptions) {
+	const { createSmitheryClientSync } = await import("./lib/smithery-client")
+
+	async function mintApiKey() {
+		const rootApiKey = await getApiKey()
+		if (!rootApiKey) throw new Error("No API key found")
+		const client = createSmitheryClientSync(rootApiKey)
+		const token = await client.tokens.create({
+			policy: [
+				{
+					resources: ["connections", "servers", "namespaces", "skills"],
+					operations: ["read", "write", "execute"],
+					namespaces: "*",
+					metadata: { userId: "root-whoami" },
+					ttl: 3600,
+				},
+			],
+		})
+		const apiKey = token.token
+		const expiresAt = new Date(token.expiresAt)
+		return { apiKey, expiresAt }
+	}
 	try {
-		const apiKey = await getApiKey()
+		let { apiKey, expiresAt } = await mintApiKey()
 
 		if (!apiKey) {
-			console.log(pc.yellow("No token found"))
+			console.log(pc.yellow("No API key found"))
 			console.log(pc.gray("Run 'smithery auth login' to authenticate"))
 			process.exit(1)
+		}
+
+		if (options.server) {
+			const server = createServer(async (req, res) => {
+				res.setHeader("Access-Control-Allow-Origin", "*")
+				res.setHeader("Access-Control-Allow-Methods", "GET, OPTIONS")
+				res.setHeader("Access-Control-Allow-Headers", "Content-Type")
+
+				if (req.method === "OPTIONS") {
+					res.writeHead(204)
+					res.end()
+					return
+				}
+
+				if (req.method === "GET" && req.url === "/whoami") {
+					if (expiresAt <= new Date()) {
+						const newToken = await mintApiKey()
+						apiKey = newToken.apiKey
+						expiresAt = newToken.expiresAt
+					}
+					res.writeHead(200, { "Content-Type": "application/json" })
+					res.end(JSON.stringify({ SMITHERY_API_KEY: apiKey, expiresAt }))
+				} else {
+					res.writeHead(404, { "Content-Type": "application/json" })
+					res.end(JSON.stringify({ error: "Not found" }))
+				}
+			})
+			server.listen(4260, "localhost", () => {
+				console.log(pc.cyan("Server running at http://localhost:4260"))
+				console.log(pc.gray("GET /whoami to retrieve API key"))
+				console.log(pc.gray("Press Ctrl+C to stop"))
+			})
+			return
 		}
 
 		if (options.full) {
 			console.log(`SMITHERY_API_KEY=${apiKey}`)
 		} else {
 			const masked = `${apiKey.slice(0, 8)}...${apiKey.slice(-4)}`
-			console.log(pc.cyan("Token:"), masked)
-			console.log(pc.gray("Use --full to display the complete token"))
+			console.log(pc.cyan("API Key:"), masked)
+			console.log(pc.gray("Use --full to display the complete key"))
 		}
 	} catch (_error) {
 		console.log(pc.yellow("Not logged in"))
@@ -438,11 +536,11 @@ function withPublishOptions(cmd: InstanceType<typeof Command>) {
 }
 
 /** Register a hidden backward-compat alias that copies options and action from a source command. */
-function registerAlias(
+function registerAlias<TArgs extends unknown[]>(
 	parent: InstanceType<typeof Command>,
 	name: string,
 	sourceCmd: InstanceType<typeof Command>,
-	action: (...args: any[]) => void,
+	action: (...args: TArgs) => void | Promise<void>,
 	opts?: { deprecation?: string },
 ) {
 	const alias = parent.command(name, { hidden: true })
@@ -454,7 +552,7 @@ function registerAlias(
 			console.warn(pc.yellow(opts.deprecation))
 		})
 	}
-	alias.action(action)
+	alias.action((...args) => action(...(args as TArgs)))
 	return alias
 }
 
@@ -724,9 +822,9 @@ const toolCmd = program
 	.description("Find and call tools from MCP servers added via 'smithery mcp'")
 
 toolCmd
-	.command("find [query]")
-	.description("Find tools across your connected MCP servers")
-	.option("--connection <id>", "Limit search to a specific connection")
+	.command("find <connection> [query]")
+	.showHelpAfterError()
+	.description("Search tools by name or intent")
 	.option("--namespace <ns>", "Namespace to search in")
 	.option("--match <mode>", "Match mode: fuzzy, substring, or exact")
 	.option("--limit <n>", "Maximum number of tools to return (default: 10)")
@@ -737,33 +835,43 @@ toolCmd
 		"after",
 		`
 Examples:
-  smithery tool find "create issue"                      Find by intent across connections
-  smithery tool find --connection github --all           Show all tools for one connection
-  smithery tool find notion-fetch --match exact --json   Exact match as JSON`,
+  smithery tool find github "create issue"               Search by intent
+  smithery tool find github --all                        List all tools flat
+  smithery tool find github fetch --match exact --json   Exact match as JSON
+
+Use 'smithery mcp list' to see available connections.`,
 	)
-	.action(handleFindTools)
+	.action((connection, query, options) =>
+		handleFindTools(query, { ...options, connection }),
+	)
 
 toolCmd
-	.command("list [connection] [prefix]")
-	.description("List tools from your connected MCP servers")
+	.command("list <connection> [prefix]")
+	.showHelpAfterError()
+	.description("Browse tools from a connection")
 	.option("--namespace <ns>", "Namespace to list from")
-	.option("--limit <n>", "Maximum number of tools to return (default: 10)")
+	.option("--limit <n>", "Maximum number of entries to return (default: 10)")
 	.option("--page <n>", "Page number (default: 1)")
+	.option("--flat", "List tools without grouping (respects prefix filter)")
 
 	.addHelpText(
 		"after",
 		`
-Arguments:
-  connection   Connection ID to list tools from (omit to list from all)
-  prefix       Only show tools whose name starts with this prefix (e.g. "issues.")
+Tools are displayed as a tree. Groups (prefixes shared by multiple tools) are
+collapsed and shown with a tool count. Drill into a group by passing its name
+as the prefix.
+
+Use --flat to skip grouping and list matching tools individually. When a prefix
+is given, --flat lists all tools under that prefix without nesting.
 
 Examples:
-  smithery tool list                              List tools from all connections
-  smithery tool list myserver                     List tools for a specific connection
-  smithery tool list myserver issues.             List tools starting with "issues."
-  smithery tool list myserver issues. --json      Prefix-filtered output as JSON
+  smithery tool list github                           Browse root-level groups
+  smithery tool list github issues.                   Drill into "issues." group
+  smithery tool list github issues. --flat            All issue tools, no grouping
+  smithery tool list github --flat | grep label       Search with grep
 
-Tip: Use 'smithery tool find <query>' to search tools by name or intent.`,
+Use 'smithery mcp list' to see available connections.
+Use 'smithery tool find <connection> <query>' to search by name or intent.`,
 	)
 	.action((connection, prefix, options) =>
 		handleFindTools(undefined, { ...options, connection, prefix }),
@@ -771,14 +879,14 @@ Tip: Use 'smithery tool find <query>' to search tools by name or intent.`,
 
 toolCmd
 	.command("get <connection> <tool>")
-	.description("Get details for a specific tool")
+	.description("Get input/output schema for a tool")
 	.option("--namespace <ns>", "Namespace for the tool")
 
 	.addHelpText(
 		"after",
 		`
 Examples:
-  smithery tool get myserver search     Show tool details and input schema`,
+  smithery tool get myserver search     Show input/output schema`,
 	)
 	.action(handleGetTool)
 
@@ -819,9 +927,12 @@ Examples:
   smithery event topics myserver user.            List topics starting with "user."
   smithery event topics myserver user. --json     Prefix-filtered output as JSON`,
 	)
-	// biome-ignore lint/suspicious/noExplicitAny: commander.js passes options as any
 	.action(
-		async (connection: string, prefix: string | undefined, options: any) => {
+		async (
+			connection: string,
+			prefix: string | undefined,
+			options: CliOptions,
+		) => {
 			const { listTopics } = await import("./commands/event")
 			await listTopics(connection, { ...options, prefix })
 		},
@@ -843,7 +954,7 @@ Examples:
 			connection: string,
 			topic: string,
 			args: string | undefined,
-			options: any,
+			options: CliOptions,
 		) => {
 			const { subscribeEvents } = await import("./commands/event")
 			await subscribeEvents(connection, topic, args, options)
@@ -860,7 +971,7 @@ eventCmd
 Examples:
   smithery event unsubscribe myserver slack/message.created`,
 	)
-	.action(async (connection: string, topic: string, options: any) => {
+	.action(async (connection: string, topic: string, options: CliOptions) => {
 		const { unsubscribeEvents } = await import("./commands/event")
 		await unsubscribeEvents(connection, topic, options)
 	})
@@ -870,7 +981,7 @@ eventCmd
 	.description("Poll for queued events from a connection")
 	.option("--namespace <ns>", "Namespace for the connection")
 	.option("--limit <n>", "Maximum events to return (1-100, default 100)")
-	.action(async (connection: string, options: any) => {
+	.action(async (connection: string, options: CliOptions) => {
 		const { pollEvents } = await import("./commands/event")
 		await pollEvents(connection, options)
 	})
@@ -1024,10 +1135,15 @@ const reviewRemoveCmd = skillReview
 		await deleteReview(skill)
 	})
 
-registerAlias(skillReview, "rm <skill>", reviewRemoveCmd, async (skill) => {
-	const { deleteReview } = await import("./commands/skill")
-	await deleteReview(skill)
-})
+registerAlias(
+	skillReview,
+	"rm <skill>",
+	reviewRemoveCmd,
+	async (skill: string) => {
+		const { deleteReview } = await import("./commands/skill")
+		await deleteReview(skill)
+	},
+)
 
 skillReview
 	.command("upvote <skill> <review-id>")
@@ -1121,7 +1237,15 @@ Examples:
   smithery auth token --policy '{"resources": "connections", "operations": "read", "ttl": "30m"}'
   smithery auth token --policy '{"namespaces": "prod"}' --policy '{"resources": "skills", "ttl": "2h"}'
 
-For more examples, run: smithery skill view smithery-ai/cli/references/AUTH.md`,
+rpcReqMatch restricts which MCP JSON-RPC requests a token can make.
+Keys are dot-paths into the request body; values are regex patterns (all must match).
+
+  smithery auth token --policy '{"rpcReqMatch": {"method": "tools/call", "params.name": "^search$"}}'
+  smithery auth token --policy '{"rpcReqMatch": {"method": "^tools/list$"}}'
+  smithery auth token --policy '{"metadata": {"connectionId": "my-github"}, "rpcReqMatch": {"method": "tools/call", "params.name": "^issues\\\\."}}'
+
+Note: Connection IDs are not in the JSON-RPC body — use metadata to restrict by connection,
+and combine with rpcReqMatch to also restrict which tools can be called (as shown above).`,
 	)
 	.action(async (options) => {
 		const { createToken } = await import("./commands/auth/token")

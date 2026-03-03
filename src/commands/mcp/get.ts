@@ -1,5 +1,5 @@
 import { fatal } from "../../lib/cli-error"
-import { isJsonMode, outputDetail } from "../../utils/output"
+import { outputDetail } from "../../utils/output"
 import { ConnectSession } from "./api"
 import { formatConnectionOutput } from "./format-connection"
 
@@ -15,7 +15,6 @@ export async function getServer(
 		const data = formatConnectionOutput(connection)
 		outputDetail({
 			data,
-			json: isJsonMode(),
 			tip: `Use smithery tool list ${id} to view tools for this connection.`,
 		})
 	} catch (error) {

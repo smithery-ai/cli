@@ -1,6 +1,6 @@
 import pc from "picocolors"
 import { fatal } from "../../lib/cli-error"
-import { isJsonMode, outputDetail } from "../../utils/output"
+import { outputDetail } from "../../utils/output"
 import { ConnectSession } from "./api"
 import { formatConnectionOutput } from "./format-connection"
 import { normalizeMcpUrl } from "./normalize-url"
@@ -17,8 +17,6 @@ export async function addServer(
 		unstableWebhookUrl?: string
 	},
 ): Promise<void> {
-	const isJson = isJsonMode()
-
 	try {
 		const parsedMetadata = parseJsonObject(options.metadata, "Metadata")
 		const parsedHeaders = parseJsonObject<Record<string, string>>(
@@ -59,7 +57,7 @@ export async function addServer(
 				}
 				console.error(pc.dim(`Use --force to create a new connection anyway.`))
 				const output = formatConnectionOutput(match)
-				outputDetail({ data: output, json: isJson })
+				outputDetail({ data: output })
 				return
 			}
 		}
@@ -85,7 +83,6 @@ export async function addServer(
 		const id = connection.connectionId
 		outputDetail({
 			data: output,
-			json: isJson,
 			tip: `Call tools: smithery tool call ${id} <tool> '<args>'\nList tools: smithery tool list ${id}`,
 		})
 	} catch (error) {

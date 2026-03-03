@@ -17,16 +17,27 @@ export function setOutputMode(options: {
 	globalTable = options.table
 }
 
+type OutputFormat = "table" | "json" | "jsonl"
+
 /**
- * Resolve whether to use JSON output mode.
- * - --json flag → always JSON
+ * Resolve the output format.
  * - --table flag → always table
- * - Neither → auto-detect: JSON when stdout is piped (non-TTY), table when interactive
+ * - --json flag → always JSON (single blob)
+ * - Neither → auto-detect: JSONL when stdout is piped (non-TTY), table when interactive
+ */
+export function getOutputFormat(): OutputFormat {
+	if (globalTable) return "table"
+	if (globalJson === true) return "json"
+	if (globalJson === false) return "table"
+	if (!process.stdout.isTTY) return "jsonl"
+	return "table"
+}
+
+/**
+ * Resolve whether to use a machine-readable output mode (JSON or JSONL).
  */
 export function isJsonMode(): boolean {
-	if (globalTable) return false
-	if (globalJson !== undefined) return globalJson
-	return !process.stdout.isTTY
+	return getOutputFormat() !== "table"
 }
 
 // ─── Table output ───────────────────────────────────────────────────────────
@@ -63,6 +74,27 @@ export function outputTable(options: {
 	const { data, columns, json, jsonData, tip, pagination } = options
 
 	if (json) {
+		const format = getOutputFormat()
+
+		// JSONL mode: one record per line, grep-friendly
+		if (format === "jsonl") {
+			const records = extractRecords(jsonData) ?? data
+			if (
+				records.length === 0 &&
+				jsonData != null &&
+				typeof jsonData === "object"
+			) {
+				// Emit metadata (error, hint, etc.) as a single line
+				console.log(JSON.stringify(jsonData))
+			} else {
+				for (const record of records) {
+					console.log(JSON.stringify(record))
+				}
+			}
+			return
+		}
+
+		// JSON mode: single blob with metadata
 		const payload = jsonData ?? data
 		const paginationHint = pagination
 			? formatPagination(pagination, data.length)
@@ -126,12 +158,11 @@ export function outputTable(options: {
  */
 export function outputDetail(options: {
 	data: Record<string, unknown>
-	json: boolean
 	tip?: string
 }): void {
-	const { data, json, tip } = options
+	const { data, tip } = options
 
-	if (json) {
+	if (isJsonMode()) {
 		if (tip) {
 			console.log(JSON.stringify({ ...data, hint: tip }))
 		} else {
@@ -171,6 +202,18 @@ function formatCell(val: unknown, format?: (val: unknown) => string): string {
 	if (val === undefined || val === null) return ""
 	if (format) return format(val)
 	return String(val)
+}
+
+/** Extract the primary array of records from jsonData for JSONL output. */
+function extractRecords(data: unknown): unknown[] | null {
+	if (Array.isArray(data)) return data
+	if (typeof data === "object" && data !== null) {
+		const obj = data as Record<string, unknown>
+		for (const key of ["tools", "results", "connections", "skills"]) {
+			if (Array.isArray(obj[key])) return obj[key] as unknown[]
+		}
+	}
+	return null
 }
 
 /** Wrap an array in an object so hint can be merged at the top level. */
