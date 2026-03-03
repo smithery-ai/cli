@@ -1,6 +1,5 @@
 #!/usr/bin/env node
 
-import { createServer } from "node:http"
 import pc from "picocolors"
 
 const brandOrange = (text: string) => `\x1b[38;2;234;88;12m${text}\x1b[39m`
@@ -355,76 +354,21 @@ async function handleLogout() {
 }
 
 async function handleWhoami(options: any) {
-	const { createSmitheryClientSync } = await import("./lib/smithery-client")
-
-	async function mintApiKey() {
-		const rootApiKey = await getApiKey()
-		if (!rootApiKey) throw new Error("No API key found")
-		const client = createSmitheryClientSync(rootApiKey)
-		const token = await client.tokens.create({
-			policy: [
-				{
-					resources: ["connections", "servers", "namespaces", "skills"],
-					operations: ["read", "write", "execute"],
-					namespaces: "*",
-					metadata: { userId: "root-whoami" },
-					ttl: 3600,
-				},
-			],
-		})
-		const apiKey = token.token
-		const expiresAt = new Date(token.expiresAt)
-		return { apiKey, expiresAt }
-	}
-
 	try {
-		let { apiKey, expiresAt } = await mintApiKey()
+		const apiKey = await getApiKey()
 
 		if (!apiKey) {
-			console.log(pc.yellow("No API key found"))
+			console.log(pc.yellow("No token found"))
 			console.log(pc.gray("Run 'smithery auth login' to authenticate"))
 			process.exit(1)
-		}
-
-		if (options.server) {
-			const server = createServer(async (req, res) => {
-				res.setHeader("Access-Control-Allow-Origin", "*")
-				res.setHeader("Access-Control-Allow-Methods", "GET, OPTIONS")
-				res.setHeader("Access-Control-Allow-Headers", "Content-Type")
-
-				if (req.method === "OPTIONS") {
-					res.writeHead(204)
-					res.end()
-					return
-				}
-
-				if (req.method === "GET" && req.url === "/whoami") {
-					if (expiresAt <= new Date()) {
-						const newToken = await mintApiKey()
-						apiKey = newToken.apiKey
-						expiresAt = newToken.expiresAt
-					}
-					res.writeHead(200, { "Content-Type": "application/json" })
-					res.end(JSON.stringify({ SMITHERY_API_KEY: apiKey, expiresAt }))
-				} else {
-					res.writeHead(404, { "Content-Type": "application/json" })
-					res.end(JSON.stringify({ error: "Not found" }))
-				}
-			})
-			server.listen(4260, "localhost", () => {
-				console.log(pc.cyan("Server running at http://localhost:4260"))
-				console.log(pc.gray("GET /whoami to retrieve API key"))
-				console.log(pc.gray("Press Ctrl+C to stop"))
-			})
-			return
 		}
 
 		if (options.full) {
 			console.log(`SMITHERY_API_KEY=${apiKey}`)
 		} else {
 			const masked = `${apiKey.slice(0, 8)}...${apiKey.slice(-4)}`
-			console.log(pc.cyan("API Key:"), masked)
-			console.log(pc.gray("Use --full to display the complete key"))
+			console.log(pc.cyan("Token:"), masked)
+			console.log(pc.gray("Use --full to display the complete token"))
 		}
 	} catch (_error) {
 		console.log(pc.yellow("Not logged in"))
@@ -1120,12 +1064,8 @@ auth
 
 const whoamiCmd = auth
 	.command("whoami")
-	.description("Display the currently logged in user")
-	.option("--full", "Show the full API key instead of masking it")
-	.option(
-		"--server",
-		"Start an HTTP server on localhost:4260 that serves the API key",
-	)
+	.description("Display the currently logged in token")
+	.option("--full", "Show the full token instead of masking it")
 	.action(handleWhoami)
 
 auth
