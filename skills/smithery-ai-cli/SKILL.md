@@ -39,12 +39,10 @@ smithery tool call github issues.create '{"repo": "owner/repo", "title": "Bug"}'
 
 ## Core Concepts
 
-### Namespaces
+### [Namespaces](https://smithery.ai/docs/concepts/namespaces.md)
 
 A namespace is the workspace boundary for Smithery resources. Servers, connections, and skills all live in a namespace.
 Use one namespace per app/environment (for example, `my-app-dev`, `my-app-prod`), then set it as your active context.
-Read more: [Namespaces](https://smithery.ai/docs/concepts/namespaces.md).
-
 Canonical flow:
 
 ```bash
@@ -55,12 +53,10 @@ smithery namespace use my-app-prod
 
 For namespace-specific flags and overrides, run `smithery namespace --help` and `smithery mcp --help`.
 
-### Connect (MCP Connections)
+### [Connect (MCP Connections)](https://smithery.ai/docs/use/connect.md)
 
 A connection is a managed, long-lived MCP session.
 Smithery Connect handles OAuth flow, credential storage, token refresh, and session lifecycle.
-Read more: [Connect](https://smithery.ai/docs/use/connect.md).
-
 Connection status model:
 - `connected`: ready to list/call tools
 - `auth_required`: human must open authorization URL
@@ -79,12 +75,10 @@ smithery tool list user-123-github
 
 If CLI shows `auth_required`, tell your human to open the URL and then retry.
 
-### Token Scoping
+### [Token Scoping](https://smithery.ai/docs/use/token-scoping.md)
 
 Service tokens are restricted credentials for browser/mobile/agent usage.
 Never pass a full API key to untrusted code.
-Read more: [Token Scoping](https://smithery.ai/docs/use/token-scoping.md).
-
 Policy mental model:
 - A token policy is one or more constraints
 - In the CLI, pass one JSON object per `--policy` flag
