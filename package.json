@@ -86,6 +86,9 @@
 	"exports": {
 		".": {
 			"import": "./dist/index.js"
+		},
+		"./automation": {
+			"import": "./dist/automation.js"
 		}
 	},
 	"engines": {
