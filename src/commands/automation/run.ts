@@ -1,14 +1,17 @@
 import fs from "node:fs"
 import pc from "picocolors"
+import type { ZodTypeAny } from "zod"
 import { errorMessage, fatal } from "../../lib/cli-error"
 import { isJsonMode, outputJson } from "../../utils/output"
+import { getApiKey } from "../../utils/smithery-settings"
 import { type AutomationContext, createAutomationContext } from "./context"
 import { ensureInitialized } from "./ensure-init"
 import { automationPath } from "./paths"
 
 interface AutomationModule {
 	servers: string[]
-	run: (args: Record<string, string>, ctx: AutomationContext) => Promise<void>
+	argsSchema?: ZodTypeAny
+	run: (args: Record<string, unknown>, ctx: AutomationContext) => Promise<void>
 }
 
 /**
@@ -35,12 +38,20 @@ export async function runAutomation(
 ): Promise<void> {
 	ensureInitialized()
 
+	// Require authentication before running automations
+	const apiKey = await getApiKey()
+	if (!apiKey) {
+		fatal(
+			"Not logged in. Run 'smithery login' to authenticate before running automations.",
+		)
+	}
+
 	const filePath = automationPath(name)
 	if (!fs.existsSync(filePath)) {
 		fatal(`Automation "${name}" not found at ${filePath}`)
 	}
 
-	const args = parseArgs(rawArgs)
+	const rawParsed = parseArgs(rawArgs)
 
 	// Dynamically import the automation file using tsx loader
 	let mod: AutomationModule
@@ -57,6 +68,22 @@ export async function runAutomation(
 	}
 	if (typeof mod.run !== "function") {
 		fatal(`Automation "${name}" must export a "run" function.`)
+	}
+
+	// Validate args against schema if provided
+	let args: Record<string, unknown> = rawParsed
+	if (mod.argsSchema) {
+		const result = mod.argsSchema.safeParse(rawParsed)
+		if (!result.success) {
+			const issues = result.error.issues
+				.map(
+					(i: { path: PropertyKey[]; message: string }) =>
+						`  ${i.path.map(String).join(".")}: ${i.message}`,
+				)
+				.join("\n")
+			fatal(`Invalid arguments for "${name}":\n${issues}`)
+		}
+		args = result.data as Record<string, unknown>
 	}
 
 	// Create the automation context (resolves connections, handles auth)
