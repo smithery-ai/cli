@@ -1,3 +1,4 @@
+import { execSync } from "node:child_process"
 import fs from "node:fs"
 import path from "node:path"
 import pc from "picocolors"
@@ -36,6 +37,15 @@ export async function initAutomations(): Promise<void> {
 		path.join(SMITHERY_HOME, "tsconfig.json"),
 		JSON.stringify(TSCONFIG, null, 2),
 	)
+
+	// Install zod as a default dependency
+	try {
+		execSync("npm install zod", { cwd: SMITHERY_HOME, stdio: "pipe" })
+	} catch {
+		console.warn(
+			pc.yellow("Warning: failed to install zod. Run manually: cd ~/.smithery && npm install zod"),
+		)
+	}
 
 	console.log(pc.green("Initialized ~/.smithery"))
 	console.log(pc.dim("Created package.json, tsconfig.json, automations/"))
