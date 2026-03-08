@@ -43,7 +43,9 @@ export async function initAutomations(): Promise<void> {
 		execSync("npm install zod", { cwd: SMITHERY_HOME, stdio: "pipe" })
 	} catch {
 		console.warn(
-			pc.yellow("Warning: failed to install zod. Run manually: cd ~/.smithery && npm install zod"),
+			pc.yellow(
+				"Warning: failed to install zod. Run manually: cd ~/.smithery && npm install zod",
+			),
 		)
 	}
 

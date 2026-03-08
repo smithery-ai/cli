@@ -1,9 +1,9 @@
 import fs from "node:fs"
-import type { ZodTypeAny } from "zod"
 import pc from "picocolors"
+import type { ZodTypeAny } from "zod"
 import { errorMessage, fatal } from "../../lib/cli-error"
-import { getApiKey } from "../../utils/smithery-settings"
 import { isJsonMode, outputJson } from "../../utils/output"
+import { getApiKey } from "../../utils/smithery-settings"
 import { type AutomationContext, createAutomationContext } from "./context"
 import { ensureInitialized } from "./ensure-init"
 import { automationPath } from "./paths"
@@ -41,7 +41,9 @@ export async function runAutomation(
 	// Require authentication before running automations
 	const apiKey = await getApiKey()
 	if (!apiKey) {
-		fatal("Not logged in. Run 'smithery login' to authenticate before running automations.")
+		fatal(
+			"Not logged in. Run 'smithery login' to authenticate before running automations.",
+		)
 	}
 
 	const filePath = automationPath(name)
@@ -74,8 +76,9 @@ export async function runAutomation(
 		const result = mod.argsSchema.safeParse(rawParsed)
 		if (!result.success) {
 			const issues = result.error.issues
-				.map((i: { path: PropertyKey[]; message: string }) =>
-					`  ${i.path.map(String).join(".")}: ${i.message}`,
+				.map(
+					(i: { path: PropertyKey[]; message: string }) =>
+						`  ${i.path.map(String).join(".")}: ${i.message}`,
 				)
 				.join("\n")
 			fatal(`Invalid arguments for "${name}":\n${issues}`)
