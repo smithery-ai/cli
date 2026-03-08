@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 
+## [4.6.0](https://github.com/smithery-ai/cli/compare/v4.5.0...v4.6.0) (2026-03-08)
+
+
+### Features
+
+* **automation:** add zod schema validation and improve DX ([#692](https://github.com/smithery-ai/cli/issues/692)) ([4840995](https://github.com/smithery-ai/cli/commit/484099570bc60d6ea5162cd995a501a8e3a6782c))
+
 ## [4.5.0](https://github.com/smithery-ai/cli/compare/v4.4.0...v4.5.0) (2026-03-03)
 
 
