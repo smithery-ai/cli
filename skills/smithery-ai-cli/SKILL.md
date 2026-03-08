@@ -1,6 +1,6 @@
 ---
 name: smithery-ai-cli
-description: Find, connect, and use MCP tools and skills via the Smithery CLI. Use when the user searches for new tools or skills, wants to discover integrations, connect to an MCP, install a skill, or wants to interact with an external service (email, Slack, Discord, GitHub, Jira, Notion, databases, cloud APIs, monitoring, etc.).
+description: Find, connect, and use MCP tools and skills via the Smithery CLI. Use when the user searches for new tools or skills, wants to discover integrations, connect to an MCP, install a skill, create or run automations, or wants to interact with an external service (email, Slack, Discord, GitHub, Jira, Notion, databases, cloud APIs, monitoring, etc.).
 metadata: { "openclaw": { "requires": { "bins": ["smithery"] }, "homepage": "https://smithery.ai" } }
 ---
 
@@ -118,6 +118,77 @@ smithery auth token --policy '{
   "ttl": "30m"
 }'
 ```
+
+### [Automations](https://smithery.ai/docs/use/automations.md)
+
+Automations are deterministic TypeScript scripts that call MCP tools without AI.
+They live in `~/.smithery/automations/` and each file exports a `servers` array (MCP URLs) and a `run` function.
+Smithery handles connection management and auth — the automation just calls tools.
+
+Canonical flow:
+
+```bash
+# 1. Initialize the ~/.smithery project (once)
+smithery automation init
+
+# 2. Create an automation
+smithery automation create create-linear-ticket
+
+# 3. Edit ~/.smithery/automations/create-linear-ticket.ts
+#    - Add server URLs to the servers array
+#    - Implement the run function using ctx.callTool()
+
+# 4. Run it with key=value arguments
+smithery automation run create-linear-ticket ticket-name="Fix login bug" priority=high
+```
+
+Automation file structure:
+
+```typescript
+export const servers = ["https://server.smithery.ai/linear"]
+
+export async function run(
+  args: Record<string, string>,
+  ctx: {
+    callTool: (server: string, toolName: string, toolArgs: Record<string, unknown>) => Promise<unknown>
+  },
+) {
+  const result = await ctx.callTool(
+    "https://server.smithery.ai/linear",
+    "create_issue",
+    { title: args["ticket-name"], priority: args["priority"] }
+  )
+  console.log("Created:", result)
+}
+```
+
+CRUD commands: `automation create`, `automation list`, `automation get`, `automation remove`.
+On first run, connections are auto-created for each server URL. If auth is required, the CLI prints the authorization URL.
+
+### Programmatic Automations (SDK)
+
+The same automation context is available as a library import for any TypeScript project.
+Install `@smithery/cli` and import `createAutomationContext` from `@smithery/cli/automation`.
+
+```typescript
+import { createAutomationContext } from "@smithery/cli/automation"
+
+const ctx = await createAutomationContext({
+  servers: ["https://server.smithery.ai/linear"],
+  apiKey: process.env.SMITHERY_API_KEY, // or omit to use stored key
+})
+
+const result = await ctx.callTool(
+  "https://server.smithery.ai/linear",
+  "create_issue",
+  { title: "Bug: login page broken", priority: "high" },
+)
+```
+
+This works anywhere — standalone scripts, API routes, background jobs, CI pipelines, etc.
+Connections are auto-created and MCP clients are managed for you, same as the CLI.
+Pass `apiKey` explicitly (e.g. from env vars) instead of relying on `smithery auth login`.
+Auth errors throw with an `authorizationUrl` property for your code to handle.
 
 ### Piped Output
 
