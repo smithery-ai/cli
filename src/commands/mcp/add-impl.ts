@@ -1,5 +1,7 @@
 import pc from "picocolors"
 import { fatal } from "../../lib/cli-error"
+import { trackEvent } from "../../utils/analytics"
+import { showDiscordInvite } from "../../utils/discord"
 import { outputDetail } from "../../utils/output"
 import { ConnectSession } from "./api"
 import { formatConnectionOutput } from "./format-connection"
@@ -85,6 +87,9 @@ export async function addServer(
 			data: output,
 			tip: `Call tools: smithery tool call ${id} <tool> '<args>'\nList tools: smithery tool list ${id}`,
 		})
+
+		showDiscordInvite()
+		trackEvent("discord_invite_shown", { source: "mcp_add" })
 	} catch (error) {
 		fatal("Failed to add connection", error)
 	}

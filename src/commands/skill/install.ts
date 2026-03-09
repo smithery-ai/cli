@@ -1,5 +1,7 @@
 import pc from "picocolors"
 import { fatal } from "../../lib/cli-error"
+import { trackEvent } from "../../utils/analytics"
+import { showDiscordInvite } from "../../utils/discord"
 import {
 	createPublicSkillsClient,
 	getSkillUrl,
@@ -65,4 +67,7 @@ export async function installSkill(
 	console.log(pc.cyan(`Running: ${command}`))
 	console.log()
 	execSync(command, { stdio: "inherit" })
+
+	showDiscordInvite()
+	trackEvent("discord_invite_shown", { source: "skill_install" })
 }
