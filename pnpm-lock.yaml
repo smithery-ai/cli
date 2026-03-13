@@ -7,6 +7,10 @@ settings:
 importers:
 
   .:
+    dependencies:
+      fflate:
+        specifier: ^0.8.2
+        version: 0.8.2
     devDependencies:
       '@anthropic-ai/mcpb':
         specifier: ^1.1.1
@@ -21,8 +25,8 @@ importers:
         specifier: ^1.5.1
         version: 1.7.0
       '@smithery/api':
-        specifier: 0.53.0
-        version: 0.53.0(@modelcontextprotocol/sdk@1.25.3(hono@4.11.1)(zod@4.2.1))
+        specifier: 0.56.0
+        version: 0.56.0(@modelcontextprotocol/sdk@1.25.3(hono@4.11.1)(zod@4.2.1))
       '@smithery/sdk':
         specifier: ^4.1.0
         version: 4.1.0(@modelcontextprotocol/sdk@1.25.3(hono@4.11.1)(zod@4.2.1))(zod@4.2.1)
@@ -881,8 +885,8 @@ packages:
     resolution: {integrity: sha512-P1Cz1dWaFfR4IR+U13mqqiGsLFf1KbayybWwdd2vfctdV6hDpUkgCY0nKOLLTMSoRd/jJNjtbqzf13K8DCCXQw==}
     engines: {node: '>=18'}
 
-  '@smithery/api@0.53.0':
-    resolution: {integrity: sha512-pV3YZx8ndod/jYgwKYCWw03tyjjR/FobQSvhttLwW8J/Nq6xmd+uhma1Aa6967LCgUT8sEh3alPnr1VBlOxLlw==}
+  '@smithery/api@0.56.0':
+    resolution: {integrity: sha512-Ndi/4SZBULLQ7AifhR1bt4w8XUw7WeeW/u5SjtGzX1nKWYscRbNN7/OYuf/vMfzZHOWYWptNFe+a8Tr+Qp9XSQ==}
     peerDependencies:
       '@modelcontextprotocol/sdk': '>=1.0.0'
     peerDependenciesMeta:
@@ -2785,7 +2789,7 @@ snapshots:
 
   '@sindresorhus/is@7.2.0': {}
 
-  '@smithery/api@0.53.0(@modelcontextprotocol/sdk@1.25.3(hono@4.11.1)(zod@4.2.1))':
+  '@smithery/api@0.56.0(@modelcontextprotocol/sdk@1.25.3(hono@4.11.1)(zod@4.2.1))':
     optionalDependencies:
       '@modelcontextprotocol/sdk': 1.25.3(hono@4.11.1)(zod@4.2.1)
 

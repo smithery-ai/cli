@@ -1000,6 +1000,15 @@ skillCmd
 		})
 	})
 
+skillCmd
+	.command("upload [directory]")
+	.description("Upload a skill bundle to the Smithery registry")
+	.option("-n, --name <slug>", "Skill slug (defaults to name from SKILL.md)")
+	.action(async (directory, options) => {
+		const { uploadSkill } = await import("./commands/skill")
+		await uploadSkill(directory, { name: options.name })
+	})
+
 // Skill voting (verbs instead of flags)
 skillCmd
 	.command("upvote <skill>")
