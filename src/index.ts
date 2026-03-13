@@ -1122,90 +1122,6 @@ skillReview
 	})
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// Automation command — Create and run deterministic automations
-// ═══════════════════════════════════════════════════════════════════════════════
-
-const automationCmd = program
-	.command("automation")
-	.description("Create and run deterministic automations")
-
-automationCmd
-	.command("init")
-	.description("Initialize ~/.smithery automations project")
-	.action(async () => {
-		const { initAutomations } = await import("./commands/automation")
-		await initAutomations()
-	})
-
-automationCmd
-	.command("create <name>")
-	.description("Create a new automation")
-	.addHelpText(
-		"after",
-		`
-Examples:
-  smithery automation create create-linear-ticket
-  smithery automation create deploy-notification`,
-	)
-	.action(async (name) => {
-		const { createAutomation } = await import("./commands/automation")
-		await createAutomation(name)
-	})
-
-automationCmd
-	.command("list")
-	.description("List all automations")
-	.action(async () => {
-		const { listAutomations } = await import("./commands/automation")
-		await listAutomations()
-	})
-
-automationCmd
-	.command("get <name>")
-	.description("Show automation details and source")
-	.action(async (name) => {
-		const { getAutomation } = await import("./commands/automation")
-		await getAutomation(name)
-	})
-
-const automationRemoveCmd = automationCmd
-	.command("remove <name>")
-	.description("Delete an automation")
-	.action(async (name) => {
-		const { removeAutomation } = await import("./commands/automation")
-		await removeAutomation(name)
-	})
-
-registerAlias(
-	automationCmd,
-	"rm <name>",
-	automationRemoveCmd,
-	async (name: string) => {
-		const { removeAutomation } = await import("./commands/automation")
-		await removeAutomation(name)
-	},
-)
-
-automationCmd
-	.command("run <name> [args...]")
-	.description("Run an automation with key=value arguments")
-	.option("--namespace <ns>", "Namespace for connections")
-	.addHelpText(
-		"after",
-		`
-Arguments are passed as key=value pairs:
-  smithery automation run create-linear-ticket ticket-name="my ticket" priority=high
-
-Examples:
-  smithery automation run create-linear-ticket ticket-name="Fix login bug"
-  smithery automation run deploy-notification env=production version=1.2.3`,
-	)
-	.action(async (name, args, options) => {
-		const { runAutomation } = await import("./commands/automation")
-		await runAutomation(name, args, options)
-	})
-
-// ═══════════════════════════════════════════════════════════════════════════════
 // Auth command — Authentication and permissions
 // ═══════════════════════════════════════════════════════════════════════════════
 
@@ -1295,10 +1211,6 @@ and combine with rpcReqMatch to also restrict which tools can be called (as show
 		const { createToken } = await import("./commands/auth/token")
 		await createToken(options)
 	})
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// Automation command — Create and run deterministic MCP automations
-// ═══════════════════════════════════════════════════════════════════════════════
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // Management
@@ -1437,7 +1349,6 @@ const COMMAND_ALIASES: Record<string, string> = {
 	tools: "tool",
 	skills: "skill",
 	events: "event",
-	automations: "automation",
 }
 const argv = process.argv.slice()
 if (argv[2] && argv[2] in COMMAND_ALIASES) {

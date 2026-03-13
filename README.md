@@ -59,19 +59,6 @@ smithery auth token                     # Mint a service token
 smithery auth token --policy '<json>'   # Mint a restricted token
 ```
 
-### Automations
-
-Create and run deterministic MCP tool scripts — no AI involved, just direct tool calls.
-
-```bash
-smithery automation init                        # Initialize the ~/.smithery automations project
-smithery automation create <name>               # Create a new automation from a template
-smithery automation list                        # List all automations
-smithery automation get <name>                  # Show automation details and source code
-smithery automation run <name> [key=value...]   # Run an automation with arguments
-smithery automation remove <name>               # Delete an automation
-```
-
 ### Namespaces
 
 ```bash
@@ -99,11 +86,6 @@ smithery tool call github create_issue '{"title":"Bug fix","body":"..."}'
 # Browse and install skills
 smithery skill search "frontend" --json --page 2
 smithery skill add anthropics/frontend-design --agent claude-code
-
-# Create and run an automation
-smithery automation init
-smithery automation create create-ticket
-smithery automation run create-ticket title="Bug fix" priority=high
 
 # Publish your MCP server URL
 smithery mcp publish "https://my-mcp-server.com" -n myorg/my-server
