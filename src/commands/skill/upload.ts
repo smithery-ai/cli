@@ -8,6 +8,7 @@ import { fatal } from "../../lib/cli-error"
 import { resolveNamespace } from "../../lib/namespace.js"
 import { createSmitheryClientSync } from "../../lib/smithery-client"
 import { ensureApiKey } from "../../utils/runtime.js"
+import { getNamespace } from "../../utils/smithery-settings"
 
 interface UploadOptions {
 	name?: string
@@ -76,8 +77,11 @@ export async function uploadSkill(
 	const apiKey = await ensureApiKey()
 	const client = createSmitheryClientSync(apiKey)
 
-	// Resolve namespace
-	const namespace = options.namespace ?? (await resolveNamespace(client))
+	// Resolve namespace: explicit flag > saved default > interactive
+	const namespace =
+		options.namespace ??
+		(await getNamespace()) ??
+		(await resolveNamespace(client))
 
 	// Collect files and create ZIP
 	const spinner = yoctoSpinner({ text: "Creating archive..." }).start()
