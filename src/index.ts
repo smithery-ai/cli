@@ -1000,6 +1000,19 @@ skillCmd
 		})
 	})
 
+skillCmd
+	.command("publish [path]")
+	.description("Publish a skill from a directory, zip file, or GitHub URL")
+	.option("-n, --name <slug>", "Skill slug (defaults to name from SKILL.md)")
+	.option("--namespace <namespace>", "Target namespace")
+	.action(async (path, options) => {
+		const { publishSkill } = await import("./commands/skill")
+		await publishSkill(path, {
+			name: options.name,
+			namespace: options.namespace,
+		})
+	})
+
 // Skill voting (verbs instead of flags)
 skillCmd
 	.command("upvote <skill>")
