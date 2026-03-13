@@ -15,6 +15,10 @@ interface PublishOptions {
 	namespace?: string
 }
 
+function isUrl(str: string): boolean {
+	return str.startsWith("https://") || str.startsWith("http://")
+}
+
 function isArchiveFile(path: string): boolean {
 	return path.endsWith(".zip") || path.endsWith(".skill")
 }
@@ -22,6 +26,62 @@ function isArchiveFile(path: string): boolean {
 export async function publishSkill(
 	pathArg: string = ".",
 	options: PublishOptions = {},
+) {
+	// Authenticate early — needed for all paths
+	const apiKey = await ensureApiKey()
+	const client = createSmitheryClientSync(apiKey)
+
+	// Resolve namespace: explicit flag > saved default > interactive
+	const namespace =
+		options.namespace ??
+		(await getNamespace()) ??
+		(await resolveNamespace(client))
+
+	if (isUrl(pathArg)) {
+		return publishFromUrl(client, namespace, pathArg, options)
+	}
+
+	return publishFromPath(client, namespace, pathArg, options)
+}
+
+async function publishFromUrl(
+	client: ReturnType<typeof createSmitheryClientSync>,
+	namespace: string,
+	gitUrl: string,
+	options: PublishOptions,
+) {
+	const slug = options.name
+	if (!slug) {
+		fatal("Could not determine skill name from a URL. Provide --name.")
+	}
+
+	const spinner = yoctoSpinner({ text: "Publishing skill..." }).start()
+
+	try {
+		const result = await client.skills.set(slug, {
+			namespace,
+			body: { gitUrl },
+		})
+
+		spinner.success(
+			result.updatedAt
+				? `Updated skill ${pc.cyan(`${namespace}/${slug}`)}`
+				: `Created skill ${pc.cyan(`${namespace}/${slug}`)}`,
+		)
+		console.log(
+			pc.dim(`  View at: https://smithery.ai/skills/${namespace}/${slug}`),
+		)
+	} catch (error) {
+		spinner.error("Publish failed")
+		fatal("Failed to publish skill", error)
+	}
+}
+
+async function publishFromPath(
+	client: ReturnType<typeof createSmitheryClientSync>,
+	namespace: string,
+	pathArg: string,
+	options: PublishOptions,
 ) {
 	const fullPath = resolve(pathArg)
 	let stat: ReturnType<typeof statSync>
@@ -35,13 +95,11 @@ export async function publishSkill(
 	let slug: string | undefined = options.name
 
 	if (stat.isFile() && isArchiveFile(fullPath)) {
-		// Pre-zipped archive
 		archiveData = new Uint8Array(readFileSync(fullPath))
 		if (!slug) {
 			fatal("Could not determine skill name from a zip file. Provide --name.")
 		}
 	} else if (stat.isDirectory()) {
-		// Directory — read SKILL.md for slug, then zip
 		const skillMdPath = join(fullPath, "SKILL.md")
 		let skillMdContent: string
 		try {
@@ -63,16 +121,6 @@ export async function publishSkill(
 	} else {
 		fatal(`${fullPath} is not a directory or a .zip/.skill file.`)
 	}
-
-	// Authenticate
-	const apiKey = await ensureApiKey()
-	const client = createSmitheryClientSync(apiKey)
-
-	// Resolve namespace: explicit flag > saved default > interactive
-	const namespace =
-		options.namespace ??
-		(await getNamespace()) ??
-		(await resolveNamespace(client))
 
 	const spinner = yoctoSpinner({ text: "Uploading skill..." }).start()
 
