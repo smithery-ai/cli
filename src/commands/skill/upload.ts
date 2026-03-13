@@ -1,5 +1,5 @@
 import { readdirSync, readFileSync, statSync } from "node:fs"
-import { join, relative } from "node:path"
+import { join, relative, resolve } from "node:path"
 import { toFile } from "@smithery/api/uploads"
 import { zipSync } from "fflate"
 import pc from "picocolors"
@@ -48,7 +48,7 @@ export async function uploadSkill(
 	options: UploadOptions = {},
 ) {
 	// Verify the directory exists and contains SKILL.md
-	const dir = join(process.cwd(), directory)
+	const dir = resolve(directory)
 	try {
 		statSync(dir)
 	} catch {
