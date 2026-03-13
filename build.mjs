@@ -101,23 +101,6 @@ await esbuild.build({
 	define,
 })
 
-// Build automation SDK entry point (for programmatic usage)
-await esbuild.build({
-	entryPoints: ["src/commands/automation/context.ts"],
-	bundle: true,
-	platform: "node",
-	target: "node20",
-	format: "esm",
-	minify: true,
-	treeShaking: true,
-	outfile: "dist/automation.js",
-	external: nativePackages,
-	banner: {
-		js: `import { createRequire } from 'module'; const require = createRequire(import.meta.url);`,
-	},
-	define,
-})
-
 // Copy runtime files to dist/runtime/
 const runtimeDir = "dist/runtime"
 if (!existsSync(runtimeDir)) {
