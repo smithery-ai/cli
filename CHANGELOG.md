@@ -5,6 +5,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 
+## [4.7.0](https://github.com/smithery-ai/cli/compare/v4.6.0...v4.7.0) (2026-03-13)
+
+
+### Features
+
+* **skill:** add publish command ([#696](https://github.com/smithery-ai/cli/issues/696)) ([2b8c592](https://github.com/smithery-ai/cli/commit/2b8c59251515ae8b98f98eb2668e4d2fdcf719c6))
+
+
+### Refactors
+
+* remove automation commands feature ([#698](https://github.com/smithery-ai/cli/issues/698)) ([5413f9b](https://github.com/smithery-ai/cli/commit/5413f9b51f64ff175c2c7474abdf5cd680b2f744))
+
 ## [4.6.0](https://github.com/smithery-ai/cli/compare/v4.5.0...v4.6.0) (2026-03-08)
 
 
