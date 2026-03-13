@@ -11,6 +11,7 @@ import { ensureApiKey } from "../../utils/runtime.js"
 
 interface UploadOptions {
 	name?: string
+	namespace?: string
 }
 
 /** Recursively collect all file paths in a directory. */
@@ -76,7 +77,7 @@ export async function uploadSkill(
 	const client = createSmitheryClientSync(apiKey)
 
 	// Resolve namespace
-	const namespace = await resolveNamespace(client)
+	const namespace = options.namespace ?? (await resolveNamespace(client))
 
 	// Collect files and create ZIP
 	const spinner = yoctoSpinner({ text: "Creating archive..." }).start()
