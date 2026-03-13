@@ -1,6 +1,6 @@
 export { installSkill } from "./install"
+export { publishSkill } from "./publish"
 export { deleteReview, listReviews, submitReview, voteReview } from "./review"
 export { searchSkills } from "./search"
-export { uploadSkill } from "./upload"
 export { viewSkill } from "./view"
 export { voteSkill } from "./vote"

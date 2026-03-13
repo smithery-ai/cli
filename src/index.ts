@@ -1001,13 +1001,13 @@ skillCmd
 	})
 
 skillCmd
-	.command("upload [directory]")
-	.description("Upload a skill bundle to the Smithery registry")
+	.command("publish [directory]")
+	.description("Publish a skill bundle to the Smithery registry")
 	.option("-n, --name <slug>", "Skill slug (defaults to name from SKILL.md)")
 	.option("--namespace <namespace>", "Target namespace")
 	.action(async (directory, options) => {
-		const { uploadSkill } = await import("./commands/skill")
-		await uploadSkill(directory, {
+		const { publishSkill } = await import("./commands/skill")
+		await publishSkill(directory, {
 			name: options.name,
 			namespace: options.namespace,
 		})

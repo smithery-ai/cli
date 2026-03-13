@@ -45,7 +45,7 @@ function parseSkillName(skillMdContent: string): string | null {
 	return nameMatch ? nameMatch[1].trim() : null
 }
 
-export async function uploadSkill(
+export async function publishSkill(
 	directory: string = ".",
 	options: UploadOptions = {},
 ) {
