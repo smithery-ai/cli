@@ -1,7 +1,6 @@
-import { readdirSync, readFileSync, statSync } from "node:fs"
-import { join, relative, resolve } from "node:path"
+import { readFileSync, statSync } from "node:fs"
+import { join, resolve } from "node:path"
 import { toFile } from "@smithery/api/uploads"
-import { zipSync } from "fflate"
 import pc from "picocolors"
 import yoctoSpinner from "yocto-spinner"
 import { fatal } from "../../lib/cli-error"
@@ -9,68 +8,60 @@ import { resolveNamespace } from "../../lib/namespace.js"
 import { createSmitheryClientSync } from "../../lib/smithery-client"
 import { ensureApiKey } from "../../utils/runtime.js"
 import { getNamespace } from "../../utils/smithery-settings"
+import { createArchiveFromDirectory, parseSkillName } from "./publish-utils"
 
-interface UploadOptions {
+interface PublishOptions {
 	name?: string
 	namespace?: string
 }
 
-/** Recursively collect all file paths in a directory. */
-function collectFiles(
-	dir: string,
-	base: string = dir,
-): Map<string, Uint8Array> {
-	const files = new Map<string, Uint8Array>()
-	for (const entry of readdirSync(dir, { withFileTypes: true })) {
-		const fullPath = join(dir, entry.name)
-		if (entry.isDirectory()) {
-			// Skip hidden dirs and common non-skill dirs
-			if (entry.name.startsWith(".") || entry.name === "node_modules") continue
-			for (const [k, v] of collectFiles(fullPath, base)) {
-				files.set(k, v)
-			}
-		} else if (entry.isFile()) {
-			const relPath = relative(base, fullPath)
-			files.set(relPath, new Uint8Array(readFileSync(fullPath)))
-		}
-	}
-	return files
-}
-
-/** Parse the `name` field from SKILL.md frontmatter. */
-function parseSkillName(skillMdContent: string): string | null {
-	const match = skillMdContent.match(/^---\r?\n([\s\S]*?)\r?\n---/)
-	if (!match) return null
-	const nameMatch = match[1].match(/^name:\s*(.+)$/m)
-	return nameMatch ? nameMatch[1].trim() : null
+function isArchiveFile(path: string): boolean {
+	return path.endsWith(".zip") || path.endsWith(".skill")
 }
 
 export async function publishSkill(
-	directory: string = ".",
-	options: UploadOptions = {},
+	pathArg: string = ".",
+	options: PublishOptions = {},
 ) {
-	// Verify the directory exists and contains SKILL.md
-	const dir = resolve(directory)
+	const fullPath = resolve(pathArg)
+	let stat: ReturnType<typeof statSync>
 	try {
-		statSync(dir)
+		stat = statSync(fullPath)
 	} catch {
-		fatal(`Directory not found: ${dir}`)
+		fatal(`Path not found: ${fullPath}`)
 	}
 
-	const skillMdPath = join(dir, "SKILL.md")
-	let skillMdContent: string
-	try {
-		skillMdContent = readFileSync(skillMdPath, "utf-8")
-	} catch {
-		fatal(`SKILL.md not found in ${dir}. A skill must contain a SKILL.md file.`)
-	}
+	let archiveData: Uint8Array
+	let slug: string | undefined = options.name
 
-	// Determine slug from --name or SKILL.md frontmatter
-	const slug = options.name ?? parseSkillName(skillMdContent)
-	if (!slug) {
-		fatal(
-			"Could not determine skill name. Either provide --name or add a 'name' field to SKILL.md frontmatter.",
-		)
+	if (stat.isFile() && isArchiveFile(fullPath)) {
+		// Pre-zipped archive
+		archiveData = new Uint8Array(readFileSync(fullPath))
+		if (!slug) {
+			fatal("Could not determine skill name from a zip file. Provide --name.")
+		}
+	} else if (stat.isDirectory()) {
+		// Directory — read SKILL.md for slug, then zip
+		const skillMdPath = join(fullPath, "SKILL.md")
+		let skillMdContent: string
+		try {
+			skillMdContent = readFileSync(skillMdPath, "utf-8")
+		} catch {
+			fatal(
+				`SKILL.md not found in ${fullPath}. A skill must contain a SKILL.md file.`,
+			)
+		}
+
+		slug = slug ?? parseSkillName(skillMdContent) ?? undefined
+		if (!slug) {
+			fatal(
+				"Could not determine skill name. Either provide --name or add a 'name' field to SKILL.md frontmatter.",
+			)
+		}
+
+		archiveData = createArchiveFromDirectory(fullPath)
+	} else {
+		fatal(`${fullPath} is not a directory or a .zip/.skill file.`)
 	}
 
 	// Authenticate
@@ -83,21 +74,11 @@ export async function publishSkill(
 		(await getNamespace()) ??
 		(await resolveNamespace(client))
 
-	// Collect files and create ZIP
-	const spinner = yoctoSpinner({ text: "Creating archive..." }).start()
+	const spinner = yoctoSpinner({ text: "Uploading skill..." }).start()
 
-	const files = collectFiles(dir)
-	const zipInput: Record<string, Uint8Array> = {}
-	for (const [path, content] of files) {
-		zipInput[path] = content
-	}
-
-	const zipData = zipSync(zipInput)
-	const archive = await toFile(zipData, "archive.zip", {
+	const archive = await toFile(archiveData, "archive.zip", {
 		type: "application/zip",
 	})
-
-	spinner.text = "Uploading skill..."
 
 	try {
 		const result = await client.skills.upload(slug, {
