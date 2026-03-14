@@ -14,9 +14,10 @@ import { saveConfig } from "../../lib/keychain"
 import { verbose } from "../../lib/logger"
 import { resolveServer } from "../../lib/registry"
 import type { ServerConfig } from "../../types/registry"
-import { checkAnalyticsConsent } from "../../utils/analytics"
+import { checkAnalyticsConsent, trackEvent } from "../../utils/analytics"
 import { parseQualifiedName } from "../../utils/cli-utils"
 import { promptForRestart, showPostInstallHint } from "../../utils/client"
+import { showDiscordInvite } from "../../utils/discord"
 import { resolveTransport } from "../../utils/install/transport"
 import { resolveUserConfig } from "../../utils/install/user-config"
 import {
@@ -120,6 +121,8 @@ export async function installServer(
 		console.log(
 			pc.green(`✓ ${qualifiedName} successfully installed for ${client}`),
 		)
+		showDiscordInvite()
+		trackEvent("discord_invite_shown", { source: "mcp_install", client })
 		showPostInstallHint(client)
 		await promptForRestart(client)
 		process.exit(0)
