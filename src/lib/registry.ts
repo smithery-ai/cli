@@ -129,7 +129,12 @@ export const resolveServer = async (
 export const searchServers = async (
 	searchTerm: string,
 	apiKey?: string,
-	filters?: { verified?: boolean; pageSize?: number; page?: number },
+	filters?: {
+		verified?: boolean
+		namespace?: string
+		pageSize?: number
+		page?: number
+	},
 ): Promise<
 	Array<{
 		qualifiedName: string
@@ -149,6 +154,7 @@ export const searchServers = async (
 			pageSize: filters?.pageSize ?? 10,
 			page: filters?.page,
 			...(filters?.verified && { verified: "true" }),
+			...(filters?.namespace && { namespace: filters.namespace }),
 		})
 
 		const servers = (response.servers || []).map((server) => ({

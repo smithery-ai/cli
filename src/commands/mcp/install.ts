@@ -1,6 +1,5 @@
 import "../../utils/suppress-punycode-warning"
 import pc from "picocolors"
-import yoctoSpinner from "yocto-spinner"
 import type { ValidClient } from "../../config/clients"
 import { getClientConfiguration } from "../../config/clients"
 import { fatal } from "../../lib/cli-error"
@@ -19,11 +18,13 @@ import { parseQualifiedName } from "../../utils/cli-utils"
 import { promptForRestart, showPostInstallHint } from "../../utils/client"
 import { resolveTransport } from "../../utils/install/transport"
 import { resolveUserConfig } from "../../utils/install/user-config"
+import { isJsonMode } from "../../utils/output"
 import {
 	checkAndNotifyRemoteServer,
 	ensureBunInstalled,
 	ensureUVInstalled,
 } from "../../utils/runtime"
+import { createSpinner } from "../../utils/spinner"
 
 /**
  * Installs and configures a Smithery server for a specified client.
@@ -49,14 +50,13 @@ export async function installServer(
 	const clientConfig = getClientConfiguration(client)
 
 	/* resolve server */
-	const spinner = yoctoSpinner({
-		text: `Resolving ${qualifiedName}...`,
-	}).start()
+	const json = isJsonMode()
+	const spinner = createSpinner(`Resolving ${qualifiedName}...`)
 	try {
 		const { server, connection } = await resolveServer(
 			parseQualifiedName(qualifiedName),
 		)
-		spinner.success(pc.dim(`Successfully resolved ${pc.cyan(qualifiedName)}`))
+		spinner?.success(pc.dim(`Successfully resolved ${pc.cyan(qualifiedName)}`))
 
 		// Resolve transport type (single source of truth)
 		const transport = resolveTransport(connection, client)
@@ -68,7 +68,9 @@ export async function installServer(
 		}
 
 		// Notify user if remote server
-		checkAndNotifyRemoteServer(server)
+		if (!json) {
+			checkAndNotifyRemoteServer(server)
+		}
 
 		/* resolve server configuration - only for STDIO since HTTP uses OAuth (handled by client or mcp-remote) */
 		let finalConfig: ServerConfig = {}
@@ -116,15 +118,27 @@ export async function installServer(
 			writeConfig(config, client)
 		}
 
-		console.log()
-		console.log(
-			pc.green(`✓ ${qualifiedName} successfully installed for ${client}`),
-		)
-		showPostInstallHint(client)
-		await promptForRestart(client)
+		if (json) {
+			console.log(
+				JSON.stringify({
+					success: true,
+					qualifiedName,
+					client,
+					transport: transport.type,
+					hint: `Restart ${client} to apply changes.`,
+				}),
+			)
+		} else {
+			console.log()
+			console.log(
+				pc.green(`✓ ${qualifiedName} successfully installed for ${client}`),
+			)
+			showPostInstallHint(client)
+			await promptForRestart(client)
+		}
 		process.exit(0)
 	} catch (error) {
-		spinner.error(`Failed to install ${qualifiedName}`)
+		spinner?.error(`Failed to install ${qualifiedName}`)
 		verbose(
 			`Installation error: ${error instanceof Error ? error.stack : JSON.stringify(error)}`,
 		)

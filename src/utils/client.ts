@@ -78,6 +78,14 @@ export async function promptForRestart(client?: string): Promise<boolean> {
 		return false
 	}
 
+	// Non-TTY: skip interactive prompt to avoid hanging in CI/agent environments
+	if (!process.stdin.isTTY) {
+		console.log(
+			`The ${client} app is running. Restart it manually to apply changes.`,
+		)
+		return false
+	}
+
 	const { shouldRestart } = await inquirer.prompt<{ shouldRestart: boolean }>([
 		{
 			type: "confirm",
