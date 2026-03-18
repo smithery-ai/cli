@@ -1131,7 +1131,12 @@ const auth = program
 	.command("auth")
 	.description("Authentication and permissions")
 
-auth.command("login").description("Login with Smithery").action(handleLogin)
+auth
+	.command("login")
+	.description(
+		"Login with Smithery (non-TTY: outputs JSON with auth_url for agents)",
+	)
+	.action(handleLogin)
 
 auth
 	.command("logout")
