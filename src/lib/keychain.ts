@@ -1,6 +1,6 @@
 import type { ServerConfig } from "../types/registry.js"
 import { maskConfig } from "../utils/cli-utils.js"
-import { lazyImport } from "./lazy-import.js"
+import { lazyImport, tryImport } from "./lazy-import.js"
 import { verbose } from "./logger.js"
 
 const SERVICE_NAME = "smithery"
@@ -12,11 +12,27 @@ interface Keytar {
 }
 
 let keytar: Keytar | null = null
-let keytarLoadAttempted = false
 
+/**
+ * Try to load keytar silently. Returns null if not installed.
+ * Use for operations where keytar is optional (read, delete, clear).
+ */
 async function getKeytar(): Promise<Keytar | null> {
-	if (!keytarLoadAttempted) {
-		keytarLoadAttempted = true
+	if (!keytar) {
+		keytar = await tryImport<Keytar>("keytar")
+		if (!keytar) {
+			verbose("keytar not available - keychain features disabled")
+		}
+	}
+	return keytar
+}
+
+/**
+ * Load keytar with install prompt if missing.
+ * Use for operations where keytar is needed (save).
+ */
+async function requireKeytar(): Promise<Keytar | null> {
+	if (!keytar) {
 		try {
 			keytar = await lazyImport<Keytar>("keytar")
 		} catch {
@@ -44,7 +60,7 @@ export async function saveConfig(
 	qualifiedName: string,
 	config: ServerConfig,
 ): Promise<void> {
-	const kt = await getKeytar()
+	const kt = await requireKeytar()
 	if (!kt) {
 		verbose(`Keychain not available, skipping save for ${qualifiedName}`)
 		return
