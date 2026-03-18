@@ -261,12 +261,15 @@ export async function executeCliAuthFlow(
 	options: CliAuthOptions = {},
 ): Promise<string> {
 	verbose(`Starting CLI auth flow with endpoint: ${SMITHERY_URL}`)
+	const isTTY = process.stdin.isTTY
 
 	// Step 1: Create session
-	const sessionSpinner = yoctoSpinner({
-		text: "Preparing authentication...",
-		color: "cyan",
-	}).start()
+	const sessionSpinner = isTTY
+		? yoctoSpinner({
+				text: "Preparing authentication...",
+				color: "cyan",
+			}).start()
+		: null
 
 	let session: CliAuthSession
 	try {
@@ -278,33 +281,45 @@ export async function executeCliAuthFlow(
 	}
 
 	// Step 2: Display URL and open browser
-	console.log()
-	console.log(pc.cyan("Opening browser for authentication..."))
-	console.log()
-	console.log(pc.bold("  If your browser doesn't open, visit:"))
-	console.log(pc.blue(pc.underline(`  ${session.authUrl}`)))
-	console.log()
+	if (isTTY) {
+		console.log()
+		console.log(pc.cyan("Opening browser for authentication..."))
+		console.log()
+		console.log(pc.bold("  If your browser doesn't open, visit:"))
+		console.log(pc.blue(pc.underline(`  ${session.authUrl}`)))
+		console.log()
 
-	// Try to open browser (non-blocking)
-	try {
-		await openBrowserForAuth(session.authUrl)
-	} catch (error) {
-		// Silent failure - URL already shown above
-		verbose(`Browser opening failed: ${error}`)
+		// Try to open browser (non-blocking)
+		try {
+			await openBrowserForAuth(session.authUrl)
+		} catch (error) {
+			// Silent failure - URL already shown above
+			verbose(`Browser opening failed: ${error}`)
+		}
+	} else {
+		// Non-TTY: output machine-readable auth URL for agents
+		console.log(
+			JSON.stringify({
+				auth_url: session.authUrl,
+				session_id: session.sessionId,
+			}),
+		)
 	}
 
 	// Step 3: Poll for completion
-	const pollSpinner = yoctoSpinner({
-		text: "Waiting for you to authorize in browser...",
-		color: "yellow",
-	}).start()
+	const pollSpinner = isTTY
+		? yoctoSpinner({
+				text: "Waiting for you to authorize in browser...",
+				color: "yellow",
+			}).start()
+		: null
 
 	try {
 		const apiKey = await pollForApiKey(session.sessionId, SMITHERY_URL, options)
-		pollSpinner.success("Authorization received")
+		pollSpinner?.success("Authorization received")
 		return apiKey
 	} catch (error) {
-		pollSpinner.error("Authorization failed")
+		pollSpinner?.error("Authorization failed")
 		throw error
 	}
 }
