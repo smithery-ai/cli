@@ -126,6 +126,17 @@ vi.mock("node:fs", () => ({
 		return stream
 	}),
 	existsSync: vi.fn().mockReturnValue(true),
+	writeFileSync: vi.fn(),
+}))
+
+vi.mock("node:child_process", () => ({
+	spawn: vi.fn(() => ({
+		unref: vi.fn(),
+	})),
+}))
+
+vi.mock("../../utils/output", () => ({
+	isJsonMode: vi.fn().mockReturnValue(false),
 }))
 
 import { NotFoundError, PermissionDeniedError, Smithery } from "@smithery/api"
@@ -590,6 +601,65 @@ describe("deploy command", () => {
 		).rejects.toThrow("process.exit() was called")
 
 		expect(buildBundle).not.toHaveBeenCalled()
+	})
+
+	test("non-TTY mode: spawns background watcher and outputs JSON", async () => {
+		const { isJsonMode } = await import("../../utils/output")
+		const { spawn } = await import("node:child_process")
+		const { writeFileSync } = await import("node:fs")
+
+		vi.mocked(isJsonMode).mockReturnValue(true)
+
+		const consoleSpy = vi.spyOn(console, "log")
+
+		await deploy({ name: "myorg/myserver" })
+
+		// Should write empty log file
+		expect(writeFileSync).toHaveBeenCalledWith(
+			expect.stringContaining("smithery-deploy-test-deployment-id.log"),
+			"",
+		)
+
+		// Should spawn background watcher
+		expect(spawn).toHaveBeenCalledWith(
+			process.execPath,
+			expect.arrayContaining([
+				"_watch-deploy",
+				"test-deployment-id",
+				"myorg/myserver",
+			]),
+			expect.objectContaining({
+				detached: true,
+				stdio: "ignore",
+			}),
+		)
+
+		// Should output JSON with deployment info
+		const jsonOutput = consoleSpy.mock.calls.find((call) => {
+			try {
+				const parsed = JSON.parse(call[0])
+				return parsed.deploymentId === "test-deployment-id"
+			} catch {
+				return false
+			}
+		})
+		expect(jsonOutput).toBeDefined()
+		const parsed = JSON.parse(jsonOutput![0])
+		expect(parsed).toMatchObject({
+			deploymentId: "test-deployment-id",
+			qualifiedName: "myorg/myserver",
+			status: "PENDING",
+			logFile: expect.stringContaining(
+				"smithery-deploy-test-deployment-id.log",
+			),
+			statusUrl: "https://smithery.ai/servers/myorg/myserver/releases",
+		})
+
+		// Should NOT have polled deployment status
+		expect(mockRegistry.servers.releases.get).not.toHaveBeenCalled()
+
+		// Restore
+		vi.mocked(isJsonMode).mockReturnValue(false)
 	})
 
 	test("404 error: auto-creates server and retries deploy", async () => {

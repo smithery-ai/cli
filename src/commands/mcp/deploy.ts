@@ -1,4 +1,7 @@
-import { createReadStream } from "node:fs"
+import { spawn } from "node:child_process"
+import { createReadStream, writeFileSync } from "node:fs"
+import { tmpdir } from "node:os"
+import { join } from "node:path"
 import { NotFoundError, type Smithery } from "@smithery/api"
 import type {
 	DeployPayload,
@@ -6,7 +9,6 @@ import type {
 	ReleaseGetResponse,
 } from "@smithery/api/resources/servers/releases"
 import pc from "picocolors"
-import yoctoSpinner from "yocto-spinner"
 import { buildBundle, loadBuildManifest } from "../../lib/bundle/index.js"
 import { fatal } from "../../lib/cli-error"
 import { loadProjectConfig } from "../../lib/config-loader.js"
@@ -14,7 +16,9 @@ import { resolveNamespace } from "../../lib/namespace.js"
 import { createSmitheryClientSync } from "../../lib/smithery-client"
 import { parseConfigSchema } from "../../utils/cli-utils.js"
 import { promptForServerNameInput } from "../../utils/command-prompts.js"
+import { isJsonMode } from "../../utils/output.js"
 import { ensureApiKey } from "../../utils/runtime.js"
+import { createSpinner } from "../../utils/spinner"
 
 interface DeployOptions {
 	entryFile?: string
@@ -211,10 +215,9 @@ async function deployToServer(
 	sourcemapFile?: ReturnType<typeof createReadStream>,
 	bundleFile?: ReturnType<typeof createReadStream>,
 ) {
-	const uploadSpinner = yoctoSpinner({
-		text: "Uploading release...",
+	const uploadSpinner = createSpinner("Uploading release...", {
 		color: "yellow",
-	}).start()
+	})
 
 	const deployParams: ReleaseDeployParams = {
 		payload: JSON.stringify(payload),
@@ -232,6 +235,40 @@ async function deployToServer(
 
 	uploadSpinner.stop()
 	console.log(pc.dim(`✓ Release ${result.deploymentId} accepted`))
+
+	// Non-TTY / --json: spawn a background watcher to a tmp file and return immediately
+	if (isJsonMode()) {
+		const logFile = join(tmpdir(), `smithery-deploy-${result.deploymentId}.log`)
+		writeFileSync(logFile, "") // create empty log file
+
+		const child = spawn(
+			process.execPath,
+			[
+				process.argv[1],
+				"_watch-deploy",
+				result.deploymentId,
+				qualifiedName,
+				logFile,
+			],
+			{
+				detached: true,
+				stdio: "ignore",
+				env: process.env,
+			},
+		)
+		child.unref()
+
+		console.log(
+			JSON.stringify({
+				deploymentId: result.deploymentId,
+				qualifiedName,
+				status: "PENDING",
+				logFile,
+				statusUrl: `https://smithery.ai/servers/${qualifiedName}/releases`,
+			}),
+		)
+		return
+	}
 
 	console.log(pc.dim("> Waiting for completion..."))
 	console.log(
@@ -323,6 +360,105 @@ async function deployWithAutoCreate(
 			streams.sourcemapFile,
 			streams.bundleFile,
 		)
+	}
+}
+
+/**
+ * Background watcher: polls deployment status and writes logs to a file.
+ * Invoked via hidden `_watch-deploy` command in a detached process.
+ *
+ * Safety: exits after 10 minutes or 3 consecutive poll errors to prevent
+ * orphaned processes from running indefinitely.
+ */
+export async function watchDeploy(
+	deploymentId: string,
+	qualifiedName: string,
+	logFile: string,
+) {
+	const { createWriteStream } = await import("node:fs")
+	const apiKey = await ensureApiKey()
+	const registry = createSmitheryClientSync(apiKey)
+	let lastLoggedIndex = 0
+	let consecutiveErrors = 0
+
+	const MAX_DURATION_MS = 10 * 60 * 1000 // 10 minutes
+	const MAX_CONSECUTIVE_ERRORS = 3
+	const startTime = Date.now()
+
+	const stream = createWriteStream(logFile, { flags: "a" })
+	const log = (line: string) => {
+		stream.write(`${line}\n`)
+	}
+
+	while (true) {
+		if (Date.now() - startTime > MAX_DURATION_MS) {
+			log(`\n⚠ Watcher timed out after 10 minutes. Check status at:`)
+			log(`https://smithery.ai/servers/${qualifiedName}/releases`)
+			stream.end()
+			process.exit(0)
+		}
+
+		let data: ReleaseGetResponse
+		try {
+			data = await registry.servers.releases.get(deploymentId, {
+				qualifiedName,
+			})
+			consecutiveErrors = 0
+		} catch (error) {
+			consecutiveErrors++
+			log(
+				`[error] Failed to poll deployment (attempt ${consecutiveErrors}/${MAX_CONSECUTIVE_ERRORS}): ${error}`,
+			)
+			if (consecutiveErrors >= MAX_CONSECUTIVE_ERRORS) {
+				log(`\n✗ Giving up after ${MAX_CONSECUTIVE_ERRORS} consecutive errors.`)
+				stream.end()
+				process.exit(1)
+			}
+			await sleep(2000)
+			continue
+		}
+
+		if (data.logs && data.logs.length > lastLoggedIndex) {
+			for (let i = lastLoggedIndex; i < data.logs.length; i++) {
+				const entry = data.logs[i]
+				if (entry.message === "auth_required") continue
+				log(`[${entry.stage}] ${entry.message}`)
+			}
+			lastLoggedIndex = data.logs.length
+		}
+
+		if (data.status === "SUCCESS") {
+			log(`\n✓ Release successful!`)
+			log(`Release ID: ${deploymentId}`)
+			log(`MCP URL: ${data.mcpUrl}`)
+			log(`Server Page: https://smithery.ai/servers/${qualifiedName}`)
+			stream.end()
+			process.exit(0)
+		}
+
+		if (data.status === "AUTH_REQUIRED") {
+			log(`\n⚠ OAuth authorization required.`)
+			log(
+				`Authorize at: https://smithery.ai/servers/${qualifiedName}/releases/`,
+			)
+			stream.end()
+			process.exit(0)
+		}
+
+		if (
+			["FAILURE", "FAILURE_SCAN", "INTERNAL_ERROR", "CANCELLED"].includes(
+				data.status,
+			)
+		) {
+			const errorLog = data.logs?.find(
+				(l: ReleaseGetResponse.Log) => l.level === "error",
+			)
+			log(`\n✗ Release failed: ${errorLog?.message || "Release failed"}`)
+			stream.end()
+			process.exit(1)
+		}
+
+		await sleep(2000)
 	}
 }
 

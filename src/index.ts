@@ -102,12 +102,13 @@ async function handleSearch(term: string | undefined, options: CliOptions) {
 	const searchTerm = term ?? ""
 	const json = isJsonMode()
 
-	if (json && !searchTerm) {
-		fatal("Search term is required when using --json")
+	if (json && !searchTerm && !options.namespace) {
+		fatal("Search term or --namespace is required when using --json")
 	}
 
 	const results = await searchServers(searchTerm, apiKey, {
 		verified: options.verified,
+		namespace: options.namespace,
 		pageSize: parseInt(options.limit ?? "10", 10),
 		page: parseInt(options.page ?? "1", 10),
 	})
@@ -425,6 +426,7 @@ function withSearchOptions(cmd: InstanceType<typeof Command>) {
 	return cmd
 		.option("-i, --interactive", "Interactive search mode")
 		.option("--verified", "Only show verified servers")
+		.option("--namespace <namespace>", "Filter by namespace")
 		.option("--limit <number>", "Max results per page", "10")
 		.option("--page <number>", "Page number", "1")
 }
@@ -1339,6 +1341,22 @@ program.hook("preAction", async (_thisCommand, actionCommand) => {
 		isAgent,
 	})
 })
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// Hidden commands (internal use only)
+// ═══════════════════════════════════════════════════════════════════════════════
+
+program
+	.command("_watch-deploy", { hidden: true })
+	.argument("<deploymentId>")
+	.argument("<qualifiedName>")
+	.argument("<logFile>")
+	.action(
+		async (deploymentId: string, qualifiedName: string, logFile: string) => {
+			const { watchDeploy } = await import("./commands/mcp/deploy")
+			await watchDeploy(deploymentId, qualifiedName, logFile)
+		},
+	)
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // Entry point
