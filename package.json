@@ -55,6 +55,7 @@
 		"dotenv": "^17.2.2",
 		"es-toolkit": "^1.0.0",
 		"esbuild": "^0.27.0",
+		"fflate": "^0.8.2",
 		"flexsearch": "^0.7.43",
 		"inquirer": "^8.2.4",
 		"inquirer-autocomplete-prompt": "^2.0.0",
@@ -91,7 +92,5 @@
 	"engines": {
 		"node": ">=20.0.0"
 	},
-	"dependencies": {
-		"fflate": "^0.8.2"
-	}
+	"dependencies": {}
 }
