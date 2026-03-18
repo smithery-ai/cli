@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 
+## [4.7.1](https://github.com/smithery-ai/cli/compare/v4.7.0...v4.7.1) (2026-03-18)
+
+
+### Bug Fixes
+
+* don't prompt to install keytar on logout (SMI-1615) ([#699](https://github.com/smithery-ai/cli/issues/699)) ([918ac0c](https://github.com/smithery-ai/cli/commit/918ac0ca6067f48276bf45a8c25f2566e673ea32))
+
 ## [4.7.0](https://github.com/smithery-ai/cli/compare/v4.6.0...v4.7.0) (2026-03-13)
 
 
