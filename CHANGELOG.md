@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 
+## [4.7.2](https://github.com/smithery-ai/cli/compare/v4.7.1...v4.7.2) (2026-03-18)
+
+
+### Bug Fixes
+
+* agent-friendly auth login for non-TTY environments (SMI-1627) ([#701](https://github.com/smithery-ai/cli/issues/701)) ([280917c](https://github.com/smithery-ai/cli/commit/280917c5bea8759ac0d8930654ddc584a5b296f0))
+
 ## [4.7.1](https://github.com/smithery-ai/cli/compare/v4.7.0...v4.7.1) (2026-03-18)
 
 
