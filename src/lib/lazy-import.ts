@@ -28,6 +28,21 @@ function isModuleNotFound(err: unknown): boolean {
  * If missing, prompts the user to install it (or auto-installs in CI),
  * then retries the import.
  */
+/**
+ * Try to import a package silently. Returns null if not installed.
+ * Use this for optional dependencies where missing is acceptable.
+ */
+export async function tryImport<T = unknown>(
+	packageName: string,
+): Promise<T | null> {
+	try {
+		return (await import(packageName)) as T
+	} catch (err) {
+		if (isModuleNotFound(err)) return null
+		throw err
+	}
+}
+
 export async function lazyImport<T = unknown>(packageName: string): Promise<T> {
 	// Attempt 1: try to load
 	try {

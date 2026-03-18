@@ -7,10 +7,6 @@ settings:
 importers:
 
   .:
-    dependencies:
-      fflate:
-        specifier: ^0.8.2
-        version: 0.8.2
     devDependencies:
       '@anthropic-ai/mcpb':
         specifier: ^1.1.1
@@ -54,6 +50,9 @@ importers:
       esbuild:
         specifier: ^0.27.0
         version: 0.27.2
+      fflate:
+        specifier: ^0.8.2
+        version: 0.8.2
       flexsearch:
         specifier: ^0.7.43
         version: 0.7.43
