@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 
+## [4.7.4](https://github.com/smithery-ai/cli/compare/v4.7.3...v4.7.4) (2026-03-18)
+
+
+### Chores
+
+* remove review, upvote, downvote commands (SMI-1505) ([#706](https://github.com/smithery-ai/cli/issues/706)) ([36e7882](https://github.com/smithery-ai/cli/commit/36e78827a7821965375a0f02890174a7b003c1f9))
+
 ## [4.7.3](https://github.com/smithery-ai/cli/compare/v4.7.2...v4.7.3) (2026-03-18)
 
 
