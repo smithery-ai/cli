@@ -358,6 +358,15 @@ async function handleSecretsDelete(server: string, name: string) {
 }
 
 async function handleLogin() {
+	if (!process.stdin.isTTY) {
+		console.error(
+			pc.red(
+				"Error: This command requires an interactive terminal. Run it directly in your terminal.",
+			),
+		)
+		process.exit(1)
+	}
+
 	const { executeCliAuthFlow } = await import("./lib/cli-auth")
 	const { validateApiKey } = await import("./lib/registry")
 

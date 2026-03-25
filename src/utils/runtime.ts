@@ -282,8 +282,16 @@ export async function ensureApiKey(apiKey?: string): Promise<string> {
 		existingApiKey = await getApiKey()
 	}
 
-	// If no API key found, prompt for one and set it as existing
+	// If no API key found, check for interactive terminal before prompting
 	if (!existingApiKey) {
+		if (!process.stdin.isTTY) {
+			console.error(
+				pc.red(
+					"Not authenticated. Run `smithery auth login` in your terminal first.",
+				),
+			)
+			process.exit(1)
+		}
 		const promptedApiKey = await promptForApiKey()
 		await setApiKey(promptedApiKey)
 		existingApiKey = promptedApiKey
@@ -299,13 +307,23 @@ export async function ensureApiKey(apiKey?: string): Promise<string> {
 		if (error instanceof AuthenticationError) {
 			console.error(
 				pc.red(
-					'✗ API key is expired or invalid. Run "smithery login" to re-authenticate.',
+					'✗ API key is expired or invalid. Run "smithery auth login" to re-authenticate.',
 				),
 			)
 
 			// Clear invalid saved key if it was from config (not command line)
 			if (!apiKey) {
 				await clearApiKey()
+			}
+
+			// In non-interactive mode, exit instead of prompting
+			if (!process.stdin.isTTY) {
+				console.error(
+					pc.red(
+						"Not authenticated. Run `smithery auth login` in your terminal first.",
+					),
+				)
+				process.exit(1)
 			}
 
 			// Prompt for new API key, validate, and save
