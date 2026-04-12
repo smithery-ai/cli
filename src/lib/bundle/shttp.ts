@@ -1,10 +1,10 @@
 import { execSync } from "node:child_process"
 import { existsSync, mkdirSync, unlinkSync, writeFileSync } from "node:fs"
 import { join } from "node:path"
-import type { DeployPayload } from "@smithery/api/resources/servers/releases"
 import pc from "picocolors"
 
 import { buildServer } from "../build.js"
+import type { DeployPayload } from "../deploy-payload.js"
 import type { BuildManifest } from "./index.js"
 import { type ScanResult, scanModule } from "./scan.js"
 

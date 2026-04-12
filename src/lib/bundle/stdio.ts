@@ -8,11 +8,11 @@ import {
 } from "node:fs"
 import { join } from "node:path"
 import { packExtension } from "@anthropic-ai/mcpb"
-import type { DeployPayload } from "@smithery/api/resources/servers/releases"
 import pc from "picocolors"
 
 import { buildServer } from "../build.js"
 import { loadProjectConfig } from "../config-loader.js"
+import type { DeployPayload } from "../deploy-payload.js"
 import { copyBundleAssets } from "./copy-assets.js"
 import type { BuildManifest } from "./index.js"
 import { createMcpbManifest, MCPB_ENTRY_POINT } from "./mcpb-manifest.js"
@@ -105,6 +105,7 @@ export async function buildStdioBundle(
 	const payload: DeployPayload = {
 		type: "stdio" as const,
 		runtime: "node" as const,
+		stateful: false,
 		hasAuthAdapter: scanResult.hasAuthAdapter ?? false,
 		configSchema: scanResult.configSchema,
 		serverCard: scanResult.serverCard,

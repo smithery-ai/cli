@@ -11,7 +11,6 @@ export const noConfigServer: Server = {
 	deploymentUrl: null,
 	security: null,
 	tools: null,
-	eventTopics: null,
 	prompts: null,
 	resources: null,
 	connections: [
@@ -31,7 +30,6 @@ export const requiredOnlyServer: Server = {
 	deploymentUrl: "https://server.smithery.ai",
 	security: null,
 	tools: null,
-	eventTopics: null,
 	prompts: null,
 	resources: null,
 	connections: [
@@ -63,7 +61,6 @@ export const requiredAndOptionalServer: Server = {
 	deploymentUrl: null,
 	security: null,
 	tools: null,
-	eventTopics: null,
 	prompts: null,
 	resources: null,
 	connections: [
