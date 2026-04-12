@@ -1,7 +1,7 @@
 import { existsSync, readFileSync, writeFileSync } from "node:fs"
 import { join, resolve } from "node:path"
-import type { DeployPayload } from "@smithery/api/resources/servers/releases"
 import { loadProjectConfig } from "../config-loader.js"
+import type { DeployPayload } from "../deploy-payload.js"
 import { buildShttpBundle } from "./shttp.js"
 import { buildStdioBundle } from "./stdio.js"
 

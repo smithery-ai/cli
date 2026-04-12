@@ -13,7 +13,6 @@ import {
 	getNamespace as getStoredNamespace,
 	setNamespace,
 } from "../../utils/smithery-settings"
-
 export type { Connection, ConnectionsListResponse }
 
 export interface ToolInfo extends Tool {
@@ -68,7 +67,10 @@ export class ConnectSession {
 				cursor: options.cursor,
 				...metadataQuery,
 			} as ListConnectionsParams)
-			return { connections: data.connections, nextCursor: data.nextCursor }
+			return {
+				connections: data.connections,
+				nextCursor: data.nextCursor,
+			}
 		}
 
 		// Fetch pages until we have enough results (or all if no limit)
@@ -206,7 +208,7 @@ export class ConnectSession {
 			}),
 		} as Parameters<typeof this.smitheryClient.connections.set>[1]
 		try {
-			return await this.smitheryClient.connections.set(connectionId, params)
+			return this.smitheryClient.connections.set(connectionId, params)
 		} catch (error) {
 			if (error instanceof Error && error.message.includes("409")) {
 				await this.deleteConnection(connectionId)

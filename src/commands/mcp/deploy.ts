@@ -4,7 +4,6 @@ import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { NotFoundError, type Smithery } from "@smithery/api"
 import type {
-	DeployPayload,
 	ReleaseDeployParams,
 	ReleaseGetResponse,
 } from "@smithery/api/resources/servers/releases"
@@ -12,6 +11,7 @@ import pc from "picocolors"
 import { buildBundle, loadBuildManifest } from "../../lib/bundle/index.js"
 import { fatal } from "../../lib/cli-error"
 import { loadProjectConfig } from "../../lib/config-loader.js"
+import type { DeployPayload } from "../../lib/deploy-payload.js"
 import { resolveNamespace } from "../../lib/namespace.js"
 import { createSmitheryClientSync } from "../../lib/smithery-client"
 import { parseConfigSchema } from "../../utils/cli-utils.js"

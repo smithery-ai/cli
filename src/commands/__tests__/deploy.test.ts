@@ -552,7 +552,12 @@ describe("deploy command", () => {
 
 	test("--from-build with stdio: uploads bundle artifact", async () => {
 		vi.mocked(loadBuildManifest).mockReturnValue({
-			payload: { type: "stdio", runtime: "node", hasAuthAdapter: false },
+			payload: {
+				type: "stdio",
+				runtime: "node",
+				stateful: false,
+				hasAuthAdapter: false,
+			},
 			bundlePath: "/my/prebuilt/server.mcpb",
 		})
 
