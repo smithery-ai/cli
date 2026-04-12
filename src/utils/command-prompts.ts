@@ -1,4 +1,5 @@
 import pc from "picocolors"
+import type { ConnectionStatusInputRequired } from "../commands/mcp/connection-status"
 import { VALID_CLIENTS, type ValidClient } from "../config/clients"
 import { fatal } from "../lib/cli-error"
 import { searchServers } from "../lib/registry"
@@ -545,4 +546,67 @@ export async function promptForServerNameInput(
 	])
 
 	return serverName.trim()
+}
+
+export async function promptForConnectionInputs(
+	status: ConnectionStatusInputRequired,
+): Promise<{
+	headers?: Record<string, string>
+	query?: Record<string, string>
+}> {
+	const inquirer = (await import("inquirer")).default
+	const prompts = [
+		...status.missing.headers.map((key) => ({
+			type: "password",
+			name: `header:${key}`,
+			mask: "*",
+			message: formatMissingInputMessage(
+				"header",
+				key,
+				status.http.headers?.[key]?.label,
+			),
+			validate: (input: string) =>
+				input.trim().length > 0 || "Please enter a value",
+		})),
+		...status.missing.query.map((key) => ({
+			type: "input",
+			name: `query:${key}`,
+			message: formatMissingInputMessage(
+				"query param",
+				key,
+				status.http.query?.[key]?.label,
+			),
+			validate: (input: string) =>
+				input.trim().length > 0 || "Please enter a value",
+		})),
+	]
+
+	if (prompts.length === 0) {
+		return {}
+	}
+
+	const answers = await inquirer.prompt(prompts)
+	const headers = Object.fromEntries(
+		status.missing.headers
+			.map((key) => [key, answers[`header:${key}`]])
+			.filter(([, value]) => typeof value === "string"),
+	)
+	const query = Object.fromEntries(
+		status.missing.query
+			.map((key) => [key, answers[`query:${key}`]])
+			.filter(([, value]) => typeof value === "string"),
+	)
+
+	return {
+		headers: Object.keys(headers).length > 0 ? headers : undefined,
+		query: Object.keys(query).length > 0 ? query : undefined,
+	}
+}
+
+function formatMissingInputMessage(
+	kind: string,
+	key: string,
+	label: string | undefined,
+): string {
+	return label ? `Enter ${label} (${kind}: ${key})` : `Enter ${kind}: ${key}`
 }

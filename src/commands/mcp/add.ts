@@ -1,4 +1,5 @@
 import { fatal } from "../../lib/cli-error"
+import { finalizeAddedConnection } from "./add-flow"
 import { addServer as addServerImpl } from "./add-impl"
 import { ConnectSession } from "./api"
 import { normalizeMcpUrl } from "./normalize-url"
@@ -39,9 +40,19 @@ export async function addServer(
 					unstableWebhookUrl: options.unstableWebhookUrl,
 				},
 			)
-			outputConnectionDetail({
+			const finalConnection = await finalizeAddedConnection(
+				session,
 				connection,
-				tip: `Use smithery tool list ${connection.connectionId} to view tools.`,
+				{
+					name,
+					metadata: parsedMetadata,
+					headers: parsedHeaders,
+					unstableWebhookUrl: options.unstableWebhookUrl,
+				},
+			)
+			outputConnectionDetail({
+				connection: finalConnection,
+				tip: `Use smithery tool list ${finalConnection.connectionId} to view tools.`,
 			})
 		} catch (error) {
 			fatal("Failed to add connection", error)

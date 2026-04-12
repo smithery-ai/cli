@@ -2,6 +2,7 @@ import FlexSearch from "flexsearch"
 import pc from "picocolors"
 import { isJsonMode, outputJson, outputTable } from "../../utils/output"
 import { type Connection, ConnectSession, type ToolInfo } from "./api"
+import { isInputRequiredStatus } from "./connection-status"
 import {
 	formatGroupRow,
 	formatListToolRow,
@@ -39,6 +40,15 @@ function formatConnectionStatus(
 		return {
 			error: `Server "${connection.name}" has an error: ${connection.status.message}`,
 			status: { state: "error", message: connection.status.message },
+		}
+	}
+
+	if (isInputRequiredStatus(connection.status)) {
+		return {
+			error: `Server "${connection.name}" requires additional input`,
+			status: {
+				...connection.status,
+			},
 		}
 	}
 

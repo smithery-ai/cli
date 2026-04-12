@@ -65,4 +65,37 @@ describe("mcp list command", () => {
 		})
 		expect(mockOutputTable).toHaveBeenCalled()
 	})
+
+	test("preserves input_required status in output rows", async () => {
+		mockListConnections.mockResolvedValue({
+			connections: [
+				{
+					connectionId: "test-input-required-two",
+					name: "test-input-required-two",
+					mcpUrl:
+						"https://server.smithery.ai/calclavia/test-input-required-two",
+					status: {
+						state: "input_required",
+						http: {},
+						missing: { headers: ["x-api-key"], query: ["projectId"] },
+					},
+				},
+			],
+			nextCursor: null,
+		})
+
+		await listServers({})
+
+		expect(mockOutputTable).toHaveBeenCalledWith(
+			expect.objectContaining({
+				jsonData: expect.objectContaining({
+					servers: [
+						expect.objectContaining({
+							status: "input_required",
+						}),
+					],
+				}),
+			}),
+		)
+	})
 })

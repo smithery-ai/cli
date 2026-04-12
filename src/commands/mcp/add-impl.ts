@@ -1,5 +1,9 @@
 import pc from "picocolors"
 import { fatal } from "../../lib/cli-error"
+import {
+	buildDuplicateInputRequiredTip,
+	finalizeAddedConnection,
+} from "./add-flow"
 import { ConnectSession } from "./api"
 import { normalizeMcpUrl } from "./normalize-url"
 import { outputConnectionDetail } from "./output-connection"
@@ -54,8 +58,17 @@ export async function addServer(
 						),
 					)
 				}
-				console.error(pc.dim(`Use --force to create a new connection anyway.`))
-				outputConnectionDetail({ connection: match })
+				const tip =
+					buildDuplicateInputRequiredTip(match) ??
+					(status === "connected"
+						? `Use smithery tool list ${match.connectionId} to interact with it.`
+						: status === "auth_required"
+							? "Use the authorization URL above to complete setup."
+							: `Use --force to create a new connection anyway.`)
+				outputConnectionDetail({
+					connection: match,
+					tip,
+				})
 				return
 			}
 		}
@@ -67,8 +80,15 @@ export async function addServer(
 			unstableWebhookUrl: options.unstableWebhookUrl,
 		})
 
-		if (connection.status?.state === "auth_required") {
-			const authUrl = (connection.status as { authorizationUrl?: string })
+		const finalConnection = await finalizeAddedConnection(session, connection, {
+			name: options.name,
+			metadata: parsedMetadata,
+			headers: parsedHeaders,
+			unstableWebhookUrl: options.unstableWebhookUrl,
+		})
+
+		if (finalConnection.status?.state === "auth_required") {
+			const authUrl = (finalConnection.status as { authorizationUrl?: string })
 				?.authorizationUrl
 			if (authUrl) {
 				console.error(
@@ -77,9 +97,9 @@ export async function addServer(
 			}
 		}
 
-		const id = connection.connectionId
+		const id = finalConnection.connectionId
 		outputConnectionDetail({
-			connection,
+			connection: finalConnection,
 			tip: `Call tools: smithery tool call ${id} <tool> '<args>'\nList tools: smithery tool list ${id}`,
 		})
 	} catch (error) {

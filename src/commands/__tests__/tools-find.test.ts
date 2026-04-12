@@ -381,4 +381,52 @@ describe("tools find command", () => {
 			}),
 		)
 	})
+
+	test("reports input_required connections as connection issues", async () => {
+		mockGetConnection.mockResolvedValue({
+			connectionId: "test-input-required-two",
+			name: "test-input-required-two",
+			mcpUrl: "https://server.smithery.ai/calclavia/test-input-required-two",
+			status: {
+				state: "input_required",
+				http: {
+					headers: {
+						"x-api-key": {
+							label: "API Key",
+							required: true,
+						},
+					},
+				},
+				missing: {
+					headers: ["x-api-key"],
+					query: [],
+				},
+			},
+		})
+		mockListToolsForConnection.mockRejectedValue(
+			new Error("connection requires additional input"),
+		)
+
+		await findTools(undefined, {
+			connection: "test-input-required-two",
+			prefix: undefined,
+		})
+
+		expect(mockOutputTable).toHaveBeenCalledWith(
+			expect.objectContaining({
+				jsonData: expect.objectContaining({
+					tools: [],
+					connectionIssues: [
+						expect.objectContaining({
+							error:
+								'Server "test-input-required-two" requires additional input',
+							status: expect.objectContaining({
+								state: "input_required",
+							}),
+						}),
+					],
+				}),
+			}),
+		)
+	})
 })
