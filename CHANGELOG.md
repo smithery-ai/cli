@@ -5,6 +5,23 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 
+## [4.8.0](https://github.com/smithery-ai/cli/compare/v4.7.4...v4.8.0) (2026-04-12)
+
+
+### Features
+
+* support input_required MCP connection flows ([#716](https://github.com/smithery-ai/cli/issues/716)) ([506bc3c](https://github.com/smithery-ai/cli/commit/506bc3c7819f4484bc2a87cdfad0dc46ed2dc2f4))
+
+
+### Chores
+
+* update @smithery/api to 0.58.0 ([#717](https://github.com/smithery-ai/cli/issues/717)) ([b714a86](https://github.com/smithery-ai/cli/commit/b714a863476c231c15501c33ec8b3b3e773c4a9a))
+
+
+### Refactors
+
+* extract MCP connection output helper ([#718](https://github.com/smithery-ai/cli/issues/718)) ([1bbc5bd](https://github.com/smithery-ai/cli/commit/1bbc5bd566a01719e219cf7baaedc5af96b987dc))
+
 ## [4.7.4](https://github.com/smithery-ai/cli/compare/v4.7.3...v4.7.4) (2026-03-18)
 
 
