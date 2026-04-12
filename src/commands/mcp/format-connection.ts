@@ -1,4 +1,5 @@
 import type { Connection } from "./api"
+import { isInputRequiredStatus } from "./connection-status"
 
 /**
  * Format a Connection object for output, including all relevant fields.
@@ -24,10 +25,6 @@ export function formatConnectionOutput(
 
 	if (connection.serverInfo) {
 		output.serverInfo = formatServerInfo(connection.serverInfo)
-	}
-
-	if (connection.iconUrl) {
-		output.iconUrl = connection.iconUrl
 	}
 
 	return output
@@ -56,6 +53,12 @@ function formatStatus(
 		return {
 			state: "error",
 			message: status.message,
+		}
+	}
+
+	if (isInputRequiredStatus(status)) {
+		return {
+			...status,
 		}
 	}
 
