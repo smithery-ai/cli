@@ -27,10 +27,6 @@ export function formatConnectionOutput(
 		output.serverInfo = formatServerInfo(connection.serverInfo)
 	}
 
-	if (connection.iconUrl) {
-		output.iconUrl = connection.iconUrl
-	}
-
 	return output
 }
 

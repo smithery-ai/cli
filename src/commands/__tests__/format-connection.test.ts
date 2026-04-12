@@ -37,4 +37,17 @@ describe("formatConnectionOutput", () => {
 
 		expect(output.status).toEqual(status)
 	})
+
+	test("does not expose iconUrl in CLI output", () => {
+		const output = formatConnectionOutput({
+			connectionId: "browserbase",
+			name: "browserbase",
+			mcpUrl: "https://server.smithery.ai/browserbase",
+			metadata: null,
+			status: { state: "connected" },
+			iconUrl: "https://icons.duckduckgo.com/ip3/www.browserbase.com.ico",
+		} as never)
+
+		expect(output.iconUrl).toBeUndefined()
+	})
 })
