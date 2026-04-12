@@ -1,9 +1,8 @@
 import pc from "picocolors"
 import { fatal } from "../../lib/cli-error"
-import { outputDetail } from "../../utils/output"
 import { ConnectSession } from "./api"
-import { formatConnectionOutput } from "./format-connection"
 import { normalizeMcpUrl } from "./normalize-url"
+import { outputConnectionDetail } from "./output-connection"
 import { parseJsonObject } from "./parse-json"
 
 export async function addServer(
@@ -56,8 +55,7 @@ export async function addServer(
 					)
 				}
 				console.error(pc.dim(`Use --force to create a new connection anyway.`))
-				const output = formatConnectionOutput(match)
-				outputDetail({ data: output })
+				outputConnectionDetail({ connection: match })
 				return
 			}
 		}
@@ -79,10 +77,9 @@ export async function addServer(
 			}
 		}
 
-		const output = formatConnectionOutput(connection)
 		const id = connection.connectionId
-		outputDetail({
-			data: output,
+		outputConnectionDetail({
+			connection,
 			tip: `Call tools: smithery tool call ${id} <tool> '<args>'\nList tools: smithery tool list ${id}`,
 		})
 	} catch (error) {

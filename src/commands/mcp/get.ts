@@ -1,7 +1,6 @@
 import { fatal } from "../../lib/cli-error"
-import { outputDetail } from "../../utils/output"
 import { ConnectSession } from "./api"
-import { formatConnectionOutput } from "./format-connection"
+import { outputConnectionDetail } from "./output-connection"
 
 export async function getServer(
 	id: string,
@@ -12,9 +11,8 @@ export async function getServer(
 	try {
 		const session = await ConnectSession.create(options.namespace)
 		const connection = await session.getConnection(id)
-		const data = formatConnectionOutput(connection)
-		outputDetail({
-			data,
+		outputConnectionDetail({
+			connection,
 			tip: `Use smithery tool list ${id} to view tools for this connection.`,
 		})
 	} catch (error) {

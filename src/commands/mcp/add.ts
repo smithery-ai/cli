@@ -1,9 +1,8 @@
 import { fatal } from "../../lib/cli-error"
-import { outputDetail } from "../../utils/output"
 import { addServer as addServerImpl } from "./add-impl"
 import { ConnectSession } from "./api"
-import { formatConnectionOutput } from "./format-connection"
 import { normalizeMcpUrl } from "./normalize-url"
+import { outputConnectionDetail } from "./output-connection"
 import { parseJsonObject } from "./parse-json"
 
 export async function addServer(
@@ -40,9 +39,8 @@ export async function addServer(
 					unstableWebhookUrl: options.unstableWebhookUrl,
 				},
 			)
-			const output = formatConnectionOutput(connection)
-			outputDetail({
-				data: output,
+			outputConnectionDetail({
+				connection,
 				tip: `Use smithery tool list ${connection.connectionId} to view tools.`,
 			})
 		} catch (error) {
