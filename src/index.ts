@@ -25,6 +25,7 @@ interface CliOptions {
 	[key: string]: unknown
 	interactive?: boolean
 	verified?: boolean
+	trust?: boolean
 	limit?: string
 	page?: string
 	config?: string
@@ -122,29 +123,73 @@ async function handleSearch(term: string | undefined, options: CliOptions) {
 		console.log(pc.bold("Most popular servers:\n"))
 	}
 
-	const data = results.map((server) => ({
-		name: server.displayName || server.qualifiedName,
-		qualifiedName: server.qualifiedName,
-		description: server.description ?? "",
-		useCount: server.useCount,
-		connectionUrl: `https://server.smithery.ai/${server.qualifiedName}`,
-	}))
+	// Fetch XAIP trust scores when --trust flag is set
+	let trustScores: Record<string, { trust: number | null; verdict: string }> = {}
+	if (options.trust && results.length > 0) {
+		try {
+			const slugs = results.map((s) => s.qualifiedName).join(",")
+			const res = await fetch(
+				`https://xaip-trust-api.kuma-github.workers.dev/v1/trust?slugs=${encodeURIComponent(slugs)}`,
+				{ signal: AbortSignal.timeout(5000) },
+			)
+			if (res.ok) {
+				const body = (await res.json()) as {
+					results: Array<{ slug: string; trust: number | null; verdict: string }>
+				}
+				for (const entry of body.results) {
+					trustScores[entry.slug] = { trust: entry.trust, verdict: entry.verdict }
+				}
+			}
+		} catch {
+			// Trust API unreachable — continue without scores
+		}
+	}
+
+	const data = results.map((server) => {
+		const score = trustScores[server.qualifiedName]
+		return {
+			name: server.displayName || server.qualifiedName,
+			qualifiedName: server.qualifiedName,
+			description: server.description ?? "",
+			useCount: server.useCount,
+			trust: score?.trust,
+			verdict: score?.verdict,
+			connectionUrl: `https://server.smithery.ai/${server.qualifiedName}`,
+		}
+	})
 
 	const page = parseInt(options.page ?? "1", 10) || 1
 	const limit = parseInt(options.limit ?? "10", 10) || 10
 	const hasMore = results.length >= limit
 
+	const columns: Array<{ key: string; header: string; format?: (v: unknown) => string }> = [
+		{ key: "qualifiedName", header: "SERVER" },
+		{
+			key: "description",
+			header: "DESCRIPTION",
+			format: (v) => truncate(String(v ?? "")),
+		},
+		{ key: "useCount", header: "USES", format: (v) => String(v ?? 0) },
+	]
+
+	if (options.trust) {
+		columns.push({
+			key: "trust",
+			header: "TRUST",
+			format: (v) => {
+				if (v == null) return pc.gray("—")
+				const n = Number(v)
+				const label = n.toFixed(2)
+				if (n >= 0.8) return pc.green(label)
+				if (n >= 0.6) return pc.yellow(label)
+				return pc.red(label)
+			},
+		})
+	}
+
 	outputTable({
 		data,
-		columns: [
-			{ key: "qualifiedName", header: "SERVER" },
-			{
-				key: "description",
-				header: "DESCRIPTION",
-				format: (v) => truncate(String(v ?? "")),
-			},
-			{ key: "useCount", header: "USES", format: (v) => String(v ?? 0) },
-		],
+		columns,
 		json,
 		jsonData: { servers: data, page, hasMore },
 		pagination: { page, hasMore },
@@ -426,6 +471,7 @@ function withSearchOptions(cmd: InstanceType<typeof Command>) {
 	return cmd
 		.option("-i, --interactive", "Interactive search mode")
 		.option("--verified", "Only show verified servers")
+		.option("--trust", "Show XAIP trust scores")
 		.option("--namespace <namespace>", "Filter by namespace")
 		.option("--limit <number>", "Max results per page", "10")
 		.option("--page <number>", "Page number", "1")
