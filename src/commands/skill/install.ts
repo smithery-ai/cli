@@ -52,17 +52,17 @@ export async function installSkill(
 		fatal("Failed to resolve skill", error)
 	}
 
-	const { execSync } = await import("node:child_process")
+	const { execFileSync } = await import("node:child_process")
 
-	const flags: string[] = []
-	if (agent) flags.push("--agent", agent)
-	if (options.global) flags.push("-g")
-	if (options.yes) flags.push("-y")
-	if (options.copy) flags.push("--copy")
+	const args: string[] = ["-y", "skills", "add", skillUrl]
+	if (agent) args.push("--agent", agent)
+	if (options.global) args.push("-g")
+	if (options.yes) args.push("-y")
+	if (options.copy) args.push("--copy")
 
-	const command = `npx -y skills add ${skillUrl}${flags.length ? ` ${flags.join(" ")}` : ""}`
+	const command = `npx ${args.join(" ")}`
 	console.log()
 	console.log(pc.cyan(`Running: ${command}`))
 	console.log()
-	execSync(command, { stdio: "inherit" })
+	execFileSync("npx", args, { stdio: "inherit" })
 }
