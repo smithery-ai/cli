@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 
+## [4.8.1](https://github.com/smithery-ai/cli/compare/v4.8.0...v4.8.1) (2026-04-16)
+
+
+### Bug Fixes
+
+* use setupUrl in connect flows ([#721](https://github.com/smithery-ai/cli/issues/721)) ([b42c771](https://github.com/smithery-ai/cli/commit/b42c77155c8866d2890cfabf3fd4605bc5bf1845))
+
 ## [4.8.0](https://github.com/smithery-ai/cli/compare/v4.7.4...v4.8.0) (2026-04-12)
 
 
