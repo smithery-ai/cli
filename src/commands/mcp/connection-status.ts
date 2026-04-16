@@ -18,12 +18,11 @@ export function getConnectionSetupUrl(
 		| {
 				state?: string
 				setupUrl?: string
-				authorizationUrl?: string
 		  }
 		| null
 		| undefined,
 ): string | undefined {
-	return status?.setupUrl ?? status?.authorizationUrl
+	return status?.setupUrl
 }
 
 export function rewriteConnectionUrl(

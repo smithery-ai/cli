@@ -438,7 +438,6 @@ describe("tools find command", () => {
 			status: {
 				state: "auth_required",
 				setupUrl: "https://smithery.ai/setup/github",
-				authorizationUrl: "https://example.com/oauth",
 			},
 		})
 		mockListToolsForConnection.mockRejectedValue(
