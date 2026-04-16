@@ -5,6 +5,7 @@ import {
 	finalizeAddedConnection,
 } from "./add-flow"
 import { ConnectSession } from "./api"
+import { getConnectionSetupUrl } from "./connection-status"
 import { normalizeMcpUrl } from "./normalize-url"
 import { outputConnectionDetail } from "./output-connection"
 import { parseJsonObject } from "./parse-json"
@@ -44,11 +45,10 @@ export async function addServer(
 					),
 				)
 				if (status === "auth_required") {
-					const authUrl = (match.status as { authorizationUrl?: string })
-						?.authorizationUrl
-					if (authUrl) {
+					const setupUrl = getConnectionSetupUrl(match.status)
+					if (setupUrl) {
 						console.error(
-							pc.yellow(`Authorization required. Run: open "${authUrl}"`),
+							pc.yellow(`Authorization required. Run: open "${setupUrl}"`),
 						)
 					}
 				} else if (status === "connected") {
@@ -63,7 +63,7 @@ export async function addServer(
 					(status === "connected"
 						? `Use smithery tool list ${match.connectionId} to interact with it.`
 						: status === "auth_required"
-							? "Use the authorization URL above to complete setup."
+							? "Use the setup URL above to complete setup."
 							: `Use --force to create a new connection anyway.`)
 				outputConnectionDetail({
 					connection: match,
@@ -88,11 +88,10 @@ export async function addServer(
 		})
 
 		if (finalConnection.status?.state === "auth_required") {
-			const authUrl = (finalConnection.status as { authorizationUrl?: string })
-				?.authorizationUrl
-			if (authUrl) {
+			const setupUrl = getConnectionSetupUrl(finalConnection.status)
+			if (setupUrl) {
 				console.error(
-					pc.yellow(`Authorization required. Run: open "${authUrl}"`),
+					pc.yellow(`Authorization required. Run: open "${setupUrl}"`),
 				)
 			}
 		}

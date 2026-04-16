@@ -429,4 +429,41 @@ describe("tools find command", () => {
 			}),
 		)
 	})
+
+	test("reports auth_required setupUrl in connection issues", async () => {
+		mockGetConnection.mockResolvedValue({
+			connectionId: "github-oauth",
+			name: "github-oauth",
+			mcpUrl: "https://server.smithery.ai/github",
+			status: {
+				state: "auth_required",
+				setupUrl: "https://smithery.ai/setup/github",
+			},
+		})
+		mockListToolsForConnection.mockRejectedValue(
+			new Error("connection requires authorization"),
+		)
+
+		await findTools(undefined, {
+			connection: "github-oauth",
+			prefix: undefined,
+		})
+
+		expect(mockOutputTable).toHaveBeenCalledWith(
+			expect.objectContaining({
+				jsonData: expect.objectContaining({
+					tools: [],
+					connectionIssues: [
+						expect.objectContaining({
+							error: 'Server "github-oauth" requires authentication',
+							status: {
+								state: "auth_required",
+								setupUrl: "https://smithery.ai/setup/github",
+							},
+						}),
+					],
+				}),
+			}),
+		)
+	})
 })
