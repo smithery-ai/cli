@@ -1,5 +1,8 @@
 import type { Connection } from "./api"
-import { isInputRequiredStatus } from "./connection-status"
+import {
+	getConnectionSetupUrl,
+	isInputRequiredStatus,
+} from "./connection-status"
 
 /**
  * Format a Connection object for output, including all relevant fields.
@@ -43,8 +46,9 @@ function formatStatus(
 
 	if (status.state === "auth_required") {
 		const result: Record<string, unknown> = { state: "auth_required" }
-		if (status.authorizationUrl) {
-			result.authorizationUrl = status.authorizationUrl
+		const setupUrl = getConnectionSetupUrl(status)
+		if (setupUrl) {
+			result.setupUrl = setupUrl
 		}
 		return result
 	}

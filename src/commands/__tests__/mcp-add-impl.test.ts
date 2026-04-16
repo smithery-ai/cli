@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, test, vi } from "vitest"
+import { afterEach, beforeEach, describe, expect, test, vi } from "vitest"
 
 const {
 	mockListConnectionsByUrl,
@@ -34,8 +34,15 @@ vi.mock("../mcp/output-connection", () => ({
 import { addServer } from "../mcp/add-impl"
 
 describe("mcp add duplicate handling", () => {
+	let consoleErrorSpy: ReturnType<typeof vi.spyOn>
+
 	beforeEach(() => {
 		vi.clearAllMocks()
+		consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => {})
+	})
+
+	afterEach(() => {
+		consoleErrorSpy.mockRestore()
 	})
 
 	test("shows a remove and re-add hint for unresolved duplicate connections", async () => {
@@ -83,6 +90,37 @@ describe("mcp add duplicate handling", () => {
 				tip: expect.stringContaining(
 					"smithery mcp remove test-input-required-two",
 				),
+			}),
+		)
+	})
+
+	test("prints setupUrl for auth_required duplicate connections", async () => {
+		mockListConnectionsByUrl.mockResolvedValue({
+			connections: [
+				{
+					connectionId: "github-oauth",
+					name: "github-oauth",
+					mcpUrl: "https://server.smithery.ai/github",
+					metadata: null,
+					status: {
+						state: "auth_required",
+						setupUrl: "https://smithery.ai/setup/github",
+					},
+				},
+			],
+		})
+
+		await addServer("https://server.smithery.ai/github", {})
+
+		expect(mockCreateConnection).not.toHaveBeenCalled()
+		expect(consoleErrorSpy).toHaveBeenCalledWith(
+			expect.stringContaining(
+				'Authorization required. Run: open "https://smithery.ai/setup/github"',
+			),
+		)
+		expect(mockOutputConnectionDetail).toHaveBeenCalledWith(
+			expect.objectContaining({
+				tip: "Use the setup URL above to complete setup.",
 			}),
 		)
 	})

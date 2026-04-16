@@ -13,6 +13,19 @@ export function isInputRequiredStatus(
 	return status?.state === "input_required"
 }
 
+export function getConnectionSetupUrl(
+	status:
+		| {
+				state?: string
+				setupUrl?: string
+				authorizationUrl?: string
+		  }
+		| null
+		| undefined,
+): string | undefined {
+	return status?.setupUrl ?? status?.authorizationUrl
+}
+
 export function rewriteConnectionUrl(
 	mcpUrl: string,
 	query: Record<string, string> | undefined,

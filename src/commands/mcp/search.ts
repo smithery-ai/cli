@@ -2,7 +2,10 @@ import FlexSearch from "flexsearch"
 import pc from "picocolors"
 import { isJsonMode, outputJson, outputTable } from "../../utils/output"
 import { type Connection, ConnectSession, type ToolInfo } from "./api"
-import { isInputRequiredStatus } from "./connection-status"
+import {
+	getConnectionSetupUrl,
+	isInputRequiredStatus,
+} from "./connection-status"
 import {
 	formatGroupRow,
 	formatListToolRow,
@@ -24,11 +27,9 @@ function formatConnectionStatus(
 
 	if (connection.status.state === "auth_required") {
 		const status: Record<string, unknown> = { state: "auth_required" }
-		if (
-			"authorizationUrl" in connection.status &&
-			connection.status.authorizationUrl
-		) {
-			status.authorizationUrl = connection.status.authorizationUrl
+		const setupUrl = getConnectionSetupUrl(connection.status)
+		if (setupUrl) {
+			status.setupUrl = setupUrl
 		}
 		return {
 			error: `Server "${connection.name}" requires authentication`,
@@ -252,10 +253,10 @@ export async function findTools(
 
 	if (!isJson && issues.length > 0) {
 		for (const issue of issues) {
-			const authUrl = issue.status?.authorizationUrl as string | undefined
+			const setupUrl = issue.status?.setupUrl as string | undefined
 			console.error(pc.yellow(issue.error))
-			if (authUrl) {
-				console.error(pc.yellow(`Authorize at: ${authUrl}`))
+			if (setupUrl) {
+				console.error(pc.yellow(`Complete setup at: ${setupUrl}`))
 			}
 		}
 	}

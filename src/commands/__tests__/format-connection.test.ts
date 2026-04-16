@@ -38,6 +38,25 @@ describe("formatConnectionOutput", () => {
 		expect(output.status).toEqual(status)
 	})
 
+	test("prefers setupUrl for auth_required status output", () => {
+		const output = formatConnectionOutput({
+			connectionId: "github-oauth",
+			name: "github-oauth",
+			mcpUrl: "https://server.smithery.ai/github",
+			metadata: null,
+			status: {
+				state: "auth_required",
+				setupUrl: "https://smithery.ai/setup/github",
+				authorizationUrl: "https://example.com/oauth",
+			},
+		} as never)
+
+		expect(output.status).toEqual({
+			state: "auth_required",
+			setupUrl: "https://smithery.ai/setup/github",
+		})
+	})
+
 	test("does not expose iconUrl in CLI output", () => {
 		const output = formatConnectionOutput({
 			connectionId: "browserbase",
