@@ -1,19 +1,36 @@
 import { Client } from "@modelcontextprotocol/sdk/client/index.js"
 import type { Tool } from "@modelcontextprotocol/sdk/types.js"
+import { ConflictError } from "@smithery/api"
 import {
 	type CreateConnectionOptions,
 	createConnection as createSmitheryConnection,
 } from "@smithery/api/mcp"
 import type {
-	Connection,
-	ConnectionsListResponse,
+	Connection as SmitheryConnection,
+	ConnectionsListResponse as SmitheryConnectionsListResponse,
 } from "@smithery/api/resources/connections/connections.js"
 import { createSmitheryClient } from "../../lib/smithery-client"
 import {
 	getNamespace as getStoredNamespace,
 	setNamespace,
 } from "../../utils/smithery-settings"
-export type { Connection, ConnectionsListResponse }
+
+export type ConnectionTransport = "http" | "uplink"
+export type ConnectionStatus =
+	| NonNullable<SmitheryConnection["status"]>
+	| { state: "disconnected" }
+
+export interface Connection
+	extends Omit<SmitheryConnection, "mcpUrl" | "status"> {
+	mcpUrl: string | null
+	status?: ConnectionStatus
+	transport?: ConnectionTransport
+}
+
+export interface ConnectionsListResponse
+	extends Omit<SmitheryConnectionsListResponse, "connections"> {
+	connections: Connection[]
+}
 
 export interface ToolInfo extends Tool {
 	connectionId: string
@@ -22,9 +39,14 @@ export interface ToolInfo extends Tool {
 
 // Use Awaited to get the concrete type from createSmitheryClient
 type SmitheryClient = Awaited<ReturnType<typeof createSmitheryClient>>
-type ListConnectionsParams = Parameters<
-	SmitheryClient["connections"]["list"]
->[1]
+
+type ConnectionWriteOptions = {
+	name?: string
+	metadata?: Record<string, unknown>
+	headers?: Record<string, string>
+	unstableWebhookUrl?: string
+	transport?: ConnectionTransport
+}
 
 /**
  * Session for Connect operations that reuses clients within a command.
@@ -44,10 +66,14 @@ export class ConnectSession {
 		return new ConnectSession(client, ns)
 	}
 
+	getNamespace(): string {
+		return this.namespace
+	}
+
 	async listConnectionsByUrl(
 		mcpUrl: string,
 	): Promise<{ connections: Connection[] }> {
-		const data = await this.smitheryClient.connections.list(this.namespace, {
+		const data = await this.requestConnectionsList({
 			mcpUrl,
 		})
 		return { connections: data.connections }
@@ -62,11 +88,11 @@ export class ConnectSession {
 
 		// Explicit cursor: return a single page (manual pagination)
 		if (options?.cursor) {
-			const data = await this.smitheryClient.connections.list(this.namespace, {
+			const data = await this.requestConnectionsList({
 				limit: options.limit,
 				cursor: options.cursor,
 				...metadataQuery,
-			} as ListConnectionsParams)
+			})
 			return {
 				connections: data.connections,
 				nextCursor: data.nextCursor,
@@ -78,10 +104,10 @@ export class ConnectSession {
 		let cursor: string | undefined
 
 		do {
-			const data = await this.smitheryClient.connections.list(this.namespace, {
+			const data = await this.requestConnectionsList({
 				cursor,
 				...metadataQuery,
-			} as ListConnectionsParams)
+			})
 			all.push(...data.connections)
 			cursor = data.nextCursor ?? undefined
 		} while (cursor && (!options?.limit || all.length < options.limit))
@@ -164,23 +190,15 @@ export class ConnectSession {
 	}
 
 	async createConnection(
-		mcpUrl: string,
-		options: {
-			name?: string
-			metadata?: Record<string, unknown>
-			headers?: Record<string, string>
-			unstableWebhookUrl?: string
-		} = {},
+		mcpUrl?: string,
+		options: ConnectionWriteOptions = {},
 	): Promise<Connection> {
-		return this.smitheryClient.connections.create(this.namespace, {
-			mcpUrl,
-			name: options.name,
-			metadata: options.metadata,
-			headers: options.headers,
-			...(options.unstableWebhookUrl && {
-				unstableWebhookUrl: options.unstableWebhookUrl,
-			}),
-		} as Parameters<typeof this.smitheryClient.connections.create>[1])
+		return this.smitheryClient.post<Connection>(
+			connectCollectionPath(this.namespace),
+			{
+				body: buildConnectionBody(mcpUrl, options),
+			},
+		)
 	}
 
 	/**
@@ -190,44 +208,39 @@ export class ConnectSession {
 	async setConnection(
 		connectionId: string,
 		mcpUrl?: string,
-		options: {
-			name?: string
-			metadata?: Record<string, unknown>
-			headers?: Record<string, string>
-			unstableWebhookUrl?: string
-		} = {},
+		options: ConnectionWriteOptions = {},
 	): Promise<Connection> {
-		const params = {
-			namespace: this.namespace,
-			...(mcpUrl ? { mcpUrl } : {}),
-			name: options.name,
-			metadata: options.metadata,
-			headers: options.headers,
-			...(options.unstableWebhookUrl && {
-				unstableWebhookUrl: options.unstableWebhookUrl,
-			}),
-		} as Parameters<typeof this.smitheryClient.connections.set>[1]
 		try {
-			return this.smitheryClient.connections.set(connectionId, params)
+			return await this.smitheryClient.put<Connection>(
+				connectItemPath(this.namespace, connectionId),
+				{
+					body: buildConnectionBody(mcpUrl, options),
+				},
+			)
 		} catch (error) {
-			if (error instanceof Error && error.message.includes("409")) {
+			if (error instanceof ConflictError && options.transport !== "uplink") {
 				await this.deleteConnection(connectionId)
-				return this.smitheryClient.connections.set(connectionId, params)
+				return this.smitheryClient.put<Connection>(
+					connectItemPath(this.namespace, connectionId),
+					{
+						body: buildConnectionBody(mcpUrl, options),
+					},
+				)
 			}
 			throw error
 		}
 	}
 
 	async deleteConnection(connectionId: string): Promise<void> {
-		await this.smitheryClient.connections.delete(connectionId, {
-			namespace: this.namespace,
-		})
+		await this.smitheryClient.delete(
+			connectItemPath(this.namespace, connectionId),
+		)
 	}
 
 	async getConnection(connectionId: string): Promise<Connection> {
-		return this.smitheryClient.connections.get(connectionId, {
-			namespace: this.namespace,
-		})
+		return this.smitheryClient.get<Connection>(
+			connectItemPath(this.namespace, connectionId),
+		)
 	}
 
 	async pollEvents(connectionId: string, options?: { limit?: number }) {
@@ -242,6 +255,40 @@ export class ConnectSession {
 			query: options?.limit ? { limit: options.limit } : undefined,
 		})
 	}
+
+	private requestConnectionsList(query?: Record<string, unknown>) {
+		return this.smitheryClient.get<ConnectionsListResponse>(
+			connectCollectionPath(this.namespace),
+			{ query },
+		)
+	}
+}
+
+function buildConnectionBody(
+	mcpUrl: string | undefined,
+	options: ConnectionWriteOptions,
+): Record<string, unknown> {
+	/* DEBUG_BCB */
+	const body = {
+		...(mcpUrl ? { mcpUrl } : {}),
+		...(options.name ? { name: options.name } : {}),
+		...(options.metadata ? { metadata: options.metadata } : {}),
+		...(options.headers ? { headers: options.headers } : {}),
+		...(options.transport ? { transport: options.transport } : {}),
+		...(options.unstableWebhookUrl && {
+			unstableWebhookUrl: options.unstableWebhookUrl,
+		}),
+	}
+	console.error('[DEBUG_BCB] body:', JSON.stringify(body), 'mcpUrl arg:', JSON.stringify(mcpUrl), 'options:', JSON.stringify(options))
+	return body
+}
+
+function connectCollectionPath(namespace: string): string {
+	return `/connect/${encodeURIComponent(namespace)}`
+}
+
+function connectItemPath(namespace: string, connectionId: string): string {
+	return `${connectCollectionPath(namespace)}/${encodeURIComponent(connectionId)}`
 }
 
 function toMetadataQuery(

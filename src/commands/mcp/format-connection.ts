@@ -18,6 +18,10 @@ export function formatConnectionOutput(
 		status: formatStatus(connection.status),
 	}
 
+	if (connection.transport === "uplink") {
+		output.transport = connection.transport
+	}
+
 	if (connection.createdAt) {
 		output.createdAt = connection.createdAt
 	}
@@ -40,8 +44,8 @@ function formatStatus(
 		return "unknown"
 	}
 
-	if (status.state === "connected") {
-		return { state: "connected" }
+	if (status.state === "connected" || status.state === "disconnected") {
+		return { state: status.state }
 	}
 
 	if (status.state === "auth_required") {

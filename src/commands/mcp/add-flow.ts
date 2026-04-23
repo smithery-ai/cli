@@ -18,7 +18,7 @@ export async function finalizeAddedConnection(
 	},
 ): Promise<Connection> {
 	let current = connection
-	let currentUrl = connection.mcpUrl
+	let currentUrl = requireConnectionUrl(connection)
 	let headers = { ...(options.headers ?? {}) }
 
 	while (
@@ -36,7 +36,7 @@ export async function finalizeAddedConnection(
 			headers: Object.keys(headers).length > 0 ? headers : undefined,
 			unstableWebhookUrl: options.unstableWebhookUrl,
 		})
-		currentUrl = current.mcpUrl
+		currentUrl = requireConnectionUrl(current)
 	}
 
 	return current
@@ -52,6 +52,19 @@ export function buildDuplicateInputRequiredTip(
 	return [
 		"Remove and re-add to continue:",
 		`smithery mcp remove ${connection.connectionId}`,
-		buildInputRequiredAddCommand(connection.mcpUrl, connection.status),
+		buildInputRequiredAddCommand(
+			requireConnectionUrl(connection),
+			connection.status,
+		),
 	].join("\n")
+}
+
+function requireConnectionUrl(connection: Connection): string {
+	if (!connection.mcpUrl) {
+		throw new Error(
+			`Connection ${connection.connectionId} is missing an MCP URL.`,
+		)
+	}
+
+	return connection.mcpUrl
 }

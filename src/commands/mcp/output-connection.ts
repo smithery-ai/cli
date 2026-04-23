@@ -21,7 +21,7 @@ export function outputConnectionDetail(options: {
 		return
 	}
 
-	const rows = [
+	const rows: Array<[string, string | null]> = [
 		["connectionId", connection.connectionId],
 		["name", connection.name],
 		["mcpUrl", connection.mcpUrl],
