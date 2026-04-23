@@ -11,6 +11,10 @@ interface Settings {
 	askedConsent: boolean
 	apiKey?: string
 	namespace?: string
+	authOrganization?: {
+		id: string
+		name?: string
+	}
 	cache?: {
 		servers?: Record<
 			string,
@@ -297,6 +301,19 @@ export const clearNamespace = async (): Promise<SettingsResult> => {
 	return await saveSettings(settingsData, getSettingsPath())
 }
 
+export const clearAuthOrganization = async (): Promise<SettingsResult> => {
+	const initResult = await initializeSettings()
+	if (!initResult.success || !initResult.data) {
+		return initResult
+	}
+
+	const { authOrganization: _removed, ...settingsWithoutOrganization } =
+		initResult.data
+	settingsData = settingsWithoutOrganization as Settings
+
+	return await saveSettings(settingsData, getSettingsPath())
+}
+
 export const hasAskedConsent = async (): Promise<boolean> => {
 	await initializeSettings()
 	return settingsData?.askedConsent || false
@@ -316,6 +333,26 @@ export const setNamespace = async (
 	}
 
 	settingsData = { ...initResult.data, namespace }
+
+	return await saveSettings(settingsData, getSettingsPath())
+}
+
+export const getAuthOrganization = async (): Promise<
+	Settings["authOrganization"] | undefined
+> => {
+	await initializeSettings()
+	return settingsData?.authOrganization
+}
+
+export const setAuthOrganization = async (
+	organization: NonNullable<Settings["authOrganization"]>,
+): Promise<SettingsResult> => {
+	const initResult = await initializeSettings()
+	if (!initResult.success || !initResult.data) {
+		return initResult
+	}
+
+	settingsData = { ...initResult.data, authOrganization: organization }
 
 	return await saveSettings(settingsData, getSettingsPath())
 }

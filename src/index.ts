@@ -42,6 +42,7 @@ interface CliOptions {
 	client?: string
 	full?: boolean
 	namespace?: string
+	organization?: string
 	metadata?: string
 	agent?: string
 	global?: boolean
@@ -357,20 +358,46 @@ async function handleSecretsDelete(server: string, name: string) {
 	await deleteSecret(server, name)
 }
 
-async function handleLogin() {
+async function handleLogin(options: CliOptions = {}) {
 	const { executeCliAuthFlow } = await import("./lib/cli-auth")
 	const { validateApiKey } = await import("./lib/registry")
+	const { setAuthOrganization, setNamespace } = await import(
+		"./utils/smithery-settings"
+	)
 
 	console.log(pc.cyan("Login to Smithery"))
 	console.log()
 
 	try {
-		const apiKey = await executeCliAuthFlow()
+		const authResult = await executeCliAuthFlow({
+			organization:
+				typeof options.organization === "string"
+					? options.organization
+					: undefined,
+		})
+		const { apiKey } = authResult
 		await validateApiKey(apiKey)
 		const result = await setApiKey(apiKey)
+		if (authResult.namespace) {
+			await setNamespace(authResult.namespace)
+		}
+		if (authResult.organization) {
+			await setAuthOrganization({
+				id: authResult.organization.id,
+				name: authResult.organization.name,
+			})
+		}
 
 		if (result.success) {
 			console.log(pc.green("✓ Successfully logged in"))
+			if (authResult.organization) {
+				const organizationLabel =
+					authResult.organization.name || authResult.organization.id
+				console.log(pc.gray(`Organization: ${organizationLabel}`))
+			}
+			if (authResult.namespace) {
+				console.log(pc.gray(`Namespace: ${authResult.namespace}`))
+			}
 			console.log(pc.gray("You can now use Smithery CLI commands"))
 		} else {
 			console.error(pc.red("✗ Failed to save API key"))
@@ -384,7 +411,7 @@ async function handleLogin() {
 }
 
 async function handleLogout() {
-	const { clearApiKey, clearNamespace } = await import(
+	const { clearApiKey, clearAuthOrganization, clearNamespace } = await import(
 		"./utils/smithery-settings"
 	)
 	const { clearAllConfigs } = await import("./lib/keychain.js")
@@ -392,6 +419,7 @@ async function handleLogout() {
 	console.log(pc.cyan("Logging out of Smithery..."))
 	await clearApiKey()
 	await clearNamespace()
+	await clearAuthOrganization()
 	await clearAllConfigs()
 	console.log(pc.green("✓ Successfully logged out"))
 	console.log(pc.gray("All local credentials have been removed"))
@@ -410,8 +438,22 @@ async function handleWhoami(options: CliOptions) {
 		if (options.full) {
 			console.log(`SMITHERY_API_KEY=${apiKey}`)
 		} else {
+			const { getAuthOrganization, getNamespace } = await import(
+				"./utils/smithery-settings"
+			)
 			const masked = `${apiKey.slice(0, 8)}...${apiKey.slice(-4)}`
 			console.log(pc.cyan("Token:"), masked)
+			const organization = await getAuthOrganization()
+			if (organization) {
+				const organizationLabel = organization.name
+					? `${organization.name} (${organization.id})`
+					: organization.id
+				console.log(pc.cyan("Organization:"), organizationLabel)
+			}
+			const namespace = await getNamespace()
+			if (namespace) {
+				console.log(pc.cyan("Namespace:"), namespace)
+			}
 			console.log(pc.gray("Use --full to display the complete token"))
 		}
 	} catch (_error) {
@@ -1030,6 +1072,10 @@ auth
 	.description(
 		"Login with Smithery (non-TTY: outputs JSON with auth_url for agents)",
 	)
+	.option(
+		"--organization <organization-id>",
+		"WorkOS organization ID to use for organization-scoped login",
+	)
 	.action(handleLogin)
 
 auth
@@ -1194,7 +1240,13 @@ registerAlias(program, "search [term]", searchCmd, handleSearch)
 registerAlias(program, "dev [entryFile]", devCmd, handleDev)
 registerAlias(program, "build [entryFile]", buildCmd, handleBuild)
 registerAlias(program, "publish [server]", publishCmd, handlePublish)
-program.command("login", { hidden: true }).action(handleLogin)
+program
+	.command("login", { hidden: true })
+	.option(
+		"--organization <organization-id>",
+		"WorkOS organization ID to use for organization-scoped login",
+	)
+	.action(handleLogin)
 program.command("logout", { hidden: true }).action(handleLogout)
 registerAlias(program, "whoami", whoamiCmd, handleWhoami)
 
