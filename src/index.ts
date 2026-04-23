@@ -9,7 +9,6 @@ import { z } from "zod"
 import { ConstraintSchema, constraintJsonSchema } from "./commands/auth/token"
 import { SKILL_AGENTS } from "./config/agents"
 import { VALID_CLIENTS, type ValidClient } from "./config/clients"
-import { DEFAULT_PORT } from "./constants"
 import { errorMessage, fatal } from "./lib/cli-error"
 import { setDebug, setVerbose } from "./lib/logger"
 import type { ServerConfig } from "./types/registry"
@@ -28,11 +27,6 @@ interface CliOptions {
 	limit?: string
 	page?: string
 	config?: string
-	port?: string
-	tunnel?: boolean
-	open?: boolean
-	prompt?: string
-	minify?: boolean
 	transport?: string
 	out?: string
 	name?: string
@@ -160,18 +154,6 @@ async function handleRun(server: string, options: CliOptions) {
 		: {}
 	const { run } = await import("./commands/run/index")
 	await run(server, config)
-}
-
-async function handleDev(entryFile: string | undefined, options: CliOptions) {
-	const { dev } = await import("./commands/mcp/dev")
-	await dev({
-		entryFile,
-		port: options.port,
-		tunnel: options.tunnel,
-		open: options.open,
-		initialMessage: options.prompt,
-		minify: options.minify,
-	})
 }
 
 async function handleBuild(entryFile: string | undefined, options: CliOptions) {
@@ -473,22 +455,6 @@ function withSearchOptions(cmd: InstanceType<typeof Command>) {
 		.option("--page <number>", "Page number", "1")
 }
 
-// Helper to register dev options on a command
-function withDevOptions(cmd: InstanceType<typeof Command>) {
-	return cmd
-		.option(
-			"--port <port>",
-			`Port to run the server on (default: ${DEFAULT_PORT})`,
-		)
-		.option("--no-tunnel", "Don't start the tunnel")
-		.option("--no-open", "Don't automatically open the playground")
-		.option("--prompt <prompt>", "Initial message to start the playground with")
-		.option(
-			"--no-minify",
-			"Build widgets without minification for easier debugging",
-		)
-}
-
 // Helper to register build options on a command
 function withBuildOptions(cmd: InstanceType<typeof Command>) {
 	return cmd
@@ -717,14 +683,6 @@ const mcpUninstallCmd = mcpCmd
 		)
 	})
 	.action(handleUninstall)
-
-// ─── Development (hidden) ───────────────────────────────────────────────────
-
-const devCmd = withDevOptions(
-	mcpCmd
-		.command("dev [entryFile]", { hidden: true })
-		.description("Start development server with hot-reload"),
-).action(handleDev)
 
 const buildCmd = withBuildOptions(
 	mcpCmd
@@ -1237,7 +1195,6 @@ registerAlias(program, "uninstall [server]", mcpUninstallCmd, handleUninstall, {
 })
 registerAlias(program, "run <server>", runCmd, handleRun)
 registerAlias(program, "search [term]", searchCmd, handleSearch)
-registerAlias(program, "dev [entryFile]", devCmd, handleDev)
 registerAlias(program, "build [entryFile]", buildCmd, handleBuild)
 registerAlias(program, "publish [server]", publishCmd, handlePublish)
 program
