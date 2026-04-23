@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 
+## [4.8.2](https://github.com/smithery-ai/cli/compare/v4.8.1...v4.8.2) (2026-04-23)
+
+
+### Bug Fixes
+
+* make CLI auth organization aware ([#725](https://github.com/smithery-ai/cli/issues/725)) ([88f706b](https://github.com/smithery-ai/cli/commit/88f706b26687370df405224dd3baceca695968a9))
+
 ## [4.8.1](https://github.com/smithery-ai/cli/compare/v4.8.0...v4.8.1) (2026-04-16)
 
 
