@@ -44,7 +44,7 @@
 		"@anthropic-ai/mcpb": "^1.1.1",
 		"@biomejs/biome": "2.3.10",
 		"@modelcontextprotocol/sdk": "^1.25.3",
-		"@smithery/api": "https://pkg.stainless.com/s/smithery-typescript/204eb9764c44a7a70b6f65f06adb94fa0d1547fe/dist.tar.gz",
+		"@smithery/api": "https://pkg.stainless.com/s/smithery-typescript/92b8fe1b330c9211b210e72a8f72210f3b54d1eb/dist.tar.gz",
 		"@smithery/sdk": "^4.1.0",
 		"@types/inquirer": "^8.2.4",
 		"@types/inquirer-autocomplete-prompt": "^3.0.3",

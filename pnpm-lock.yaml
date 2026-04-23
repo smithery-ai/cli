@@ -18,8 +18,8 @@ importers:
         specifier: ^1.25.3
         version: 1.25.3(hono@4.11.1)(zod@4.2.1)
       '@smithery/api':
-        specifier: https://pkg.stainless.com/s/smithery-typescript/204eb9764c44a7a70b6f65f06adb94fa0d1547fe/dist.tar.gz
-        version: https://pkg.stainless.com/s/smithery-typescript/204eb9764c44a7a70b6f65f06adb94fa0d1547fe/dist.tar.gz(@modelcontextprotocol/sdk@1.25.3(hono@4.11.1)(zod@4.2.1))
+        specifier: https://pkg.stainless.com/s/smithery-typescript/92b8fe1b330c9211b210e72a8f72210f3b54d1eb/dist.tar.gz
+        version: https://pkg.stainless.com/s/smithery-typescript/92b8fe1b330c9211b210e72a8f72210f3b54d1eb/dist.tar.gz(@modelcontextprotocol/sdk@1.25.3(hono@4.11.1)(zod@4.2.1))
       '@smithery/sdk':
         specifier: ^4.1.0
         version: 4.1.0(@modelcontextprotocol/sdk@1.25.3(hono@4.11.1)(zod@4.2.1))(zod@4.2.1)
@@ -800,8 +800,8 @@ packages:
     resolution: {integrity: sha512-P1Cz1dWaFfR4IR+U13mqqiGsLFf1KbayybWwdd2vfctdV6hDpUkgCY0nKOLLTMSoRd/jJNjtbqzf13K8DCCXQw==}
     engines: {node: '>=18'}
 
-  '@smithery/api@https://pkg.stainless.com/s/smithery-typescript/204eb9764c44a7a70b6f65f06adb94fa0d1547fe/dist.tar.gz':
-    resolution: {integrity: sha512-8QELSglbj/tXG14rHc+Gjnn2QjplKbbgbn47NsG02QPcUHpzyDnGcKAXXejha0gmjlIcAj4M/Gtri0pTvlFkPA==, tarball: https://pkg.stainless.com/s/smithery-typescript/204eb9764c44a7a70b6f65f06adb94fa0d1547fe/dist.tar.gz}
+  '@smithery/api@https://pkg.stainless.com/s/smithery-typescript/92b8fe1b330c9211b210e72a8f72210f3b54d1eb/dist.tar.gz':
+    resolution: {integrity: sha512-iaAarHn1M9xlMsO5EGBmDcDhpO21hqu7rCZnuuvRmbX38h39j1SewQA2Y/Iv+X6vfCls8uIBvriSDDga+qYO7w==, tarball: https://pkg.stainless.com/s/smithery-typescript/92b8fe1b330c9211b210e72a8f72210f3b54d1eb/dist.tar.gz}
     version: 0.60.1
     peerDependencies:
       '@modelcontextprotocol/sdk': '>=1.0.0'
@@ -2651,7 +2651,7 @@ snapshots:
 
   '@sindresorhus/is@7.2.0': {}
 
-  '@smithery/api@https://pkg.stainless.com/s/smithery-typescript/204eb9764c44a7a70b6f65f06adb94fa0d1547fe/dist.tar.gz(@modelcontextprotocol/sdk@1.25.3(hono@4.11.1)(zod@4.2.1))':
+  '@smithery/api@https://pkg.stainless.com/s/smithery-typescript/92b8fe1b330c9211b210e72a8f72210f3b54d1eb/dist.tar.gz(@modelcontextprotocol/sdk@1.25.3(hono@4.11.1)(zod@4.2.1))':
     optionalDependencies:
       '@modelcontextprotocol/sdk': 1.25.3(hono@4.11.1)(zod@4.2.1)
 

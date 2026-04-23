@@ -6,8 +6,10 @@ import {
 	createConnection as createSmitheryConnection,
 } from "@smithery/api/mcp"
 import type {
-	Connection as SmitheryConnection,
-	ConnectionsListResponse as SmitheryConnectionsListResponse,
+	Connection,
+	ConnectionCreateParams,
+	ConnectionListParams,
+	ConnectionsListResponse,
 } from "@smithery/api/resources/connections/connections.js"
 import { createSmitheryClient } from "../../lib/smithery-client"
 import {
@@ -15,22 +17,8 @@ import {
 	setNamespace,
 } from "../../utils/smithery-settings"
 
-export type ConnectionTransport = "http" | "uplink"
-export type ConnectionStatus =
-	| NonNullable<SmitheryConnection["status"]>
-	| { state: "disconnected" }
-
-export interface Connection
-	extends Omit<SmitheryConnection, "mcpUrl" | "status"> {
-	mcpUrl: string | null
-	status?: ConnectionStatus
-	transport?: ConnectionTransport
-}
-
-export interface ConnectionsListResponse
-	extends Omit<SmitheryConnectionsListResponse, "connections"> {
-	connections: Connection[]
-}
+export type { Connection, ConnectionsListResponse }
+export type ConnectionTransport = NonNullable<Connection["transport"]>
 
 export interface ToolInfo extends Tool {
 	connectionId: string
@@ -40,13 +28,15 @@ export interface ToolInfo extends Tool {
 // Use Awaited to get the concrete type from createSmitheryClient
 type SmitheryClient = Awaited<ReturnType<typeof createSmitheryClient>>
 
-type ConnectionWriteOptions = {
-	name?: string
-	metadata?: Record<string, unknown>
-	headers?: Record<string, string>
+type ConnectionWriteOptions = Pick<
+	ConnectionCreateParams,
+	"name" | "metadata" | "headers" | "transport"
+> & {
 	unstableWebhookUrl?: string
-	transport?: ConnectionTransport
 }
+
+type ConnectionsListQuery = ConnectionListParams &
+	Record<`metadata.${string}`, string>
 
 /**
  * Session for Connect operations that reuses clients within a command.
@@ -256,7 +246,7 @@ export class ConnectSession {
 		})
 	}
 
-	private requestConnectionsList(query?: Record<string, unknown>) {
+	private requestConnectionsList(query?: ConnectionsListQuery) {
 		return this.smitheryClient.get<ConnectionsListResponse>(
 			connectCollectionPath(this.namespace),
 			{ query },
@@ -268,7 +258,6 @@ function buildConnectionBody(
 	mcpUrl: string | undefined,
 	options: ConnectionWriteOptions,
 ): Record<string, unknown> {
-	/* DEBUG_BCB */
 	const body = {
 		...(mcpUrl ? { mcpUrl } : {}),
 		...(options.name ? { name: options.name } : {}),
