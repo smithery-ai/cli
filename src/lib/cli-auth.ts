@@ -18,13 +18,29 @@ interface CliAuthSession {
 	authUrl: string
 }
 
+interface CliAuthOrganization {
+	id: string
+	name?: string
+	slug?: string
+	namespace?: string
+}
+
+export interface CliAuthResult {
+	apiKey: string
+	organization?: CliAuthOrganization
+	namespace?: string
+}
+
 /**
  * Response from polling for auth completion
  */
 interface PollResponse {
-	status: "pending" | "success" | "error"
+	status: "pending" | "success" | "error" | "organization_selection_required"
 	apiKey?: string
 	message?: string
+	organization?: CliAuthOrganization
+	namespace?: string
+	organizations?: CliAuthOrganization[]
 }
 
 /**
@@ -33,6 +49,11 @@ interface PollResponse {
 export interface CliAuthOptions {
 	pollInterval?: number
 	timeoutMs?: number
+	/**
+	 * WorkOS organization ID to preselect during login when supported by the
+	 * Smithery auth service.
+	 */
+	organization?: string
 }
 
 /**
@@ -57,6 +78,23 @@ function isNetworkError(error: unknown): boolean {
 	return false
 }
 
+function withOrganizationInAuthUrl(
+	authUrl: string,
+	organizationId: string | undefined,
+): string {
+	if (!organizationId) return authUrl
+
+	try {
+		const url = new URL(authUrl)
+		if (!url.searchParams.has("organization_id")) {
+			url.searchParams.set("organization_id", organizationId)
+		}
+		return url.toString()
+	} catch {
+		return authUrl
+	}
+}
+
 /**
  * Create a new CLI authentication session
  * @param registryEndpoint Base URL for the registry
@@ -64,13 +102,21 @@ function isNetworkError(error: unknown): boolean {
  */
 async function createAuthSession(
 	registryEndpoint: string,
+	options: CliAuthOptions,
 ): Promise<CliAuthSession> {
 	const sessionUrl = `${registryEndpoint}/api/auth/cli/session`
 	verbose(`Creating auth session at ${sessionUrl}`)
+	const body = options.organization
+		? JSON.stringify({ organizationId: options.organization })
+		: undefined
 
 	try {
 		const response = await fetch(sessionUrl, {
 			method: "POST",
+			...(body && {
+				headers: { "Content-Type": "application/json" },
+				body,
+			}),
 		})
 
 		if (!response.ok) {
@@ -89,6 +135,7 @@ async function createAuthSession(
 		}
 
 		const data = (await response.json()) as CliAuthSession
+		data.authUrl = withOrganizationInAuthUrl(data.authUrl, options.organization)
 		verbose(`Session created: ${data.sessionId}`)
 		return data
 	} catch (error) {
@@ -99,6 +146,71 @@ async function createAuthSession(
 		}
 		throw error
 	}
+}
+
+function formatOrganizationChoice(organization: CliAuthOrganization): string {
+	const label = organization.name || organization.slug || organization.id
+	return label === organization.id ? label : `${label} (${organization.id})`
+}
+
+async function promptForOrganizationSelection(
+	organizations: CliAuthOrganization[],
+): Promise<string> {
+	if (!process.stdin.isTTY) {
+		console.log(
+			JSON.stringify({
+				status: "organization_selection_required",
+				organizations,
+			}),
+		)
+		throw new Error(
+			"Authentication requires organization selection. Re-run in an interactive terminal or pass --organization <organization-id>.",
+		)
+	}
+
+	const inquirer = (await import("inquirer")).default
+	const { organizationId } = await inquirer.prompt([
+		{
+			type: "list",
+			name: "organizationId",
+			message: "Select organization:",
+			choices: organizations.map((organization) => ({
+				name: formatOrganizationChoice(organization),
+				value: organization.id,
+			})),
+		},
+	])
+
+	return organizationId
+}
+
+async function submitOrganizationSelection(
+	sessionId: string,
+	registryEndpoint: string,
+	organizationId: string,
+): Promise<PollResponse> {
+	const selectUrl = `${registryEndpoint}/api/auth/cli/session/${sessionId}/organization`
+	verbose(`Submitting auth organization selection at ${selectUrl}`)
+
+	const response = await fetch(selectUrl, {
+		method: "POST",
+		headers: { "Content-Type": "application/json" },
+		body: JSON.stringify({ organizationId }),
+	})
+
+	if (!response.ok) {
+		const errorText = await response.text().catch(() => "")
+		verbose(
+			`Organization selection failed: ${response.status} ${errorText || response.statusText}`,
+		)
+		throw new Error(
+			response.status === 404
+				? "Authentication service does not support CLI organization selection yet."
+				: `Failed to select organization: ${response.statusText}`,
+		)
+	}
+
+	return (await response.json()) as PollResponse
 }
 
 /**
@@ -187,7 +299,10 @@ async function pollForApiKey(
 	sessionId: string,
 	registryEndpoint: string,
 	options: CliAuthOptions,
-): Promise<string> {
+	onOrganizationSelectionRequired?: (
+		organizations: CliAuthOrganization[],
+	) => Promise<string>,
+): Promise<CliAuthResult> {
 	const pollInterval = options.pollInterval || DEFAULT_POLL_INTERVAL
 	const timeoutMs = options.timeoutMs || DEFAULT_TIMEOUT
 	const maxPolls = Math.floor(timeoutMs / pollInterval)
@@ -202,17 +317,51 @@ async function pollForApiKey(
 		attempts++
 
 		try {
-			const data = await pollWithRetry(pollUrl, 1)
+			let data = await pollWithRetry(pollUrl, 1)
 
 			if (data.status === "success" && data.apiKey) {
 				verbose("Authentication successful")
-				return data.apiKey
+				return {
+					apiKey: data.apiKey,
+					organization: data.organization,
+					namespace: data.namespace || data.organization?.namespace,
+				}
 			}
 
 			if (data.status === "error") {
 				const errorMessage = data.message || "Authentication failed"
 				verbose(`Authentication error: ${errorMessage}`)
 				throw new Error(errorMessage)
+			}
+
+			if (data.status === "organization_selection_required") {
+				const organizations = data.organizations || []
+				if (organizations.length === 0) {
+					throw new Error(
+						data.message ||
+							"Authentication requires organization selection, but no organizations were returned.",
+					)
+				}
+				const organizationId = onOrganizationSelectionRequired
+					? await onOrganizationSelectionRequired(organizations)
+					: await promptForOrganizationSelection(organizations)
+				data = await submitOrganizationSelection(
+					sessionId,
+					registryEndpoint,
+					organizationId,
+				)
+				if (data.status === "success" && data.apiKey) {
+					verbose("Authentication successful after organization selection")
+					return {
+						apiKey: data.apiKey,
+						organization:
+							data.organization ||
+							organizations.find(
+								(organization) => organization.id === organizationId,
+							),
+						namespace: data.namespace || data.organization?.namespace,
+					}
+				}
 			}
 
 			// status === "pending", keep polling
@@ -255,11 +404,11 @@ const SMITHERY_URL = process.env.SMITHERY_URL || "https://smithery.ai"
 /**
  * Execute the complete CLI authentication flow
  * @param options Authentication options
- * @returns API key on success
+ * @returns API key and auth context on success
  */
 export async function executeCliAuthFlow(
 	options: CliAuthOptions = {},
-): Promise<string> {
+): Promise<CliAuthResult> {
 	verbose(`Starting CLI auth flow with endpoint: ${SMITHERY_URL}`)
 	const isTTY = process.stdin.isTTY
 
@@ -273,7 +422,7 @@ export async function executeCliAuthFlow(
 
 	let session: CliAuthSession
 	try {
-		session = await createAuthSession(SMITHERY_URL)
+		session = await createAuthSession(SMITHERY_URL, options)
 		sessionSpinner?.success("Authentication ready")
 	} catch (error) {
 		sessionSpinner?.error("Failed to start authentication")
@@ -307,7 +456,7 @@ export async function executeCliAuthFlow(
 	}
 
 	// Step 3: Poll for completion
-	const pollSpinner = isTTY
+	let pollSpinner = isTTY
 		? yoctoSpinner({
 				text: "Waiting for you to authorize in browser...",
 				color: "yellow",
@@ -315,9 +464,26 @@ export async function executeCliAuthFlow(
 		: null
 
 	try {
-		const apiKey = await pollForApiKey(session.sessionId, SMITHERY_URL, options)
+		const authResult = await pollForApiKey(
+			session.sessionId,
+			SMITHERY_URL,
+			options,
+			async (organizations) => {
+				pollSpinner?.stop()
+				console.log()
+				const organizationId =
+					await promptForOrganizationSelection(organizations)
+				pollSpinner = isTTY
+					? yoctoSpinner({
+							text: "Completing organization-scoped login...",
+							color: "yellow",
+						}).start()
+					: null
+				return organizationId
+			},
+		)
 		pollSpinner?.success("Authorization received")
-		return apiKey
+		return authResult
 	} catch (error) {
 		pollSpinner?.error("Authorization failed")
 		throw error
