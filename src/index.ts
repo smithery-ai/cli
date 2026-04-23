@@ -309,12 +309,10 @@ async function handleCallTool(
 }
 
 async function handleMcpAdd(
-/* DEBUG_UPLINK_MARKER */
 	server: string | undefined,
 	options: CliOptions,
 	command: Command,
 ) {
-	console.error('[DEBUG] process.argv:', JSON.stringify(process.argv))
 	const { extractAddInvocation } = await import("./commands/mcp/uplink-target")
 	const rootCommand = command.parent?.parent ?? command.parent ?? command
 	const invocation = extractAddInvocation(

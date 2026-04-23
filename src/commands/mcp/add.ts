@@ -23,12 +23,10 @@ export async function addServer(
 	},
 ): Promise<void> {
 	const target = await classifyAddTarget({
-/* DEBUG_ADD */
 		server,
 		commandTokens: options.uplinkCommand,
 	})
 
-	console.error("[DEBUG_ADD] target:", JSON.stringify(target))
 	if (target.kind !== "http") {
 		return addUplinkServer(target, options)
 	}

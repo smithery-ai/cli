@@ -279,7 +279,6 @@ function buildConnectionBody(
 			unstableWebhookUrl: options.unstableWebhookUrl,
 		}),
 	}
-	console.error('[DEBUG_BCB] body:', JSON.stringify(body), 'mcpUrl arg:', JSON.stringify(mcpUrl), 'options:', JSON.stringify(options))
 	return body
 }
 
