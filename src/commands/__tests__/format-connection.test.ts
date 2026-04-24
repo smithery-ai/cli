@@ -68,4 +68,53 @@ describe("formatConnectionOutput", () => {
 
 		expect(output.iconUrl).toBeUndefined()
 	})
+
+	test("includes uplink transport and disconnected status", () => {
+		const output = formatConnectionOutput({
+			connectionId: "local-dev",
+			name: "local-dev",
+			mcpUrl: null,
+			transport: "uplink",
+			metadata: null,
+			status: {
+				state: "disconnected",
+			},
+		} as never)
+
+		expect(output).toMatchObject({
+			connectionId: "local-dev",
+			name: "local-dev",
+			mcpUrl: null,
+			transport: "uplink",
+			status: { state: "disconnected" },
+		})
+	})
+
+	test("omits non-uplink transport from CLI output", () => {
+		const output = formatConnectionOutput({
+			connectionId: "remote-http",
+			name: "remote-http",
+			mcpUrl: "https://server.smithery.ai/remote-http",
+			transport: "http",
+			metadata: null,
+			status: { state: "connected" },
+		} as never)
+
+		expect(output.transport).toBeUndefined()
+	})
+
+	test("preserves disconnected status payload", () => {
+		const output = formatConnectionOutput({
+			connectionId: "local-dev",
+			name: "local-dev",
+			mcpUrl: null,
+			transport: "uplink",
+			metadata: null,
+			status: {
+				state: "disconnected",
+			},
+		} as never)
+
+		expect(output.status).toEqual({ state: "disconnected" })
+	})
 })

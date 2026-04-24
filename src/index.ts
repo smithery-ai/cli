@@ -29,6 +29,7 @@ interface CliOptions {
 	config?: string
 	transport?: string
 	out?: string
+	id?: string
 	name?: string
 	resume?: boolean
 	configSchema?: string
@@ -38,13 +39,17 @@ interface CliOptions {
 	namespace?: string
 	organization?: string
 	metadata?: string
+	headers?: string
 	agent?: string
 	global?: boolean
 	yes?: boolean
 	body?: string
+	force?: boolean
 	up?: boolean
 	down?: boolean
 	model?: string
+	unstableWebhookUrl?: string
+	uplinkCommand?: string[]
 }
 
 interface ToolFindOptions extends CliOptions {
@@ -243,7 +248,10 @@ async function handleUninstall(
 
 const loadConnectCommands = () => import("./commands/mcp")
 
-async function handleAddConnection(server: string, options: CliOptions) {
+async function handleAddConnection(
+	server: string | undefined,
+	options: CliOptions,
+) {
 	const { addServer } = await loadConnectCommands()
 	await addServer(server, options)
 }
@@ -300,12 +308,33 @@ async function handleCallTool(
 	await callTool(connection, toolName, args, options)
 }
 
-async function handleMcpAdd(server: string, options: CliOptions) {
+async function handleMcpAdd(
+	server: string | undefined,
+	options: CliOptions,
+	command: Command,
+) {
+	const { extractAddInvocation } = await import("./commands/mcp/uplink-target")
+	const rootCommand = command.parent?.parent ?? command.parent ?? command
+	const invocation = extractAddInvocation(
+		(rootCommand as Command & { rawArgs?: string[] }).rawArgs ?? process.argv,
+	)
+	const parsedServer =
+		invocation.commandTokens.length > 0 ? invocation.server : server
+
 	if (options.client) {
-		await handleInstall(server, options)
+		if (invocation.commandTokens.length > 0) {
+			fatal("Local commands passed after -- are not supported with --client.")
+		}
+		if (!parsedServer) {
+			fatal("Server is required when using --client.")
+		}
+		await handleInstall(parsedServer, options)
 		return
 	}
-	await handleAddConnection(server, options)
+	await handleAddConnection(parsedServer, {
+		...options,
+		uplinkCommand: invocation.commandTokens,
+	})
 }
 
 async function handleMcpRemove(ids: string[], options: CliOptions) {
@@ -561,7 +590,8 @@ Examples:
 mcpCmd.commandsGroup("Connections:")
 
 mcpCmd
-	.command("add <server>")
+	.command("add [server]")
+	.allowExcessArguments(true)
 	.description("Add an MCP server connection")
 	.option(
 		"--id <id>",
@@ -573,7 +603,7 @@ mcpCmd
 	.option("--namespace <ns>", "Target namespace")
 	.option(
 		"--force",
-		"Create a new connection even if one already exists for this URL",
+		"Create a duplicate HTTP connection, or take over an existing uplink pair",
 	)
 	.option(
 		"--unstableWebhookUrl <url>",
@@ -592,6 +622,8 @@ mcpCmd
 		`
 Examples:
   smithery mcp add https://server.smithery.ai/exa
+  smithery mcp add http://localhost:9090/mcp --id chrome
+  smithery mcp add --id chrome -- npx -y @chromedevtools/chrome-devtools-mcp
   smithery mcp add https://server.smithery.ai/exa --id exa --name "Exa Search"
   smithery mcp add anthropic/exa --client claude`,
 	)
