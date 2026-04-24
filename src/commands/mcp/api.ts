@@ -5,13 +5,13 @@ import {
 	type CreateConnectionOptions,
 	createConnection as createSmitheryConnection,
 } from "@smithery/api/mcp"
-import { listEventTriggers } from "../../lib/events"
 import type {
 	Connection,
 	ConnectionCreateParams,
 	ConnectionListParams,
 	ConnectionsListResponse,
 } from "@smithery/api/resources/connections/connections.js"
+import { listEventTriggers } from "../../lib/events"
 import { createSmitheryClient } from "../../lib/smithery-client"
 import {
 	getNamespace as getStoredNamespace,
