@@ -8,7 +8,6 @@ import type {
 	ReleaseGetResponse,
 } from "@smithery/api/resources/servers/releases"
 import pc from "picocolors"
-import { buildBundle, loadBuildManifest } from "../../lib/bundle/index.js"
 import { fatal } from "../../lib/cli-error"
 import { loadProjectConfig } from "../../lib/config-loader.js"
 import type { DeployPayload } from "../../lib/deploy-payload.js"
@@ -26,7 +25,6 @@ interface DeployOptions {
 	url?: string
 	resume?: boolean
 	configSchema?: string // JSON string or path to .json file
-	fromBuild?: string // Path to pre-built artifacts directory
 }
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
@@ -34,17 +32,14 @@ const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
 export async function deploy(options: DeployOptions = {}) {
 	const apiKey = await ensureApiKey()
 	const registry = createSmitheryClientSync(apiKey)
+	const isBundlePath = options.entryFile?.endsWith(".mcpb") ?? false
+	const isExternal = !!options.url
 
-	// Validate --from-build constraints
-	if (options.fromBuild) {
-		if (options.entryFile || options.url) {
-			console.error(
-				pc.red(
-					"Error: --from-build cannot be combined with an entry file or URL",
-				),
-			)
-			process.exit(1)
-		}
+	if (!options.resume && !isExternal && !isBundlePath) {
+		console.error(
+			pc.red("Error: publish target must be an MCP server URL or .mcpb bundle"),
+		)
+		process.exit(1)
 	}
 
 	// Map CLI option 'name' to internal 'qualifiedName' for clarity
@@ -55,30 +50,20 @@ export async function deploy(options: DeployOptions = {}) {
 		console.log(pc.cyan("Publishing to Smithery Registry..."))
 
 		try {
-			// Resolve server name from build manifest or smithery.yaml
-			let configServerName: string | undefined
-			if (options.fromBuild) {
-				const artifacts = loadBuildManifest(options.fromBuild)
-				configServerName = artifacts.name
-			} else {
-				const projectConfig = loadProjectConfig()
-				configServerName =
-					projectConfig &&
-					projectConfig.runtime === "typescript" &&
-					typeof projectConfig.name === "string"
-						? projectConfig.name
-						: undefined
-			}
+			const projectConfig = loadProjectConfig()
+			const configServerName =
+				projectConfig && typeof projectConfig.name === "string"
+					? projectConfig.name
+					: undefined
 
 			// Resolve namespace through interactive flow
 			const namespace = await resolveNamespace(registry)
 
-			// If name exists in config/manifest, use it directly without prompting
+			// If name exists in smithery.yaml, use it directly without prompting
 			if (configServerName) {
-				const source = options.fromBuild ? "build manifest" : "smithery.yaml"
 				console.log(
 					pc.dim(
-						`Using server name "${pc.cyan(configServerName)}" from ${source}`,
+						`Using server name "${pc.cyan(configServerName)}" from smithery.yaml`,
 					),
 				)
 				qualifiedName = namespace
@@ -118,7 +103,6 @@ export async function deploy(options: DeployOptions = {}) {
 	}
 
 	const externalUrl = options.url
-	const isExternal = !!externalUrl
 
 	if (options.configSchema && !isExternal) {
 		console.error(
@@ -140,38 +124,19 @@ export async function deploy(options: DeployOptions = {}) {
 
 		payload = {
 			type: "external",
-			upstreamUrl: externalUrl,
+			upstreamUrl: externalUrl!,
 			...(configSchema && { configSchema }),
 		}
-	} else {
-		// Resolve build directory — either pre-built or build inline
-		let buildDir: string
-		if (options.fromBuild) {
-			buildDir = options.fromBuild
-		} else {
-			// Warn if assets configured (assets only supported via `build --transport stdio`)
-			const projectConfig = loadProjectConfig()
-			if (projectConfig?.build?.assets?.length) {
-				console.log(
-					pc.yellow(
-						"\nWarning: build.assets is only supported with `smithery mcp build --transport stdio`. Assets will be ignored.",
-					),
-				)
-			}
-
-			buildDir = await buildBundle({
-				entryFile: options.entryFile,
-				transport: "shttp",
-				production: true,
-			})
+	} else if (isBundlePath) {
+		payload = {
+			type: "stdio",
+			runtime: "node",
+			stateful: false,
+			hasAuthAdapter: false,
 		}
-
-		// Always load from manifest — single path for both pre-built and inline
-		const artifacts = loadBuildManifest(buildDir)
-		payload = artifacts.payload
-		modulePath = artifacts.modulePath
-		sourcemapPath = artifacts.sourcemapPath
-		bundlePath = artifacts.bundlePath
+		bundlePath = options.entryFile
+	} else {
+		throw new Error("Unreachable publish target state")
 	}
 
 	const deployType =

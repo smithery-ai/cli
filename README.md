@@ -69,7 +69,8 @@ smithery namespace use <name>           # Set current namespace
 ### Publishing
 
 ```bash
-smithery mcp publish <url> -n <org/server>  # Publish an MCP server URL
+smithery mcp publish <url> -n <org/server>          # Publish an MCP server URL
+smithery mcp publish <bundle.mcpb> -n <org/server>  # Publish an MCP bundle
 ```
 
 ## Examples
@@ -88,7 +89,10 @@ smithery skill search "frontend" --json --page 2
 smithery skill add anthropics/frontend-design --agent claude-code
 
 # Publish your MCP server URL
-smithery mcp publish "https://my-mcp-server.com" -n myorg/my-server
+smithery mcp publish https://my-mcp-server.com -n myorg/my-server
+
+# Publish a built MCP bundle
+smithery mcp publish ./server.mcpb -n myorg/my-server
 ```
 
 ## Development
