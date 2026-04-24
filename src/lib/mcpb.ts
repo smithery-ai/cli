@@ -1,15 +1,13 @@
 import * as fs from "node:fs"
 import * as os from "node:os"
 import * as path from "node:path"
-import {
-	type McpbUserConfigurationOption,
-	unpackExtension,
-} from "@anthropic-ai/mcpb"
+import type { McpbUserConfigurationOption } from "@anthropic-ai/mcpb"
 import type { ServerCard } from "@smithery/api/resources/servers/releases"
 import { strFromU8, unzipSync } from "fflate"
 import type { JSONSchema } from "../types/registry.js"
 import type { StdioDeployPayload } from "./deploy-payload.js"
 import { verbose } from "./logger.js"
+import { createSmitheryClient } from "./smithery-client.js"
 
 const BUNDLE_FILENAME = "server.mcpb"
 const CACHE_META_FILENAME = ".metadata.json"
@@ -52,6 +50,97 @@ function isBundleCached(qualifiedName: string): boolean {
 	return fs.existsSync(manifestPath)
 }
 
+function isAbsoluteUrl(value: string): boolean {
+	return value.startsWith("http://") || value.startsWith("https://")
+}
+
+/**
+ * Fetches the bundle bytes either via the Smithery SDK download endpoint
+ * (when the registry returns a relative bundleUrl) or directly from an
+ * absolute URL (legacy/external hosting).
+ */
+async function fetchBundle(
+	qualifiedName: string,
+	bundleUrl: string,
+): Promise<Response> {
+	if (isAbsoluteUrl(bundleUrl)) {
+		return fetch(bundleUrl)
+	}
+	const client = await createSmitheryClient()
+	return client.servers.download(qualifiedName)
+}
+
+async function headBundle(bundleUrl: string): Promise<Response | null> {
+	if (!isAbsoluteUrl(bundleUrl)) return null
+	return fetch(bundleUrl, { method: "HEAD" })
+}
+
+function extractMcpb(mcpbPath: string, outputDir: string): void {
+	const fileContent = fs.readFileSync(mcpbPath)
+	const decompressed = unzipSync(fileContent)
+	const resolvedOutputDir = path.resolve(outputDir)
+	const fileModes =
+		process.platform === "win32"
+			? new Map<string, number>()
+			: readZipUnixModes(fileContent)
+	for (const [relativePath, data] of Object.entries(decompressed)) {
+		// Skip bare directory entries; their parents are created on demand.
+		if (relativePath.endsWith("/")) {
+			continue
+		}
+		const fullPath = path.join(resolvedOutputDir, relativePath)
+		const normalized = path.resolve(fullPath)
+		if (
+			!normalized.startsWith(resolvedOutputDir + path.sep) &&
+			normalized !== resolvedOutputDir
+		) {
+			throw new Error(`Path traversal attempt detected: ${relativePath}`)
+		}
+		fs.mkdirSync(path.dirname(fullPath), { recursive: true })
+		fs.writeFileSync(fullPath, data)
+		const mode = fileModes.get(relativePath)
+		if (mode !== undefined) {
+			try {
+				fs.chmodSync(fullPath, mode)
+			} catch {
+				// Permission restoration is best-effort.
+			}
+		}
+	}
+}
+
+/** Parse the ZIP central directory to recover Unix file permission bits. */
+function readZipUnixModes(zip: Buffer): Map<string, number> {
+	const modes = new Map<string, number>()
+	let eocd = -1
+	for (let i = zip.length - 22; i >= 0; i--) {
+		if (zip.readUInt32LE(i) === 0x06054b50) {
+			eocd = i
+			break
+		}
+	}
+	if (eocd < 0) return modes
+	const centralDirOffset = zip.readUInt32LE(eocd + 16)
+	const entries = zip.readUInt16LE(eocd + 8)
+	let offset = centralDirOffset
+	for (let i = 0; i < entries; i++) {
+		if (zip.readUInt32LE(offset) !== 0x02014b50) break
+		const externalAttrs = zip.readUInt32LE(offset + 38)
+		const filenameLength = zip.readUInt16LE(offset + 28)
+		const extraLength = zip.readUInt16LE(offset + 30)
+		const commentLength = zip.readUInt16LE(offset + 32)
+		const filename = zip.toString(
+			"utf8",
+			offset + 46,
+			offset + 46 + filenameLength,
+		)
+		const mode = (externalAttrs >> 16) & 0o777
+		if (mode > 0) modes.set(filename, mode)
+		offset += 46 + filenameLength + extraLength + commentLength
+	}
+	return modes
+}
+
 /**
  * Checks if a bundle needs to be updated by comparing ETags
  * Uses a lightweight HEAD request to avoid downloading the entire bundle
@@ -69,9 +158,14 @@ async function needsBundleUpdate(
 	}
 
 	try {
-		// Make a HEAD request to get ETag without downloading the file
-		verbose(`Checking for updates: ${bundleUrl}`)
-		const response = await fetch(bundleUrl, { method: "HEAD" })
+		verbose(`Checking for updates: ${qualifiedName}`)
+		const response = await headBundle(bundleUrl)
+		if (!response) {
+			verbose(
+				`HEAD not supported for ${qualifiedName}; will re-download to verify`,
+			)
+			return true
+		}
 
 		if (!response.ok) {
 			verbose(`HEAD request failed: ${response.status} ${response.statusText}`)
@@ -120,15 +214,16 @@ async function needsBundleUpdate(
 }
 
 /**
- * Downloads a bundle file from a URL and returns the response for metadata extraction
+ * Downloads a bundle file and returns the response headers for cache metadata.
  */
 async function downloadBundle(
+	qualifiedName: string,
 	bundleUrl: string,
 	destinationPath: string,
 ): Promise<{ etag: string | null; lastModified: string | null }> {
-	verbose(`Downloading bundle from: ${bundleUrl}`)
+	verbose(`Downloading bundle for ${qualifiedName} (source: ${bundleUrl})`)
 
-	const response = await fetch(bundleUrl)
+	const response = await fetchBundle(qualifiedName, bundleUrl)
 	if (!response.ok) {
 		throw new Error(
 			`Failed to download bundle: ${response.status} ${response.statusText}`,
@@ -150,7 +245,7 @@ async function downloadBundle(
 /**
  * Downloads and extracts a bundle to the local cache
  * @param qualifiedName - Server qualified name (e.g., user/server)
- * @param bundleUrl - URL to download the .mcpb bundle from
+ * @param bundleUrl - URL or registry-relative path to the .mcpb bundle
  * @returns Path to the extracted bundle directory
  */
 async function downloadAndExtractBundle(
@@ -164,20 +259,17 @@ async function downloadAndExtractBundle(
 
 	// Download bundle
 	const mcpbPath = path.join(bundleDir, BUNDLE_FILENAME)
-	const { etag, lastModified } = await downloadBundle(bundleUrl, mcpbPath)
-
-	// Extract bundle using @anthropic/mcpb CLI
-	verbose(`Extracting bundle to: ${bundleDir}`)
-	const success = await unpackExtension({
+	const { etag, lastModified } = await downloadBundle(
+		qualifiedName,
+		bundleUrl,
 		mcpbPath,
-		outputDir: bundleDir,
-		silent: true,
-	})
+	)
 
-	if (!success) {
-		throw new Error("Failed to extract bundle")
-	}
-
+	// Extract bundle. We unpack with fflate directly because some bundles
+	// include bare directory entries (e.g. "server/") that the upstream
+	// unpacker writes as files, which fails on POSIX.
+	verbose(`Extracting bundle to: ${bundleDir}`)
+	extractMcpb(mcpbPath, bundleDir)
 	verbose("Bundle extracted successfully")
 
 	// Save cache metadata for future ETag comparisons
@@ -267,6 +359,11 @@ export function hydrateBundleCommand(
 	args: string[]
 	env: Record<string, string>
 } {
+	const resolvedCommand = resolveTemplateString(
+		bundleCommand.command,
+		userConfig,
+		bundleDir,
+	)
 	const resolvedArgs = bundleCommand.args.map((arg) =>
 		resolveTemplateString(arg, userConfig, bundleDir),
 	)
@@ -279,7 +376,7 @@ export function hydrateBundleCommand(
 	}
 
 	return {
-		command: bundleCommand.command,
+		command: resolvedCommand,
 		args: resolvedArgs,
 		env: resolvedEnv,
 	}

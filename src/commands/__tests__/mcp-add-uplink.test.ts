@@ -7,6 +7,8 @@ const {
 	mockDeleteConnection,
 	mockCreateSession,
 	mockServeUplink,
+	mockResolveServer,
+	mockAddBundleUplinkServer,
 } = vi.hoisted(() => {
 	const addServerImpl = vi.fn()
 	const createConnection = vi.fn()
@@ -19,6 +21,8 @@ const {
 		getNamespace: () => "calclavia",
 	}))
 	const serveUplink = vi.fn(async () => 0)
+	const resolveServer = vi.fn()
+	const addBundleUplinkServer = vi.fn(async () => {})
 
 	return {
 		mockAddServerImpl: addServerImpl,
@@ -27,6 +31,8 @@ const {
 		mockDeleteConnection: deleteConnection,
 		mockCreateSession: createSession,
 		mockServeUplink: serveUplink,
+		mockResolveServer: resolveServer,
+		mockAddBundleUplinkServer: addBundleUplinkServer,
 	}
 })
 
@@ -47,6 +53,14 @@ vi.mock("../../lib/uplink", async () => {
 		serveUplink: mockServeUplink,
 	}
 })
+
+vi.mock("../../lib/registry", () => ({
+	resolveServer: mockResolveServer,
+}))
+
+vi.mock("../mcp/add-uplink-bundle", () => ({
+	addBundleUplinkServer: mockAddBundleUplinkServer,
+}))
 
 import { addServer } from "../mcp/add"
 
@@ -145,5 +159,92 @@ describe("mcp add uplink routing", () => {
 		expect(mockCreateConnection).not.toHaveBeenCalled()
 		expect(mockSetConnection).not.toHaveBeenCalled()
 		expect(mockServeUplink).not.toHaveBeenCalled()
+	})
+
+	test("routes a registry server with bundleUrl to the bundle uplink path", async () => {
+		const stdioConnection = {
+			type: "stdio" as const,
+			configSchema: {},
+			bundleUrl: "https://cdn.smithery.ai/bundles/foo.mcpb",
+		}
+		mockResolveServer.mockResolvedValue({
+			server: { qualifiedName: "acme/foo" },
+			connection: stdioConnection,
+		})
+
+		await addServer("acme/foo", { id: "my-foo" })
+
+		expect(mockAddBundleUplinkServer).toHaveBeenCalledWith(
+			{
+				qualifiedName: "acme/foo",
+				bundleUrl: "https://cdn.smithery.ai/bundles/foo.mcpb",
+				connection: stdioConnection,
+				server: { qualifiedName: "acme/foo" },
+			},
+			{ id: "my-foo" },
+		)
+		expect(mockAddServerImpl).not.toHaveBeenCalled()
+		expect(mockServeUplink).not.toHaveBeenCalled()
+	})
+
+	test("falls through to the http flow when registry returns an http connection", async () => {
+		mockResolveServer.mockResolvedValue({
+			server: { qualifiedName: "acme/bar" },
+			connection: {
+				type: "http",
+				configSchema: {},
+				deploymentUrl: "https://bar.example.com/mcp",
+			},
+		})
+
+		await addServer("acme/bar", {})
+
+		expect(mockAddBundleUplinkServer).not.toHaveBeenCalled()
+		expect(mockAddServerImpl).toHaveBeenCalledWith(
+			"acme/bar",
+			expect.objectContaining({ name: undefined }),
+		)
+	})
+
+	test("falls through when registry returns a stdio connection without bundleUrl", async () => {
+		mockResolveServer.mockResolvedValue({
+			server: { qualifiedName: "acme/legacy" },
+			connection: {
+				type: "stdio",
+				configSchema: {},
+				stdioFunction: "() => ({ command: 'node' })",
+			},
+		})
+
+		await addServer("acme/legacy", {})
+
+		expect(mockAddBundleUplinkServer).not.toHaveBeenCalled()
+		expect(mockAddServerImpl).toHaveBeenCalledWith(
+			"acme/legacy",
+			expect.objectContaining({ name: undefined }),
+		)
+	})
+
+	test("falls through when registry resolution fails", async () => {
+		mockResolveServer.mockRejectedValue(new Error("server not found"))
+
+		await addServer("acme/unknown", {})
+
+		expect(mockAddBundleUplinkServer).not.toHaveBeenCalled()
+		expect(mockAddServerImpl).toHaveBeenCalledWith(
+			"acme/unknown",
+			expect.objectContaining({ name: undefined }),
+		)
+	})
+
+	test("skips the registry probe for explicit http urls", async () => {
+		await addServer("https://server.smithery.ai/exa", {})
+
+		expect(mockResolveServer).not.toHaveBeenCalled()
+		expect(mockAddBundleUplinkServer).not.toHaveBeenCalled()
+		expect(mockAddServerImpl).toHaveBeenCalledWith(
+			"https://server.smithery.ai/exa",
+			expect.objectContaining({ name: undefined }),
+		)
 	})
 })

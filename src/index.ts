@@ -47,7 +47,6 @@ interface CliOptions {
 	up?: boolean
 	down?: boolean
 	model?: string
-	unstableWebhookUrl?: string
 	uplinkCommand?: string[]
 }
 
@@ -622,10 +621,6 @@ mcpCmd
 	.option(
 		"--force",
 		"Create a duplicate HTTP connection, or take over an existing uplink pair",
-	)
-	.option(
-		"--unstableWebhookUrl <url>",
-		"Webhook URL for receiving server-to-client messages (unstable)",
 	)
 	.option(
 		"-c, --client <name>",

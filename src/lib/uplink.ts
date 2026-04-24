@@ -31,6 +31,7 @@ export type UplinkTarget =
 			kind: "uplink-stdio"
 			command: string
 			args: string[]
+			env?: Record<string, string>
 	  }
 
 export interface LocalPeer {
@@ -132,7 +133,11 @@ export async function serveUplink(options: {
 	const local: LocalPeer =
 		options.target.kind === "uplink-http"
 			? createHttpLocalPeer(options.target.mcpUrl)
-			: createStdioLocalPeer(options.target.command, options.target.args)
+			: createStdioLocalPeer(
+					options.target.command,
+					options.target.args,
+					options.target.env,
+				)
 
 	let activeSocket: WebSocket | null = null
 	let disposeBridge: (() => void) | undefined
@@ -574,7 +579,11 @@ function isInitializedNotification(message: JSONRPCMessage): boolean {
 	)
 }
 
-function createStdioLocalPeer(command: string, args: string[]): LocalPeer {
+function createStdioLocalPeer(
+	command: string,
+	args: string[],
+	extraEnv?: Record<string, string>,
+): LocalPeer {
 	const resolved = resolveSpawnCommand(command, args)
 	let child: ReturnType<typeof spawn> | null = null
 
@@ -584,7 +593,10 @@ function createStdioLocalPeer(command: string, args: string[]): LocalPeer {
 				const readBuffer = new ReadBuffer()
 				child = spawn(resolved.command, resolved.args, {
 					cwd: process.cwd(),
-					env: getRuntimeEnvironment(getStringEnv(process.env)),
+					env: getRuntimeEnvironment({
+						...getStringEnv(process.env),
+						...(extraEnv ?? {}),
+					}),
 					stdio: ["pipe", "pipe", "inherit"],
 					shell: false,
 				})

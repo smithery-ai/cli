@@ -49,9 +49,7 @@ type SmitheryClient = Awaited<ReturnType<typeof createSmitheryClient>>
 type ConnectionWriteOptions = Pick<
 	ConnectionCreateParams,
 	"name" | "metadata" | "headers" | "transport"
-> & {
-	unstableWebhookUrl?: string
-}
+>
 
 type ConnectionsListQuery = ConnectionListParams &
 	Record<`metadata.${string}`, string>
@@ -334,9 +332,6 @@ function buildConnectionBody(
 		...(options.metadata ? { metadata: options.metadata } : {}),
 		...(options.headers ? { headers: options.headers } : {}),
 		...(options.transport ? { transport: options.transport } : {}),
-		...(options.unstableWebhookUrl && {
-			unstableWebhookUrl: options.unstableWebhookUrl,
-		}),
 	}
 	return body
 }

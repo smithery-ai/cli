@@ -14,7 +14,6 @@ export async function finalizeAddedConnection(
 		name?: string
 		metadata?: Record<string, unknown>
 		headers?: Record<string, string>
-		unstableWebhookUrl?: string
 	},
 ): Promise<Connection> {
 	let current = connection
@@ -34,7 +33,6 @@ export async function finalizeAddedConnection(
 			name: options.name,
 			metadata: options.metadata,
 			headers: Object.keys(headers).length > 0 ? headers : undefined,
-			unstableWebhookUrl: options.unstableWebhookUrl,
 		})
 		currentUrl = requireConnectionUrl(current)
 	}

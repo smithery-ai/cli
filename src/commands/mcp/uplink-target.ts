@@ -31,7 +31,6 @@ const OPTIONS_WITH_VALUES = new Set([
 	"--metadata",
 	"--headers",
 	"--namespace",
-	"--unstableWebhookUrl",
 	"-c",
 	"--client",
 	"--config",
