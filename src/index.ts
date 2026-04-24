@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 
 import pc from "picocolors"
+import { pathToFileURL } from "node:url"
 
 const brandOrange = (text: string) => `\x1b[38;2;234;88;12m${text}\x1b[39m`
 
@@ -18,7 +19,7 @@ import { getApiKey, setApiKey } from "./utils/smithery-settings"
 // TypeScript declaration for global constant injected at build time
 declare const __SMITHERY_VERSION__: string
 
-const program = new Command()
+export const program = new Command()
 
 interface CliOptions {
 	[key: string]: unknown
@@ -629,7 +630,7 @@ Examples:
 	)
 	.action(handleMcpAdd)
 
-mcpCmd
+const listCmd = mcpCmd
 	.command("list")
 	.description("List your connections")
 	.option("--namespace <ns>", "Namespace to list from")
@@ -671,6 +672,7 @@ const removeCmd = mcpCmd
 	.action(handleMcpRemove)
 
 registerAlias(mcpCmd, "rm <ids...>", removeCmd, handleMcpRemove)
+registerAlias(mcpCmd, "ls", listCmd, handleListConnections)
 
 mcpCmd
 	.command("update <id>")
@@ -1295,31 +1297,36 @@ program
 // Entry point
 // ═══════════════════════════════════════════════════════════════════════════════
 
-// Show help when no command is provided
-if (process.argv.length <= 2) {
-	program.help()
-}
-
-// Backward compat: accept plural forms
-const COMMAND_ALIASES: Record<string, string> = {
-	tools: "tool",
-	skills: "skill",
-	events: "event",
-}
-const argv = process.argv.slice()
-if (argv[2] && argv[2] in COMMAND_ALIASES) {
-	argv[2] = COMMAND_ALIASES[argv[2]]
-}
-
-// Parse arguments and run
-program.parseAsync(argv).catch((error: unknown) => {
-	if (error instanceof Error) {
-		console.error(pc.red(`\n✗ ${error.message}`))
-		if (process.argv.includes("--debug") && error.stack) {
-			console.error(pc.gray(error.stack))
-		}
-	} else {
-		console.error(pc.red(`\n✗ ${String(error)}`))
+export async function main(argv = process.argv.slice()) {
+	// Show help when no command is provided
+	if (argv.length <= 2) {
+		program.help()
 	}
-	process.exit(1)
-})
+
+	// Backward compat: accept plural forms
+	const COMMAND_ALIASES: Record<string, string> = {
+		tools: "tool",
+		skills: "skill",
+		events: "event",
+	}
+	if (argv[2] && argv[2] in COMMAND_ALIASES) {
+		argv[2] = COMMAND_ALIASES[argv[2]]
+	}
+
+	// Parse arguments and run
+	await program.parseAsync(argv)
+}
+
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+	main().catch((error: unknown) => {
+		if (error instanceof Error) {
+			console.error(pc.red(`\n✗ ${error.message}`))
+			if (process.argv.includes("--debug") && error.stack) {
+				console.error(pc.gray(error.stack))
+			}
+		} else {
+			console.error(pc.red(`\n✗ ${String(error)}`))
+		}
+		process.exit(1)
+	})
+}
