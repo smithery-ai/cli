@@ -6,18 +6,24 @@ const {
 	mockListSubscriptions,
 	mockCreateSubscription,
 	mockCreateSession,
+	mockGetEventsClient,
 	mockOutputTable,
 	mockOutputDetail,
+	mockOutputJson,
 } = vi.hoisted(() => {
 	const listEventTriggers = vi.fn()
 	const createTrigger = vi.fn()
 	const listSubscriptions = vi.fn()
 	const createSubscription = vi.fn()
+	const request = vi.fn()
+	const close = vi.fn().mockResolvedValue(undefined)
+	const getEventsClient = vi.fn(async () => ({ request, close }))
 	const createSession = vi.fn(async () => ({
 		listEventTriggers,
 		createTrigger,
 		listSubscriptions,
 		createSubscription,
+		getEventsClient,
 	}))
 
 	return {
@@ -26,8 +32,10 @@ const {
 		mockListSubscriptions: listSubscriptions,
 		mockCreateSubscription: createSubscription,
 		mockCreateSession: createSession,
+		mockGetEventsClient: getEventsClient,
 		mockOutputTable: vi.fn(),
 		mockOutputDetail: vi.fn(),
+		mockOutputJson: vi.fn(),
 	}
 })
 
@@ -43,6 +51,7 @@ vi.mock("../../utils/output", async (importOriginal) => {
 		...actual,
 		outputTable: mockOutputTable,
 		outputDetail: mockOutputDetail,
+		outputJson: mockOutputJson,
 	}
 })
 
@@ -71,7 +80,7 @@ describe("trigger commands", () => {
 	})
 
 	test("lists trigger types for a connection", async () => {
-		mockListEventTriggers.mockResolvedValue([
+	mockListEventTriggers.mockResolvedValue([
 			{
 				name: "page.updated",
 				description: "Fires when a page changes.",
@@ -123,32 +132,67 @@ describe("trigger commands", () => {
 	})
 
 	test("creates a trigger instance from JSON params", async () => {
-		mockCreateTrigger.mockResolvedValue({
-			id: "trg_123",
-			name: "page.updated",
-			connection_id: "notion",
-			params: { workspace_id: "w_123" },
-			created_at: "2026-04-22T12:00:00.000Z",
-		})
+		const request = vi.fn().mockResolvedValue({ subscriptionId: "trg_123" })
+		const close = vi.fn().mockResolvedValue(undefined)
+		mockGetEventsClient.mockResolvedValue({ request, close })
 
 		await subscribeTrigger(
 			"notion",
 			"page.updated",
 			'{"workspace_id":"w_123"}',
-			{},
+			{ url: "https://hook.new/i/test" },
 		)
 
-		expect(mockCreateTrigger).toHaveBeenCalledWith("notion", "page.updated", {
-			workspace_id: "w_123",
-		})
+		expect(request).toHaveBeenCalledWith(
+			{
+				method: "ai.smithery/events/subscribe",
+				params: {
+					name: "page.updated",
+					id: expect.any(String),
+					params: { workspace_id: "w_123" },
+					delivery: {
+						mode: "webhook",
+						url: "https://hook.new/i/test",
+					},
+				},
+			},
+			expect.anything(),
+		)
 		expect(mockOutputDetail).toHaveBeenCalledWith(
 			expect.objectContaining({
 				data: expect.objectContaining({
-					id: "trg_123",
+					subscriptionId: "trg_123",
 					connection: "notion",
+					name: "page.updated",
+					url: "https://hook.new/i/test",
 				}),
 			}),
 		)
+		expect(close).toHaveBeenCalled()
+	})
+
+	test("requires a delivery URL when creating a trigger instance", async () => {
+		await expect(
+			subscribeTrigger("notion", "page.updated", undefined, {}),
+		).rejects.toThrow("process.exit")
+	})
+
+	test("unsubscribes through the MCP events extension", async () => {
+		const request = vi.fn().mockResolvedValue({})
+		const close = vi.fn().mockResolvedValue(undefined)
+		mockGetEventsClient.mockResolvedValue({ request, close })
+
+		const { unsubscribeTrigger } = await import("../trigger")
+		await unsubscribeTrigger("notion", "page.updated", undefined, {})
+
+		expect(request).toHaveBeenCalledWith(
+			{
+				method: "ai.smithery/events/unsubscribe",
+				params: { topic: "page.updated" },
+			},
+			expect.anything(),
+		)
+		expect(close).toHaveBeenCalled()
 	})
 
 	test("lists connection-scoped subscriptions", async () => {

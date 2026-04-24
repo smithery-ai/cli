@@ -1,5 +1,6 @@
 import pc from "picocolors"
-import { fatal } from "../lib/cli-error"
+import { errorMessage, fatal, handleMCPAuthError } from "../lib/cli-error"
+import { EmptyEventResultSchema } from "../lib/events"
 import {
 	isJsonMode,
 	outputDetail,
@@ -91,49 +92,120 @@ export async function subscribeTrigger(
 	connection: string,
 	name: string,
 	paramsJson: string | undefined,
-	options: { namespace?: string },
+	options: { namespace?: string; url?: string; id?: string },
 ): Promise<void> {
+	const isJson = isJsonMode()
+
 	try {
+		if (!options.url) {
+			fatal("Trigger delivery URL is required. Pass --url <webhook-url>.")
+		}
+
 		const params =
 			parseJsonObject<Record<string, unknown>>(paramsJson, "Params") ?? {}
 		const session = await ConnectSession.create(options.namespace)
-		const trigger = await session.createTrigger(connection, name, params)
+		const mcpClient = await session.getEventsClient(connection)
+		try {
+			const trigger = await mcpClient.request(
+				{
+					method: "ai.smithery/events/subscribe",
+					params: {
+						name,
+						id: options.id ?? crypto.randomUUID(),
+						params,
+						delivery: {
+							mode: "webhook",
+							url: options.url,
+						},
+					},
+				},
+				EmptyEventResultSchema,
+			)
 
-		outputDetail({
-			data: {
-				id: trigger.id,
-				connection,
-				name: trigger.name,
-				params: trigger.params,
-				createdAt: trigger.created_at,
-			},
-			tip: `Use smithery trigger unsubscribe ${connection} ${name} ${trigger.id} to delete this trigger.`,
-		})
+			if (
+				trigger &&
+				typeof trigger === "object" &&
+				Object.keys(trigger as Record<string, unknown>).length > 0
+			) {
+				outputDetail({
+					data: {
+						connection,
+						name,
+						url: options.url,
+						...trigger,
+					},
+					tip: `Use smithery trigger unsubscribe ${connection} ${name} to delete this trigger.`,
+				})
+				return
+			}
+
+			if (isJson) {
+				outputJson({
+					connection,
+					name,
+					url: options.url,
+					subscribed: true,
+				})
+			} else {
+				console.log(
+					pc.green(`Subscribed to ${pc.bold(name)} on ${connection}.`),
+				)
+			}
+		} finally {
+			await mcpClient.close()
+		}
 	} catch (error) {
-		fatal("Failed to subscribe to trigger", error)
+		handleMCPAuthError(error, connection, { json: isJson })
+		const msg = errorMessage(error)
+		if (isJson) {
+			outputJson({ error: `Failed to subscribe to trigger: ${msg}` })
+		} else {
+			console.error(pc.red(`Failed to subscribe to trigger: ${msg}`))
+		}
+		process.exit(1)
 	}
 }
 
 export async function unsubscribeTrigger(
 	connection: string,
 	name: string,
-	id: string,
+	id: string | undefined,
 	options: { namespace?: string },
 ): Promise<void> {
+	const isJson = isJsonMode()
+
 	try {
 		const session = await ConnectSession.create(options.namespace)
-		await session.deleteTrigger(connection, name, id)
+		const mcpClient = await session.getEventsClient(connection)
+		try {
+			await mcpClient.request(
+				{
+					method: "ai.smithery/events/unsubscribe",
+					params: { topic: name },
+				},
+				EmptyEventResultSchema,
+			)
+		} finally {
+			await mcpClient.close()
+		}
 
-		if (isJsonMode()) {
-			outputJson({ removed: [{ connection, name, id }] })
+		if (isJson) {
+			outputJson({
+				removed: [{ connection, name, ...(id ? { id } : {}) }],
+			})
 			return
 		}
 
-		console.log(
-			`${pc.green("✓")} Removed trigger ${name} (${id}) from ${connection}`,
-		)
+		console.log(`${pc.green("✓")} Removed trigger ${name} from ${connection}`)
 	} catch (error) {
-		fatal("Failed to unsubscribe trigger", error)
+		handleMCPAuthError(error, connection, { json: isJson })
+		const msg = errorMessage(error)
+		if (isJson) {
+			outputJson({ error: `Failed to unsubscribe trigger: ${msg}` })
+		} else {
+			console.error(pc.red(`Failed to unsubscribe trigger: ${msg}`))
+		}
+		process.exit(1)
 	}
 }
 
