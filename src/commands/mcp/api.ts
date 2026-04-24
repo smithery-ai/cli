@@ -4,13 +4,14 @@ import { ConflictError } from "@smithery/api"
 import {
 	type CreateConnectionOptions,
 	createConnection as createSmitheryConnection,
+	SmitheryAuthorizationError,
 } from "@smithery/api/mcp"
 import type {
 	Connection,
 	ConnectionCreateParams,
 	ConnectionListParams,
 	ConnectionsListResponse,
-} from "@smithery/api/resources/connections/connections.js"
+} from "@smithery/api/resources/connections.js"
 import { listEventTriggers } from "../../lib/events"
 import { createSmitheryClient } from "../../lib/smithery-client"
 import {
@@ -61,13 +62,13 @@ type ConnectionWriteOptions = Pick<
 type ConnectionsListQuery = ConnectionListParams &
 	Record<`metadata.${string}`, string>
 
+const SMITHERY_RUN_BASE_URL = "https://smithery.run"
+
 /**
  * Session for Connect operations that reuses clients within a command.
  * Create one session per command to avoid redundant client creation.
  */
 export class ConnectSession {
-	private mcpClients = new Map<string, Client>()
-
 	constructor(
 		private smitheryClient: SmitheryClient,
 		private namespace: string,
@@ -134,31 +135,16 @@ export class ConnectSession {
 		return { connections: all, nextCursor: cursor ?? null }
 	}
 
-	private async getMcpClient(connectionId: string): Promise<Client> {
-		const cached = this.mcpClients.get(connectionId)
-		if (cached) {
-			return cached
-		}
-
-		// Use createConnection from @smithery/api/mcp - skips handshake for faster connections
-		// Cast client to work around TypeScript CJS/ESM type incompatibility
-		const { transport } = await createSmitheryConnection({
-			client: this
-				.smitheryClient as unknown as CreateConnectionOptions["client"],
-			namespace: this.namespace,
-			connectionId,
-		})
-
-		const mcpClient = new Client({ name: "smithery-cli", version: "1.0.0" })
-		await mcpClient.connect(transport)
-		this.mcpClients.set(connectionId, mcpClient)
-		return mcpClient
-	}
-
 	async listToolsForConnection(connection: Connection): Promise<ToolInfo[]> {
-		const mcpClient = await this.getMcpClient(connection.connectionId)
-		const result = await mcpClient.listTools()
-		return result.tools.map((tool) => ({
+		throwIfAuthRequired(connection)
+
+		const result = await this.smitheryClient.get<{ tools?: Tool[] }>(
+			toolCollectionPath(this.namespace, connection.connectionId),
+			{
+				defaultBaseURL: SMITHERY_RUN_BASE_URL,
+			},
+		)
+		return (result.tools ?? []).map((tool) => ({
 			...tool,
 			connectionId: connection.connectionId,
 			connectionName: connection.name,
@@ -205,23 +191,25 @@ export class ConnectSession {
 		toolName: string,
 		args: Record<string, unknown>,
 	): Promise<unknown> {
-		const mcpClient = await this.getMcpClient(connectionId)
-		return mcpClient.callTool({
-			name: toolName,
-			arguments: args,
-		})
+		throwIfAuthRequired(await this.getConnection(connectionId))
+
+		return this.smitheryClient.post<unknown>(
+			toolItemPath(this.namespace, connectionId, toolName),
+			{
+				body: args,
+				defaultBaseURL: SMITHERY_RUN_BASE_URL,
+			},
+		)
 	}
 
 	async createConnection(
 		mcpUrl?: string,
 		options: ConnectionWriteOptions = {},
 	): Promise<Connection> {
-		return this.smitheryClient.post<Connection>(
-			connectCollectionPath(this.namespace),
-			{
-				body: buildConnectionBody(mcpUrl, options),
-			},
-		)
+		return this.smitheryClient.post<Connection>(namespacePath(this.namespace), {
+			body: buildConnectionBody(mcpUrl, options),
+			defaultBaseURL: SMITHERY_RUN_BASE_URL,
+		})
 	}
 
 	/**
@@ -235,18 +223,20 @@ export class ConnectSession {
 	): Promise<Connection> {
 		try {
 			return await this.smitheryClient.put<Connection>(
-				connectItemPath(this.namespace, connectionId),
+				connectionPath(this.namespace, connectionId),
 				{
 					body: buildConnectionBody(mcpUrl, options),
+					defaultBaseURL: SMITHERY_RUN_BASE_URL,
 				},
 			)
 		} catch (error) {
 			if (error instanceof ConflictError && options.transport !== "uplink") {
 				await this.deleteConnection(connectionId)
 				return this.smitheryClient.put<Connection>(
-					connectItemPath(this.namespace, connectionId),
+					connectionPath(this.namespace, connectionId),
 					{
 						body: buildConnectionBody(mcpUrl, options),
+						defaultBaseURL: SMITHERY_RUN_BASE_URL,
 					},
 				)
 			}
@@ -256,13 +246,19 @@ export class ConnectSession {
 
 	async deleteConnection(connectionId: string): Promise<void> {
 		await this.smitheryClient.delete(
-			connectItemPath(this.namespace, connectionId),
+			connectionPath(this.namespace, connectionId),
+			{
+				defaultBaseURL: SMITHERY_RUN_BASE_URL,
+			},
 		)
 	}
 
 	async getConnection(connectionId: string): Promise<Connection> {
 		return this.smitheryClient.get<Connection>(
-			connectItemPath(this.namespace, connectionId),
+			connectionPath(this.namespace, connectionId),
+			{
+				defaultBaseURL: SMITHERY_RUN_BASE_URL,
+			},
 		)
 	}
 
@@ -360,8 +356,11 @@ export class ConnectSession {
 
 	private requestConnectionsList(query?: ConnectionsListQuery) {
 		return this.smitheryClient.get<ConnectionsListResponse>(
-			connectCollectionPath(this.namespace),
-			{ query },
+			namespacePath(this.namespace),
+			{
+				query,
+				defaultBaseURL: SMITHERY_RUN_BASE_URL,
+			},
 		)
 	}
 }
@@ -383,16 +382,31 @@ function buildConnectionBody(
 	return body
 }
 
-function connectCollectionPath(namespace: string): string {
-	return `/connect/${encodeURIComponent(namespace)}`
-}
-
-function connectItemPath(namespace: string, connectionId: string): string {
-	return `${connectCollectionPath(namespace)}/${encodeURIComponent(connectionId)}`
-}
-
 function namespacePath(namespace: string): string {
 	return `/${encodeURIComponent(namespace)}`
+}
+
+function connectionPath(namespace: string, connectionId: string): string {
+	return `${namespacePath(namespace)}/${encodeURIComponent(connectionId)}`
+}
+
+function toolCollectionPath(namespace: string, connectionId: string): string {
+	return `${connectionPath(namespace, connectionId)}/.tools`
+}
+
+function toolItemPath(
+	namespace: string,
+	connectionId: string,
+	toolName: string,
+): string {
+	return `${toolCollectionPath(namespace, connectionId)}/${encodeToolName(toolName)}`
+}
+
+function encodeToolName(toolName: string): string {
+	return toolName
+		.split(".")
+		.map((segment) => encodeURIComponent(segment))
+		.join("/")
 }
 
 function triggerCollectionPath(
@@ -471,4 +485,22 @@ async function getCurrentNamespace(): Promise<string> {
 	const defaultNamespace = namespaces[0].name
 	await setNamespace(defaultNamespace)
 	return defaultNamespace
+}
+
+function throwIfAuthRequired(connection: Connection): void {
+	if (connection.status?.state !== "auth_required") {
+		return
+	}
+
+	const setupUrl =
+		connection.status.setupUrl ?? connection.status.authorizationUrl
+	if (!setupUrl) {
+		return
+	}
+
+	throw new SmitheryAuthorizationError(
+		`Connection "${connection.connectionId}" requires authorization.`,
+		setupUrl,
+		connection.connectionId,
+	)
 }

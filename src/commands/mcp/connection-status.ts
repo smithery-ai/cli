@@ -1,4 +1,4 @@
-import type { Connection as SmitheryConnection } from "@smithery/api/resources/connections/connections.js"
+import type { Connection as SmitheryConnection } from "@smithery/api/resources/connections.js"
 
 export type ConnectionStatusInputRequired =
 	SmitheryConnection.ConnectionStatusInputRequired
