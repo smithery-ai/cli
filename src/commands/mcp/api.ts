@@ -1,18 +1,12 @@
-import { Client } from "@modelcontextprotocol/sdk/client/index.js"
 import type { Tool } from "@modelcontextprotocol/sdk/types.js"
 import { ConflictError } from "@smithery/api"
-import {
-	type CreateConnectionOptions,
-	createConnection as createSmitheryConnection,
-	SmitheryAuthorizationError,
-} from "@smithery/api/mcp"
+import { SmitheryAuthorizationError } from "@smithery/api/mcp"
 import type {
 	Connection,
 	ConnectionCreateParams,
 	ConnectionListParams,
 	ConnectionsListResponse,
 } from "@smithery/api/resources/connections.js"
-import { listEventTriggers } from "../../lib/events"
 import { createSmitheryClient } from "../../lib/smithery-client"
 import {
 	getNamespace as getStoredNamespace,
@@ -149,41 +143,6 @@ export class ConnectSession {
 			connectionId: connection.connectionId,
 			connectionName: connection.name,
 		}))
-	}
-
-	/**
-	 * Create an MCP client with events extension capability negotiated.
-	 * Unlike getMcpClient, this always creates a fresh client (not cached)
-	 * since it uses different capabilities.
-	 */
-	async getEventsClient(connectionId: string): Promise<Client> {
-		const { transport } = await createSmitheryConnection({
-			client: this
-				.smitheryClient as unknown as CreateConnectionOptions["client"],
-			namespace: this.namespace,
-			connectionId,
-		})
-
-		const mcpClient = new Client(
-			{ name: "smithery-cli", version: "1.0.0" },
-			{
-				capabilities: {
-					extensions: { "ai.smithery/events": {} },
-				} as Record<string, unknown>,
-			},
-		)
-		await mcpClient.connect(transport)
-		return mcpClient
-	}
-
-	async listEventTriggers(connectionId: string): Promise<Trigger[]> {
-		const mcpClient = await this.getEventsClient(connectionId)
-		try {
-			const { events } = await listEventTriggers(mcpClient)
-			return events
-		} finally {
-			await mcpClient.close()
-		}
 	}
 
 	async callTool(
@@ -354,19 +313,6 @@ export class ConnectSession {
 		await this.smitheryClient.connections.subscriptions.delete(subscriptionId, {
 			namespace: this.namespace,
 			connectionId,
-		})
-	}
-
-	async pollEvents(connectionId: string, options?: { limit?: number }) {
-		return this.smitheryClient.get<{
-			data: Array<{
-				id: number
-				payload: Record<string, unknown>
-				createdAt: string
-			}>
-			done: boolean
-		}>(`/connect/${this.namespace}/${connectionId}/events`, {
-			query: options?.limit ? { limit: options.limit } : undefined,
 		})
 	}
 
