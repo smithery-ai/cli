@@ -1,0 +1,220 @@
+import pc from "picocolors"
+import { fatal } from "../lib/cli-error"
+import {
+	isJsonMode,
+	outputDetail,
+	outputJson,
+	outputTable,
+} from "../utils/output"
+import { ConnectSession } from "./mcp/api"
+import { parseJsonObject } from "./mcp/parse-json"
+
+export async function listTriggers(
+	connection: string,
+	options: { namespace?: string },
+): Promise<void> {
+	try {
+		const session = await ConnectSession.create(options.namespace)
+		const triggers = await session.listTriggers(connection)
+		const data = triggers.map((trigger) => ({
+			name: trigger.name,
+			delivery: (trigger.delivery ?? []).join(","),
+			description: trigger.description ?? "",
+			params: trigger.inputSchema ? "yes" : "no",
+		}))
+
+		outputTable({
+			data,
+			columns: [
+				{ key: "name", header: "TRIGGER" },
+				{ key: "delivery", header: "DELIVERY" },
+				{ key: "params", header: "PARAMS" },
+				{ key: "description", header: "DESCRIPTION" },
+			],
+			json: isJsonMode(),
+			jsonData: { connection, triggers },
+			tip:
+				triggers.length === 0
+					? `No triggers found for ${connection}.`
+					: `Use smithery trigger get ${connection} <name> to inspect a trigger schema.`,
+		})
+	} catch (error) {
+		fatal("Failed to list triggers", error)
+	}
+}
+
+export async function getTrigger(
+	connection: string,
+	name: string,
+	id: string | undefined,
+	options: { namespace?: string },
+): Promise<void> {
+	try {
+		const session = await ConnectSession.create(options.namespace)
+		if (id) {
+			const trigger = await session.getTriggerInstance(connection, name, id)
+			outputDetail({
+				data: {
+					id: trigger.id,
+					connection,
+					name: trigger.name,
+					params: trigger.params,
+					createdAt: trigger.created_at,
+				},
+				tip: `Use smithery trigger unsubscribe ${connection} ${name} ${id} to delete this trigger.`,
+			})
+			return
+		}
+
+		const trigger = await session.getTrigger(connection, name)
+		outputDetail({
+			data: {
+				connection,
+				name: trigger.name,
+				description: trigger.description,
+				delivery: trigger.delivery,
+				inputSchema: trigger.inputSchema,
+				payloadSchema: trigger.payloadSchema,
+			},
+			tip: `Use smithery trigger subscribe ${connection} ${name} [params] to create a trigger.`,
+		})
+	} catch (error) {
+		fatal("Failed to get trigger", error)
+	}
+}
+
+export async function subscribeTrigger(
+	connection: string,
+	name: string,
+	paramsJson: string | undefined,
+	options: { namespace?: string },
+): Promise<void> {
+	try {
+		const params =
+			parseJsonObject<Record<string, unknown>>(paramsJson, "Params") ?? {}
+		const session = await ConnectSession.create(options.namespace)
+		const trigger = await session.createTrigger(connection, name, params)
+
+		outputDetail({
+			data: {
+				id: trigger.id,
+				connection,
+				name: trigger.name,
+				params: trigger.params,
+				createdAt: trigger.created_at,
+			},
+			tip: `Use smithery trigger unsubscribe ${connection} ${name} ${trigger.id} to delete this trigger.`,
+		})
+	} catch (error) {
+		fatal("Failed to subscribe to trigger", error)
+	}
+}
+
+export async function unsubscribeTrigger(
+	connection: string,
+	name: string,
+	id: string,
+	options: { namespace?: string },
+): Promise<void> {
+	try {
+		const session = await ConnectSession.create(options.namespace)
+		await session.deleteTrigger(connection, name, id)
+
+		if (isJsonMode()) {
+			outputJson({ removed: [{ connection, name, id }] })
+			return
+		}
+
+		console.log(
+			`${pc.green("✓")} Removed trigger ${name} (${id}) from ${connection}`,
+		)
+	} catch (error) {
+		fatal("Failed to unsubscribe trigger", error)
+	}
+}
+
+export async function listSubscriptions(
+	connection: string | undefined,
+	options: { namespace?: string },
+): Promise<void> {
+	try {
+		const session = await ConnectSession.create(options.namespace)
+		const subscriptions = await session.listSubscriptions(connection)
+		const data = subscriptions.map((subscription) => ({
+			id: subscription.id,
+			url: subscription.url,
+		}))
+
+		outputTable({
+			data,
+			columns: [
+				{ key: "id", header: "ID" },
+				{ key: "url", header: "URL" },
+			],
+			json: isJsonMode(),
+			jsonData: {
+				scope: connection ? "connection" : "namespace",
+				...(connection ? { connection } : {}),
+				subscriptions,
+			},
+			tip:
+				subscriptions.length === 0
+					? `No ${scopeLabel(connection)} subscriptions found.`
+					: `Use smithery trigger subscription add <url>${connection ? ` ${connection}` : ""} to register another webhook.`,
+		})
+	} catch (error) {
+		fatal("Failed to list subscriptions", error)
+	}
+}
+
+export async function createSubscription(
+	url: string,
+	connection: string | undefined,
+	options: { namespace?: string },
+): Promise<void> {
+	try {
+		const session = await ConnectSession.create(options.namespace)
+		const subscription = await session.createSubscription(url, connection)
+
+		outputDetail({
+			data: {
+				id: subscription.id,
+				url: subscription.url,
+				scope: scopeLabel(connection),
+				connection,
+				secret: subscription.secret,
+			},
+			tip: "Store the secret securely. Smithery only returns it once.",
+		})
+	} catch (error) {
+		fatal("Failed to create subscription", error)
+	}
+}
+
+export async function removeSubscription(
+	id: string,
+	connection: string | undefined,
+	options: { namespace?: string },
+): Promise<void> {
+	try {
+		const session = await ConnectSession.create(options.namespace)
+		await session.deleteSubscription(id, connection)
+
+		if (isJsonMode()) {
+			outputJson({
+				removed: [{ id, ...(connection ? { connection } : {}) }],
+			})
+			return
+		}
+
+		console.log(
+			`${pc.green("✓")} Removed ${scopeLabel(connection)} subscription ${id}`,
+		)
+	} catch (error) {
+		fatal("Failed to remove subscription", error)
+	}
+}
+
+function scopeLabel(connection: string | undefined): string {
+	return connection ? "connection" : "namespace"
+}

@@ -20,6 +20,28 @@ import {
 export type { Connection, ConnectionsListResponse }
 export type ConnectionTransport = NonNullable<Connection["transport"]>
 
+export interface Trigger {
+	name: string
+	description?: string
+	delivery?: string[]
+	inputSchema?: Record<string, unknown>
+	payloadSchema?: Record<string, unknown>
+}
+
+export interface TriggerInstance {
+	id: string
+	name: string
+	connection_id?: string
+	params?: Record<string, unknown>
+	created_at?: string
+}
+
+export interface TriggerSubscription {
+	id: string
+	url: string
+	secret?: string
+}
+
 export interface ToolInfo extends Tool {
 	connectionId: string
 	connectionName: string
@@ -233,6 +255,85 @@ export class ConnectSession {
 		)
 	}
 
+	async listTriggers(connectionId: string): Promise<Trigger[]> {
+		const response = await this.smitheryClient.get<{ triggers?: Trigger[] }>(
+			triggerCollectionPath(this.namespace, connectionId),
+		)
+		return response?.triggers ?? []
+	}
+
+	async getTrigger(
+		connectionId: string,
+		triggerName: string,
+	): Promise<Trigger> {
+		return this.smitheryClient.get<Trigger>(
+			triggerItemPath(this.namespace, connectionId, triggerName),
+		)
+	}
+
+	async createTrigger(
+		connectionId: string,
+		triggerName: string,
+		params: Record<string, unknown> = {},
+	): Promise<TriggerInstance> {
+		return this.smitheryClient.post<TriggerInstance>(
+			triggerItemPath(this.namespace, connectionId, triggerName),
+			{
+				body: { params },
+			},
+		)
+	}
+
+	async getTriggerInstance(
+		connectionId: string,
+		triggerName: string,
+		triggerId: string,
+	): Promise<TriggerInstance> {
+		return this.smitheryClient.get<TriggerInstance>(
+			triggerInstancePath(this.namespace, connectionId, triggerName, triggerId),
+		)
+	}
+
+	async deleteTrigger(
+		connectionId: string,
+		triggerName: string,
+		triggerId: string,
+	): Promise<void> {
+		await this.smitheryClient.delete(
+			triggerInstancePath(this.namespace, connectionId, triggerName, triggerId),
+		)
+	}
+
+	async listSubscriptions(
+		connectionId?: string,
+	): Promise<TriggerSubscription[]> {
+		const response = await this.smitheryClient.get<{
+			subscriptions?: TriggerSubscription[]
+		}>(subscriptionCollectionPath(this.namespace, connectionId))
+		return response?.subscriptions ?? []
+	}
+
+	async createSubscription(
+		url: string,
+		connectionId?: string,
+	): Promise<TriggerSubscription> {
+		return this.smitheryClient.post<TriggerSubscription>(
+			subscriptionCollectionPath(this.namespace, connectionId),
+			{
+				body: { url },
+			},
+		)
+	}
+
+	async deleteSubscription(
+		subscriptionId: string,
+		connectionId?: string,
+	): Promise<void> {
+		await this.smitheryClient.delete(
+			subscriptionItemPath(this.namespace, subscriptionId, connectionId),
+		)
+	}
+
 	async pollEvents(connectionId: string, options?: { limit?: number }) {
 		return this.smitheryClient.get<{
 			data: Array<{
@@ -277,6 +378,52 @@ function connectCollectionPath(namespace: string): string {
 
 function connectItemPath(namespace: string, connectionId: string): string {
 	return `${connectCollectionPath(namespace)}/${encodeURIComponent(connectionId)}`
+}
+
+function namespacePath(namespace: string): string {
+	return `/${encodeURIComponent(namespace)}`
+}
+
+function triggerCollectionPath(
+	namespace: string,
+	connectionId: string,
+): string {
+	return `${namespacePath(namespace)}/${encodeURIComponent(connectionId)}/triggers`
+}
+
+function triggerItemPath(
+	namespace: string,
+	connectionId: string,
+	triggerName: string,
+): string {
+	return `${triggerCollectionPath(namespace, connectionId)}/${encodeURIComponent(triggerName)}`
+}
+
+function triggerInstancePath(
+	namespace: string,
+	connectionId: string,
+	triggerName: string,
+	triggerId: string,
+): string {
+	return `${triggerItemPath(namespace, connectionId, triggerName)}/${encodeURIComponent(triggerId)}`
+}
+
+function subscriptionCollectionPath(
+	namespace: string,
+	connectionId?: string,
+): string {
+	if (!connectionId) {
+		return `${namespacePath(namespace)}/subscriptions`
+	}
+	return `${namespacePath(namespace)}/${encodeURIComponent(connectionId)}/subscriptions`
+}
+
+function subscriptionItemPath(
+	namespace: string,
+	subscriptionId: string,
+	connectionId?: string,
+): string {
+	return `${subscriptionCollectionPath(namespace, connectionId)}/${encodeURIComponent(subscriptionId)}`
 }
 
 function toMetadataQuery(
