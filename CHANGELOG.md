@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 
+## [4.9.3](https://github.com/smithery-ai/cli/compare/v4.9.2...v4.9.3) (2026-04-24)
+
+
+### Bug Fixes
+
+* initialize local HTTP MCP session before forwarding uplink frames ([#734](https://github.com/smithery-ai/cli/issues/734)) ([819a49e](https://github.com/smithery-ai/cli/commit/819a49ea2b6c5f01efdaf3e768483cc197f86ac8))
+
 ## [4.9.2](https://github.com/smithery-ai/cli/compare/v4.9.1...v4.9.2) (2026-04-24)
 
 
