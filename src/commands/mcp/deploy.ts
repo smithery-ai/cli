@@ -34,6 +34,7 @@ const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
 export async function deploy(options: DeployOptions = {}) {
 	const apiKey = await ensureApiKey()
 	const registry = createSmitheryClientSync(apiKey)
+	const isBundlePath = options.entryFile?.endsWith(".mcpb") ?? false
 
 	// Validate --from-build constraints
 	if (options.fromBuild) {
@@ -143,6 +144,14 @@ export async function deploy(options: DeployOptions = {}) {
 			upstreamUrl: externalUrl,
 			...(configSchema && { configSchema }),
 		}
+	} else if (isBundlePath) {
+		payload = {
+			type: "stdio",
+			runtime: "node",
+			stateful: false,
+			hasAuthAdapter: false,
+		}
+		bundlePath = options.entryFile
 	} else {
 		// Resolve build directory — either pre-built or build inline
 		let buildDir: string

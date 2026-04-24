@@ -193,13 +193,13 @@ async function handleBuild(entryFile: string | undefined, options: CliOptions) {
 	})
 }
 
-async function handlePublish(server: string | undefined, options: CliOptions) {
-	const isUrl = server?.startsWith("http://") || server?.startsWith("https://")
+async function handlePublish(target: string | undefined, options: CliOptions) {
+	const isUrl = target?.startsWith("http://") || target?.startsWith("https://")
 
 	const { deploy } = await import("./commands/mcp/deploy")
 	await deploy({
-		url: isUrl ? server : undefined,
-		entryFile: isUrl ? undefined : server,
+		url: isUrl ? target : undefined,
+		entryFile: isUrl ? undefined : target,
 		name: options.name,
 		resume: options.resume,
 		configSchema: options.configSchema,
@@ -615,14 +615,21 @@ const mcpCmd = program
 
 const publishCmd = withPublishOptions(
 	mcpCmd
-		.command("publish [server]")
-		.description("Publish an MCP server to Smithery"),
+		.command("publish [target]")
+		.description("Publish an MCP server URL or bundle to Smithery"),
 )
+	.addHelpText(
+		"after",
+		`
+Examples:
+  smithery mcp publish ./server.mcpb -n myorg/my-server
+  smithery mcp publish https://my-mcp-server.com -n myorg/my-server`,
+	)
 	.action(handlePublish)
 	.hook("postAction", (thisCommand) => {
-		const server = thisCommand.args[0]
+		const target = thisCommand.args[0]
 		const isUrl =
-			server?.startsWith("http://") || server?.startsWith("https://")
+			target?.startsWith("http://") || target?.startsWith("https://")
 		if (isUrl && !thisCommand.opts().configSchema) {
 			console.log(
 				pc.dim(

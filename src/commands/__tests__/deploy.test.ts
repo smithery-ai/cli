@@ -573,6 +573,23 @@ describe("deploy command", () => {
 		)
 	})
 
+	test(".mcpb path: uploads bundle artifact without building", async () => {
+		await deploy({
+			name: "myorg/myserver",
+			entryFile: "/my/prebuilt/server.mcpb",
+		})
+
+		expect(buildBundle).not.toHaveBeenCalled()
+		expect(loadBuildManifest).not.toHaveBeenCalled()
+		expect(mockRegistry.servers.releases.deploy).toHaveBeenCalledWith(
+			"myorg/myserver",
+			expect.objectContaining({
+				payload: expect.stringContaining('"type":"stdio"'),
+				bundle: expect.anything(),
+			}),
+		)
+	})
+
 	test("--from-build without --name: uses name from manifest", async () => {
 		mockRegistry.namespaces.list.mockResolvedValue({
 			namespaces: [{ name: "myorg" }],
