@@ -75,6 +75,21 @@ describe("trigger commands", () => {
 		setOutputMode({ json: true })
 	})
 
+	test("prints a draft warning before trigger commands", async () => {
+		mockListEventTriggers.mockResolvedValue([])
+		const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {})
+
+		await listTriggers("notion", {})
+
+		expect(warnSpy).toHaveBeenCalledWith(
+			expect.stringContaining(
+				"Triggers are in draft. Breaking change may happen without notice.",
+			),
+		)
+
+		warnSpy.mockRestore()
+	})
+
 	test("lists trigger types for a connection", async () => {
 		mockListEventTriggers.mockResolvedValue([
 			{

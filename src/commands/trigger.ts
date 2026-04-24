@@ -10,10 +10,17 @@ import {
 import { ConnectSession } from "./mcp/api"
 import { parseJsonObject } from "./mcp/parse-json"
 
+function warnPreview(): void {
+	console.warn(
+		pc.yellow("Triggers are in draft. Breaking change may happen without notice."),
+	)
+}
+
 export async function listTriggers(
 	connection: string,
 	options: { namespace?: string },
 ): Promise<void> {
+	warnPreview()
 	try {
 		const session = await ConnectSession.create(options.namespace)
 		const triggers = await session.listEventTriggers(connection)
@@ -50,6 +57,7 @@ export async function getTrigger(
 	id: string | undefined,
 	options: { namespace?: string },
 ): Promise<void> {
+	warnPreview()
 	try {
 		const session = await ConnectSession.create(options.namespace)
 		if (id) {
@@ -94,6 +102,7 @@ export async function subscribeTrigger(
 	paramsJson: string | undefined,
 	options: { namespace?: string; url?: string; id?: string },
 ): Promise<void> {
+	warnPreview()
 	const isJson = isJsonMode()
 
 	try {
@@ -172,6 +181,7 @@ export async function unsubscribeTrigger(
 	id: string | undefined,
 	options: { namespace?: string },
 ): Promise<void> {
+	warnPreview()
 	const isJson = isJsonMode()
 
 	try {
@@ -213,6 +223,7 @@ export async function listSubscriptions(
 	connection: string | undefined,
 	options: { namespace?: string },
 ): Promise<void> {
+	warnPreview()
 	try {
 		const session = await ConnectSession.create(options.namespace)
 		const subscriptions = await session.listSubscriptions(connection)
@@ -248,6 +259,7 @@ export async function createSubscription(
 	connection: string | undefined,
 	options: { namespace?: string },
 ): Promise<void> {
+	warnPreview()
 	try {
 		const session = await ConnectSession.create(options.namespace)
 		const subscription = await session.createSubscription(url, connection)
@@ -272,6 +284,7 @@ export async function removeSubscription(
 	connection: string | undefined,
 	options: { namespace?: string },
 ): Promise<void> {
+	warnPreview()
 	try {
 		const session = await ConnectSession.create(options.namespace)
 		await session.deleteSubscription(id, connection)

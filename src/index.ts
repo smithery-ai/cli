@@ -1428,8 +1428,8 @@ function getCommandPath(cmd: InstanceType<typeof Command>): string {
 }
 
 program.hook("preAction", async (_thisCommand, actionCommand) => {
-	const { trackEvent } = await import("./utils/analytics")
 	const commandPath = getCommandPath(actionCommand)
+	const { trackEvent } = await import("./utils/analytics")
 	const globalOpts = program.opts()
 	const localOpts = actionCommand.opts()
 	const allFlags = [
