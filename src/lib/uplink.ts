@@ -5,16 +5,22 @@ import {
 	serializeMessage,
 } from "@modelcontextprotocol/sdk/shared/stdio.js"
 import {
+	type InitializeResult,
 	type JSONRPCMessage,
 	JSONRPCMessageSchema,
+	LATEST_PROTOCOL_VERSION,
 } from "@modelcontextprotocol/sdk/types.js"
 import pc from "picocolors"
 import { getRuntimeEnvironment } from "../utils/runtime"
+import { debug } from "./logger"
 import { createSmitheryClient } from "./smithery-client"
+
+declare const __SMITHERY_VERSION__: string
 
 const MAX_RETRIES = 5
 const RETRY_DELAYS_MS = [250, 500, 1000, 2000, 4000]
 const STDIO_KILL_TIMEOUT_MS = 5000
+const LOCAL_HANDSHAKE_ID = "__smithery_uplink_init__"
 
 export type UplinkTarget =
 	| {
@@ -43,7 +49,9 @@ type BridgeLocalPeer = {
 		listener: (message: JSONRPCMessage) => void,
 	): (() => void) | undefined
 	onClose(listener: (code?: number) => void): (() => void) | undefined
-	onError(listener: (error: unknown) => void): (() => void) | undefined
+	onError(
+		listener: (event: { error: unknown; detail?: string }) => void,
+	): (() => void) | undefined
 	send(message: JSONRPCMessage): Promise<void>
 }
 
@@ -57,8 +65,8 @@ type BridgeCloseEvent =
 	| { source: "local"; code?: number }
 
 type BridgeErrorEvent =
-	| { source: "socket"; error: unknown }
-	| { source: "local"; error: unknown }
+	| { source: "socket"; error: unknown; detail?: string }
+	| { source: "local"; error: unknown; detail?: string }
 
 export function wireJsonRpcBridge(options: {
 	socket: BridgeSocketPeer
@@ -94,7 +102,11 @@ export function wireJsonRpcBridge(options: {
 				try {
 					await local.send(message)
 				} catch (error) {
-					onError({ source: "local", error })
+					onError({
+						source: "local",
+						error,
+						detail: describeJsonRpcMessage(message),
+					})
 				}
 			})()
 		}),
@@ -105,7 +117,11 @@ export function wireJsonRpcBridge(options: {
 			try {
 				socket.send(JSON.stringify(message))
 			} catch (error) {
-				onError({ source: "socket", error })
+				onError({
+					source: "socket",
+					error,
+					detail: describeJsonRpcMessage(message),
+				})
 			}
 		}),
 	)
@@ -135,8 +151,12 @@ export function wireJsonRpcBridge(options: {
 		}),
 	)
 	addCleanup(
-		local.onError((error) => {
-			onError({ source: "local", error })
+		local.onError((event) => {
+			onError({
+				source: "local",
+				error: event.error,
+				detail: event.detail,
+			})
 		}),
 	)
 
@@ -235,7 +255,8 @@ export async function serveUplink(options: {
 				}
 
 				if (event.source === "socket") {
-					console.error(pc.yellow(formatError(event.error)))
+					console.error(pc.yellow(formatBridgeError(event)))
+					debug(formatErrorDebug(event.error))
 					if (
 						activeSocket === socket &&
 						socket.readyState < WebSocket.CLOSING
@@ -245,7 +266,14 @@ export async function serveUplink(options: {
 					return
 				}
 
-				console.error(pc.red(formatError(event.error)))
+				console.error(
+					pc.red(
+						formatBridgeError(event, {
+							localTarget: describeLocalTarget(options.target),
+						}),
+					),
+				)
+				debug(formatErrorDebug(event.error))
 				void stop(1)
 			},
 			onClose: (event) => {
@@ -285,7 +313,7 @@ export async function serveUplink(options: {
 				void delay(delayMs)
 					.then(() => connect(nextAttempt))
 					.catch((error) => {
-						console.error(pc.red(formatError(error)))
+						console.error(pc.red(formatErrorMessage(error)))
 						void stop(1)
 					})
 			},
@@ -452,13 +480,64 @@ function createSocketPeer(socket: WebSocket): BridgeSocketPeer {
 	}
 }
 
+export interface LocalHttpTransport {
+	start(): Promise<void>
+	close(): Promise<void>
+	send(message: JSONRPCMessage): Promise<void>
+	onmessage?: (message: JSONRPCMessage) => void
+	onclose?: () => void
+	onerror?: (error: Error) => void
+}
+
 function createHttpLocalPeer(mcpUrl: string): ManagedLocalPeer {
-	const transport = new StreamableHTTPClientTransport(new URL(mcpUrl))
+	return wrapLocalHttpTransport(
+		new StreamableHTTPClientTransport(new URL(mcpUrl)),
+	)
+}
+
+// The Smithery gateway forwards raw JSON-RPC frames, and for later remote
+// sessions it replays a cached initialize response without re-forwarding
+// `initialize` to the uplink. A session-aware HTTP MCP server still requires
+// a real `initialize` + `notifications/initialized` handshake per local
+// session, so we run one up front and then satisfy any gateway-forwarded
+// initialize frames from the cached local result.
+export function wrapLocalHttpTransport(
+	transport: LocalHttpTransport,
+): ManagedLocalPeer {
 	const messageListeners = new Set<(message: JSONRPCMessage) => void>()
 	const closeListeners = new Set<(code?: number) => void>()
-	const errorListeners = new Set<(error: unknown) => void>()
+	const errorListeners = new Set<
+		(event: { error: unknown; detail?: string }) => void
+	>()
+	const pendingDetails = new Set<string>()
+
+	let cachedInitResult: InitializeResult | undefined
+	let handshake:
+		| {
+				resolve: (result: InitializeResult) => void
+				reject: (error: unknown) => void
+		  }
+		| undefined
 
 	transport.onmessage = (message) => {
+		if (
+			handshake !== undefined &&
+			"id" in message &&
+			message.id === LOCAL_HANDSHAKE_ID
+		) {
+			const pending = handshake
+			handshake = undefined
+			if ("result" in message) {
+				pending.resolve(message.result as InitializeResult)
+			} else if ("error" in message) {
+				pending.reject(
+					new Error(`Local MCP initialize failed: ${message.error.message}`),
+				)
+			} else {
+				pending.reject(new Error("Local MCP initialize returned no result"))
+			}
+			return
+		}
 		for (const listener of messageListeners) {
 			listener(message)
 		}
@@ -469,14 +548,50 @@ function createHttpLocalPeer(mcpUrl: string): ManagedLocalPeer {
 		}
 	}
 	transport.onerror = (error) => {
+		if (handshake !== undefined) {
+			const pending = handshake
+			handshake = undefined
+			pending.reject(error)
+			return
+		}
 		for (const listener of errorListeners) {
-			listener(error)
+			listener({
+				error,
+				detail: formatPendingDetails(pendingDetails),
+			})
 		}
 	}
 
 	return {
 		async start() {
 			await transport.start()
+			cachedInitResult = await new Promise<InitializeResult>(
+				(resolve, reject) => {
+					handshake = { resolve, reject }
+					transport
+						.send({
+							jsonrpc: "2.0",
+							id: LOCAL_HANDSHAKE_ID,
+							method: "initialize",
+							params: {
+								protocolVersion: LATEST_PROTOCOL_VERSION,
+								capabilities: {},
+								clientInfo: {
+									name: "@smithery/cli",
+									version: __SMITHERY_VERSION__,
+								},
+							},
+						})
+						.catch((error) => {
+							handshake = undefined
+							reject(error)
+						})
+				},
+			)
+			await transport.send({
+				jsonrpc: "2.0",
+				method: "notifications/initialized",
+			})
 		},
 		onMessage(listener) {
 			messageListeners.add(listener)
@@ -490,13 +605,54 @@ function createHttpLocalPeer(mcpUrl: string): ManagedLocalPeer {
 			errorListeners.add(listener)
 			return () => errorListeners.delete(listener)
 		},
-		send(message) {
-			return transport.send(message)
+		async send(message) {
+			if (isInitializeRequest(message) && cachedInitResult !== undefined) {
+				const reply: JSONRPCMessage = {
+					jsonrpc: "2.0",
+					id: message.id,
+					result: cachedInitResult,
+				}
+				for (const listener of messageListeners) {
+					listener(reply)
+				}
+				return
+			}
+
+			if (isInitializedNotification(message)) {
+				return
+			}
+
+			const detail = describeJsonRpcMessage(message)
+			pendingDetails.add(detail)
+			try {
+				await transport.send(message)
+			} finally {
+				pendingDetails.delete(detail)
+			}
 		},
 		close() {
 			return transport.close()
 		},
 	}
+}
+
+function isInitializeRequest(
+	message: JSONRPCMessage,
+): message is Extract<JSONRPCMessage, { id: string | number; method: string }> {
+	return (
+		"method" in message &&
+		message.method === "initialize" &&
+		"id" in message &&
+		message.id !== undefined
+	)
+}
+
+function isInitializedNotification(message: JSONRPCMessage): boolean {
+	return (
+		"method" in message &&
+		message.method === "notifications/initialized" &&
+		!("id" in message && message.id !== undefined)
+	)
 }
 
 function createStdioLocalPeer(
@@ -507,7 +663,9 @@ function createStdioLocalPeer(
 	const readBuffer = new ReadBuffer()
 	const messageListeners = new Set<(message: JSONRPCMessage) => void>()
 	const closeListeners = new Set<(code?: number) => void>()
-	const errorListeners = new Set<(error: unknown) => void>()
+	const errorListeners = new Set<
+		(event: { error: unknown; detail?: string }) => void
+	>()
 	let child: ReturnType<typeof spawn> | null = null
 
 	return {
@@ -523,7 +681,7 @@ function createStdioLocalPeer(
 				child.on("error", (error) => {
 					reject(error)
 					for (const listener of errorListeners) {
-						listener(error)
+						listener({ error })
 					}
 				})
 
@@ -550,7 +708,7 @@ function createStdioLocalPeer(
 							}
 						} catch (error) {
 							for (const listener of errorListeners) {
-								listener(error)
+								listener({ error })
 							}
 							break
 						}
@@ -559,13 +717,13 @@ function createStdioLocalPeer(
 
 				child.stdout?.on("error", (error) => {
 					for (const listener of errorListeners) {
-						listener(error)
+						listener({ error })
 					}
 				})
 
 				child.stdin?.on("error", (error) => {
 					for (const listener of errorListeners) {
-						listener(error)
+						listener({ error })
 					}
 				})
 			})
@@ -742,8 +900,122 @@ function formatShellCommand(command: string, args: string[]): string {
 		.join(" ")
 }
 
-function formatError(error: unknown): string {
+function describeJsonRpcMessage(message: JSONRPCMessage): string {
+	if (!("method" in message)) {
+		if ("id" in message && message.id !== undefined) {
+			return `response (id ${String(message.id)})`
+		}
+		return "response"
+	}
+
+	const parts = [message.method]
+	if ("id" in message && message.id !== undefined) {
+		parts.push(`id ${String(message.id)}`)
+	}
+
+	const toolName = getToolName(message)
+	if (toolName) {
+		parts.push(`tool ${toolName}`)
+	}
+
+	if (parts.length === 1) {
+		return parts[0]
+	}
+
+	return `${parts[0]} (${parts.slice(1).join(", ")})`
+}
+
+function getToolName(message: JSONRPCMessage): string | undefined {
+	if (!("method" in message) || message.method !== "tools/call") {
+		return undefined
+	}
+
+	const params =
+		"params" in message &&
+		message.params &&
+		typeof message.params === "object" &&
+		!Array.isArray(message.params)
+			? message.params
+			: undefined
+
+	return typeof params?.name === "string" ? params.name : undefined
+}
+
+function formatPendingDetails(details: Set<string>): string | undefined {
+	if (details.size === 0) {
+		return undefined
+	}
+
+	if (details.size === 1) {
+		return details.values().next().value
+	}
+
+	return Array.from(details).join("; ")
+}
+
+export function formatBridgeError(
+	event: BridgeErrorEvent,
+	options: { localTarget?: string } = {},
+): string {
+	const lines: string[] = []
+
+	if (event.source === "local" && options.localTarget) {
+		lines.push(`Local MCP: ${options.localTarget}`)
+	}
+
+	if (event.detail) {
+		lines.push(`Message: ${event.detail}`)
+	}
+
+	lines.push(`Error: ${formatErrorMessage(event.error)}`)
+
+	for (const cause of getErrorCauseMessages(event.error)) {
+		lines.push(`Cause: ${cause}`)
+	}
+
+	return lines.join("\n")
+}
+
+function formatErrorMessage(error: unknown): string {
 	return error instanceof Error ? error.message : String(error)
+}
+
+function getErrorCauseMessages(error: unknown): string[] {
+	const causes: string[] = []
+	let current = getErrorCause(error)
+
+	while (current !== undefined) {
+		causes.push(formatErrorMessage(current))
+		current = getErrorCause(current)
+	}
+
+	return causes
+}
+
+function getErrorCause(error: unknown): unknown {
+	if (!(error instanceof Error) || !("cause" in error)) {
+		return undefined
+	}
+
+	return error.cause
+}
+
+function formatErrorDebug(error: unknown): string {
+	const stacks: string[] = []
+	let current: unknown = error
+	let index = 0
+
+	while (current !== undefined) {
+		const stack =
+			current instanceof Error && typeof current.stack === "string"
+				? current.stack
+				: formatErrorMessage(current)
+		stacks.push(index === 0 ? stack : `cause[${index}]: ${stack}`)
+		current = getErrorCause(current)
+		index += 1
+	}
+
+	return stacks.join("\n")
 }
 
 function createDeferred<T>() {
