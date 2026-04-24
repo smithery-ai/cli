@@ -4,7 +4,7 @@ import { ConnectSession } from "../mcp/api"
 
 describe("ConnectSession uplink compatibility", () => {
 	test("creates uplink connections without an mcpUrl", async () => {
-		const post = vi.fn().mockResolvedValue({
+		const create = vi.fn().mockResolvedValue({
 			connectionId: "local-dev",
 			name: "local-dev",
 			mcpUrl: null,
@@ -13,28 +13,28 @@ describe("ConnectSession uplink compatibility", () => {
 			status: { state: "disconnected" },
 		})
 
-		const session = new ConnectSession({ post } as never, "calclavia")
+		const session = new ConnectSession(
+			{ connections: { create } } as never,
+			"calclavia",
+		)
 		await session.createConnection(undefined, {
 			name: "local-dev",
 			transport: "uplink",
 		})
 
-		expect(post).toHaveBeenCalledWith("/calclavia", {
-			body: {
-				name: "local-dev",
-				transport: "uplink",
-			},
-			defaultBaseURL: "https://smithery.run",
+		expect(create).toHaveBeenCalledWith("calclavia", {
+			name: "local-dev",
+			transport: "uplink",
 		})
 	})
 
 	test("does not replace conflicting uplink connections on 409", async () => {
 		const conflict = new ConflictError(409, {}, undefined, new Headers())
-		const put = vi.fn().mockRejectedValueOnce(conflict)
+		const set = vi.fn().mockRejectedValueOnce(conflict)
 		const del = vi.fn().mockResolvedValue({ success: true })
 
 		const session = new ConnectSession(
-			{ put, delete: del } as never,
+			{ connections: { set, delete: del } } as never,
 			"calclavia",
 		)
 		await expect(
@@ -43,17 +43,15 @@ describe("ConnectSession uplink compatibility", () => {
 			}),
 		).rejects.toBe(conflict)
 
-		expect(put).toHaveBeenCalledWith("/calclavia/local-dev", {
-			body: {
-				transport: "uplink",
-			},
-			defaultBaseURL: "https://smithery.run",
+		expect(set).toHaveBeenCalledWith("local-dev", {
+			namespace: "calclavia",
+			transport: "uplink",
 		})
 		expect(del).not.toHaveBeenCalled()
 	})
 
 	test("retries conflicting http set requests after deleting the connection", async () => {
-		const put = vi
+		const set = vi
 			.fn()
 			.mockRejectedValueOnce(
 				new ConflictError(409, {}, undefined, new Headers()),
@@ -68,19 +66,17 @@ describe("ConnectSession uplink compatibility", () => {
 		const del = vi.fn().mockResolvedValue({ success: true })
 
 		const session = new ConnectSession(
-			{ put, delete: del } as never,
+			{ connections: { set, delete: del } } as never,
 			"calclavia",
 		)
 		await session.setConnection("remote-http", "https://server.smithery.ai/exa")
 
-		expect(del).toHaveBeenCalledWith("/calclavia/remote-http", {
-			defaultBaseURL: "https://smithery.run",
+		expect(del).toHaveBeenCalledWith("remote-http", {
+			namespace: "calclavia",
 		})
-		expect(put).toHaveBeenNthCalledWith(2, "/calclavia/remote-http", {
-			body: {
-				mcpUrl: "https://server.smithery.ai/exa",
-			},
-			defaultBaseURL: "https://smithery.run",
+		expect(set).toHaveBeenNthCalledWith(2, "remote-http", {
+			namespace: "calclavia",
+			mcpUrl: "https://server.smithery.ai/exa",
 		})
 	})
 
@@ -116,7 +112,7 @@ describe("ConnectSession uplink compatibility", () => {
 	})
 
 	test("calls dotted tools through hierarchical REST paths", async () => {
-		const get = vi.fn().mockResolvedValue({
+		const getConnection = vi.fn().mockResolvedValue({
 			connectionId: "github",
 			name: "GitHub",
 			status: { state: "connected" },
@@ -124,12 +120,15 @@ describe("ConnectSession uplink compatibility", () => {
 		const post = vi.fn().mockResolvedValue({
 			content: [{ type: "text", text: "ok" }],
 		})
-		const session = new ConnectSession({ get, post } as never, "calclavia")
+		const session = new ConnectSession(
+			{ post, connections: { get: getConnection } } as never,
+			"calclavia",
+		)
 
 		await session.callTool("github", "repo.search", { query: "mcp" })
 
-		expect(get).toHaveBeenCalledWith("/calclavia/github", {
-			defaultBaseURL: "https://smithery.run",
+		expect(getConnection).toHaveBeenCalledWith("github", {
+			namespace: "calclavia",
 		})
 		expect(post).toHaveBeenCalledWith("/calclavia/github/.tools/repo/search", {
 			body: { query: "mcp" },

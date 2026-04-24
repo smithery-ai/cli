@@ -206,10 +206,10 @@ export class ConnectSession {
 		mcpUrl?: string,
 		options: ConnectionWriteOptions = {},
 	): Promise<Connection> {
-		return this.smitheryClient.post<Connection>(namespacePath(this.namespace), {
-			body: buildConnectionBody(mcpUrl, options),
-			defaultBaseURL: SMITHERY_RUN_BASE_URL,
-		})
+		return this.smitheryClient.connections.create(
+			this.namespace,
+			buildConnectionBody(mcpUrl, options) as ConnectionCreateParams,
+		)
 	}
 
 	/**
@@ -222,22 +222,16 @@ export class ConnectSession {
 		options: ConnectionWriteOptions = {},
 	): Promise<Connection> {
 		try {
-			return await this.smitheryClient.put<Connection>(
-				connectionPath(this.namespace, connectionId),
-				{
-					body: buildConnectionBody(mcpUrl, options),
-					defaultBaseURL: SMITHERY_RUN_BASE_URL,
-				},
+			return await this.smitheryClient.connections.set(
+				connectionId,
+				buildConnectionSetParams(this.namespace, mcpUrl, options),
 			)
 		} catch (error) {
 			if (error instanceof ConflictError && options.transport !== "uplink") {
 				await this.deleteConnection(connectionId)
-				return this.smitheryClient.put<Connection>(
-					connectionPath(this.namespace, connectionId),
-					{
-						body: buildConnectionBody(mcpUrl, options),
-						defaultBaseURL: SMITHERY_RUN_BASE_URL,
-					},
+				return this.smitheryClient.connections.set(
+					connectionId,
+					buildConnectionSetParams(this.namespace, mcpUrl, options),
 				)
 			}
 			throw error
@@ -245,21 +239,15 @@ export class ConnectSession {
 	}
 
 	async deleteConnection(connectionId: string): Promise<void> {
-		await this.smitheryClient.delete(
-			connectionPath(this.namespace, connectionId),
-			{
-				defaultBaseURL: SMITHERY_RUN_BASE_URL,
-			},
-		)
+		await this.smitheryClient.connections.delete(connectionId, {
+			namespace: this.namespace,
+		})
 	}
 
 	async getConnection(connectionId: string): Promise<Connection> {
-		return this.smitheryClient.get<Connection>(
-			connectionPath(this.namespace, connectionId),
-			{
-				defaultBaseURL: SMITHERY_RUN_BASE_URL,
-			},
-		)
+		return this.smitheryClient.connections.get(connectionId, {
+			namespace: this.namespace,
+		})
 	}
 
 	async listTriggers(connectionId: string): Promise<Trigger[]> {
@@ -374,12 +362,9 @@ export class ConnectSession {
 	}
 
 	private requestConnectionsList(query?: ConnectionsListQuery) {
-		return this.smitheryClient.get<ConnectionsListResponse>(
-			namespacePath(this.namespace),
-			{
-				query,
-				defaultBaseURL: SMITHERY_RUN_BASE_URL,
-			},
+		return this.smitheryClient.connections.list(
+			this.namespace,
+			query as ConnectionListParams,
 		)
 	}
 }
@@ -399,6 +384,17 @@ function buildConnectionBody(
 		}),
 	}
 	return body
+}
+
+function buildConnectionSetParams(
+	namespace: string,
+	mcpUrl: string | undefined,
+	options: ConnectionWriteOptions,
+) {
+	return {
+		namespace,
+		...buildConnectionBody(mcpUrl, options),
+	}
 }
 
 function namespacePath(namespace: string): string {
