@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 
+## [4.9.1](https://github.com/smithery-ai/cli/compare/v4.9.0...v4.9.1) (2026-04-24)
+
+
+### Chores
+
+* add mcp ls alias ([#730](https://github.com/smithery-ai/cli/issues/730)) ([806061b](https://github.com/smithery-ai/cli/commit/806061b8d3ad4cac9b75f403d23e47be66ad6486))
+
 ## [4.9.0](https://github.com/smithery-ai/cli/compare/v4.8.2...v4.9.0) (2026-04-24)
 
 
