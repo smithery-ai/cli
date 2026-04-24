@@ -35,7 +35,6 @@ interface CliOptions {
 	name?: string
 	resume?: boolean
 	configSchema?: string
-	fromBuild?: string
 	client?: string
 	full?: boolean
 	namespace?: string
@@ -203,7 +202,6 @@ async function handlePublish(target: string | undefined, options: CliOptions) {
 		name: options.name,
 		resume: options.resume,
 		configSchema: options.configSchema,
-		fromBuild: options.fromBuild,
 	})
 }
 
@@ -575,10 +573,6 @@ function withPublishOptions(cmd: InstanceType<typeof Command>) {
 		.option(
 			"--config-schema <json-or-path>",
 			"JSON Schema for server configuration. Inline JSON or path to .json file",
-		)
-		.option(
-			"--from-build <dir>",
-			"Publish from pre-built artifacts (skips build). Requires --name.",
 		)
 }
 

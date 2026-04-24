@@ -530,49 +530,6 @@ describe("deploy command", () => {
 		)
 	})
 
-	test("--from-build: skips build and loads manifest from directory", async () => {
-		vi.mocked(loadBuildManifest).mockReturnValue({
-			payload: { type: "hosted", stateful: false, hasAuthAdapter: false },
-			modulePath: "/my/prebuilt/module.js",
-			sourcemapPath: "/my/prebuilt/module.js.map",
-		})
-
-		await deploy({ name: "myorg/myserver", fromBuild: "/my/prebuilt" })
-
-		expect(buildBundle).not.toHaveBeenCalled()
-		expect(loadBuildManifest).toHaveBeenCalledWith("/my/prebuilt")
-		expect(mockRegistry.servers.releases.deploy).toHaveBeenCalledWith(
-			"myorg/myserver",
-			expect.objectContaining({
-				payload: expect.stringContaining('"type":"hosted"'),
-				module: expect.anything(),
-			}),
-		)
-	})
-
-	test("--from-build with stdio: uploads bundle artifact", async () => {
-		vi.mocked(loadBuildManifest).mockReturnValue({
-			payload: {
-				type: "stdio",
-				runtime: "node",
-				stateful: false,
-				hasAuthAdapter: false,
-			},
-			bundlePath: "/my/prebuilt/server.mcpb",
-		})
-
-		await deploy({ name: "myorg/myserver", fromBuild: "/my/prebuilt" })
-
-		expect(buildBundle).not.toHaveBeenCalled()
-		expect(mockRegistry.servers.releases.deploy).toHaveBeenCalledWith(
-			"myorg/myserver",
-			expect.objectContaining({
-				payload: expect.stringContaining('"type":"stdio"'),
-				bundle: expect.anything(),
-			}),
-		)
-	})
-
 	test(".mcpb path: uploads bundle artifact without building", async () => {
 		await deploy({
 			name: "myorg/myserver",
@@ -588,41 +545,6 @@ describe("deploy command", () => {
 				bundle: expect.anything(),
 			}),
 		)
-	})
-
-	test("--from-build without --name: uses name from manifest", async () => {
-		mockRegistry.namespaces.list.mockResolvedValue({
-			namespaces: [{ name: "myorg" }],
-		})
-		vi.mocked(loadBuildManifest).mockReturnValue({
-			name: "my-server",
-			payload: { type: "hosted", stateful: false, hasAuthAdapter: false },
-			modulePath: "/my/prebuilt/module.js",
-		})
-
-		await deploy({ fromBuild: "/my/prebuilt" })
-
-		expect(buildBundle).not.toHaveBeenCalled()
-		expect(loadBuildManifest).toHaveBeenCalledWith("/my/prebuilt")
-		expect(promptForServerNameInput).not.toHaveBeenCalled()
-		expect(mockRegistry.servers.releases.deploy).toHaveBeenCalledWith(
-			"myorg/my-server",
-			expect.objectContaining({
-				payload: expect.any(String),
-			}),
-		)
-	})
-
-	test("--from-build with --url: exits with error", async () => {
-		await expect(
-			deploy({
-				name: "myorg/myserver",
-				fromBuild: "/my/prebuilt",
-				url: "https://example.com/mcp",
-			}),
-		).rejects.toThrow("process.exit() was called")
-
-		expect(buildBundle).not.toHaveBeenCalled()
 	})
 
 	test("non-TTY mode: spawns background watcher and outputs JSON", async () => {
