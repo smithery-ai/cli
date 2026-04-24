@@ -310,6 +310,67 @@ async function handleCallTool(
 	await callTool(connection, toolName, args, options)
 }
 
+async function handleListTriggers(connection: string, options: CliOptions) {
+	const { listTriggers } = await import("./commands/trigger")
+	await listTriggers(connection, options)
+}
+
+async function handleGetTrigger(
+	connection: string,
+	name: string,
+	id: string | undefined,
+	options: CliOptions,
+) {
+	const { getTrigger } = await import("./commands/trigger")
+	await getTrigger(connection, name, id, options)
+}
+
+async function handleSubscribeTrigger(
+	connection: string,
+	name: string,
+	params: string | undefined,
+	options: CliOptions,
+) {
+	const { subscribeTrigger } = await import("./commands/trigger")
+	await subscribeTrigger(connection, name, params, options)
+}
+
+async function handleUnsubscribeTrigger(
+	connection: string,
+	name: string,
+	id: string | undefined,
+	options: CliOptions,
+) {
+	const { unsubscribeTrigger } = await import("./commands/trigger")
+	await unsubscribeTrigger(connection, name, id, options)
+}
+
+async function handleListSubscriptions(
+	connection: string | undefined,
+	options: CliOptions,
+) {
+	const { listSubscriptions } = await import("./commands/trigger")
+	await listSubscriptions(connection, options)
+}
+
+async function handleCreateSubscription(
+	url: string,
+	connection: string | undefined,
+	options: CliOptions,
+) {
+	const { createSubscription } = await import("./commands/trigger")
+	await createSubscription(url, connection, options)
+}
+
+async function handleRemoveSubscription(
+	id: string,
+	connection: string | undefined,
+	options: CliOptions,
+) {
+	const { removeSubscription } = await import("./commands/trigger")
+	await removeSubscription(id, connection, options)
+}
+
 async function handleMcpAdd(
 	server: string | undefined,
 	options: CliOptions,
@@ -888,6 +949,111 @@ Examples:
 	.action(handleCallTool)
 
 // ═══════════════════════════════════════════════════════════════════════════════
+// Trigger command — Discover and manage trigger webhooks for connections
+// ═══════════════════════════════════════════════════════════════════════════════
+
+const triggerCmd = program
+	.command("trigger")
+	.description("Discover and manage trigger webhooks for connected MCP servers")
+
+triggerCmd
+	.command("list <connection>")
+	.description("List available triggers for a connection")
+	.option("--namespace <ns>", "Namespace for the connection")
+	.addHelpText(
+		"after",
+		`
+Examples:
+  smithery trigger list notion
+  smithery trigger list github --json`,
+	)
+	.action(handleListTriggers)
+
+triggerCmd
+	.command("get <connection> <name> [id]")
+	.description("Get a trigger schema or trigger instance details")
+	.option("--namespace <ns>", "Namespace for the connection")
+	.addHelpText(
+		"after",
+		`
+Examples:
+  smithery trigger get notion page.updated
+  smithery trigger get notion page.updated trg_01HW...`,
+	)
+	.action(handleGetTrigger)
+
+triggerCmd
+	.command("subscribe <connection> <name> [params]")
+	.description("Create a trigger instance")
+	.option("--namespace <ns>", "Namespace for the connection")
+	.option("--url <url>", "Webhook URL for trigger delivery")
+	.option("--id <id>", "Trigger subscription ID (defaults to a random UUID)")
+	.addHelpText(
+		"after",
+		`
+Examples:
+  smithery trigger subscribe notion page.updated '{"workspace_id":"w_123"}' --url https://hook.new/i/...
+  smithery trigger subscribe scheduler alarm '{"in":"PT10S"}' --url https://hook.new/i/...`,
+	)
+	.action(handleSubscribeTrigger)
+
+triggerCmd
+	.command("unsubscribe <connection> <name> [id]")
+	.description("Delete a trigger instance")
+	.option("--namespace <ns>", "Namespace for the connection")
+	.addHelpText(
+		"after",
+		`
+Examples:
+  smithery trigger unsubscribe notion page.updated
+  smithery trigger unsubscribe notion page.updated trg_01HW...`,
+	)
+	.action(handleUnsubscribeTrigger)
+
+const subscriptionCmd = triggerCmd
+	.command("subscription")
+	.description("Manage trigger webhook subscriptions")
+
+subscriptionCmd
+	.command("list [connection]")
+	.description("List namespace or connection webhook subscriptions")
+	.option("--namespace <ns>", "Namespace for the subscription")
+	.addHelpText(
+		"after",
+		`
+Examples:
+  smithery trigger subscription list
+  smithery trigger subscription list notion`,
+	)
+	.action(handleListSubscriptions)
+
+subscriptionCmd
+	.command("add <url> [connection]")
+	.description("Create a namespace or connection webhook subscription")
+	.option("--namespace <ns>", "Namespace for the subscription")
+	.addHelpText(
+		"after",
+		`
+Examples:
+  smithery trigger subscription add https://my-app.example.com/events
+  smithery trigger subscription add https://my-app.example.com/events notion`,
+	)
+	.action(handleCreateSubscription)
+
+subscriptionCmd
+	.command("remove <id> [connection]")
+	.description("Delete a namespace or connection webhook subscription")
+	.option("--namespace <ns>", "Namespace for the subscription")
+	.addHelpText(
+		"after",
+		`
+Examples:
+  smithery trigger subscription remove sub_01HW...
+  smithery trigger subscription remove sub_01HW... notion`,
+	)
+	.action(handleRemoveSubscription)
+
+// ═══════════════════════════════════════════════════════════════════════════════
 // Event command (hidden/alpha) — Subscribe to event streams from MCP servers
 // ═══════════════════════════════════════════════════════════════════════════════
 
@@ -1262,8 +1428,8 @@ function getCommandPath(cmd: InstanceType<typeof Command>): string {
 }
 
 program.hook("preAction", async (_thisCommand, actionCommand) => {
-	const { trackEvent } = await import("./utils/analytics")
 	const commandPath = getCommandPath(actionCommand)
+	const { trackEvent } = await import("./utils/analytics")
 	const globalOpts = program.opts()
 	const localOpts = actionCommand.opts()
 	const allFlags = [
