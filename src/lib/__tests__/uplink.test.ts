@@ -2,9 +2,10 @@ import type { JSONRPCMessage } from "@modelcontextprotocol/sdk/types.js"
 import { describe, expect, test, vi } from "vitest"
 import {
 	formatBridgeError,
-	type LocalHttpTransport,
+	type LocalPeer,
+	type SocketPeer,
 	wireJsonRpcBridge,
-	wrapLocalHttpTransport,
+	wrapInitialized,
 } from "../uplink"
 
 declare global {
@@ -12,79 +13,61 @@ declare global {
 }
 globalThis.__SMITHERY_VERSION__ = globalThis.__SMITHERY_VERSION__ ?? "test"
 
-function createSocketPeer() {
-	const listeners: {
-		message?: (data: string | ArrayBuffer) => void
-		close?: (event: { code: number; reason: string }) => void
-		error?: (error: unknown) => void
-	} = {}
+interface MockSocketPeer extends SocketPeer {
+	sent: string[]
+	emitMessage(data: string | ArrayBuffer): void
+	emitClose(event: { code: number; reason: string }): void
+	emitError(error: unknown): void
+}
 
-	return {
-		sent: [] as string[],
-		onMessage(listener: (data: string | ArrayBuffer) => void) {
-			listeners.message = listener
-			return undefined
+function createSocketPeer(): MockSocketPeer {
+	const peer: MockSocketPeer = {
+		sent: [],
+		send(text) {
+			peer.sent.push(text)
 		},
-		onClose(listener: (event: { code: number; reason: string }) => void) {
-			listeners.close = listener
-			return undefined
+		emitMessage(data) {
+			peer.onmessage?.(data)
 		},
-		onError(listener: (error: unknown) => void) {
-			listeners.error = listener
-			return undefined
+		emitClose(event) {
+			peer.onclose?.(event)
 		},
-		send(text: string) {
-			this.sent.push(text)
-		},
-		emitMessage(data: string | ArrayBuffer) {
-			listeners.message?.(data)
-		},
-		emitClose(event: { code: number; reason: string }) {
-			listeners.close?.(event)
-		},
-		emitError(error: unknown) {
-			listeners.error?.(error)
+		emitError(error) {
+			peer.onerror?.(error)
 		},
 	}
+	return peer
+}
+
+interface MockLocalPeer extends LocalPeer {
+	sent: JSONRPCMessage[]
+	emitMessage(message: JSONRPCMessage): void
+	emitClose(code?: number): void
+	emitError(error: unknown, detail?: string): void
 }
 
 function createLocalPeer(options?: {
 	send?: (message: JSONRPCMessage) => Promise<void>
-}) {
-	const listeners: {
-		message?: (message: JSONRPCMessage) => void
-		close?: (code?: number) => void
-		error?: (event: { error: unknown; detail?: string }) => void
-	} = {}
-
-	return {
-		sent: [] as JSONRPCMessage[],
-		onMessage(listener: (message: JSONRPCMessage) => void) {
-			listeners.message = listener
-			return undefined
-		},
-		onClose(listener: (code?: number) => void) {
-			listeners.close = listener
-			return undefined
-		},
-		onError(listener: (event: { error: unknown; detail?: string }) => void) {
-			listeners.error = listener
-			return undefined
-		},
-		async send(message: JSONRPCMessage) {
-			this.sent.push(message)
+}): MockLocalPeer {
+	const peer: MockLocalPeer = {
+		sent: [],
+		async start() {},
+		async close() {},
+		async send(message) {
+			peer.sent.push(message)
 			await options?.send?.(message)
 		},
-		emitMessage(message: JSONRPCMessage) {
-			listeners.message?.(message)
+		emitMessage(message) {
+			peer.onmessage?.(message)
 		},
-		emitClose(code?: number) {
-			listeners.close?.(code)
+		emitClose(code) {
+			peer.onclose?.(code)
 		},
-		emitError(error: unknown, detail?: string) {
-			listeners.error?.({ error, detail })
+		emitError(error, detail) {
+			peer.onerror?.({ error, detail })
 		},
 	}
+	return peer
 }
 
 describe("wireJsonRpcBridge", () => {
@@ -168,6 +151,7 @@ describe("wireJsonRpcBridge", () => {
 		expect(onError).toHaveBeenCalledWith({
 			source: "local",
 			error: localError,
+			detail: undefined,
 		})
 	})
 
@@ -227,34 +211,25 @@ describe("wireJsonRpcBridge", () => {
 			].join("\n"),
 		)
 	})
+
+	test("dispose detaches handlers from both peers", () => {
+		const socket = createSocketPeer()
+		const local = createLocalPeer()
+		const onClose = vi.fn()
+		const onError = vi.fn()
+
+		const dispose = wireJsonRpcBridge({ socket, local, onClose, onError })
+		dispose()
+
+		socket.emitClose({ code: 1000, reason: "" })
+		local.emitClose(0)
+		socket.emitError(new Error("boom"))
+		local.emitError(new Error("boom"))
+
+		expect(onClose).not.toHaveBeenCalled()
+		expect(onError).not.toHaveBeenCalled()
+	})
 })
-
-interface MockHttpTransport extends LocalHttpTransport {
-	started: boolean
-	closed: boolean
-	sent: JSONRPCMessage[]
-}
-
-function createMockHttpTransport(): MockHttpTransport {
-	const transport: MockHttpTransport = {
-		started: false,
-		closed: false,
-		sent: [],
-		async start() {
-			transport.started = true
-		},
-		async close() {
-			transport.closed = true
-		},
-		async send(message: JSONRPCMessage) {
-			transport.sent.push(message)
-		},
-		onmessage: undefined,
-		onclose: undefined,
-		onerror: undefined,
-	}
-	return transport
-}
 
 const SAMPLE_INIT_RESULT = {
 	protocolVersion: "2025-11-25",
@@ -272,27 +247,27 @@ function findHandshakeId(sent: JSONRPCMessage[]): string | number {
 	return init.id
 }
 
-describe("wrapLocalHttpTransport", () => {
+describe("wrapInitialized", () => {
 	test("runs initialize + notifications/initialized handshake on start", async () => {
-		const transport = createMockHttpTransport()
-		const peer = wrapLocalHttpTransport(transport)
+		const inner = createLocalPeer()
+		const peer = wrapInitialized(inner)
 		const seenMessages: JSONRPCMessage[] = []
-		peer.onMessage((message) => seenMessages.push(message))
+		peer.onmessage = (message) => seenMessages.push(message)
 
 		const startPromise = peer.start()
 		await vi.waitFor(() => {
-			expect(transport.sent).toHaveLength(1)
+			expect(inner.sent).toHaveLength(1)
 		})
 
-		const handshakeId = findHandshakeId(transport.sent)
-		transport.onmessage?.({
+		const handshakeId = findHandshakeId(inner.sent)
+		inner.emitMessage({
 			jsonrpc: "2.0",
 			id: handshakeId,
 			result: SAMPLE_INIT_RESULT,
 		})
 		await startPromise
 
-		expect(transport.sent).toEqual([
+		expect(inner.sent).toEqual([
 			expect.objectContaining({ method: "initialize", id: handshakeId }),
 			{ jsonrpc: "2.0", method: "notifications/initialized" },
 		])
@@ -301,17 +276,17 @@ describe("wrapLocalHttpTransport", () => {
 	})
 
 	test("replies from cache when gateway forwards initialize and drops initialized notification", async () => {
-		const transport = createMockHttpTransport()
-		const peer = wrapLocalHttpTransport(transport)
+		const inner = createLocalPeer()
+		const peer = wrapInitialized(inner)
 		const seenMessages: JSONRPCMessage[] = []
-		peer.onMessage((message) => seenMessages.push(message))
+		peer.onmessage = (message) => seenMessages.push(message)
 
 		const startPromise = peer.start()
 		await vi.waitFor(() => {
-			expect(transport.sent).toHaveLength(1)
+			expect(inner.sent).toHaveLength(1)
 		})
-		const handshakeId = findHandshakeId(transport.sent)
-		transport.onmessage?.({
+		const handshakeId = findHandshakeId(inner.sent)
+		inner.emitMessage({
 			jsonrpc: "2.0",
 			id: handshakeId,
 			result: SAMPLE_INIT_RESULT,
@@ -333,8 +308,8 @@ describe("wrapLocalHttpTransport", () => {
 			method: "notifications/initialized",
 		})
 
-		// Neither gateway-forwarded frame reaches the local transport.
-		expect(transport.sent).toEqual([
+		// Neither gateway-forwarded frame reaches the inner peer.
+		expect(inner.sent).toEqual([
 			expect.objectContaining({ method: "initialize", id: handshakeId }),
 			{ jsonrpc: "2.0", method: "notifications/initialized" },
 		])
@@ -344,16 +319,16 @@ describe("wrapLocalHttpTransport", () => {
 		])
 	})
 
-	test("forwards non-handshake frames to the transport", async () => {
-		const transport = createMockHttpTransport()
-		const peer = wrapLocalHttpTransport(transport)
+	test("forwards non-handshake frames to the inner peer", async () => {
+		const inner = createLocalPeer()
+		const peer = wrapInitialized(inner)
 
 		const startPromise = peer.start()
 		await vi.waitFor(() => {
-			expect(transport.sent).toHaveLength(1)
+			expect(inner.sent).toHaveLength(1)
 		})
-		const handshakeId = findHandshakeId(transport.sent)
-		transport.onmessage?.({
+		const handshakeId = findHandshakeId(inner.sent)
+		inner.emitMessage({
 			jsonrpc: "2.0",
 			id: handshakeId,
 			result: SAMPLE_INIT_RESULT,
@@ -367,24 +342,40 @@ describe("wrapLocalHttpTransport", () => {
 		}
 		await peer.send(toolsList)
 
-		expect(transport.sent.at(-1)).toEqual(toolsList)
+		expect(inner.sent.at(-1)).toEqual(toolsList)
 	})
 
 	test("rejects start() when the local initialize errors", async () => {
-		const transport = createMockHttpTransport()
-		const peer = wrapLocalHttpTransport(transport)
+		const inner = createLocalPeer()
+		const peer = wrapInitialized(inner)
 
 		const startPromise = peer.start()
 		await vi.waitFor(() => {
-			expect(transport.sent).toHaveLength(1)
+			expect(inner.sent).toHaveLength(1)
 		})
-		const handshakeId = findHandshakeId(transport.sent)
-		transport.onmessage?.({
+		const handshakeId = findHandshakeId(inner.sent)
+		inner.emitMessage({
 			jsonrpc: "2.0",
 			id: handshakeId,
 			error: { code: -32000, message: "boom" },
 		})
 
 		await expect(startPromise).rejects.toThrow(/Local MCP initialize failed/)
+	})
+
+	test("rejects start() when the inner peer closes before initialize resolves", async () => {
+		const inner = createLocalPeer()
+		const peer = wrapInitialized(inner)
+
+		const startPromise = peer.start()
+		await vi.waitFor(() => {
+			expect(inner.sent).toHaveLength(1)
+		})
+
+		inner.emitClose(1)
+
+		await expect(startPromise).rejects.toThrow(
+			/closed before initialize completed/i,
+		)
 	})
 })
