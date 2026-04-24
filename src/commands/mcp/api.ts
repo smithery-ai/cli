@@ -251,25 +251,19 @@ export class ConnectSession {
 	}
 
 	async listTriggers(connectionId: string): Promise<Trigger[]> {
-		const response = await this.smitheryClient.get<{ triggers?: Trigger[] }>(
-			triggerCollectionPath(this.namespace, connectionId),
-			{
-				defaultBaseURL: SMITHERY_RUN_BASE_URL,
-			},
-		)
-		return response?.triggers ?? []
+		return this.smitheryClient.connections.triggers.list(connectionId, {
+			namespace: this.namespace,
+		})
 	}
 
 	async getTrigger(
 		connectionId: string,
 		triggerName: string,
 	): Promise<Trigger> {
-		return this.smitheryClient.get<Trigger>(
-			triggerItemPath(this.namespace, connectionId, triggerName),
-			{
-				defaultBaseURL: SMITHERY_RUN_BASE_URL,
-			},
-		)
+		return this.smitheryClient.connections.triggers.get(triggerName, {
+			namespace: this.namespace,
+			connectionId,
+		})
 	}
 
 	async createTrigger(
@@ -277,11 +271,14 @@ export class ConnectSession {
 		triggerName: string,
 		params: Record<string, unknown> = {},
 	): Promise<TriggerInstance> {
-		return this.smitheryClient.post<TriggerInstance>(
-			triggerItemPath(this.namespace, connectionId, triggerName),
+		return this.smitheryClient.connections.triggers.create(
+			triggerName,
+			{
+				namespace: this.namespace,
+				connectionId,
+			},
 			{
 				body: { params },
-				defaultBaseURL: SMITHERY_RUN_BASE_URL,
 			},
 		)
 	}
@@ -291,12 +288,11 @@ export class ConnectSession {
 		triggerName: string,
 		triggerId: string,
 	): Promise<TriggerInstance> {
-		return this.smitheryClient.get<TriggerInstance>(
-			triggerInstancePath(this.namespace, connectionId, triggerName, triggerId),
-			{
-				defaultBaseURL: SMITHERY_RUN_BASE_URL,
-			},
-		)
+		return this.smitheryClient.connections.triggers.getInstance(triggerId, {
+			namespace: this.namespace,
+			connectionId,
+			triggerName,
+		})
 	}
 
 	async deleteTrigger(
@@ -304,34 +300,42 @@ export class ConnectSession {
 		triggerName: string,
 		triggerId: string,
 	): Promise<void> {
-		await this.smitheryClient.delete(
-			triggerInstancePath(this.namespace, connectionId, triggerName, triggerId),
-			{
-				defaultBaseURL: SMITHERY_RUN_BASE_URL,
-			},
-		)
+		await this.smitheryClient.connections.triggers.delete(triggerId, {
+			namespace: this.namespace,
+			connectionId,
+			triggerName,
+		})
 	}
 
 	async listSubscriptions(
 		connectionId?: string,
 	): Promise<TriggerSubscription[]> {
-		const response = await this.smitheryClient.get<{
-			subscriptions?: TriggerSubscription[]
-		}>(subscriptionCollectionPath(this.namespace, connectionId), {
-			defaultBaseURL: SMITHERY_RUN_BASE_URL,
+		if (!connectionId) {
+			return this.smitheryClient.subscriptions.list(this.namespace)
+		}
+
+		return this.smitheryClient.connections.subscriptions.list(connectionId, {
+			namespace: this.namespace,
 		})
-		return response?.subscriptions ?? []
 	}
 
 	async createSubscription(
 		url: string,
 		connectionId?: string,
 	): Promise<TriggerSubscription> {
-		return this.smitheryClient.post<TriggerSubscription>(
-			subscriptionCollectionPath(this.namespace, connectionId),
+		if (!connectionId) {
+			return this.smitheryClient.subscriptions.create(this.namespace, {
+				body: { url },
+			})
+		}
+
+		return this.smitheryClient.connections.subscriptions.create(
+			connectionId,
+			{
+				namespace: this.namespace,
+			},
 			{
 				body: { url },
-				defaultBaseURL: SMITHERY_RUN_BASE_URL,
 			},
 		)
 	}
@@ -340,12 +344,17 @@ export class ConnectSession {
 		subscriptionId: string,
 		connectionId?: string,
 	): Promise<void> {
-		await this.smitheryClient.delete(
-			subscriptionItemPath(this.namespace, subscriptionId, connectionId),
-			{
-				defaultBaseURL: SMITHERY_RUN_BASE_URL,
-			},
-		)
+		if (!connectionId) {
+			await this.smitheryClient.subscriptions.delete(subscriptionId, {
+				namespace: this.namespace,
+			})
+			return
+		}
+
+		await this.smitheryClient.connections.subscriptions.delete(subscriptionId, {
+			namespace: this.namespace,
+			connectionId,
+		})
 	}
 
 	async pollEvents(connectionId: string, options?: { limit?: number }) {
@@ -422,48 +431,6 @@ function encodeToolName(toolName: string): string {
 		.split(".")
 		.map((segment) => encodeURIComponent(segment))
 		.join("/")
-}
-
-function triggerCollectionPath(
-	namespace: string,
-	connectionId: string,
-): string {
-	return `${namespacePath(namespace)}/${encodeURIComponent(connectionId)}/.triggers`
-}
-
-function triggerItemPath(
-	namespace: string,
-	connectionId: string,
-	triggerName: string,
-): string {
-	return `${triggerCollectionPath(namespace, connectionId)}/${encodeURIComponent(triggerName)}`
-}
-
-function triggerInstancePath(
-	namespace: string,
-	connectionId: string,
-	triggerName: string,
-	triggerId: string,
-): string {
-	return `${triggerItemPath(namespace, connectionId, triggerName)}/${encodeURIComponent(triggerId)}`
-}
-
-function subscriptionCollectionPath(
-	namespace: string,
-	connectionId?: string,
-): string {
-	if (!connectionId) {
-		return `${namespacePath(namespace)}/.subscriptions`
-	}
-	return `${namespacePath(namespace)}/${encodeURIComponent(connectionId)}/.subscriptions`
-}
-
-function subscriptionItemPath(
-	namespace: string,
-	subscriptionId: string,
-	connectionId?: string,
-): string {
-	return `${subscriptionCollectionPath(namespace, connectionId)}/${encodeURIComponent(subscriptionId)}`
 }
 
 function toMetadataQuery(
