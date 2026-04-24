@@ -13,6 +13,11 @@ const __dirname = dirname(fileURLToPath(import.meta.url))
 const CLI_ROOT = resolve(__dirname, "../../../")
 const FIXTURES = resolve(CLI_ROOT, "test/fixtures")
 const OUT_DIR = resolve(CLI_ROOT, ".smithery-e2e")
+const e2eGlobals = globalThis as typeof globalThis & {
+	__SHTTP_BOOTSTRAP__: string
+	__STDIO_BOOTSTRAP__: string
+	__SMITHERY_VERSION__: string
+}
 
 /**
  * Helper to parse MCP response which might be wrapped in SSE format
@@ -107,12 +112,9 @@ describeE2E("CLI E2E MCP Server", { timeout: 60000 }, () => {
 			external: ["virtual:user-module"],
 		})
 
-		// @ts-expect-error global injection for tests
-		globalThis.__SHTTP_BOOTSTRAP__ = shttp.outputFiles[0].text
-		// @ts-expect-error global injection for tests
-		globalThis.__STDIO_BOOTSTRAP__ = stdio.outputFiles[0].text
-		// @ts-expect-error global injection for tests
-		globalThis.__SMITHERY_VERSION__ = "1.0.0-test"
+		e2eGlobals.__SHTTP_BOOTSTRAP__ = shttp.outputFiles[0].text
+		e2eGlobals.__STDIO_BOOTSTRAP__ = stdio.outputFiles[0].text
+		e2eGlobals.__SMITHERY_VERSION__ = "1.0.0-test"
 	})
 
 	afterAll(() => {

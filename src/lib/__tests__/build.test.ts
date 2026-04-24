@@ -7,10 +7,14 @@ import { buildServer } from "../build"
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const CLI_ROOT = resolve(__dirname, "../../../")
 const FIXTURES = resolve(CLI_ROOT, "test/fixtures")
+const buildGlobals = globalThis as typeof globalThis & {
+	__SHTTP_BOOTSTRAP__: string
+	__STDIO_BOOTSTRAP__: string
+	__SMITHERY_VERSION__: string
+}
 
 // Mock the injected constants that normally come from esbuild define
-// @ts-expect-error
-globalThis.__SHTTP_BOOTSTRAP__ = `
+buildGlobals.__SHTTP_BOOTSTRAP__ = `
 import createServer from "virtual:user-module";
 export default {
   async fetch(request) {
@@ -18,11 +22,9 @@ export default {
   }
 };
 `
-// @ts-expect-error
-globalThis.__STDIO_BOOTSTRAP__ =
+buildGlobals.__STDIO_BOOTSTRAP__ =
 	"console.log('stdio-bootstrap'); import createServer from 'virtual:user-module';"
-// @ts-expect-error
-globalThis.__SMITHERY_VERSION__ = "1.0.0"
+buildGlobals.__SMITHERY_VERSION__ = "1.0.0"
 
 describe("buildServer integration", () => {
 	const outDir = join(CLI_ROOT, ".smithery-test")
