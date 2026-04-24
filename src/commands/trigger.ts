@@ -15,7 +15,7 @@ export async function listTriggers(
 ): Promise<void> {
 	try {
 		const session = await ConnectSession.create(options.namespace)
-		const triggers = await session.listTriggers(connection)
+		const triggers = await session.listEventTriggers(connection)
 		const data = triggers.map((trigger) => ({
 			name: trigger.name,
 			delivery: (trigger.delivery ?? []).join(","),
@@ -66,7 +66,11 @@ export async function getTrigger(
 			return
 		}
 
-		const trigger = await session.getTrigger(connection, name)
+		const triggers = await session.listEventTriggers(connection)
+		const trigger = triggers.find((event) => event.name === name)
+		if (!trigger) {
+			fatal(`Trigger "${name}" was not found on connection "${connection}".`)
+		}
 		outputDetail({
 			data: {
 				connection,

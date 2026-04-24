@@ -1,7 +1,7 @@
 import { beforeAll, beforeEach, describe, expect, test, vi } from "vitest"
 
 const {
-	mockListTriggers,
+	mockListEventTriggers,
 	mockCreateTrigger,
 	mockListSubscriptions,
 	mockCreateSubscription,
@@ -9,19 +9,19 @@ const {
 	mockOutputTable,
 	mockOutputDetail,
 } = vi.hoisted(() => {
-	const listTriggers = vi.fn()
+	const listEventTriggers = vi.fn()
 	const createTrigger = vi.fn()
 	const listSubscriptions = vi.fn()
 	const createSubscription = vi.fn()
 	const createSession = vi.fn(async () => ({
-		listTriggers,
+		listEventTriggers,
 		createTrigger,
 		listSubscriptions,
 		createSubscription,
 	}))
 
 	return {
-		mockListTriggers: listTriggers,
+		mockListEventTriggers: listEventTriggers,
 		mockCreateTrigger: createTrigger,
 		mockListSubscriptions: listSubscriptions,
 		mockCreateSubscription: createSubscription,
@@ -71,7 +71,7 @@ describe("trigger commands", () => {
 	})
 
 	test("lists trigger types for a connection", async () => {
-		mockListTriggers.mockResolvedValue([
+		mockListEventTriggers.mockResolvedValue([
 			{
 				name: "page.updated",
 				description: "Fires when a page changes.",
@@ -83,7 +83,7 @@ describe("trigger commands", () => {
 		await listTriggers("notion", { namespace: "prod" })
 
 		expect(mockCreateSession).toHaveBeenCalledWith("prod")
-		expect(mockListTriggers).toHaveBeenCalledWith("notion")
+		expect(mockListEventTriggers).toHaveBeenCalledWith("notion")
 		expect(mockOutputTable).toHaveBeenCalledWith(
 			expect.objectContaining({
 				jsonData: expect.objectContaining({
@@ -92,6 +92,31 @@ describe("trigger commands", () => {
 							name: "page.updated",
 						}),
 					],
+				}),
+			}),
+		)
+	})
+
+	test("gets trigger schemas from the MCP trigger catalog", async () => {
+		mockListEventTriggers.mockResolvedValue([
+			{
+				name: "page.updated",
+				description: "Fires when a page changes.",
+				delivery: ["webhook"],
+				inputSchema: { type: "object" },
+				payloadSchema: { type: "object" },
+			},
+		])
+
+		const { getTrigger } = await import("../trigger")
+		await getTrigger("notion", "page.updated", undefined, {})
+
+		expect(mockListEventTriggers).toHaveBeenCalledWith("notion")
+		expect(mockOutputDetail).toHaveBeenCalledWith(
+			expect.objectContaining({
+				data: expect.objectContaining({
+					name: "page.updated",
+					inputSchema: { type: "object" },
 				}),
 			}),
 		)

@@ -68,4 +68,23 @@ describe("ConnectSession trigger support", () => {
 			"/my%20app/notion/subscriptions/sub_456",
 		)
 	})
+
+	test("lists trigger types through the MCP events extension", async () => {
+		const request = vi.fn().mockResolvedValue({
+			events: [{ name: "page.updated" }],
+		})
+		const close = vi.fn().mockResolvedValue(undefined)
+		const session = new ConnectSession({} as never, "calclavia")
+		session.getEventsClient = vi.fn().mockResolvedValue({ request, close })
+
+		const result = await session.listEventTriggers("notion")
+
+		expect(session.getEventsClient).toHaveBeenCalledWith("notion")
+		expect(request).toHaveBeenCalledWith(
+			{ method: "ai.smithery/events/list" },
+			expect.anything(),
+		)
+		expect(result).toEqual([{ name: "page.updated" }])
+		expect(close).toHaveBeenCalled()
+	})
 })

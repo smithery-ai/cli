@@ -5,6 +5,7 @@ import {
 	type CreateConnectionOptions,
 	createConnection as createSmitheryConnection,
 } from "@smithery/api/mcp"
+import { listEventTriggers } from "../../lib/events"
 import type {
 	Connection,
 	ConnectionCreateParams,
@@ -187,6 +188,16 @@ export class ConnectSession {
 		)
 		await mcpClient.connect(transport)
 		return mcpClient
+	}
+
+	async listEventTriggers(connectionId: string): Promise<Trigger[]> {
+		const mcpClient = await this.getEventsClient(connectionId)
+		try {
+			const { events } = await listEventTriggers(mcpClient)
+			return events
+		} finally {
+			await mcpClient.close()
+		}
 	}
 
 	async callTool(
