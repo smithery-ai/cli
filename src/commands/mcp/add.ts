@@ -127,12 +127,17 @@ async function addUplinkServer(
 			`Creating connection ${namespace}/${connection.connectionId} ... ok`,
 		)
 
-		const exitCode = await serveUplink({
-			namespace,
-			connectionId: connection.connectionId,
-			target,
-			force: options.force,
-		})
+		let exitCode = 0
+		try {
+			exitCode = await serveUplink({
+				namespace,
+				connectionId: connection.connectionId,
+				target,
+				force: options.force,
+			})
+		} finally {
+			await session.deleteConnection(connection.connectionId).catch(() => {})
+		}
 		if (exitCode !== 0) {
 			process.exit(exitCode)
 		}
