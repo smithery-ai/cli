@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 
+## [4.9.0](https://github.com/smithery-ai/cli/compare/v4.8.2...v4.9.0) (2026-04-24)
+
+
+### Features
+
+* remove mcp dev command ([#727](https://github.com/smithery-ai/cli/issues/727)) ([980f994](https://github.com/smithery-ai/cli/commit/980f9943c512a88f64a3bf04fba0ef5de4f3515e))
+* support uplink in mcp add ([#729](https://github.com/smithery-ai/cli/issues/729)) ([e9eab21](https://github.com/smithery-ai/cli/commit/e9eab21858f965d6dfd4b4f1fe557587d42d513c))
+
 ## [4.8.2](https://github.com/smithery-ai/cli/compare/v4.8.1...v4.8.2) (2026-04-23)
 
 
