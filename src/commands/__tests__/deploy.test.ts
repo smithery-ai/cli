@@ -77,11 +77,6 @@ vi.mock("../../utils/runtime", () => ({
 	ensureApiKey: vi.fn().mockResolvedValue("test-api-key"),
 }))
 
-vi.mock("../../lib/bundle/index", () => ({
-	buildBundle: vi.fn(),
-	loadBuildManifest: vi.fn(),
-}))
-
 vi.mock("../../utils/command-prompts", () => ({
 	promptForNamespaceCreation: vi.fn(),
 	promptForNamespaceSelection: vi.fn(),
@@ -140,7 +135,6 @@ vi.mock("../../utils/output", () => ({
 }))
 
 import { NotFoundError, PermissionDeniedError, Smithery } from "@smithery/api"
-import { buildBundle, loadBuildManifest } from "../../lib/bundle/index"
 import { loadProjectConfig } from "../../lib/config-loader"
 import { resolveNamespace } from "../../lib/namespace"
 import {
@@ -173,16 +167,6 @@ describe("deploy command", () => {
 		// Setup default loadProjectConfig mock return value (no config file)
 		vi.mocked(loadProjectConfig).mockReturnValue(null)
 
-		// Setup default buildBundle mock (returns outDir string)
-		vi.mocked(buildBundle).mockResolvedValue("/tmp/build")
-
-		// Setup default loadBuildManifest mock (returns resolved artifacts)
-		vi.mocked(loadBuildManifest).mockReturnValue({
-			payload: { type: "hosted", stateful: false, hasAuthAdapter: false },
-			modulePath: "/tmp/build/module.js",
-			sourcemapPath: "/tmp/build/module.js.map",
-		})
-
 		// Setup mock registry
 		mockRegistry = {
 			namespaces: {
@@ -210,8 +194,11 @@ describe("deploy command", () => {
 		)
 	})
 
-	test("--name provided: uses qualified name directly for deploy API", async () => {
-		await deploy({ name: "myorg/myserver" })
+	test("--name provided with bundle target: uses qualified name directly for deploy API", async () => {
+		await deploy({
+			name: "myorg/myserver",
+			entryFile: "/tmp/server.mcpb",
+		})
 
 		expect(ensureApiKey).toHaveBeenCalled()
 		expect(mockRegistry.servers.releases.deploy).toHaveBeenCalledWith(
@@ -225,13 +212,13 @@ describe("deploy command", () => {
 		expect(promptForServerNameInput).not.toHaveBeenCalled()
 	})
 
-	test("no --name, single namespace: auto-selects namespace and prompts for server name", async () => {
+	test("no --name with bundle target: auto-selects namespace and prompts for server name", async () => {
 		mockRegistry.namespaces.list.mockResolvedValue({
 			namespaces: [{ name: "myorg" }],
 		})
 		vi.mocked(promptForServerNameInput).mockResolvedValue("myserver")
 
-		await deploy({})
+		await deploy({ entryFile: "/tmp/server.mcpb" })
 
 		expect(mockRegistry.namespaces.list).toHaveBeenCalled()
 		expect(promptForNamespaceSelection).not.toHaveBeenCalled()
@@ -245,14 +232,14 @@ describe("deploy command", () => {
 		)
 	})
 
-	test("no --name, multiple namespaces: prompts to select namespace and server name", async () => {
+	test("no --name with multiple namespaces: prompts to select namespace and server name", async () => {
 		mockRegistry.namespaces.list.mockResolvedValue({
 			namespaces: [{ name: "org1" }, { name: "org2" }],
 		})
 		vi.mocked(promptForNamespaceSelection).mockResolvedValue("org2")
 		vi.mocked(promptForServerNameInput).mockResolvedValue("myserver")
 
-		await deploy({})
+		await deploy({ entryFile: "/tmp/server.mcpb" })
 
 		expect(mockRegistry.namespaces.list).toHaveBeenCalled()
 		expect(promptForNamespaceSelection).toHaveBeenCalledWith(["org1", "org2"])
@@ -266,14 +253,14 @@ describe("deploy command", () => {
 		expect(mockRegistry.namespaces.set).not.toHaveBeenCalled()
 	})
 
-	test("no --name, no namespaces: prompts to create namespace (with claim messaging) and server name", async () => {
+	test("no --name with no namespaces: prompts to create namespace and server name", async () => {
 		mockRegistry.namespaces.list.mockResolvedValue({
 			namespaces: [],
 		})
 		vi.mocked(promptForNamespaceCreation).mockResolvedValue("neworg")
 		vi.mocked(promptForServerNameInput).mockResolvedValue("myserver")
 
-		await deploy({})
+		await deploy({ entryFile: "/tmp/server.mcpb" })
 
 		expect(mockRegistry.namespaces.list).toHaveBeenCalled()
 		expect(promptForNamespaceCreation).toHaveBeenCalled()
@@ -290,7 +277,6 @@ describe("deploy command", () => {
 	test("--url provided: performs external deploy without bundle build", async () => {
 		await deploy({ name: "myorg/myserver", url: "https://example.com/mcp" })
 
-		expect(buildBundle).not.toHaveBeenCalled()
 		expect(mockRegistry.servers.releases.deploy).toHaveBeenCalledWith(
 			"myorg/myserver",
 			expect.objectContaining({
@@ -317,7 +303,6 @@ describe("deploy command", () => {
 			configSchema: JSON.stringify(configSchema),
 		})
 
-		expect(buildBundle).not.toHaveBeenCalled()
 		expect(mockRegistry.servers.releases.deploy).toHaveBeenCalledWith(
 			"myorg/myserver",
 			expect.objectContaining({
@@ -334,63 +319,36 @@ describe("deploy command", () => {
 		await expect(
 			deploy({
 				name: "myorg/myserver",
+				entryFile: "/tmp/server.mcpb",
 				configSchema: '{"type":"object"}',
 			}),
 		).rejects.toThrow("process.exit() was called")
-
-		expect(buildBundle).not.toHaveBeenCalled()
 	})
 
-	test("inline build: always uses shttp transport", async () => {
-		vi.mocked(buildBundle).mockResolvedValue("/tmp/build")
-		vi.mocked(loadBuildManifest).mockReturnValue({
-			payload: { type: "hosted", stateful: false, hasAuthAdapter: false },
-			modulePath: "/tmp/build/module.js",
-			sourcemapPath: "/tmp/build/module.js.map",
-		})
+	test("missing target without --resume: exits with error", async () => {
+		await expect(deploy({ name: "myorg/myserver" })).rejects.toThrow(
+			"process.exit() was called",
+		)
+	})
 
-		await deploy({ name: "myorg/myserver" })
-
-		expect(buildBundle).toHaveBeenCalledWith({
-			entryFile: undefined,
-			transport: "shttp",
-			production: true,
-		})
-		expect(mockRegistry.servers.releases.deploy).toHaveBeenCalledWith(
-			"myorg/myserver",
-			expect.objectContaining({
-				payload: expect.stringContaining('"type":"hosted"'),
-				module: expect.any(Readable),
+	test("non-bundle local target: exits with error", async () => {
+		await expect(
+			deploy({
+				name: "myorg/myserver",
+				entryFile: "./server.ts",
 			}),
-		)
+		).rejects.toThrow("process.exit() was called")
 	})
 
-	test("assets configured: logs warning since publish uses shttp", async () => {
-		const consoleSpy = vi.spyOn(console, "log")
-		vi.mocked(loadProjectConfig).mockReturnValue({
-			build: {
-				assets: ["data/**"],
-			},
-		})
-
-		await deploy({ name: "myorg/myserver" })
-
-		expect(consoleSpy).toHaveBeenCalledWith(
-			expect.stringContaining("build.assets is only supported"),
-		)
-		consoleSpy.mockRestore()
-	})
-
-	test("no --name, smithery.yaml with typescript runtime and name: uses name without prompting", async () => {
+	test("no --name, smithery.yaml with name: uses name without prompting", async () => {
 		mockRegistry.namespaces.list.mockResolvedValue({
 			namespaces: [{ name: "myorg" }],
 		})
 		vi.mocked(loadProjectConfig).mockReturnValue({
-			runtime: "typescript",
 			name: "my-server-name",
 		})
 
-		await deploy({})
+		await deploy({ entryFile: "/tmp/server.mcpb" })
 
 		expect(loadProjectConfig).toHaveBeenCalled()
 		expect(promptForServerNameInput).not.toHaveBeenCalled()
@@ -402,37 +360,14 @@ describe("deploy command", () => {
 		)
 	})
 
-	test("no --name, smithery.yaml exists but no name field: prompts for server name", async () => {
+	test("no --name, smithery.yaml exists without name: prompts for server name", async () => {
 		mockRegistry.namespaces.list.mockResolvedValue({
 			namespaces: [{ name: "myorg" }],
 		})
-		vi.mocked(loadProjectConfig).mockReturnValue({
-			runtime: "typescript",
-		})
+		vi.mocked(loadProjectConfig).mockReturnValue({})
 		vi.mocked(promptForServerNameInput).mockResolvedValue("myserver")
 
-		await deploy({})
-
-		expect(loadProjectConfig).toHaveBeenCalled()
-		expect(promptForServerNameInput).toHaveBeenCalledWith("myorg")
-		expect(mockRegistry.servers.releases.deploy).toHaveBeenCalledWith(
-			"myorg/myserver",
-			expect.objectContaining({
-				payload: expect.any(String),
-			}),
-		)
-	})
-
-	test("no --name, smithery.yaml with non-typescript runtime: prompts for server name", async () => {
-		mockRegistry.namespaces.list.mockResolvedValue({
-			namespaces: [{ name: "myorg" }],
-		})
-		vi.mocked(loadProjectConfig).mockReturnValue({
-			runtime: "python",
-		})
-		vi.mocked(promptForServerNameInput).mockResolvedValue("myserver")
-
-		await deploy({})
+		await deploy({ entryFile: "/tmp/server.mcpb" })
 
 		expect(loadProjectConfig).toHaveBeenCalled()
 		expect(promptForServerNameInput).toHaveBeenCalledWith("myorg")
@@ -451,7 +386,7 @@ describe("deploy command", () => {
 		vi.mocked(loadProjectConfig).mockReturnValue(null)
 		vi.mocked(promptForServerNameInput).mockResolvedValue("myserver")
 
-		await deploy({})
+		await deploy({ entryFile: "/tmp/server.mcpb" })
 
 		expect(loadProjectConfig).toHaveBeenCalled()
 		expect(promptForServerNameInput).toHaveBeenCalledWith("myorg")
@@ -469,11 +404,10 @@ describe("deploy command", () => {
 		})
 		vi.mocked(promptForNamespaceCreation).mockResolvedValue("neworg")
 		vi.mocked(loadProjectConfig).mockReturnValue({
-			runtime: "typescript",
 			name: "my-server-name",
 		})
 
-		await deploy({})
+		await deploy({ entryFile: "/tmp/server.mcpb" })
 
 		expect(loadProjectConfig).toHaveBeenCalled()
 		expect(promptForNamespaceCreation).toHaveBeenCalled()
@@ -496,9 +430,9 @@ describe("deploy command", () => {
 		)
 		mockRegistry.servers.releases.deploy.mockRejectedValue(error)
 
-		await expect(deploy({ name: "otherorg/myserver" })).rejects.toThrow(
-			"process.exit() was called",
-		)
+		await expect(
+			deploy({ name: "otherorg/myserver", entryFile: "/tmp/server.mcpb" }),
+		).rejects.toThrow("process.exit() was called")
 	})
 
 	test("403 error: handles server ownership error correctly", async () => {
@@ -510,9 +444,9 @@ describe("deploy command", () => {
 		)
 		mockRegistry.servers.releases.deploy.mockRejectedValue(error)
 
-		await expect(deploy({ name: "myorg/myserver" })).rejects.toThrow(
-			"process.exit() was called",
-		)
+		await expect(
+			deploy({ name: "myorg/myserver", entryFile: "/tmp/server.mcpb" }),
+		).rejects.toThrow("process.exit() was called")
 	})
 
 	test("404 error: handles namespace not found error correctly", async () => {
@@ -524,46 +458,20 @@ describe("deploy command", () => {
 		)
 		mockRegistry.servers.releases.deploy.mockRejectedValue(error)
 
-		await expect(deploy({ name: "nonexistent/myserver" })).rejects.toThrow()
+		await expect(
+			deploy({ name: "nonexistent/myserver", entryFile: "/tmp/server.mcpb" }),
+		).rejects.toThrow()
 		expect(console.error).toHaveBeenCalledWith(
 			expect.stringContaining("Namespace"),
 		)
 	})
 
-	test("--from-build: skips build and loads manifest from directory", async () => {
-		vi.mocked(loadBuildManifest).mockReturnValue({
-			payload: { type: "hosted", stateful: false, hasAuthAdapter: false },
-			modulePath: "/my/prebuilt/module.js",
-			sourcemapPath: "/my/prebuilt/module.js.map",
+	test(".mcpb path: uploads bundle artifact without building", async () => {
+		await deploy({
+			name: "myorg/myserver",
+			entryFile: "/my/prebuilt/server.mcpb",
 		})
 
-		await deploy({ name: "myorg/myserver", fromBuild: "/my/prebuilt" })
-
-		expect(buildBundle).not.toHaveBeenCalled()
-		expect(loadBuildManifest).toHaveBeenCalledWith("/my/prebuilt")
-		expect(mockRegistry.servers.releases.deploy).toHaveBeenCalledWith(
-			"myorg/myserver",
-			expect.objectContaining({
-				payload: expect.stringContaining('"type":"hosted"'),
-				module: expect.anything(),
-			}),
-		)
-	})
-
-	test("--from-build with stdio: uploads bundle artifact", async () => {
-		vi.mocked(loadBuildManifest).mockReturnValue({
-			payload: {
-				type: "stdio",
-				runtime: "node",
-				stateful: false,
-				hasAuthAdapter: false,
-			},
-			bundlePath: "/my/prebuilt/server.mcpb",
-		})
-
-		await deploy({ name: "myorg/myserver", fromBuild: "/my/prebuilt" })
-
-		expect(buildBundle).not.toHaveBeenCalled()
 		expect(mockRegistry.servers.releases.deploy).toHaveBeenCalledWith(
 			"myorg/myserver",
 			expect.objectContaining({
@@ -571,41 +479,6 @@ describe("deploy command", () => {
 				bundle: expect.anything(),
 			}),
 		)
-	})
-
-	test("--from-build without --name: uses name from manifest", async () => {
-		mockRegistry.namespaces.list.mockResolvedValue({
-			namespaces: [{ name: "myorg" }],
-		})
-		vi.mocked(loadBuildManifest).mockReturnValue({
-			name: "my-server",
-			payload: { type: "hosted", stateful: false, hasAuthAdapter: false },
-			modulePath: "/my/prebuilt/module.js",
-		})
-
-		await deploy({ fromBuild: "/my/prebuilt" })
-
-		expect(buildBundle).not.toHaveBeenCalled()
-		expect(loadBuildManifest).toHaveBeenCalledWith("/my/prebuilt")
-		expect(promptForServerNameInput).not.toHaveBeenCalled()
-		expect(mockRegistry.servers.releases.deploy).toHaveBeenCalledWith(
-			"myorg/my-server",
-			expect.objectContaining({
-				payload: expect.any(String),
-			}),
-		)
-	})
-
-	test("--from-build with --url: exits with error", async () => {
-		await expect(
-			deploy({
-				name: "myorg/myserver",
-				fromBuild: "/my/prebuilt",
-				url: "https://example.com/mcp",
-			}),
-		).rejects.toThrow("process.exit() was called")
-
-		expect(buildBundle).not.toHaveBeenCalled()
 	})
 
 	test("non-TTY mode: spawns background watcher and outputs JSON", async () => {
@@ -617,7 +490,7 @@ describe("deploy command", () => {
 
 		const consoleSpy = vi.spyOn(console, "log")
 
-		await deploy({ name: "myorg/myserver" })
+		await deploy({ name: "myorg/myserver", entryFile: "/tmp/server.mcpb" })
 
 		// Should write empty log file
 		expect(writeFileSync).toHaveBeenCalledWith(
@@ -679,7 +552,7 @@ describe("deploy command", () => {
 			.mockRejectedValueOnce(error)
 			.mockResolvedValueOnce({ deploymentId: "retry-id" })
 
-		await deploy({ name: "myorg/nonexistent" })
+		await deploy({ name: "myorg/nonexistent", entryFile: "/tmp/server.mcpb" })
 
 		expect(mockRegistry.servers.create).toHaveBeenCalledWith(
 			"myorg/nonexistent",

@@ -29,13 +29,10 @@ interface CliOptions {
 	limit?: string
 	page?: string
 	config?: string
-	transport?: string
-	out?: string
 	id?: string
 	name?: string
 	resume?: boolean
 	configSchema?: string
-	fromBuild?: string
 	client?: string
 	full?: boolean
 	namespace?: string
@@ -163,47 +160,16 @@ async function handleRun(server: string, options: CliOptions) {
 	await run(server, config)
 }
 
-async function handleBuild(entryFile: string | undefined, options: CliOptions) {
-	const transportRaw = options.transport ?? "shttp"
-	if (!["shttp", "stdio"].includes(transportRaw)) {
-		fatal(
-			`Invalid transport type "${transportRaw}". Valid options are: shttp, stdio`,
-		)
-	}
-	const transport = transportRaw as "shttp" | "stdio"
-
-	if (options.out && /\.(js|cjs|mjs)$/.test(options.out)) {
-		console.warn(
-			pc.yellow(`⚠ Warning: -o now expects a directory, not a file path.`),
-		)
-		console.warn(
-			pc.yellow(
-				`  Change "${options.out}" to "${options.out.replace(/\/[^/]+\.(js|cjs|mjs)$/, "")}" instead.`,
-			),
-		)
-		console.warn()
-	}
-
-	const { buildBundle } = await import("./lib/bundle")
-	await buildBundle({
-		entryFile,
-		outDir: options.out,
-		transport,
-		production: true,
-	})
-}
-
-async function handlePublish(server: string | undefined, options: CliOptions) {
-	const isUrl = server?.startsWith("http://") || server?.startsWith("https://")
+async function handlePublish(target: string | undefined, options: CliOptions) {
+	const isUrl = target?.startsWith("http://") || target?.startsWith("https://")
 
 	const { deploy } = await import("./commands/mcp/deploy")
 	await deploy({
-		url: isUrl ? server : undefined,
-		entryFile: isUrl ? undefined : server,
+		url: isUrl ? target : undefined,
+		entryFile: isUrl ? undefined : target,
 		name: options.name,
 		resume: options.resume,
 		configSchema: options.configSchema,
-		fromBuild: options.fromBuild,
 	})
 }
 
@@ -547,20 +513,6 @@ function withSearchOptions(cmd: InstanceType<typeof Command>) {
 		.option("--page <number>", "Page number", "1")
 }
 
-// Helper to register build options on a command
-function withBuildOptions(cmd: InstanceType<typeof Command>) {
-	return cmd
-		.option(
-			"-o, --out <dir>",
-			"Output directory (default: .smithery/shttp or .smithery/stdio)",
-		)
-		.option(
-			"-t, --transport <type>",
-			"Transport type: shttp or stdio (default: shttp)",
-			"shttp",
-		)
-}
-
 // Helper to register publish options on a command
 function withPublishOptions(cmd: InstanceType<typeof Command>) {
 	return cmd
@@ -575,10 +527,6 @@ function withPublishOptions(cmd: InstanceType<typeof Command>) {
 		.option(
 			"--config-schema <json-or-path>",
 			"JSON Schema for server configuration. Inline JSON or path to .json file",
-		)
-		.option(
-			"--from-build <dir>",
-			"Publish from pre-built artifacts (skips build). Requires --name.",
 		)
 }
 
@@ -615,14 +563,21 @@ const mcpCmd = program
 
 const publishCmd = withPublishOptions(
 	mcpCmd
-		.command("publish [server]")
-		.description("Publish an MCP server to Smithery"),
+		.command("publish [target]")
+		.description("Publish an MCP server URL or bundle to Smithery"),
 )
+	.addHelpText(
+		"after",
+		`
+Examples:
+  smithery mcp publish https://my-mcp-server.com -n myorg/my-server
+  smithery mcp publish ./server.mcpb -n myorg/my-server`,
+	)
 	.action(handlePublish)
 	.hook("postAction", (thisCommand) => {
-		const server = thisCommand.args[0]
+		const target = thisCommand.args[0]
 		const isUrl =
-			server?.startsWith("http://") || server?.startsWith("https://")
+			target?.startsWith("http://") || target?.startsWith("https://")
 		if (isUrl && !thisCommand.opts().configSchema) {
 			console.log(
 				pc.dim(
@@ -779,12 +734,6 @@ const mcpUninstallCmd = mcpCmd
 		)
 	})
 	.action(handleUninstall)
-
-const buildCmd = withBuildOptions(
-	mcpCmd
-		.command("build [entryFile]", { hidden: true })
-		.description("Build MCP server for production"),
-).action(handleBuild)
 
 // Hidden within mcp: run (backward compat)
 const runCmd = mcpCmd
@@ -1397,8 +1346,7 @@ registerAlias(program, "uninstall [server]", mcpUninstallCmd, handleUninstall, {
 })
 registerAlias(program, "run <server>", runCmd, handleRun)
 registerAlias(program, "search [term]", searchCmd, handleSearch)
-registerAlias(program, "build [entryFile]", buildCmd, handleBuild)
-registerAlias(program, "publish [server]", publishCmd, handlePublish)
+registerAlias(program, "publish [target]", publishCmd, handlePublish)
 program
 	.command("login", { hidden: true })
 	.option(
