@@ -12,7 +12,9 @@ import { parseJsonObject } from "./mcp/parse-json"
 
 function warnPreview(): void {
 	console.warn(
-		pc.yellow("Triggers are in draft. Breaking change may happen without notice."),
+		pc.yellow(
+			"Triggers are in draft. Breaking change may happen without notice.",
+		),
 	)
 }
 
