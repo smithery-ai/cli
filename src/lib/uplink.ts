@@ -33,31 +33,20 @@ export type UplinkTarget =
 			args: string[]
 	  }
 
-type BridgeSocketPeer = {
-	onMessage(
-		listener: (data: string | ArrayBuffer) => void,
-	): (() => void) | undefined
-	onClose(
-		listener: (event: { code: number; reason: string }) => void,
-	): (() => void) | undefined
-	onError(listener: (error: unknown) => void): (() => void) | undefined
-	send(text: string): void
-}
-
-type BridgeLocalPeer = {
-	onMessage(
-		listener: (message: JSONRPCMessage) => void,
-	): (() => void) | undefined
-	onClose(listener: (code?: number) => void): (() => void) | undefined
-	onError(
-		listener: (event: { error: unknown; detail?: string }) => void,
-	): (() => void) | undefined
-	send(message: JSONRPCMessage): Promise<void>
-}
-
-type ManagedLocalPeer = BridgeLocalPeer & {
-	close(): Promise<void>
+export interface LocalPeer {
 	start(): Promise<void>
+	close(): Promise<void>
+	send(message: JSONRPCMessage): Promise<void>
+	onmessage?: (message: JSONRPCMessage) => void
+	onclose?: (code?: number) => void
+	onerror?: (event: { error: unknown; detail?: string }) => void
+}
+
+export interface SocketPeer {
+	send(text: string): void
+	onmessage?: (data: string | ArrayBuffer) => void
+	onclose?: (event: { code: number; reason: string }) => void
+	onerror?: (error: unknown) => void
 }
 
 type BridgeCloseEvent =
@@ -69,101 +58,67 @@ type BridgeErrorEvent =
 	| { source: "local"; error: unknown; detail?: string }
 
 export function wireJsonRpcBridge(options: {
-	socket: BridgeSocketPeer
-	local: BridgeLocalPeer
+	socket: SocketPeer
+	local: LocalPeer
 	onClose: (event: BridgeCloseEvent) => void
 	onError: (event: BridgeErrorEvent) => void
 }): () => void {
 	const { socket, local, onClose, onError } = options
 	const textDecoder = new TextDecoder()
-	const cleanups: Array<() => void> = []
 
-	const addCleanup = (cleanup: (() => void) | undefined) => {
-		if (typeof cleanup === "function") {
-			cleanups.push(cleanup)
-		}
-	}
-
-	addCleanup(
-		socket.onMessage((data) => {
-			void (async () => {
-				const text =
-					typeof data === "string"
-						? data
-						: textDecoder.decode(new Uint8Array(data))
-				let message: JSONRPCMessage
-				try {
-					message = JSONRPCMessageSchema.parse(JSON.parse(text))
-				} catch (error) {
-					onError({ source: "socket", error })
-					return
-				}
-
-				try {
-					await local.send(message)
-				} catch (error) {
-					onError({
-						source: "local",
-						error,
-						detail: describeJsonRpcMessage(message),
-					})
-				}
-			})()
-		}),
-	)
-
-	addCleanup(
-		local.onMessage((message) => {
+	socket.onmessage = (data) => {
+		void (async () => {
+			const text =
+				typeof data === "string"
+					? data
+					: textDecoder.decode(new Uint8Array(data))
+			let message: JSONRPCMessage
 			try {
-				socket.send(JSON.stringify(message))
+				message = JSONRPCMessageSchema.parse(JSON.parse(text))
+			} catch (error) {
+				onError({ source: "socket", error })
+				return
+			}
+
+			try {
+				await local.send(message)
 			} catch (error) {
 				onError({
-					source: "socket",
+					source: "local",
 					error,
 					detail: describeJsonRpcMessage(message),
 				})
 			}
-		}),
-	)
+		})()
+	}
 
-	addCleanup(
-		socket.onClose((event) => {
-			onClose({
-				source: "socket",
-				code: event.code,
-				reason: event.reason,
-			})
-		}),
-	)
-
-	addCleanup(
-		local.onClose((code) => {
-			onClose({
-				source: "local",
-				code,
-			})
-		}),
-	)
-
-	addCleanup(
-		socket.onError((error) => {
-			onError({ source: "socket", error })
-		}),
-	)
-	addCleanup(
-		local.onError((event) => {
+	local.onmessage = (message) => {
+		try {
+			socket.send(JSON.stringify(message))
+		} catch (error) {
 			onError({
-				source: "local",
-				error: event.error,
-				detail: event.detail,
+				source: "socket",
+				error,
+				detail: describeJsonRpcMessage(message),
 			})
-		}),
-	)
+		}
+	}
+
+	socket.onclose = (event) =>
+		onClose({ source: "socket", code: event.code, reason: event.reason })
+	local.onclose = (code) => onClose({ source: "local", code })
+
+	socket.onerror = (error) => onError({ source: "socket", error })
+	local.onerror = (event) =>
+		onError({ source: "local", error: event.error, detail: event.detail })
 
 	return () => {
-		for (const cleanup of cleanups.splice(0)) {
-			cleanup()
-		}
+		socket.onmessage = undefined
+		socket.onclose = undefined
+		socket.onerror = undefined
+		local.onmessage = undefined
+		local.onclose = undefined
+		local.onerror = undefined
 	}
 }
 
@@ -174,7 +129,7 @@ export async function serveUplink(options: {
 	force?: boolean
 }): Promise<number> {
 	const client = await createSmitheryClient()
-	const local: ManagedLocalPeer =
+	const local: LocalPeer =
 		options.target.kind === "uplink-http"
 			? createHttpLocalPeer(options.target.mcpUrl)
 			: createStdioLocalPeer(options.target.command, options.target.args)
@@ -435,80 +390,56 @@ async function preflightUplinkPair(options: {
 	throw new Error(await readPairError(response))
 }
 
-function createSocketPeer(socket: WebSocket): BridgeSocketPeer {
-	return {
-		onMessage(listener) {
-			const handler = (event: MessageEvent) => {
-				if (
-					typeof event.data === "string" ||
-					event.data instanceof ArrayBuffer
-				) {
-					listener(event.data)
-					return
-				}
-
-				if (ArrayBuffer.isView(event.data)) {
-					const bytes = new Uint8Array(
-						event.data.buffer,
-						event.data.byteOffset,
-						event.data.byteLength,
-					)
-					listener(Uint8Array.from(bytes).buffer)
-				}
-			}
-			socket.addEventListener("message", handler)
-			return () => socket.removeEventListener("message", handler)
-		},
-		onClose(listener) {
-			const handler = (event: CloseEvent) => {
-				listener({ code: event.code, reason: event.reason })
-			}
-			socket.addEventListener("close", handler)
-			return () => socket.removeEventListener("close", handler)
-		},
-		onError(listener) {
-			const handler = (event: Event) => {
-				const errorEvent = event as ErrorEvent
-				listener(errorEvent.error ?? new Error(errorEvent.message))
-			}
-			socket.addEventListener("error", handler)
-			return () => socket.removeEventListener("error", handler)
-		},
+function createSocketPeer(socket: WebSocket): SocketPeer {
+	const peer: SocketPeer = {
 		send(text) {
 			socket.send(text)
 		},
 	}
+	socket.addEventListener("message", (event) => {
+		if (typeof event.data === "string" || event.data instanceof ArrayBuffer) {
+			peer.onmessage?.(event.data)
+			return
+		}
+		if (ArrayBuffer.isView(event.data)) {
+			const bytes = new Uint8Array(
+				event.data.buffer,
+				event.data.byteOffset,
+				event.data.byteLength,
+			)
+			peer.onmessage?.(Uint8Array.from(bytes).buffer)
+		}
+	})
+	socket.addEventListener("close", (event) => {
+		peer.onclose?.({ code: event.code, reason: event.reason })
+	})
+	socket.addEventListener("error", (event) => {
+		const errorEvent = event as ErrorEvent
+		peer.onerror?.(errorEvent.error ?? new Error(errorEvent.message))
+	})
+	return peer
 }
 
-export interface LocalHttpTransport {
-	start(): Promise<void>
-	close(): Promise<void>
-	send(message: JSONRPCMessage): Promise<void>
-	onmessage?: (message: JSONRPCMessage) => void
-	onclose?: () => void
-	onerror?: (error: Error) => void
-}
-
-function createHttpLocalPeer(mcpUrl: string): ManagedLocalPeer {
-	return wrapLocalHttpTransport(
-		new StreamableHTTPClientTransport(new URL(mcpUrl)),
-	)
+function createHttpLocalPeer(mcpUrl: string): LocalPeer {
+	const transport = new StreamableHTTPClientTransport(new URL(mcpUrl))
+	const adapted: LocalPeer = {
+		start: () => transport.start(),
+		close: () => transport.close(),
+		send: (message) => transport.send(message),
+	}
+	transport.onmessage = (message) => adapted.onmessage?.(message)
+	transport.onclose = () => adapted.onclose?.()
+	transport.onerror = (error) => adapted.onerror?.({ error })
+	return wrapInitialized(adapted)
 }
 
 // The Smithery gateway forwards raw JSON-RPC frames, and for later remote
 // sessions it replays a cached initialize response without re-forwarding
-// `initialize` to the uplink. A session-aware HTTP MCP server still requires
-// a real `initialize` + `notifications/initialized` handshake per local
-// session, so we run one up front and then satisfy any gateway-forwarded
-// initialize frames from the cached local result.
-export function wrapLocalHttpTransport(
-	transport: LocalHttpTransport,
-): ManagedLocalPeer {
-	const messageListeners = new Set<(message: JSONRPCMessage) => void>()
-	const closeListeners = new Set<(code?: number) => void>()
-	const errorListeners = new Set<
-		(event: { error: unknown; detail?: string }) => void
-	>()
+// `initialize` to the uplink. A session-aware MCP server still requires a real
+// `initialize` + `notifications/initialized` handshake per local session, so
+// we run one up front and then satisfy any gateway-forwarded initialize frames
+// from the cached local result.
+export function wrapInitialized(inner: LocalPeer): LocalPeer {
 	const pendingDetails = new Set<string>()
 
 	let cachedInitResult: InitializeResult | undefined
@@ -519,56 +450,13 @@ export function wrapLocalHttpTransport(
 		  }
 		| undefined
 
-	transport.onmessage = (message) => {
-		if (
-			handshake !== undefined &&
-			"id" in message &&
-			message.id === LOCAL_HANDSHAKE_ID
-		) {
-			const pending = handshake
-			handshake = undefined
-			if ("result" in message) {
-				pending.resolve(message.result as InitializeResult)
-			} else if ("error" in message) {
-				pending.reject(
-					new Error(`Local MCP initialize failed: ${message.error.message}`),
-				)
-			} else {
-				pending.reject(new Error("Local MCP initialize returned no result"))
-			}
-			return
-		}
-		for (const listener of messageListeners) {
-			listener(message)
-		}
-	}
-	transport.onclose = () => {
-		for (const listener of closeListeners) {
-			listener(1)
-		}
-	}
-	transport.onerror = (error) => {
-		if (handshake !== undefined) {
-			const pending = handshake
-			handshake = undefined
-			pending.reject(error)
-			return
-		}
-		for (const listener of errorListeners) {
-			listener({
-				error,
-				detail: formatPendingDetails(pendingDetails),
-			})
-		}
-	}
-
-	return {
+	const outer: LocalPeer = {
 		async start() {
-			await transport.start()
+			await inner.start()
 			cachedInitResult = await new Promise<InitializeResult>(
 				(resolve, reject) => {
 					handshake = { resolve, reject }
-					transport
+					inner
 						.send({
 							jsonrpc: "2.0",
 							id: LOCAL_HANDSHAKE_ID,
@@ -588,33 +476,18 @@ export function wrapLocalHttpTransport(
 						})
 				},
 			)
-			await transport.send({
+			await inner.send({
 				jsonrpc: "2.0",
 				method: "notifications/initialized",
 			})
 		},
-		onMessage(listener) {
-			messageListeners.add(listener)
-			return () => messageListeners.delete(listener)
-		},
-		onClose(listener) {
-			closeListeners.add(listener)
-			return () => closeListeners.delete(listener)
-		},
-		onError(listener) {
-			errorListeners.add(listener)
-			return () => errorListeners.delete(listener)
-		},
 		async send(message) {
 			if (isInitializeRequest(message) && cachedInitResult !== undefined) {
-				const reply: JSONRPCMessage = {
+				outer.onmessage?.({
 					jsonrpc: "2.0",
 					id: message.id,
 					result: cachedInitResult,
-				}
-				for (const listener of messageListeners) {
-					listener(reply)
-				}
+				})
 				return
 			}
 
@@ -625,15 +498,61 @@ export function wrapLocalHttpTransport(
 			const detail = describeJsonRpcMessage(message)
 			pendingDetails.add(detail)
 			try {
-				await transport.send(message)
+				await inner.send(message)
 			} finally {
 				pendingDetails.delete(detail)
 			}
 		},
 		close() {
-			return transport.close()
+			return inner.close()
 		},
 	}
+
+	inner.onmessage = (message) => {
+		if (
+			handshake !== undefined &&
+			"id" in message &&
+			message.id === LOCAL_HANDSHAKE_ID
+		) {
+			const pending = handshake
+			handshake = undefined
+			if ("result" in message) {
+				pending.resolve(message.result as InitializeResult)
+			} else if ("error" in message) {
+				pending.reject(
+					new Error(`Local MCP initialize failed: ${message.error.message}`),
+				)
+			} else {
+				pending.reject(new Error("Local MCP initialize returned no result"))
+			}
+			return
+		}
+		outer.onmessage?.(message)
+	}
+
+	inner.onclose = (code) => {
+		if (handshake !== undefined) {
+			const pending = handshake
+			handshake = undefined
+			pending.reject(new Error("Local MCP closed before initialize completed."))
+		}
+		outer.onclose?.(code)
+	}
+
+	inner.onerror = (event) => {
+		if (handshake !== undefined) {
+			const pending = handshake
+			handshake = undefined
+			pending.reject(event.error)
+			return
+		}
+		outer.onerror?.({
+			error: event.error,
+			detail: event.detail ?? formatPendingDetails(pendingDetails),
+		})
+	}
+
+	return outer
 }
 
 function isInitializeRequest(
@@ -655,22 +574,14 @@ function isInitializedNotification(message: JSONRPCMessage): boolean {
 	)
 }
 
-function createStdioLocalPeer(
-	command: string,
-	args: string[],
-): ManagedLocalPeer {
+function createStdioLocalPeer(command: string, args: string[]): LocalPeer {
 	const resolved = resolveSpawnCommand(command, args)
-	const readBuffer = new ReadBuffer()
-	const messageListeners = new Set<(message: JSONRPCMessage) => void>()
-	const closeListeners = new Set<(code?: number) => void>()
-	const errorListeners = new Set<
-		(event: { error: unknown; detail?: string }) => void
-	>()
 	let child: ReturnType<typeof spawn> | null = null
 
-	return {
+	const inner: LocalPeer = {
 		start() {
 			return new Promise<void>((resolve, reject) => {
+				const readBuffer = new ReadBuffer()
 				child = spawn(resolved.command, resolved.args, {
 					cwd: process.cwd(),
 					env: getRuntimeEnvironment(getStringEnv(process.env)),
@@ -680,19 +591,14 @@ function createStdioLocalPeer(
 
 				child.on("error", (error) => {
 					reject(error)
-					for (const listener of errorListeners) {
-						listener({ error })
-					}
+					inner.onerror?.({ error })
 				})
 
 				child.on("spawn", () => resolve())
 
 				child.on("close", (code, signal) => {
 					child = null
-					const exitCode = code ?? (signal ? 1 : 0)
-					for (const listener of closeListeners) {
-						listener(exitCode)
-					}
+					inner.onclose?.(code ?? (signal ? 1 : 0))
 				})
 
 				child.stdout?.on("data", (chunk: Buffer) => {
@@ -703,42 +609,17 @@ function createStdioLocalPeer(
 							if (message === null) {
 								break
 							}
-							for (const listener of messageListeners) {
-								listener(message)
-							}
+							inner.onmessage?.(message)
 						} catch (error) {
-							for (const listener of errorListeners) {
-								listener({ error })
-							}
+							inner.onerror?.({ error })
 							break
 						}
 					}
 				})
 
-				child.stdout?.on("error", (error) => {
-					for (const listener of errorListeners) {
-						listener({ error })
-					}
-				})
-
-				child.stdin?.on("error", (error) => {
-					for (const listener of errorListeners) {
-						listener({ error })
-					}
-				})
+				child.stdout?.on("error", (error) => inner.onerror?.({ error }))
+				child.stdin?.on("error", (error) => inner.onerror?.({ error }))
 			})
-		},
-		onMessage(listener) {
-			messageListeners.add(listener)
-			return () => messageListeners.delete(listener)
-		},
-		onClose(listener) {
-			closeListeners.add(listener)
-			return () => closeListeners.delete(listener)
-		},
-		onError(listener) {
-			errorListeners.add(listener)
-			return () => errorListeners.delete(listener)
 		},
 		send(message) {
 			return writeToChild(child, serializeMessage(message))
@@ -769,6 +650,8 @@ function createStdioLocalPeer(
 			}
 		},
 	}
+
+	return wrapInitialized(inner)
 }
 
 function buildPairUrl(
