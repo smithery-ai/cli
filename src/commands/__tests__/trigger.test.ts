@@ -2,7 +2,6 @@ import { beforeAll, beforeEach, describe, expect, test, vi } from "vitest"
 
 const {
 	mockListEventTriggers,
-	mockCreateTrigger,
 	mockListSubscriptions,
 	mockCreateSubscription,
 	mockCreateSession,
@@ -12,7 +11,6 @@ const {
 	mockOutputJson,
 } = vi.hoisted(() => {
 	const listEventTriggers = vi.fn()
-	const createTrigger = vi.fn()
 	const listSubscriptions = vi.fn()
 	const createSubscription = vi.fn()
 	const request = vi.fn()
@@ -20,7 +18,6 @@ const {
 	const getEventsClient = vi.fn(async () => ({ request, close }))
 	const createSession = vi.fn(async () => ({
 		listEventTriggers,
-		createTrigger,
 		listSubscriptions,
 		createSubscription,
 		getEventsClient,
@@ -28,7 +25,6 @@ const {
 
 	return {
 		mockListEventTriggers: listEventTriggers,
-		mockCreateTrigger: createTrigger,
 		mockListSubscriptions: listSubscriptions,
 		mockCreateSubscription: createSubscription,
 		mockCreateSession: createSession,
@@ -80,7 +76,7 @@ describe("trigger commands", () => {
 	})
 
 	test("lists trigger types for a connection", async () => {
-	mockListEventTriggers.mockResolvedValue([
+		mockListEventTriggers.mockResolvedValue([
 			{
 				name: "page.updated",
 				description: "Fires when a page changes.",
