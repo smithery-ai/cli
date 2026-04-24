@@ -1,34 +1,40 @@
 import { beforeAll, beforeEach, describe, expect, test, vi } from "vitest"
 
 const {
-	mockListEventTriggers,
+	mockListTriggers,
+	mockGetTrigger,
+	mockCreateTrigger,
+	mockDeleteTrigger,
 	mockListSubscriptions,
 	mockCreateSubscription,
 	mockCreateSession,
-	mockGetEventsClient,
 	mockOutputTable,
 	mockOutputDetail,
 	mockOutputJson,
 } = vi.hoisted(() => {
-	const listEventTriggers = vi.fn()
+	const listTriggers = vi.fn()
+	const getTrigger = vi.fn()
+	const createTrigger = vi.fn()
+	const deleteTrigger = vi.fn()
 	const listSubscriptions = vi.fn()
 	const createSubscription = vi.fn()
-	const request = vi.fn()
-	const close = vi.fn().mockResolvedValue(undefined)
-	const getEventsClient = vi.fn(async () => ({ request, close }))
 	const createSession = vi.fn(async () => ({
-		listEventTriggers,
+		listTriggers,
+		getTrigger,
+		createTrigger,
+		deleteTrigger,
 		listSubscriptions,
 		createSubscription,
-		getEventsClient,
 	}))
 
 	return {
-		mockListEventTriggers: listEventTriggers,
+		mockListTriggers: listTriggers,
+		mockGetTrigger: getTrigger,
+		mockCreateTrigger: createTrigger,
+		mockDeleteTrigger: deleteTrigger,
 		mockListSubscriptions: listSubscriptions,
 		mockCreateSubscription: createSubscription,
 		mockCreateSession: createSession,
-		mockGetEventsClient: getEventsClient,
 		mockOutputTable: vi.fn(),
 		mockOutputDetail: vi.fn(),
 		mockOutputJson: vi.fn(),
@@ -76,7 +82,7 @@ describe("trigger commands", () => {
 	})
 
 	test("prints a draft warning before trigger commands", async () => {
-		mockListEventTriggers.mockResolvedValue([])
+		mockListTriggers.mockResolvedValue([])
 		const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {})
 
 		await listTriggers("notion", {})
@@ -91,7 +97,7 @@ describe("trigger commands", () => {
 	})
 
 	test("lists trigger types for a connection", async () => {
-		mockListEventTriggers.mockResolvedValue([
+		mockListTriggers.mockResolvedValue([
 			{
 				name: "page.updated",
 				description: "Fires when a page changes.",
@@ -103,7 +109,7 @@ describe("trigger commands", () => {
 		await listTriggers("notion", { namespace: "prod" })
 
 		expect(mockCreateSession).toHaveBeenCalledWith("prod")
-		expect(mockListEventTriggers).toHaveBeenCalledWith("notion")
+		expect(mockListTriggers).toHaveBeenCalledWith("notion")
 		expect(mockOutputTable).toHaveBeenCalledWith(
 			expect.objectContaining({
 				jsonData: expect.objectContaining({
@@ -117,21 +123,19 @@ describe("trigger commands", () => {
 		)
 	})
 
-	test("gets trigger schemas from the MCP trigger catalog", async () => {
-		mockListEventTriggers.mockResolvedValue([
-			{
-				name: "page.updated",
-				description: "Fires when a page changes.",
-				delivery: ["webhook"],
-				inputSchema: { type: "object" },
-				payloadSchema: { type: "object" },
-			},
-		])
+	test("gets trigger schemas from the REST trigger catalog", async () => {
+		mockGetTrigger.mockResolvedValue({
+			name: "page.updated",
+			description: "Fires when a page changes.",
+			delivery: ["webhook"],
+			inputSchema: { type: "object" },
+			payloadSchema: { type: "object" },
+		})
 
 		const { getTrigger } = await import("../trigger")
 		await getTrigger("notion", "page.updated", undefined, {})
 
-		expect(mockListEventTriggers).toHaveBeenCalledWith("notion")
+		expect(mockGetTrigger).toHaveBeenCalledWith("notion", "page.updated")
 		expect(mockOutputDetail).toHaveBeenCalledWith(
 			expect.objectContaining({
 				data: expect.objectContaining({
@@ -142,68 +146,98 @@ describe("trigger commands", () => {
 		)
 	})
 
-	test("creates a trigger instance from JSON params", async () => {
-		const request = vi.fn().mockResolvedValue({ subscriptionId: "trg_123" })
-		const close = vi.fn().mockResolvedValue(undefined)
-		mockGetEventsClient.mockResolvedValue({ request, close })
+	test("creates a trigger instance from JSON params over REST", async () => {
+		mockCreateTrigger.mockResolvedValue({
+			id: "trg_123",
+			name: "page.updated",
+			params: { workspace_id: "w_123" },
+			created_at: "2026-04-24T00:00:00.000Z",
+		})
 
 		await subscribeTrigger(
 			"notion",
 			"page.updated",
 			'{"workspace_id":"w_123"}',
-			{ url: "https://hook.new/i/test" },
+			{},
 		)
 
-		expect(request).toHaveBeenCalledWith(
-			{
-				method: "ai.smithery/events/subscribe",
-				params: {
-					name: "page.updated",
-					id: expect.any(String),
-					params: { workspace_id: "w_123" },
-					delivery: {
-						mode: "webhook",
-						url: "https://hook.new/i/test",
-					},
-				},
-			},
-			expect.anything(),
-		)
+		expect(mockCreateTrigger).toHaveBeenCalledWith("notion", "page.updated", {
+			workspace_id: "w_123",
+		})
 		expect(mockOutputDetail).toHaveBeenCalledWith(
 			expect.objectContaining({
 				data: expect.objectContaining({
-					subscriptionId: "trg_123",
+					id: "trg_123",
 					connection: "notion",
 					name: "page.updated",
+					params: { workspace_id: "w_123" },
+				}),
+			}),
+		)
+	})
+
+	test("optionally creates a connection-scoped subscription before creating a trigger", async () => {
+		mockListSubscriptions.mockResolvedValue([])
+		mockCreateSubscription.mockResolvedValue({
+			id: "sub_123",
+			url: "https://hook.new/i/test",
+			secret: "whsec_123",
+		})
+		mockCreateTrigger.mockResolvedValue({
+			id: "trg_123",
+			name: "page.updated",
+			params: {},
+			created_at: "2026-04-24T00:00:00.000Z",
+		})
+
+		await subscribeTrigger("notion", "page.updated", undefined, {
+			url: "https://hook.new/i/test",
+		})
+
+		expect(mockListSubscriptions).toHaveBeenCalledWith("notion")
+		expect(mockCreateSubscription).toHaveBeenCalledWith(
+			"https://hook.new/i/test",
+			"notion",
+		)
+		expect(mockCreateTrigger).toHaveBeenCalledWith("notion", "page.updated", {})
+		expect(mockOutputDetail).toHaveBeenCalledWith(
+			expect.objectContaining({
+				data: expect.objectContaining({
+					subscriptionId: "sub_123",
+					secret: "whsec_123",
 					url: "https://hook.new/i/test",
 				}),
 			}),
 		)
-		expect(close).toHaveBeenCalled()
 	})
 
-	test("requires a delivery URL when creating a trigger instance", async () => {
+	test("requires trigger ids to be server-generated", async () => {
 		await expect(
-			subscribeTrigger("notion", "page.updated", undefined, {}),
+			subscribeTrigger("notion", "page.updated", undefined, {
+				id: "custom-id",
+			}),
 		).rejects.toThrow("process.exit")
 	})
 
-	test("unsubscribes through the MCP events extension", async () => {
-		const request = vi.fn().mockResolvedValue({})
-		const close = vi.fn().mockResolvedValue(undefined)
-		mockGetEventsClient.mockResolvedValue({ request, close })
+	test("unsubscribes through the REST trigger endpoint", async () => {
+		mockDeleteTrigger.mockResolvedValue(undefined)
 
 		const { unsubscribeTrigger } = await import("../trigger")
-		await unsubscribeTrigger("notion", "page.updated", undefined, {})
+		await unsubscribeTrigger("notion", "page.updated", "trg_123", {})
 
-		expect(request).toHaveBeenCalledWith(
-			{
-				method: "ai.smithery/events/unsubscribe",
-				params: { topic: "page.updated" },
-			},
-			expect.anything(),
+		expect(mockDeleteTrigger).toHaveBeenCalledWith(
+			"notion",
+			"page.updated",
+			"trg_123",
 		)
-		expect(close).toHaveBeenCalled()
+	})
+
+	test("requires a trigger id when deleting a trigger instance", async () => {
+		const { unsubscribeTrigger } = await import("../trigger")
+
+		await expect(
+			unsubscribeTrigger("notion", "page.updated", undefined, {}),
+		).rejects.toThrow("process.exit")
 	})
 
 	test("lists connection-scoped subscriptions", async () => {

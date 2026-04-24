@@ -265,6 +265,9 @@ export class ConnectSession {
 	async listTriggers(connectionId: string): Promise<Trigger[]> {
 		const response = await this.smitheryClient.get<{ triggers?: Trigger[] }>(
 			triggerCollectionPath(this.namespace, connectionId),
+			{
+				defaultBaseURL: SMITHERY_RUN_BASE_URL,
+			},
 		)
 		return response?.triggers ?? []
 	}
@@ -275,6 +278,9 @@ export class ConnectSession {
 	): Promise<Trigger> {
 		return this.smitheryClient.get<Trigger>(
 			triggerItemPath(this.namespace, connectionId, triggerName),
+			{
+				defaultBaseURL: SMITHERY_RUN_BASE_URL,
+			},
 		)
 	}
 
@@ -287,6 +293,7 @@ export class ConnectSession {
 			triggerItemPath(this.namespace, connectionId, triggerName),
 			{
 				body: { params },
+				defaultBaseURL: SMITHERY_RUN_BASE_URL,
 			},
 		)
 	}
@@ -298,6 +305,9 @@ export class ConnectSession {
 	): Promise<TriggerInstance> {
 		return this.smitheryClient.get<TriggerInstance>(
 			triggerInstancePath(this.namespace, connectionId, triggerName, triggerId),
+			{
+				defaultBaseURL: SMITHERY_RUN_BASE_URL,
+			},
 		)
 	}
 
@@ -308,6 +318,9 @@ export class ConnectSession {
 	): Promise<void> {
 		await this.smitheryClient.delete(
 			triggerInstancePath(this.namespace, connectionId, triggerName, triggerId),
+			{
+				defaultBaseURL: SMITHERY_RUN_BASE_URL,
+			},
 		)
 	}
 
@@ -316,7 +329,9 @@ export class ConnectSession {
 	): Promise<TriggerSubscription[]> {
 		const response = await this.smitheryClient.get<{
 			subscriptions?: TriggerSubscription[]
-		}>(subscriptionCollectionPath(this.namespace, connectionId))
+		}>(subscriptionCollectionPath(this.namespace, connectionId), {
+			defaultBaseURL: SMITHERY_RUN_BASE_URL,
+		})
 		return response?.subscriptions ?? []
 	}
 
@@ -328,6 +343,7 @@ export class ConnectSession {
 			subscriptionCollectionPath(this.namespace, connectionId),
 			{
 				body: { url },
+				defaultBaseURL: SMITHERY_RUN_BASE_URL,
 			},
 		)
 	}
@@ -338,6 +354,9 @@ export class ConnectSession {
 	): Promise<void> {
 		await this.smitheryClient.delete(
 			subscriptionItemPath(this.namespace, subscriptionId, connectionId),
+			{
+				defaultBaseURL: SMITHERY_RUN_BASE_URL,
+			},
 		)
 	}
 
@@ -413,7 +432,7 @@ function triggerCollectionPath(
 	namespace: string,
 	connectionId: string,
 ): string {
-	return `${namespacePath(namespace)}/${encodeURIComponent(connectionId)}/triggers`
+	return `${namespacePath(namespace)}/${encodeURIComponent(connectionId)}/.triggers`
 }
 
 function triggerItemPath(
@@ -438,9 +457,9 @@ function subscriptionCollectionPath(
 	connectionId?: string,
 ): string {
 	if (!connectionId) {
-		return `${namespacePath(namespace)}/subscriptions`
+		return `${namespacePath(namespace)}/.subscriptions`
 	}
-	return `${namespacePath(namespace)}/${encodeURIComponent(connectionId)}/subscriptions`
+	return `${namespacePath(namespace)}/${encodeURIComponent(connectionId)}/.subscriptions`
 }
 
 function subscriptionItemPath(

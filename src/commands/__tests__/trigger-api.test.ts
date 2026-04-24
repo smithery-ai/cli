@@ -34,38 +34,61 @@ describe("ConnectSession trigger support", () => {
 		await session.deleteSubscription("sub_123")
 		await session.deleteSubscription("sub_456", "notion")
 
-		expect(get).toHaveBeenNthCalledWith(1, "/my%20app/notion/triggers")
+		expect(get).toHaveBeenNthCalledWith(1, "/my%20app/notion/.triggers", {
+			defaultBaseURL: "https://smithery.run",
+		})
 		expect(get).toHaveBeenNthCalledWith(
 			2,
-			"/my%20app/notion/triggers/page.updated",
+			"/my%20app/notion/.triggers/page.updated",
+			{
+				defaultBaseURL: "https://smithery.run",
+			},
 		)
 		expect(post).toHaveBeenNthCalledWith(
 			1,
-			"/my%20app/notion/triggers/page.updated",
+			"/my%20app/notion/.triggers/page.updated",
 			{
 				body: { params: { workspace_id: "w_123" } },
+				defaultBaseURL: "https://smithery.run",
 			},
 		)
 		expect(get).toHaveBeenNthCalledWith(
 			3,
-			"/my%20app/notion/triggers/page.updated/trg_123",
+			"/my%20app/notion/.triggers/page.updated/trg_123",
+			{
+				defaultBaseURL: "https://smithery.run",
+			},
 		)
 		expect(del).toHaveBeenNthCalledWith(
 			1,
-			"/my%20app/notion/triggers/page.updated/trg_123",
+			"/my%20app/notion/.triggers/page.updated/trg_123",
+			{
+				defaultBaseURL: "https://smithery.run",
+			},
 		)
-		expect(get).toHaveBeenNthCalledWith(4, "/my%20app/subscriptions")
-		expect(post).toHaveBeenNthCalledWith(2, "/my%20app/subscriptions", {
+		expect(get).toHaveBeenNthCalledWith(4, "/my%20app/.subscriptions", {
+			defaultBaseURL: "https://smithery.run",
+		})
+		expect(post).toHaveBeenNthCalledWith(2, "/my%20app/.subscriptions", {
 			body: { url: "https://example.com/events" },
+			defaultBaseURL: "https://smithery.run",
 		})
-		expect(get).toHaveBeenNthCalledWith(5, "/my%20app/notion/subscriptions")
-		expect(post).toHaveBeenNthCalledWith(3, "/my%20app/notion/subscriptions", {
+		expect(get).toHaveBeenNthCalledWith(5, "/my%20app/notion/.subscriptions", {
+			defaultBaseURL: "https://smithery.run",
+		})
+		expect(post).toHaveBeenNthCalledWith(3, "/my%20app/notion/.subscriptions", {
 			body: { url: "https://example.com/notion" },
+			defaultBaseURL: "https://smithery.run",
 		})
-		expect(del).toHaveBeenNthCalledWith(2, "/my%20app/subscriptions/sub_123")
+		expect(del).toHaveBeenNthCalledWith(2, "/my%20app/.subscriptions/sub_123", {
+			defaultBaseURL: "https://smithery.run",
+		})
 		expect(del).toHaveBeenNthCalledWith(
 			3,
-			"/my%20app/notion/subscriptions/sub_456",
+			"/my%20app/notion/.subscriptions/sub_456",
+			{
+				defaultBaseURL: "https://smithery.run",
+			},
 		)
 	})
 

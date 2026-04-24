@@ -986,14 +986,16 @@ triggerCmd
 	.command("subscribe <connection> <name> [params]")
 	.description("Create a trigger instance")
 	.option("--namespace <ns>", "Namespace for the connection")
-	.option("--url <url>", "Webhook URL for trigger delivery")
-	.option("--id <id>", "Trigger subscription ID (defaults to a random UUID)")
+	.option(
+		"--url <url>",
+		"Optionally create or reuse a connection-scoped webhook subscription first",
+	)
 	.addHelpText(
 		"after",
 		`
 Examples:
-  smithery trigger subscribe notion page.updated '{"workspace_id":"w_123"}' --url https://hook.new/i/...
-  smithery trigger subscribe scheduler alarm '{"in":"PT10S"}' --url https://hook.new/i/...`,
+  smithery trigger subscribe notion page.updated '{"workspace_id":"w_123"}'
+  smithery trigger subscribe notion page.updated '{"workspace_id":"w_123"}' --url https://hook.new/i/...`,
 	)
 	.action(handleSubscribeTrigger)
 
@@ -1005,7 +1007,6 @@ triggerCmd
 		"after",
 		`
 Examples:
-  smithery trigger unsubscribe notion page.updated
   smithery trigger unsubscribe notion page.updated trg_01HW...`,
 	)
 	.action(handleUnsubscribeTrigger)
