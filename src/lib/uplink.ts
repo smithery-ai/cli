@@ -295,10 +295,15 @@ export async function serveUplink(options: {
 			pairedOnce = true
 			console.log("Pairing uplink ... connected")
 			console.log(`Local MCP: ${describeLocalTarget(options.target)}`)
+			console.log(`Namespace: ${options.namespace}`)
+			console.log(`Connection ID: ${options.connectionId}`)
 			console.log(
-				`Smithery: ${options.namespace}/${options.connectionId} (${getConnectionUrl(options.namespace, options.connectionId)})`,
+				`MCP: https://mcp.smithery.run/${encodeURIComponent(options.namespace)}/${encodeURIComponent(options.connectionId)}`,
 			)
-			console.log("Tool calls will route here. Press Ctrl-C to stop.")
+			console.log(
+				`REST: https://smithery.run/${encodeURIComponent(options.namespace)}/${encodeURIComponent(options.connectionId)}`,
+			)
+			console.log("Press Ctrl-C to stop.")
 			return
 		}
 
@@ -667,10 +672,6 @@ function describeLocalTarget(target: UplinkTarget): string {
 		return target.mcpUrl
 	}
 	return formatShellCommand(target.command, target.args)
-}
-
-function getConnectionUrl(namespace: string, connectionId: string): string {
-	return `https://smithery.ai/connect/${encodeURIComponent(namespace)}/${encodeURIComponent(connectionId)}`
 }
 
 function resolveSpawnCommand(

@@ -4,15 +4,18 @@ const {
 	mockAddServerImpl,
 	mockCreateConnection,
 	mockSetConnection,
+	mockDeleteConnection,
 	mockCreateSession,
 	mockServeUplink,
 } = vi.hoisted(() => {
 	const addServerImpl = vi.fn()
 	const createConnection = vi.fn()
 	const setConnection = vi.fn()
+	const deleteConnection = vi.fn(async () => {})
 	const createSession = vi.fn(async () => ({
 		createConnection,
 		setConnection,
+		deleteConnection,
 		getNamespace: () => "calclavia",
 	}))
 	const serveUplink = vi.fn(async () => 0)
@@ -21,6 +24,7 @@ const {
 		mockAddServerImpl: addServerImpl,
 		mockCreateConnection: createConnection,
 		mockSetConnection: setConnection,
+		mockDeleteConnection: deleteConnection,
 		mockCreateSession: createSession,
 		mockServeUplink: serveUplink,
 	}
@@ -89,6 +93,7 @@ describe("mcp add uplink routing", () => {
 				mcpUrl: "http://127.0.0.1:9090/mcp",
 			},
 		})
+		expect(mockDeleteConnection).toHaveBeenCalledWith("chrome")
 		expect(mockAddServerImpl).not.toHaveBeenCalled()
 	})
 
@@ -121,6 +126,7 @@ describe("mcp add uplink routing", () => {
 				args: ["-y", "@chromedevtools/chrome-devtools-mcp"],
 			},
 		})
+		expect(mockDeleteConnection).toHaveBeenCalledWith("uplink-1")
 		expect(mockAddServerImpl).not.toHaveBeenCalled()
 	})
 

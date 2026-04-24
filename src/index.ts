@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 
+import { realpathSync } from "node:fs"
 import { pathToFileURL } from "node:url"
 import pc from "picocolors"
 
@@ -1317,10 +1318,22 @@ export async function main(argv = process.argv.slice()) {
 	await program.parseAsync(argv)
 }
 
-if (
-	process.argv[1] &&
-	import.meta.url === pathToFileURL(process.argv[1]).href
-) {
+export function isDirectExecution(
+	argv1: string | undefined,
+	moduleUrl: string,
+): boolean {
+	if (!argv1) {
+		return false
+	}
+
+	try {
+		return pathToFileURL(realpathSync(argv1)).href === moduleUrl
+	} catch {
+		return pathToFileURL(argv1).href === moduleUrl
+	}
+}
+
+if (isDirectExecution(process.argv[1], import.meta.url)) {
 	main().catch((error: unknown) => {
 		if (error instanceof Error) {
 			console.error(pc.red(`\n✗ ${error.message}`))
