@@ -570,8 +570,8 @@ const publishCmd = withPublishOptions(
 		"after",
 		`
 Examples:
-  smithery mcp publish ./server.mcpb -n myorg/my-server
-  smithery mcp publish https://my-mcp-server.com -n myorg/my-server`,
+  smithery mcp publish https://my-mcp-server.com -n myorg/my-server
+  smithery mcp publish ./server.mcpb -n myorg/my-server`,
 	)
 	.action(handlePublish)
 	.hook("postAction", (thisCommand) => {
