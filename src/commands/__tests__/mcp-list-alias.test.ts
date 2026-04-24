@@ -13,7 +13,9 @@ beforeAll(async () => {
 describe("mcp list alias", () => {
 	test("registers 'ls' with the same options as 'list'", () => {
 		const mcpCmd = program.commands.find((command) => command.name() === "mcp")
-		const listCmd = mcpCmd?.commands.find((command) => command.name() === "list")
+		const listCmd = mcpCmd?.commands.find(
+			(command) => command.name() === "list",
+		)
 		const lsCmd = mcpCmd?.commands.find((command) => command.name() === "ls")
 
 		expect(listCmd).toBeDefined()

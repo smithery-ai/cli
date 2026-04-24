@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
-import pc from "picocolors"
 import { pathToFileURL } from "node:url"
+import pc from "picocolors"
 
 const brandOrange = (text: string) => `\x1b[38;2;234;88;12m${text}\x1b[39m`
 
@@ -1317,7 +1317,10 @@ export async function main(argv = process.argv.slice()) {
 	await program.parseAsync(argv)
 }
 
-if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+if (
+	process.argv[1] &&
+	import.meta.url === pathToFileURL(process.argv[1]).href
+) {
 	main().catch((error: unknown) => {
 		if (error instanceof Error) {
 			console.error(pc.red(`\n✗ ${error.message}`))
