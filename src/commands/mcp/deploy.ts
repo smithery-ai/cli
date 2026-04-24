@@ -8,7 +8,6 @@ import type {
 	ReleaseGetResponse,
 } from "@smithery/api/resources/servers/releases"
 import pc from "picocolors"
-import { buildBundle, loadBuildManifest } from "../../lib/bundle/index.js"
 import { fatal } from "../../lib/cli-error"
 import { loadProjectConfig } from "../../lib/config-loader.js"
 import type { DeployPayload } from "../../lib/deploy-payload.js"
@@ -34,6 +33,14 @@ export async function deploy(options: DeployOptions = {}) {
 	const apiKey = await ensureApiKey()
 	const registry = createSmitheryClientSync(apiKey)
 	const isBundlePath = options.entryFile?.endsWith(".mcpb") ?? false
+	const isExternal = !!options.url
+
+	if (!options.resume && !isExternal && !isBundlePath) {
+		console.error(
+			pc.red("Error: publish target must be an MCP server URL or .mcpb bundle"),
+		)
+		process.exit(1)
+	}
 
 	// Map CLI option 'name' to internal 'qualifiedName' for clarity
 	let qualifiedName = options.name
@@ -45,9 +52,7 @@ export async function deploy(options: DeployOptions = {}) {
 		try {
 			const projectConfig = loadProjectConfig()
 			const configServerName =
-				projectConfig &&
-				projectConfig.runtime === "typescript" &&
-				typeof projectConfig.name === "string"
+				projectConfig && typeof projectConfig.name === "string"
 					? projectConfig.name
 					: undefined
 
@@ -98,7 +103,6 @@ export async function deploy(options: DeployOptions = {}) {
 	}
 
 	const externalUrl = options.url
-	const isExternal = !!externalUrl
 
 	if (options.configSchema && !isExternal) {
 		console.error(
@@ -120,7 +124,7 @@ export async function deploy(options: DeployOptions = {}) {
 
 		payload = {
 			type: "external",
-			upstreamUrl: externalUrl,
+			upstreamUrl: externalUrl!,
 			...(configSchema && { configSchema }),
 		}
 	} else if (isBundlePath) {
@@ -132,28 +136,7 @@ export async function deploy(options: DeployOptions = {}) {
 		}
 		bundlePath = options.entryFile
 	} else {
-		// Warn if assets configured (assets only supported via `build --transport stdio`)
-		const projectConfig = loadProjectConfig()
-		if (projectConfig?.build?.assets?.length) {
-			console.log(
-				pc.yellow(
-					"\nWarning: build.assets is only supported with `smithery mcp build --transport stdio`. Assets will be ignored.",
-				),
-			)
-		}
-
-		const buildDir = await buildBundle({
-			entryFile: options.entryFile,
-			transport: "shttp",
-			production: true,
-		})
-
-		// Hosted publishes load artifacts from the fresh build manifest.
-		const artifacts = loadBuildManifest(buildDir)
-		payload = artifacts.payload
-		modulePath = artifacts.modulePath
-		sourcemapPath = artifacts.sourcemapPath
-		bundlePath = artifacts.bundlePath
+		throw new Error("Unreachable publish target state")
 	}
 
 	const deployType =

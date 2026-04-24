@@ -6,7 +6,6 @@ import { Client } from "@modelcontextprotocol/sdk/client/index.js"
 import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js"
 import * as esbuild from "esbuild"
 import { afterAll, beforeAll, describe, expect, test } from "vitest"
-import { buildServer } from "../build"
 import { createDevServer } from "../dev-server"
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
@@ -78,6 +77,55 @@ async function canListenOnLocalhost(): Promise<boolean> {
 	})
 }
 
+async function buildTestServer(options: {
+	entryFile: string
+	outFile: string
+	transport: "shttp" | "stdio"
+}) {
+	const isStdio = options.transport === "stdio"
+	const bootstrapSource = isStdio
+		? e2eGlobals.__STDIO_BOOTSTRAP__
+		: e2eGlobals.__SHTTP_BOOTSTRAP__
+
+	await esbuild.build({
+		bundle: true,
+		outfile: options.outFile,
+		entryPoints: ["virtual:bootstrap"],
+		plugins: [
+			{
+				name: "test-bootstrap",
+				setup(build) {
+					build.onResolve({ filter: /^virtual:bootstrap$/ }, () => ({
+						path: "virtual:bootstrap",
+						namespace: "bootstrap",
+					}))
+
+					build.onLoad({ filter: /.*/, namespace: "bootstrap" }, () => ({
+						contents: bootstrapSource.replace(
+							/from\s*["']virtual:user-module["']/g,
+							`from ${JSON.stringify(options.entryFile)}`,
+						),
+						loader: "js",
+						resolveDir: dirname(options.entryFile),
+					}))
+				},
+			},
+		],
+		...(isStdio
+			? {
+					platform: "node" as const,
+					target: "node20",
+					format: "cjs" as const,
+				}
+			: {
+					platform: "node" as const,
+					target: "esnext",
+					format: "esm" as const,
+					conditions: ["workerd", "worker", "browser"],
+				}),
+	})
+}
+
 // Some sandboxed environments (like CI sandboxes) disallow binding sockets.
 // Skip these E2E tests in that case.
 const describeE2E = (await canListenOnLocalhost()) ? describe : describe.skip
@@ -130,11 +178,10 @@ describeE2E("CLI E2E MCP Server", { timeout: 60000 }, () => {
 		const outFile = join(OUT_DIR, "stateless/module.js")
 
 		beforeAll(async () => {
-			await buildServer({
+			await buildTestServer({
 				entryFile: join(FIXTURES, "stateless-server/src/index.ts"),
 				outFile,
 				transport: "shttp",
-				minify: false,
 			})
 
 			devServer = await createDevServer({
@@ -235,11 +282,10 @@ describeE2E("CLI E2E MCP Server", { timeout: 60000 }, () => {
 		const outFile = join(OUT_DIR, "stateful/module.js")
 
 		beforeAll(async () => {
-			await buildServer({
+			await buildTestServer({
 				entryFile: join(FIXTURES, "stateful-server/src/index.ts"),
 				outFile,
 				transport: "shttp",
-				minify: false,
 			})
 
 			devServer = await createDevServer({
@@ -347,11 +393,10 @@ describeE2E("CLI E2E MCP Server", { timeout: 60000 }, () => {
 		const outFile = join(OUT_DIR, "auth-server/module.js")
 
 		beforeAll(async () => {
-			await buildServer({
+			await buildTestServer({
 				entryFile: join(FIXTURES, "auth-server/src/index.ts"),
 				outFile,
 				transport: "shttp",
-				minify: false,
 			})
 
 			devServer = await createDevServer({
@@ -438,11 +483,10 @@ describeE2E("CLI E2E MCP Server", { timeout: 60000 }, () => {
 		const outFile = join(OUT_DIR, "http-handler-server/module.js")
 
 		beforeAll(async () => {
-			await buildServer({
+			await buildTestServer({
 				entryFile: join(FIXTURES, "http-handler-server/src/index.ts"),
 				outFile,
 				transport: "shttp",
-				minify: false,
 			})
 
 			devServer = await createDevServer({
@@ -483,13 +527,10 @@ describeE2E("CLI E2E MCP Server", { timeout: 60000 }, () => {
 		const outFile = join(OUT_DIR, "stdio/index.cjs")
 
 		beforeAll(async () => {
-			// Build stdio bundle with bootstrap mode
-			await buildServer({
+			await buildTestServer({
 				entryFile: join(FIXTURES, "stateful-server/src/index.ts"),
 				outFile,
 				transport: "stdio",
-				bundleMode: "bootstrap",
-				minify: false,
 			})
 		})
 
