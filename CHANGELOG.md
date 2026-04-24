@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 
+## [4.9.2](https://github.com/smithery-ai/cli/compare/v4.9.1...v4.9.2) (2026-04-24)
+
+
+### Bug Fixes
+
+* detect direct execution through symlinked bin ([#732](https://github.com/smithery-ai/cli/issues/732)) ([2cacbdf](https://github.com/smithery-ai/cli/commit/2cacbdfeb2ebaedf5cfa7ad2a38761cb835d880e))
+
 ## [4.9.1](https://github.com/smithery-ai/cli/compare/v4.9.0...v4.9.1) (2026-04-24)
 
 
