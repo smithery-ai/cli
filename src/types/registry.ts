@@ -6,6 +6,7 @@ import { z } from "zod"
 // Define the type explicitly for proper TypeScript inference
 export interface JSONSchema {
 	type?: string
+	title?: string
 	properties?: Record<string, JSONSchema>
 	items?: JSONSchema
 	required?: string[]
@@ -16,6 +17,7 @@ export interface JSONSchema {
 const JSONSchemaSchema: z.ZodType<JSONSchema> = z.lazy(() =>
 	z.object({
 		type: z.string().optional(),
+		title: z.string().optional(),
 		properties: z.record(z.string(), JSONSchemaSchema).optional(),
 		items: JSONSchemaSchema.optional(),
 		required: z.array(z.string()).optional(),

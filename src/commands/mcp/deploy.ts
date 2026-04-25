@@ -11,6 +11,7 @@ import pc from "picocolors"
 import { fatal } from "../../lib/cli-error"
 import { loadProjectConfig } from "../../lib/config-loader.js"
 import type { DeployPayload } from "../../lib/deploy-payload.js"
+import { getBundleDeployPayload } from "../../lib/mcpb.js"
 import { resolveNamespace } from "../../lib/namespace.js"
 import { createSmitheryClientSync } from "../../lib/smithery-client"
 import { parseConfigSchema } from "../../utils/cli-utils.js"
@@ -128,13 +129,8 @@ export async function deploy(options: DeployOptions = {}) {
 			...(configSchema && { configSchema }),
 		}
 	} else if (isBundlePath) {
-		payload = {
-			type: "stdio",
-			runtime: "node",
-			stateful: false,
-			hasAuthAdapter: false,
-		}
 		bundlePath = options.entryFile
+		payload = getBundleDeployPayload(bundlePath!)
 	} else {
 		throw new Error("Unreachable publish target state")
 	}
@@ -200,6 +196,31 @@ async function deployToServer(
 
 	uploadSpinner.stop()
 	console.log(pc.dim(`✓ Release ${result.deploymentId} accepted`))
+
+	if (payload.type === "stdio" && result.status === "SUCCESS") {
+		if (isJsonMode()) {
+			console.log(
+				JSON.stringify({
+					deploymentId: result.deploymentId,
+					qualifiedName,
+					status: result.status,
+					mcpUrl: result.mcpUrl,
+					statusUrl: `https://smithery.ai/servers/${qualifiedName}/releases`,
+				}),
+			)
+			return
+		}
+
+		console.log(pc.green("\n✓ Release successful!"))
+		console.log(pc.dim(`${pc.bold("Release ID:")} ${result.deploymentId}`))
+		console.log(
+			`  ${pc.green(pc.dim("➜"))}  ${pc.bold(pc.dim("MCP URL:"))}      ${pc.cyan(result.mcpUrl)}`,
+		)
+		console.log(
+			`  ${pc.green("➜")}  ${pc.bold("Server Page:")} ${pc.cyan(`https://smithery.ai/servers/${qualifiedName}`)}`,
+		)
+		return
+	}
 
 	// Non-TTY / --json: spawn a background watcher to a tmp file and return immediately
 	if (isJsonMode()) {
