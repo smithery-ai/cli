@@ -3,7 +3,9 @@
  * Validates deployment flow, namespace resolution, and API interactions
  */
 
+import { readFileSync, statSync } from "node:fs"
 import { Readable } from "node:stream"
+import { strToU8, zipSync } from "fflate"
 import { beforeEach, describe, expect, test, vi } from "vitest"
 
 // Mock dependencies
@@ -121,6 +123,8 @@ vi.mock("node:fs", () => ({
 		return stream
 	}),
 	existsSync: vi.fn().mockReturnValue(true),
+	readFileSync: vi.fn(),
+	statSync: vi.fn(),
 	writeFileSync: vi.fn(),
 }))
 
@@ -144,6 +148,13 @@ import {
 } from "../../utils/command-prompts"
 import { ensureApiKey } from "../../utils/runtime"
 import { deploy } from "../mcp/deploy"
+
+function createBundleBuffer(manifest: unknown): Buffer {
+	const zip = zipSync({
+		"manifest.json": strToU8(JSON.stringify(manifest)),
+	})
+	return Buffer.from(zip.buffer, zip.byteOffset, zip.byteLength)
+}
 
 describe("deploy command", () => {
 	let mockRegistry: {
@@ -192,6 +203,35 @@ describe("deploy command", () => {
 		vi.mocked(Smithery).mockImplementation(
 			() => mockRegistry as unknown as Smithery,
 		)
+
+		const defaultBundle = createBundleBuffer({
+			name: "test-bundle",
+			version: "1.2.3",
+			server: {
+				type: "node",
+				entry_point: "index.js",
+				mcp_config: {
+					command: "node",
+				},
+			},
+			tools: [{ name: "ping", description: "Ping" }],
+			prompts: [{ name: "draft", text: "Hello" }],
+			resources: [{ name: "docs", uri: "file:///docs" }],
+			user_config: {
+				apiKey: {
+					type: "string",
+					title: "API key",
+					description: "Used for auth",
+					required: true,
+				},
+			},
+		})
+		vi.mocked(readFileSync).mockReturnValue(
+			defaultBundle as unknown as ReturnType<typeof readFileSync>,
+		)
+		vi.mocked(statSync).mockReturnValue({
+			size: defaultBundle.length,
+		} as ReturnType<typeof statSync>)
 	})
 
 	test("--name provided with bundle target: uses qualified name directly for deploy API", async () => {
@@ -475,10 +515,45 @@ describe("deploy command", () => {
 		expect(mockRegistry.servers.releases.deploy).toHaveBeenCalledWith(
 			"myorg/myserver",
 			expect.objectContaining({
-				payload: expect.stringContaining('"type":"stdio"'),
+				payload: JSON.stringify({
+					type: "stdio",
+					runtime: "node",
+					serverCard: {
+						serverInfo: {
+							name: "test-bundle",
+							version: "1.2.3",
+						},
+						tools: [{ name: "ping", description: "Ping" }],
+						prompts: [{ name: "draft", text: "Hello" }],
+						resources: [{ name: "docs", uri: "file:///docs" }],
+					},
+					configSchema: {
+						type: "object",
+						properties: {
+							apiKey: {
+								type: "string",
+								title: "API key",
+								description: "Used for auth",
+							},
+						},
+						required: ["apiKey"],
+					},
+				}),
 				bundle: expect.anything(),
 			}),
 		)
+	})
+
+	test("stdio bundle publish with inline success: returns without polling", async () => {
+		mockRegistry.servers.releases.deploy.mockResolvedValueOnce({
+			deploymentId: "stdio-deployment-id",
+			status: "SUCCESS",
+			mcpUrl: "https://bundle.run.tools",
+		})
+
+		await deploy({ name: "myorg/myserver", entryFile: "/tmp/server.mcpb" })
+
+		expect(mockRegistry.servers.releases.get).not.toHaveBeenCalled()
 	})
 
 	test("non-TTY mode: spawns background watcher and outputs JSON", async () => {

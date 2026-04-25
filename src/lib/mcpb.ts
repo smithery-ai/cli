@@ -5,11 +5,15 @@ import {
 	type McpbUserConfigurationOption,
 	unpackExtension,
 } from "@anthropic-ai/mcpb"
+import type { ServerCard } from "@smithery/api/resources/servers/releases"
+import { strFromU8, unzipSync } from "fflate"
 import type { JSONSchema } from "../types/registry.js"
+import type { StdioDeployPayload } from "./deploy-payload.js"
 import { verbose } from "./logger.js"
 
 const BUNDLE_FILENAME = "server.mcpb"
 const CACHE_META_FILENAME = ".metadata.json"
+const MAX_BUNDLE_SIZE_BYTES = 25 * 1024 * 1024
 
 interface CacheMetadata {
 	etag: string | null
@@ -431,20 +435,32 @@ export function convertMCPBUserConfigToJSONSchema(
 			current.properties = {}
 		}
 
+		const propertyType =
+			configOption.type === "directory" || configOption.type === "file"
+				? "string"
+				: configOption.type
+		const sharedPropertyFields = {
+			...(configOption.title ? { title: configOption.title } : {}),
+			...(configOption.description
+				? { description: configOption.description }
+				: {}),
+			...(configOption.default !== undefined
+				? { default: configOption.default }
+				: {}),
+		}
+
 		// Handle multiple values (arrays) - when multiple is true, convert to array type
 		const jsonSchemaProp: JSONSchema = configOption.multiple
 			? {
 					type: "array",
 					items: {
-						type: configOption.type,
+						type: propertyType,
 					},
-					description: configOption.description,
-					default: configOption.default,
+					...sharedPropertyFields,
 				}
 			: {
-					type: configOption.type,
-					description: configOption.description,
-					default: configOption.default,
+					type: propertyType,
+					...sharedPropertyFields,
 				}
 
 		current.properties[leafKey] = jsonSchemaProp
@@ -515,7 +531,11 @@ export function getBundleUserConfigSchema(
 	}
 	const userConfig = manifest.user_config
 
-	if (!userConfig || typeof userConfig !== "object") {
+	if (
+		!userConfig ||
+		typeof userConfig !== "object" ||
+		Object.keys(userConfig).length === 0
+	) {
 		verbose(`No user_config found in bundle manifest for ${bundleDir}`)
 		return null
 	}
@@ -525,4 +545,126 @@ export function getBundleUserConfigSchema(
 	)
 	const jsonSchema = convertMCPBUserConfigToJSONSchema(userConfig)
 	return jsonSchema
+}
+
+interface BundleManifest {
+	name?: string
+	version?: string
+	server?: {
+		type?: string
+		mcp_config?: {
+			command?: string
+		}
+	}
+	tools?: Array<{ name?: string; [key: string]: unknown }>
+	prompts?: ServerCard["prompts"]
+	resources?: ServerCard["resources"]
+	user_config?: Record<string, Partial<McpbUserConfigurationOption>>
+}
+
+function readBundleArchive(bundlePath: string) {
+	const { size } = fs.statSync(bundlePath)
+	if (size > MAX_BUNDLE_SIZE_BYTES) {
+		throw new Error("Bundle exceeds 25 MB limit")
+	}
+
+	try {
+		return unzipSync(fs.readFileSync(bundlePath))
+	} catch (error) {
+		throw new Error(
+			`Bundle is not a valid .mcpb archive: ${error instanceof Error ? error.message : String(error)}`,
+		)
+	}
+}
+
+function readBundleManifest(bundlePath: string): {
+	archive: ReturnType<typeof unzipSync>
+	manifest: BundleManifest
+} {
+	const archive = readBundleArchive(bundlePath)
+	const manifestEntry = archive["manifest.json"]
+
+	if (!manifestEntry) {
+		throw new Error("Bundle manifest.json not found at archive root")
+	}
+
+	const manifestContent = strFromU8(manifestEntry)
+	if (!manifestContent.trim()) {
+		throw new Error("Bundle manifest.json is empty")
+	}
+
+	let manifest: BundleManifest
+	try {
+		manifest = JSON.parse(manifestContent) as BundleManifest
+	} catch (error) {
+		throw new Error(
+			`Failed to parse bundle manifest.json: ${error instanceof Error ? error.message : String(error)}`,
+		)
+	}
+
+	if (manifest.tools !== undefined) {
+		if (!Array.isArray(manifest.tools)) {
+			throw new Error("Bundle manifest tools must be an array")
+		}
+		for (const tool of manifest.tools) {
+			if (!tool?.name || typeof tool.name !== "string") {
+				throw new Error("Each bundle tool must include a name")
+			}
+		}
+	}
+
+	return { archive, manifest }
+}
+
+function detectBundleRuntime(
+	manifest: BundleManifest,
+	archive: ReturnType<typeof unzipSync>,
+): StdioDeployPayload["runtime"] {
+	const command = path.basename(manifest.server?.mcp_config?.command ?? "")
+	if (command === "bun") {
+		return "bun"
+	}
+	if (manifest.server?.type === "python") {
+		return "python"
+	}
+	if (manifest.server?.type === "node") {
+		return "node"
+	}
+	if (
+		manifest.server?.type === "binary" ||
+		Object.keys(archive).some((entry) => entry.startsWith("bin/"))
+	) {
+		return "binary"
+	}
+	throw new Error("Could not determine bundle runtime from manifest")
+}
+
+export function getBundleDeployPayload(bundlePath: string): StdioDeployPayload {
+	const { archive, manifest } = readBundleManifest(bundlePath)
+
+	if (!manifest.name || !manifest.version) {
+		throw new Error("Bundle manifest must include name and version")
+	}
+
+	const configSchema =
+		manifest.user_config && Object.keys(manifest.user_config).length > 0
+			? convertMCPBUserConfigToJSONSchema(manifest.user_config)
+			: undefined
+
+	return {
+		type: "stdio",
+		runtime: detectBundleRuntime(manifest, archive),
+		serverCard: {
+			serverInfo: {
+				name: manifest.name,
+				version: manifest.version,
+			},
+			...(manifest.tools
+				? { tools: manifest.tools as unknown as ServerCard["tools"] }
+				: {}),
+			...(manifest.prompts ? { prompts: manifest.prompts } : {}),
+			...(manifest.resources ? { resources: manifest.resources } : {}),
+		},
+		...(configSchema ? { configSchema } : {}),
+	}
 }

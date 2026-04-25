@@ -128,6 +128,7 @@ describe("converts flat MCPB user config format to nested JSONSchema format", ()
 		const input = {
 			apiKey: {
 				type: "string" as const,
+				title: "API key",
 				description: "API key",
 				default: "default-key",
 			},
@@ -138,8 +139,41 @@ describe("converts flat MCPB user config format to nested JSONSchema format", ()
 			properties: {
 				apiKey: {
 					type: "string",
+					title: "API key",
 					description: "API key",
 					default: "default-key",
+				},
+			},
+			required: [],
+		})
+	})
+
+	it("maps file-like config types to JSON Schema strings", () => {
+		const input = {
+			configDir: {
+				type: "directory" as const,
+				title: "Config directory",
+				description: "Directory path",
+			},
+			configFile: {
+				type: "file" as const,
+				title: "Config file",
+				description: "File path",
+			},
+		}
+		const result = convertMCPBUserConfigToJSONSchema(input)
+		expect(result).toEqual({
+			type: "object",
+			properties: {
+				configDir: {
+					type: "string",
+					title: "Config directory",
+					description: "Directory path",
+				},
+				configFile: {
+					type: "string",
+					title: "Config file",
+					description: "File path",
 				},
 			},
 			required: [],
