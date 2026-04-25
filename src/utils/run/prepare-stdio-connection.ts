@@ -42,11 +42,12 @@ function determineConnectionType(connection: StdioConnection): ConnectionType {
 	const conn = connection as StdioConnection & {
 		command?: string
 		args?: string[]
+		stdioFunction?: string
 	}
 	if (conn.command && conn.args) {
 		return "command"
 	}
-	if (connection.stdioFunction) {
+	if (conn.stdioFunction) {
 		return "stdioFunction"
 	}
 	if (connection.bundleUrl) {
@@ -66,6 +67,7 @@ export async function prepareStdioConnection(
 		command?: string
 		args?: string[]
 		env?: Record<string, string>
+		stdioFunction?: string
 	}
 
 	const connectionType = determineConnectionType(bundleConnection)

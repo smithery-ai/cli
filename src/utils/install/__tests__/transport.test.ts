@@ -95,7 +95,12 @@ describe("resolveTransport", () => {
 
 	test("should return stdio when connection is STDIO", () => {
 		// ARRANGE
-		const connection = { type: "stdio" as const, configSchema: {} }
+		const connection = {
+			type: "stdio" as const,
+			bundleUrl: "https://example.com/bundle.tar.gz",
+			runtime: "node" as const,
+			configSchema: {},
+		}
 		const client = "claude"
 
 		mockGetClientConfiguration.mockReturnValue(
@@ -114,7 +119,12 @@ describe("resolveTransport", () => {
 
 	test("stdio transport should require user config", () => {
 		// ARRANGE
-		const connection = { type: "stdio" as const, configSchema: {} }
+		const connection = {
+			type: "stdio" as const,
+			bundleUrl: "https://example.com/bundle.tar.gz",
+			runtime: "node" as const,
+			configSchema: {},
+		}
 		const client = "cursor"
 
 		mockGetClientConfiguration.mockReturnValue(mockClientWithOAuth("Cursor"))
