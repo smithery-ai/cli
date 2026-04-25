@@ -5,6 +5,24 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 
+## [4.10.0](https://github.com/smithery-ai/cli/compare/v4.9.3...v4.10.0) (2026-04-25)
+
+
+### Features
+
+* **SMI-1823:** add trigger CLI commands ([#736](https://github.com/smithery-ai/cli/issues/736)) ([1368e3f](https://github.com/smithery-ai/cli/commit/1368e3fa48661ee470ec83e16761eec3638408ae))
+* **SMI-1839:** download and run MCPB bundles via uplink on mcp add ([#741](https://github.com/smithery-ai/cli/issues/741)) ([6d70db3](https://github.com/smithery-ai/cli/commit/6d70db39ad20363fe81677d6f822b2b8379acca0))
+
+
+### Bug Fixes
+
+* simplify uplink peer abstractions and stdio fix ([#738](https://github.com/smithery-ai/cli/issues/738)) ([0080086](https://github.com/smithery-ai/cli/commit/008008618d42b3dfd86b7c51eb3a076d71ab1746))
+
+
+### Chores
+
+* use smithery.run REST API ([#739](https://github.com/smithery-ai/cli/issues/739)) ([965c84e](https://github.com/smithery-ai/cli/commit/965c84e1ffed1f1472c63d12fae05a2ffe7ad52b))
+
 ## [4.9.3](https://github.com/smithery-ai/cli/compare/v4.9.2...v4.9.3) (2026-04-24)
 
 
