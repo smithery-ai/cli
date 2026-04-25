@@ -75,7 +75,7 @@ function isUVRequired(connection: Connection): boolean {
 	// Check for stdio connection with uvx in stdioFunction
 	if (
 		connection.type === "stdio" &&
-		connection.stdioFunction?.includes("uvx")
+		(connection as { stdioFunction?: string }).stdioFunction?.includes("uvx")
 	) {
 		return true
 	}
@@ -145,7 +145,7 @@ function isBunRequired(connection: Connection): boolean {
 	// Check for stdio connection with uvx in stdioFunction
 	if (
 		connection.type === "stdio" &&
-		connection.stdioFunction?.includes("bunx")
+		(connection as { stdioFunction?: string }).stdioFunction?.includes("bunx")
 	) {
 		return true
 	}

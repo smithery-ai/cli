@@ -77,6 +77,8 @@ describe("resolveUserConfig", () => {
 	beforeEach(() => {
 		vi.clearAllMocks()
 		mockSpinner = createMockSpinner() as unknown as OraSpinner
+		mockEnsureBundleInstalled.mockResolvedValue("/tmp/bundle")
+		mockGetBundleUserConfigSchema.mockReturnValue(null)
 	})
 
 	describe("when server needs no config", () => {
@@ -483,6 +485,7 @@ describe("resolveUserConfig", () => {
 			const bundleConnection: StdioConnection = {
 				type: "stdio",
 				bundleUrl: "https://example.com/bundle.tar.gz",
+				runtime: "node",
 				configSchema: {},
 			}
 			mockGetConfig.mockResolvedValue(null)
@@ -508,6 +511,7 @@ describe("resolveUserConfig", () => {
 			const bundleConnection: StdioConnection = {
 				type: "stdio",
 				bundleUrl: "https://example.com/bundle.tar.gz",
+				runtime: "node",
 				configSchema: {},
 			}
 			mockGetConfig.mockResolvedValue(null)
@@ -530,6 +534,7 @@ describe("resolveUserConfig", () => {
 			const bundleConnection: StdioConnection = {
 				type: "stdio",
 				bundleUrl: "https://example.com/bundle.tar.gz",
+				runtime: "node",
 				configSchema: {},
 			}
 			const bundleSchema = {
@@ -571,6 +576,7 @@ describe("resolveUserConfig", () => {
 			const bundleConnection: StdioConnection = {
 				type: "stdio",
 				bundleUrl: "https://example.com/bundle.tar.gz",
+				runtime: "node",
 				configSchema: {},
 			}
 			mockGetConfig.mockResolvedValue(null)
@@ -623,6 +629,8 @@ describe("serverNeedsConfig", () => {
 	it("returns false when schema is undefined", async () => {
 		const connection: StdioConnection = {
 			type: "stdio",
+			bundleUrl: "https://example.com/bundle.tar.gz",
+			runtime: "node",
 			configSchema: {},
 		}
 
