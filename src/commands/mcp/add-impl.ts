@@ -18,7 +18,6 @@ export async function addServer(
 		headers?: string
 		namespace?: string
 		force?: boolean
-		unstableWebhookUrl?: string
 	},
 ): Promise<void> {
 	try {
@@ -77,14 +76,12 @@ export async function addServer(
 			name: options.name,
 			metadata: parsedMetadata,
 			headers: parsedHeaders,
-			unstableWebhookUrl: options.unstableWebhookUrl,
 		})
 
 		const finalConnection = await finalizeAddedConnection(session, connection, {
 			name: options.name,
 			metadata: parsedMetadata,
 			headers: parsedHeaders,
-			unstableWebhookUrl: options.unstableWebhookUrl,
 		})
 
 		if (finalConnection.status?.state === "auth_required") {

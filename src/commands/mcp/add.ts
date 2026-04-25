@@ -1,26 +1,34 @@
 import { fatal } from "../../lib/cli-error"
+import { verbose } from "../../lib/logger"
+import { resolveServer } from "../../lib/registry"
 import { serveUplink, type UplinkTarget } from "../../lib/uplink"
+import { parseQualifiedName } from "../../utils/cli-utils"
 import { finalizeAddedConnection } from "./add-flow"
 import { addServer as addServerImpl } from "./add-impl"
+import {
+	addBundleUplinkServer,
+	type BundleAddTarget,
+} from "./add-uplink-bundle"
 import { ConnectSession } from "./api"
 import { normalizeMcpUrl } from "./normalize-url"
 import { outputConnectionDetail } from "./output-connection"
 import { parseJsonObject } from "./parse-json"
 import { classifyAddTarget } from "./uplink-target"
 
+interface AddServerOptions {
+	id?: string
+	name?: string
+	namespace?: string
+	metadata?: string
+	headers?: string
+	config?: string
+	force?: boolean
+	uplinkCommand?: string[]
+}
+
 export async function addServer(
 	server: string | undefined,
-	options: {
-		id?: string
-		name?: string
-		namespace?: string
-		metadata?: string
-		headers?: string
-		config?: string
-		force?: boolean
-		uplinkCommand?: string[]
-		unstableWebhookUrl?: string
-	},
+	options: AddServerOptions,
 ): Promise<void> {
 	const target = await classifyAddTarget({
 		server,
@@ -29,6 +37,16 @@ export async function addServer(
 
 	if (target.kind !== "http") {
 		return addUplinkServer(target, options)
+	}
+
+	// Qualified names (non-URL inputs) may resolve to a local bundle server;
+	// in that case download the bundle and run it behind an uplink. Explicit
+	// http(s) URLs skip the registry probe.
+	if (server && !isHttpUrl(server)) {
+		const bundleTarget = await tryResolveBundleTarget(server)
+		if (bundleTarget) {
+			return addBundleUplinkServer(bundleTarget, options)
+		}
 	}
 
 	const mcpUrl = target.server
@@ -53,7 +71,6 @@ export async function addServer(
 					name,
 					metadata: parsedMetadata,
 					headers: parsedHeaders,
-					unstableWebhookUrl: options.unstableWebhookUrl,
 				},
 			)
 			const finalConnection = await finalizeAddedConnection(
@@ -63,7 +80,6 @@ export async function addServer(
 					name,
 					metadata: parsedMetadata,
 					headers: parsedHeaders,
-					unstableWebhookUrl: options.unstableWebhookUrl,
 				},
 			)
 			outputConnectionDetail({
@@ -79,18 +95,44 @@ export async function addServer(
 	return addServerImpl(mcpUrl, { ...options, name })
 }
 
+function isHttpUrl(value: string): boolean {
+	return value.startsWith("http://") || value.startsWith("https://")
+}
+
+async function tryResolveBundleTarget(
+	server: string,
+): Promise<BundleAddTarget | null> {
+	let parsed: ReturnType<typeof parseQualifiedName>
+	try {
+		parsed = parseQualifiedName(server)
+	} catch {
+		return null
+	}
+
+	try {
+		const { server: serverDetails, connection } = await resolveServer(parsed)
+		if (connection.type !== "stdio" || !connection.bundleUrl) {
+			return null
+		}
+		return {
+			qualifiedName: serverDetails.qualifiedName,
+			bundleUrl: connection.bundleUrl,
+			connection,
+			server: serverDetails,
+		}
+	} catch (error) {
+		verbose(
+			`Registry lookup failed for ${server}; falling back to URL-proxy flow: ${
+				error instanceof Error ? error.message : String(error)
+			}`,
+		)
+		return null
+	}
+}
+
 async function addUplinkServer(
 	target: UplinkTarget,
-	options: {
-		id?: string
-		name?: string
-		namespace?: string
-		metadata?: string
-		headers?: string
-		config?: string
-		force?: boolean
-		unstableWebhookUrl?: string
-	},
+	options: AddServerOptions,
 ): Promise<void> {
 	try {
 		if (options.headers !== undefined) {
@@ -99,12 +141,6 @@ async function addUplinkServer(
 
 		if (options.config) {
 			throw new Error("--config is not supported for uplink connections.")
-		}
-
-		if (options.unstableWebhookUrl) {
-			throw new Error(
-				"--unstableWebhookUrl is not supported for uplink connections.",
-			)
 		}
 
 		const parsedMetadata = parseJsonObject(options.metadata, "Metadata")
