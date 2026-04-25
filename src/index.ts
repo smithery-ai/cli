@@ -935,14 +935,16 @@ triggerCmd
 	.command("subscribe <connection> <name> [params]")
 	.description("Create a trigger instance")
 	.option("--namespace <ns>", "Namespace for the connection")
-	.option("--url <url>", "Webhook URL for trigger delivery")
-	.option("--id <id>", "Trigger subscription ID (defaults to a random UUID)")
+	.option(
+		"--url <url>",
+		"Optionally create or reuse a connection-scoped webhook subscription first",
+	)
 	.addHelpText(
 		"after",
 		`
 Examples:
-  smithery trigger subscribe notion page.updated '{"workspace_id":"w_123"}' --url https://hook.new/i/...
-  smithery trigger subscribe scheduler alarm '{"in":"PT10S"}' --url https://hook.new/i/...`,
+  smithery trigger subscribe notion page.updated '{"workspace_id":"w_123"}'
+  smithery trigger subscribe notion page.updated '{"workspace_id":"w_123"}' --url https://hook.new/i/...`,
 	)
 	.action(handleSubscribeTrigger)
 
@@ -954,7 +956,6 @@ triggerCmd
 		"after",
 		`
 Examples:
-  smithery trigger unsubscribe notion page.updated
   smithery trigger unsubscribe notion page.updated trg_01HW...`,
 	)
 	.action(handleUnsubscribeTrigger)
@@ -1001,89 +1002,6 @@ Examples:
   smithery trigger subscription remove sub_01HW... notion`,
 	)
 	.action(handleRemoveSubscription)
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// Event command (hidden/alpha) — Subscribe to event streams from MCP servers
-// ═══════════════════════════════════════════════════════════════════════════════
-
-const eventCmd = program
-	.command("event", { hidden: true })
-	.description("Subscribe to event streams from MCP servers")
-
-eventCmd
-	.command("topics <connection> [prefix]")
-	.description("List available event topics for a connection")
-	.option("--namespace <ns>", "Namespace for the connection")
-	.addHelpText(
-		"after",
-		`
-Arguments:
-  connection   Connection ID to list topics from
-  prefix       Only show topics whose identifier starts with this prefix (e.g. "user.")
-
-Examples:
-  smithery event topics myserver                  List all topics
-  smithery event topics myserver user.            List topics starting with "user."
-  smithery event topics myserver user. --json     Prefix-filtered output as JSON`,
-	)
-	.action(
-		async (
-			connection: string,
-			prefix: string | undefined,
-			options: CliOptions,
-		) => {
-			const { listTopics } = await import("./commands/event")
-			await listTopics(connection, { ...options, prefix })
-		},
-	)
-
-eventCmd
-	.command("subscribe <connection> <topic> [args]")
-	.description("Subscribe to events from a topic")
-	.option("--namespace <ns>", "Namespace for the connection")
-	.addHelpText(
-		"after",
-		`
-Examples:
-  smithery event subscribe myserver slack/message.created
-  smithery event subscribe myserver slack/message.created '{"channel":"C0123456"}'`,
-	)
-	.action(
-		async (
-			connection: string,
-			topic: string,
-			args: string | undefined,
-			options: CliOptions,
-		) => {
-			const { subscribeEvents } = await import("./commands/event")
-			await subscribeEvents(connection, topic, args, options)
-		},
-	)
-
-eventCmd
-	.command("unsubscribe <connection> <topic>")
-	.description("Unsubscribe from an event topic")
-	.option("--namespace <ns>", "Namespace for the connection")
-	.addHelpText(
-		"after",
-		`
-Examples:
-  smithery event unsubscribe myserver slack/message.created`,
-	)
-	.action(async (connection: string, topic: string, options: CliOptions) => {
-		const { unsubscribeEvents } = await import("./commands/event")
-		await unsubscribeEvents(connection, topic, options)
-	})
-
-eventCmd
-	.command("poll <connection>")
-	.description("Poll for queued events from a connection")
-	.option("--namespace <ns>", "Namespace for the connection")
-	.option("--limit <n>", "Maximum events to return (1-100, default 100)")
-	.action(async (connection: string, options: CliOptions) => {
-		const { pollEvents } = await import("./commands/event")
-		await pollEvents(connection, options)
-	})
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // Skill command — Search, view, and install Smithery skills
@@ -1422,7 +1340,6 @@ export async function main(argv = process.argv.slice()) {
 	const COMMAND_ALIASES: Record<string, string> = {
 		tools: "tool",
 		skills: "skill",
-		events: "event",
 	}
 	if (argv[2] && argv[2] in COMMAND_ALIASES) {
 		argv[2] = COMMAND_ALIASES[argv[2]]

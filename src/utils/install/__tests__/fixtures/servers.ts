@@ -16,6 +16,8 @@ export const noConfigServer: Server = {
 	connections: [
 		{
 			type: "stdio",
+			bundleUrl: "https://example.com/bundle.tar.gz",
+			runtime: "node",
 			configSchema: {},
 		},
 	],
@@ -66,6 +68,8 @@ export const requiredAndOptionalServer: Server = {
 	connections: [
 		{
 			type: "stdio",
+			bundleUrl: "https://example.com/bundle.tar.gz",
+			runtime: "node",
 			configSchema: {
 				type: "object",
 				properties: {
