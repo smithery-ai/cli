@@ -3,7 +3,10 @@ import { verbose } from "../../lib/logger"
 import { resolveServer } from "../../lib/registry"
 import { serveUplink, type UplinkTarget } from "../../lib/uplink"
 import { parseQualifiedName } from "../../utils/cli-utils"
-import { finalizeAddedConnection } from "./add-flow"
+import {
+	completeConnectionAuthorization,
+	finalizeAddedConnection,
+} from "./add-flow"
 import { addServer as addServerImpl } from "./add-impl"
 import {
 	addBundleUplinkServer,
@@ -73,14 +76,14 @@ export async function addServer(
 					headers: parsedHeaders,
 				},
 			)
-			const finalConnection = await finalizeAddedConnection(
+			let finalConnection = await finalizeAddedConnection(session, connection, {
+				name,
+				metadata: parsedMetadata,
+				headers: parsedHeaders,
+			})
+			finalConnection = await completeConnectionAuthorization(
 				session,
-				connection,
-				{
-					name,
-					metadata: parsedMetadata,
-					headers: parsedHeaders,
-				},
+				finalConnection,
 			)
 			outputConnectionDetail({
 				connection: finalConnection,

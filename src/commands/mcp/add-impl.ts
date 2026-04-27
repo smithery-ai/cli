@@ -2,10 +2,10 @@ import pc from "picocolors"
 import { fatal } from "../../lib/cli-error"
 import {
 	buildDuplicateInputRequiredTip,
+	completeConnectionAuthorization,
 	finalizeAddedConnection,
 } from "./add-flow"
 import { ConnectSession } from "./api"
-import { getConnectionSetupUrl } from "./connection-status"
 import { normalizeMcpUrl } from "./normalize-url"
 import { outputConnectionDetail } from "./output-connection"
 import { parseJsonObject } from "./parse-json"
@@ -36,7 +36,7 @@ export async function addServer(
 			const { connections: existing } =
 				await session.listConnectionsByUrl(normalizedUrl)
 			if (existing.length > 0) {
-				const match = existing[0]
+				let match = existing[0]
 				const status = match.status?.state ?? "unknown"
 				console.error(
 					pc.yellow(
@@ -44,12 +44,7 @@ export async function addServer(
 					),
 				)
 				if (status === "auth_required") {
-					const setupUrl = getConnectionSetupUrl(match.status)
-					if (setupUrl) {
-						console.error(
-							pc.yellow(`Authorization required. Run: open "${setupUrl}"`),
-						)
-					}
+					match = await completeConnectionAuthorization(session, match)
 				} else if (status === "connected") {
 					console.error(
 						pc.yellow(
@@ -57,11 +52,12 @@ export async function addServer(
 						),
 					)
 				}
+				const finalStatus = match.status?.state ?? "unknown"
 				const tip =
 					buildDuplicateInputRequiredTip(match) ??
-					(status === "connected"
+					(finalStatus === "connected"
 						? `Use smithery tool list ${match.connectionId} to interact with it.`
-						: status === "auth_required"
+						: finalStatus === "auth_required"
 							? "Use the setup URL above to complete setup."
 							: `Use --force to create a new connection anyway.`)
 				outputConnectionDetail({
@@ -78,20 +74,15 @@ export async function addServer(
 			headers: parsedHeaders,
 		})
 
-		const finalConnection = await finalizeAddedConnection(session, connection, {
+		let finalConnection = await finalizeAddedConnection(session, connection, {
 			name: options.name,
 			metadata: parsedMetadata,
 			headers: parsedHeaders,
 		})
-
-		if (finalConnection.status?.state === "auth_required") {
-			const setupUrl = getConnectionSetupUrl(finalConnection.status)
-			if (setupUrl) {
-				console.error(
-					pc.yellow(`Authorization required. Run: open "${setupUrl}"`),
-				)
-			}
-		}
+		finalConnection = await completeConnectionAuthorization(
+			session,
+			finalConnection,
+		)
 
 		const id = finalConnection.connectionId
 		outputConnectionDetail({
