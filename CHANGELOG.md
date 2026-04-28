@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 
+## [4.11.0](https://github.com/smithery-ai/cli/compare/v4.10.0...v4.11.0) (2026-04-28)
+
+
+### Features
+
+* Poll mcp add auth setup flow ([#743](https://github.com/smithery-ai/cli/issues/743)) ([0af019d](https://github.com/smithery-ai/cli/commit/0af019db41573b8a6871097b7b67057850fdd448))
+
 ## [4.10.0](https://github.com/smithery-ai/cli/compare/v4.9.3...v4.10.0) (2026-04-25)
 
 
