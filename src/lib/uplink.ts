@@ -21,6 +21,9 @@ const MAX_RETRIES = 5
 const RETRY_DELAYS_MS = [250, 500, 1000, 2000, 4000]
 const STDIO_KILL_TIMEOUT_MS = 5000
 const LOCAL_HANDSHAKE_ID = "__smithery_uplink_init__"
+const DEFAULT_UPLINK_BASE_URL = "https://uplink.smithery.run"
+
+export type UplinkRouteStyle = "root-host" | "connect-compat"
 
 export type UplinkTarget =
 	| {
@@ -128,6 +131,7 @@ export async function serveUplink(options: {
 	connectionId: string
 	target: UplinkTarget
 	force?: boolean
+	onInterrupt?: () => void
 }): Promise<number> {
 	const client = await createSmitheryClient()
 	const local: LocalPeer =
@@ -142,6 +146,7 @@ export async function serveUplink(options: {
 	let activeSocket: WebSocket | null = null
 	let disposeBridge: (() => void) | undefined
 	let shuttingDown = false
+	let interrupted = false
 	let pairedOnce = false
 	const done = createDeferred<number>()
 
@@ -173,6 +178,10 @@ export async function serveUplink(options: {
 	}
 
 	const handleSignal = () => {
+		if (!interrupted) {
+			interrupted = true
+			options.onInterrupt?.()
+		}
 		void stop(0)
 	}
 
@@ -194,8 +203,10 @@ export async function serveUplink(options: {
 	}
 
 	const connect = async (attempt: number) => {
+		const endpoint = getUplinkPairingEndpoint()
 		const socket = await pairUplinkSocket({
-			baseURL: client.baseURL,
+			baseURL: endpoint.baseURL,
+			routeStyle: endpoint.routeStyle,
 			apiKey: client.apiKey,
 			namespace: options.namespace,
 			connectionId: options.connectionId,
@@ -281,15 +292,19 @@ export async function serveUplink(options: {
 
 		if (!pairedOnce) {
 			pairedOnce = true
+			const connectionPath = buildConnectionPath(
+				options.namespace,
+				options.connectionId,
+			)
 			console.log("Pairing uplink ... connected")
 			console.log(`Local MCP: ${describeLocalTarget(options.target)}`)
 			console.log(`Namespace: ${options.namespace}`)
 			console.log(`Connection ID: ${options.connectionId}`)
 			console.log(
-				`MCP: https://mcp.smithery.run/${encodeURIComponent(options.namespace)}/${encodeURIComponent(options.connectionId)}`,
+				`MCP: ${new URL(connectionPath, "https://mcp.smithery.run").toString()}`,
 			)
 			console.log(
-				`REST: https://smithery.run/${encodeURIComponent(options.namespace)}/${encodeURIComponent(options.connectionId)}`,
+				`REST: ${new URL(connectionPath, "https://smithery.run").toString()}`,
 			)
 			console.log("Press Ctrl-C to stop.")
 			return
@@ -310,12 +325,25 @@ export async function serveUplink(options: {
 
 async function pairUplinkSocket(options: {
 	baseURL: string
+	routeStyle: UplinkRouteStyle
 	apiKey: string
 	namespace: string
 	connectionId: string
 	force?: boolean
 }): Promise<WebSocket> {
-	const preflight = await preflightUplinkPair(options)
+	let preflight: "paired" | "disconnected"
+	try {
+		preflight = await preflightUplinkPair(options)
+	} catch (error) {
+		if (
+			!options.force ||
+			!(error instanceof Error) ||
+			error.message !== "Uplink already paired. Use --force to take over."
+		) {
+			throw error
+		}
+		preflight = "paired"
+	}
 	if (preflight === "paired" && !options.force) {
 		throw new Error("Uplink already paired. Use --force to take over.")
 	}
@@ -325,6 +353,7 @@ async function pairUplinkSocket(options: {
 		options.namespace,
 		options.connectionId,
 		options.force,
+		options.routeStyle,
 	)
 
 	return new Promise<WebSocket>((resolve, reject) => {
@@ -367,14 +396,20 @@ async function pairUplinkSocket(options: {
 	})
 }
 
-async function preflightUplinkPair(options: {
+export async function preflightUplinkPair(options: {
 	baseURL: string
+	routeStyle?: UplinkRouteStyle
 	apiKey: string
 	namespace: string
 	connectionId: string
 }): Promise<"paired" | "disconnected"> {
 	const response = await fetch(
-		buildHttpPairUrl(options.baseURL, options.namespace, options.connectionId),
+		buildHttpPairUrl(
+			options.baseURL,
+			options.namespace,
+			options.connectionId,
+			options.routeStyle,
+		),
 		{
 			headers: {
 				Authorization: `Bearer ${options.apiKey}`,
@@ -666,14 +701,125 @@ function createStdioLocalPeer(
 	return wrapInitialized(inner)
 }
 
-function buildPairUrl(
+export function getUplinkBaseUrl(): string {
+	return getUplinkPairingEndpoint().baseURL
+}
+
+export function getUplinkPairingEndpoint(): {
+	baseURL: string
+	routeStyle: UplinkRouteStyle
+} {
+	if (process.env.SMITHERY_UPLINK_BASE_URL) {
+		const baseURL = process.env.SMITHERY_UPLINK_BASE_URL
+		return {
+			baseURL,
+			routeStyle: getUplinkRouteStyle(baseURL, "explicit"),
+		}
+	}
+
+	if (process.env.SMITHERY_MCP_BASE_URL) {
+		const baseURL = process.env.SMITHERY_MCP_BASE_URL
+		return {
+			baseURL,
+			routeStyle: getUplinkRouteStyle(baseURL, "explicit"),
+		}
+	}
+
+	const apiBaseURL = process.env.SMITHERY_BASE_URL
+	if (apiBaseURL) {
+		try {
+			const url = new URL(apiBaseURL)
+			if (isLocalHost(url.hostname) || isConnectOverrideHost(url.hostname)) {
+				return {
+					baseURL: url.origin,
+					routeStyle: getUplinkRouteStyle(url.origin, "inherited"),
+				}
+			}
+		} catch {
+			// Ignore invalid env overrides and fall back to production.
+		}
+	}
+
+	return {
+		baseURL: DEFAULT_UPLINK_BASE_URL,
+		routeStyle: "root-host",
+	}
+}
+
+export function getUplinkRouteStyle(
+	baseURL: string,
+	source: "explicit" | "inherited" = "explicit",
+): UplinkRouteStyle {
+	const host = new URL(baseURL).hostname.toLowerCase()
+	if (isDedicatedUplinkHost(host)) {
+		return "root-host"
+	}
+	if (source === "inherited") {
+		return "connect-compat"
+	}
+	if (isLocalHost(host) || isConnectOverrideHost(host)) {
+		return "connect-compat"
+	}
+	return "root-host"
+}
+
+function isDedicatedUplinkHost(hostname: string): boolean {
+	return (
+		hostname === "uplink.smithery.run" ||
+		(hostname.startsWith("fwd-uplink-") &&
+			hostname.endsWith("-dev.smithery.tools"))
+	)
+}
+
+function isConnectOverrideHost(hostname: string): boolean {
+	return (
+		hostname.startsWith("fwd-connect-") ||
+		hostname.startsWith("smithery-connect-") ||
+		hostname.endsWith(".workers.dev")
+	)
+}
+
+function isLocalHost(hostname: string): boolean {
+	return (
+		hostname === "localhost" ||
+		hostname === "127.0.0.1" ||
+		hostname === "[::1]" ||
+		hostname === "::1"
+	)
+}
+
+function encodePathSegment(value: string): string {
+	return encodeURIComponent(value)
+}
+
+function buildConnectionPath(namespace: string, connectionId: string): string {
+	const encodedConnectionPath = connectionId
+		.split("/")
+		.map(encodePathSegment)
+		.join("/")
+	return `/${encodePathSegment(namespace)}/${encodedConnectionPath}`
+}
+
+function buildPairPath(
+	namespace: string,
+	connectionId: string,
+	routeStyle: UplinkRouteStyle,
+): string {
+	const connectionPath = buildConnectionPath(namespace, connectionId)
+	return routeStyle === "connect-compat"
+		? `${connectionPath}/uplink`
+		: connectionPath
+}
+
+export function buildPairUrl(
 	baseURL: string,
 	namespace: string,
 	connectionId: string,
 	force = false,
+	routeStyle = getUplinkRouteStyle(baseURL),
 ): string {
 	const url = new URL(
-		`/connect/${encodeURIComponent(namespace)}/${encodeURIComponent(connectionId)}/uplink`,
+		buildPairPath(namespace, connectionId, routeStyle),
 		baseURL,
 	)
 	if (force) {
@@ -683,18 +829,25 @@ function buildPairUrl(
 	return url.toString()
 }
 
-function buildHttpPairUrl(
+export function buildHttpPairUrl(
 	baseURL: string,
 	namespace: string,
 	connectionId: string,
+	routeStyle = getUplinkRouteStyle(baseURL),
 ): string {
 	return new URL(
-		`/connect/${encodeURIComponent(namespace)}/${encodeURIComponent(connectionId)}/uplink`,
+		buildPairPath(namespace, connectionId, routeStyle),
 		baseURL,
 	).toString()
 }
 
 async function readPairError(response: Response): Promise<string> {
+	const statusMessage = pairStatusError(response.status)
+	if (statusMessage) {
+		await response.body?.cancel()
+		return statusMessage
+	}
+
 	const text = await response.text().catch(() => "")
 	try {
 		const parsed = JSON.parse(text) as { message?: string }
@@ -705,19 +858,25 @@ async function readPairError(response: Response): Promise<string> {
 		// Ignore JSON parse errors and fall back to plain text.
 	}
 
-	if (response.status === 401) {
+	return text || `Request failed with status ${response.status}.`
+}
+
+function pairStatusError(status: number): string | undefined {
+	if (status === 401) {
 		return "Authentication failed. Run 'smithery login' to re-authenticate."
 	}
 
-	if (response.status === 403) {
+	if (status === 403) {
 		return "Permission denied. Your token needs connections:write on this namespace."
 	}
 
-	if (response.status === 404) {
+	if (status === 404) {
 		return "Connection not found."
 	}
 
-	return text || `Request failed with status ${response.status}.`
+	if (status === 409) {
+		return "Uplink already paired. Use --force to take over."
+	}
 }
 
 function describeLocalTarget(target: UplinkTarget): string {
