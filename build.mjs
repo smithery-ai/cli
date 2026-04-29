@@ -21,6 +21,7 @@ for (const k in process.env) {
 			"SMITHERY_API_KEY",
 			"SMITHERY_BASE_URL",
 			"SMITHERY_UPLINK_BASE_URL",
+			"SMITHERY_DEV_CONNECT_UPLINK_URL",
 			"SMITHERY_MCP_BASE_URL",
 			"ANALYTICS_ENDPOINT",
 		].includes(k)

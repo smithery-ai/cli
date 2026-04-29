@@ -10,6 +10,7 @@ import {
 	JSONRPCMessageSchema,
 	LATEST_PROTOCOL_VERSION,
 } from "@modelcontextprotocol/sdk/types.js"
+import { APIError, type Smithery } from "@smithery/api"
 import pc from "picocolors"
 import { getRuntimeEnvironment } from "../utils/runtime"
 import { debug } from "./logger"
@@ -22,8 +23,6 @@ const RETRY_DELAYS_MS = [250, 500, 1000, 2000, 4000]
 const STDIO_KILL_TIMEOUT_MS = 5000
 const LOCAL_HANDSHAKE_ID = "__smithery_uplink_init__"
 const DEFAULT_UPLINK_BASE_URL = "https://uplink.smithery.run"
-
-export type UplinkRouteStyle = "root-host" | "connect-compat"
 
 export type UplinkTarget =
 	| {
@@ -205,8 +204,8 @@ export async function serveUplink(options: {
 	const connect = async (attempt: number) => {
 		const endpoint = getUplinkPairingEndpoint()
 		const socket = await pairUplinkSocket({
+			client,
 			baseURL: endpoint.baseURL,
-			routeStyle: endpoint.routeStyle,
 			apiKey: client.apiKey,
 			namespace: options.namespace,
 			connectionId: options.connectionId,
@@ -324,8 +323,8 @@ export async function serveUplink(options: {
 }
 
 async function pairUplinkSocket(options: {
+	client: Smithery
 	baseURL: string
-	routeStyle: UplinkRouteStyle
 	apiKey: string
 	namespace: string
 	connectionId: string
@@ -353,7 +352,6 @@ async function pairUplinkSocket(options: {
 		options.namespace,
 		options.connectionId,
 		options.force,
-		options.routeStyle,
 	)
 
 	return new Promise<WebSocket>((resolve, reject) => {
@@ -397,37 +395,29 @@ async function pairUplinkSocket(options: {
 }
 
 export async function preflightUplinkPair(options: {
+	client: Smithery
 	baseURL: string
-	routeStyle?: UplinkRouteStyle
-	apiKey: string
 	namespace: string
 	connectionId: string
 }): Promise<"paired" | "disconnected"> {
-	const response = await fetch(
-		buildHttpPairUrl(
-			options.baseURL,
-			options.namespace,
-			options.connectionId,
-			options.routeStyle,
-		),
-		{
-			headers: {
-				Authorization: `Bearer ${options.apiKey}`,
-			},
-		},
-	)
-
-	if (response.status === 200) {
-		await response.body?.cancel()
+	try {
+		await options.client
+			.withOptions({ baseURL: toHttpBaseUrl(options.baseURL) })
+			.uplink.check(
+				options.connectionId,
+				{ namespace: options.namespace },
+				{ maxRetries: 0 },
+			)
 		return "paired"
-	}
+	} catch (error) {
+		if (error instanceof APIError) {
+			if (error.status === 503) return "disconnected"
 
-	if (response.status === 503) {
-		await response.body?.cancel()
-		return "disconnected"
+			const message = pairStatusError(error.status)
+			if (message) throw new Error(message)
+		}
+		throw error
 	}
-
-	throw new Error(await readPairError(response))
 }
 
 function createSocketPeer(socket: WebSocket): SocketPeer {
@@ -707,85 +697,20 @@ export function getUplinkBaseUrl(): string {
 
 export function getUplinkPairingEndpoint(): {
 	baseURL: string
-	routeStyle: UplinkRouteStyle
 } {
 	if (process.env.SMITHERY_UPLINK_BASE_URL) {
-		const baseURL = process.env.SMITHERY_UPLINK_BASE_URL
-		return {
-			baseURL,
-			routeStyle: getUplinkRouteStyle(baseURL, "explicit"),
-		}
+		return { baseURL: process.env.SMITHERY_UPLINK_BASE_URL }
+	}
+
+	if (process.env.SMITHERY_DEV_CONNECT_UPLINK_URL) {
+		return { baseURL: process.env.SMITHERY_DEV_CONNECT_UPLINK_URL }
 	}
 
 	if (process.env.SMITHERY_MCP_BASE_URL) {
-		const baseURL = process.env.SMITHERY_MCP_BASE_URL
-		return {
-			baseURL,
-			routeStyle: getUplinkRouteStyle(baseURL, "explicit"),
-		}
+		return { baseURL: process.env.SMITHERY_MCP_BASE_URL }
 	}
 
-	const apiBaseURL = process.env.SMITHERY_BASE_URL
-	if (apiBaseURL) {
-		try {
-			const url = new URL(apiBaseURL)
-			if (isLocalHost(url.hostname) || isConnectOverrideHost(url.hostname)) {
-				return {
-					baseURL: url.origin,
-					routeStyle: getUplinkRouteStyle(url.origin, "inherited"),
-				}
-			}
-		} catch {
-			// Ignore invalid env overrides and fall back to production.
-		}
-	}
-
-	return {
-		baseURL: DEFAULT_UPLINK_BASE_URL,
-		routeStyle: "root-host",
-	}
-}
-
-export function getUplinkRouteStyle(
-	baseURL: string,
-	source: "explicit" | "inherited" = "explicit",
-): UplinkRouteStyle {
-	const host = new URL(baseURL).hostname.toLowerCase()
-	if (isDedicatedUplinkHost(host)) {
-		return "root-host"
-	}
-	if (source === "inherited") {
-		return "connect-compat"
-	}
-	if (isLocalHost(host) || isConnectOverrideHost(host)) {
-		return "connect-compat"
-	}
-	return "root-host"
-}
-
-function isDedicatedUplinkHost(hostname: string): boolean {
-	return (
-		hostname === "uplink.smithery.run" ||
-		(hostname.startsWith("fwd-uplink-") &&
-			hostname.endsWith("-dev.smithery.tools"))
-	)
-}
-
-function isConnectOverrideHost(hostname: string): boolean {
-	return (
-		hostname.startsWith("fwd-connect-") ||
-		hostname.startsWith("smithery-connect-") ||
-		hostname.endsWith(".workers.dev")
-	)
-}
-
-function isLocalHost(hostname: string): boolean {
-	return (
-		hostname === "localhost" ||
-		hostname === "127.0.0.1" ||
-		hostname === "[::1]" ||
-		hostname === "::1"
-	)
+	return { baseURL: DEFAULT_UPLINK_BASE_URL }
 }
 
 function encodePathSegment(value: string): string {
@@ -800,28 +725,13 @@ function buildConnectionPath(namespace: string, connectionId: string): string {
 	return `/${encodePathSegment(namespace)}/${encodedConnectionPath}`
 }
 
-function buildPairPath(
-	namespace: string,
-	connectionId: string,
-	routeStyle: UplinkRouteStyle,
-): string {
-	const connectionPath = buildConnectionPath(namespace, connectionId)
-	return routeStyle === "connect-compat"
-		? `${connectionPath}/uplink`
-		: connectionPath
-}
-
 export function buildPairUrl(
 	baseURL: string,
 	namespace: string,
 	connectionId: string,
 	force = false,
-	routeStyle = getUplinkRouteStyle(baseURL),
 ): string {
-	const url = new URL(
-		buildPairPath(namespace, connectionId, routeStyle),
-		baseURL,
-	)
+	const url = new URL(buildConnectionPath(namespace, connectionId), baseURL)
 	if (force) {
 		url.searchParams.set("force", "1")
 	}
@@ -829,36 +739,11 @@ export function buildPairUrl(
 	return url.toString()
 }
 
-export function buildHttpPairUrl(
-	baseURL: string,
-	namespace: string,
-	connectionId: string,
-	routeStyle = getUplinkRouteStyle(baseURL),
-): string {
-	return new URL(
-		buildPairPath(namespace, connectionId, routeStyle),
-		baseURL,
-	).toString()
-}
-
-async function readPairError(response: Response): Promise<string> {
-	const statusMessage = pairStatusError(response.status)
-	if (statusMessage) {
-		await response.body?.cancel()
-		return statusMessage
-	}
-
-	const text = await response.text().catch(() => "")
-	try {
-		const parsed = JSON.parse(text) as { message?: string }
-		if (parsed.message) {
-			return parsed.message
-		}
-	} catch {
-		// Ignore JSON parse errors and fall back to plain text.
-	}
-
-	return text || `Request failed with status ${response.status}.`
+function toHttpBaseUrl(baseURL: string): string {
+	const url = new URL(baseURL)
+	if (url.protocol === "wss:") url.protocol = "https:"
+	if (url.protocol === "ws:") url.protocol = "http:"
+	return url.toString()
 }
 
 function pairStatusError(status: number): string | undefined {

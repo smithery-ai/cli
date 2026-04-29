@@ -1,7 +1,7 @@
 import type { JSONRPCMessage } from "@modelcontextprotocol/sdk/types.js"
+import { Smithery } from "@smithery/api"
 import { afterEach, describe, expect, test, vi } from "vitest"
 import {
-	buildHttpPairUrl,
 	buildPairUrl,
 	formatBridgeError,
 	getUplinkBaseUrl,
@@ -19,6 +19,7 @@ declare global {
 globalThis.__SMITHERY_VERSION__ = globalThis.__SMITHERY_VERSION__ ?? "test"
 
 const ORIGINAL_UPLINK_BASE_URL = process.env.SMITHERY_UPLINK_BASE_URL
+const ORIGINAL_DEV_UPLINK_URL = process.env.SMITHERY_DEV_CONNECT_UPLINK_URL
 const ORIGINAL_MCP_BASE_URL = process.env.SMITHERY_MCP_BASE_URL
 const ORIGINAL_BASE_URL = process.env.SMITHERY_BASE_URL
 
@@ -27,6 +28,12 @@ afterEach(() => {
 		delete process.env.SMITHERY_UPLINK_BASE_URL
 	} else {
 		process.env.SMITHERY_UPLINK_BASE_URL = ORIGINAL_UPLINK_BASE_URL
+	}
+
+	if (ORIGINAL_DEV_UPLINK_URL === undefined) {
+		delete process.env.SMITHERY_DEV_CONNECT_UPLINK_URL
+	} else {
+		process.env.SMITHERY_DEV_CONNECT_UPLINK_URL = ORIGINAL_DEV_UPLINK_URL
 	}
 
 	if (ORIGINAL_MCP_BASE_URL === undefined) {
@@ -118,7 +125,10 @@ describe("uplink pairing urls", () => {
 			),
 		).toBe("wss://uplink.smithery.run/team%20a/local/server%20b?force=1")
 		expect(buildPairUrl("http://localhost:8787", "ns", "conn")).toBe(
-			"ws://localhost:8787/ns/conn/uplink",
+			"ws://localhost:8787/ns/conn",
+		)
+		expect(buildPairUrl("http://uplink.localhost:8787", "ns", "conn")).toBe(
+			"ws://uplink.localhost:8787/ns/conn",
 		)
 		expect(
 			buildPairUrl("https://uplink.smithery.run", "team/a", "conn b"),
@@ -127,36 +137,21 @@ describe("uplink pairing urls", () => {
 			"wss://uplink.smithery.run/ns/team/a%3Fb",
 		)
 		expect(
+			buildPairUrl("https://fwd-uplink-f44e-dev.smithery.tools", "ns", "conn"),
+		).toBe("wss://fwd-uplink-f44e-dev.smithery.tools/ns/conn")
+		expect(
 			buildPairUrl(
-				"https://fwd-connect-f44e-dev.smithery.tools",
+				"https://fwd-uplink-f44e-dev.smithery.tools",
 				"ns",
 				"conn",
 				true,
 			),
-		).toBe("wss://fwd-connect-f44e-dev.smithery.tools/ns/conn/uplink?force=1")
-		expect(
-			buildPairUrl("https://fwd-uplink-f44e-dev.smithery.tools", "ns", "conn"),
-		).toBe("wss://fwd-uplink-f44e-dev.smithery.tools/ns/conn")
-	})
-
-	test("builds direct http preflight urls", () => {
-		expect(
-			buildHttpPairUrl("https://uplink.smithery.run", "ns", "team/conn"),
-		).toBe("https://uplink.smithery.run/ns/team/conn")
-		expect(
-			buildHttpPairUrl("https://uplink.smithery.run", "team a", "local b"),
-		).toBe("https://uplink.smithery.run/team%20a/local%20b")
-		expect(
-			buildHttpPairUrl(
-				"https://fwd-connect-f44e-dev.smithery.tools",
-				"ns",
-				"team/conn",
-			),
-		).toBe("https://fwd-connect-f44e-dev.smithery.tools/ns/team/conn/uplink")
+		).toBe("wss://fwd-uplink-f44e-dev.smithery.tools/ns/conn?force=1")
 	})
 
 	test("resolves the uplink base independently from the api base", () => {
 		delete process.env.SMITHERY_UPLINK_BASE_URL
+		delete process.env.SMITHERY_DEV_CONNECT_UPLINK_URL
 		delete process.env.SMITHERY_MCP_BASE_URL
 		delete process.env.SMITHERY_BASE_URL
 		expect(getUplinkBaseUrl()).toBe("https://uplink.smithery.run")
@@ -165,34 +160,26 @@ describe("uplink pairing urls", () => {
 		expect(getUplinkBaseUrl()).toBe("http://localhost:8787")
 		expect(getUplinkPairingEndpoint()).toEqual({
 			baseURL: "http://localhost:8787",
-			routeStyle: "connect-compat",
 		})
 
 		delete process.env.SMITHERY_UPLINK_BASE_URL
-		process.env.SMITHERY_MCP_BASE_URL =
-			"https://fwd-connect-f44e-dev.smithery.tools"
+		process.env.SMITHERY_DEV_CONNECT_UPLINK_URL =
+			"https://fwd-uplink-f44e-dev.smithery.tools"
 		expect(getUplinkBaseUrl()).toBe(
-			"https://fwd-connect-f44e-dev.smithery.tools",
+			"https://fwd-uplink-f44e-dev.smithery.tools",
 		)
 		expect(getUplinkPairingEndpoint()).toEqual({
-			baseURL: "https://fwd-connect-f44e-dev.smithery.tools",
-			routeStyle: "connect-compat",
+			baseURL: "https://fwd-uplink-f44e-dev.smithery.tools",
 		})
 
-		delete process.env.SMITHERY_MCP_BASE_URL
-		process.env.SMITHERY_BASE_URL = "http://127.0.0.1:8789/api"
-		expect(getUplinkBaseUrl()).toBe("http://127.0.0.1:8789")
-		expect(getUplinkPairingEndpoint()).toEqual({
-			baseURL: "http://127.0.0.1:8789",
-			routeStyle: "connect-compat",
-		})
+		delete process.env.SMITHERY_DEV_CONNECT_UPLINK_URL
+		process.env.SMITHERY_MCP_BASE_URL = "https://legacy-uplink.example"
+		expect(getUplinkBaseUrl()).toBe("https://legacy-uplink.example")
 
 		process.env.SMITHERY_BASE_URL =
 			"https://fwd-connect-f44e-dev.smithery.tools"
-		expect(getUplinkPairingEndpoint()).toEqual({
-			baseURL: "https://fwd-connect-f44e-dev.smithery.tools",
-			routeStyle: "connect-compat",
-		})
+		delete process.env.SMITHERY_MCP_BASE_URL
+		expect(getUplinkBaseUrl()).toBe("https://uplink.smithery.run")
 
 		process.env.SMITHERY_BASE_URL = "https://api.smithery.ai"
 		expect(getUplinkBaseUrl()).toBe("https://uplink.smithery.run")
@@ -200,35 +187,40 @@ describe("uplink pairing urls", () => {
 })
 
 describe("preflightUplinkPair", () => {
-	test("uses the direct uplink host and treats 503 as available", async () => {
+	test("uses SDK status checks and treats 503 as available", async () => {
 		const fetchMock = vi.fn(async () => new Response(null, { status: 503 }))
-		vi.stubGlobal("fetch", fetchMock)
+		const client = new Smithery({
+			apiKey: "key",
+			fetch: fetchMock,
+			maxRetries: 0,
+		})
 
 		await expect(
 			preflightUplinkPair({
+				client,
 				baseURL: "https://uplink.smithery.run",
-				apiKey: "key",
 				namespace: "ns",
 				connectionId: "team/conn",
 			}),
 		).resolves.toBe("disconnected")
 
 		expect(fetchMock).toHaveBeenCalledWith(
-			"https://uplink.smithery.run/ns/team/conn",
-			{ headers: { Authorization: "Bearer key" } },
+			"https://uplink.smithery.run/ns/team%2Fconn",
+			expect.objectContaining({ method: "POST" }),
 		)
 	})
 
 	test("treats 200 as already paired", async () => {
-		vi.stubGlobal(
-			"fetch",
-			vi.fn(async () => new Response(null, { status: 200 })),
-		)
+		const client = new Smithery({
+			apiKey: "key",
+			fetch: vi.fn(async () => new Response(null, { status: 200 })),
+			maxRetries: 0,
+		})
 
 		await expect(
 			preflightUplinkPair({
+				client,
 				baseURL: "https://uplink.smithery.run",
-				apiKey: "key",
 				namespace: "ns",
 				connectionId: "conn",
 			}),
@@ -241,15 +233,16 @@ describe("preflightUplinkPair", () => {
 		[404, "Connection not found"],
 		[409, "Uplink already paired. Use --force to take over."],
 	])("formats %i errors", async (status, message) => {
-		vi.stubGlobal(
-			"fetch",
-			vi.fn(async () => new Response(null, { status })),
-		)
+		const client = new Smithery({
+			apiKey: "key",
+			fetch: vi.fn(async () => new Response(null, { status })),
+			maxRetries: 0,
+		})
 
 		await expect(
 			preflightUplinkPair({
+				client,
 				baseURL: "https://uplink.smithery.run",
-				apiKey: "key",
 				namespace: "ns",
 				connectionId: "conn",
 			}),
