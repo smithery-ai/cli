@@ -1,5 +1,4 @@
 import type { JSONRPCMessage } from "@modelcontextprotocol/sdk/types.js"
-import { Smithery } from "@smithery/api"
 import { afterEach, describe, expect, test, vi } from "vitest"
 import {
 	buildPairUrl,
@@ -7,7 +6,6 @@ import {
 	getUplinkBaseUrl,
 	getUplinkPairingEndpoint,
 	type LocalPeer,
-	preflightUplinkPair,
 	type SocketPeer,
 	wireJsonRpcBridge,
 	wrapInitialized,
@@ -183,70 +181,6 @@ describe("uplink pairing urls", () => {
 
 		process.env.SMITHERY_BASE_URL = "https://api.smithery.ai"
 		expect(getUplinkBaseUrl()).toBe("https://uplink.smithery.run")
-	})
-})
-
-describe("preflightUplinkPair", () => {
-	test("uses SDK status checks and treats 503 as available", async () => {
-		const fetchMock = vi.fn(async () => new Response(null, { status: 503 }))
-		const client = new Smithery({
-			apiKey: "key",
-			fetch: fetchMock,
-			maxRetries: 0,
-		})
-
-		await expect(
-			preflightUplinkPair({
-				client,
-				baseURL: "https://uplink.smithery.run",
-				namespace: "ns",
-				connectionId: "team/conn",
-			}),
-		).resolves.toBe("disconnected")
-
-		expect(fetchMock).toHaveBeenCalledWith(
-			"https://uplink.smithery.run/ns/team%2Fconn",
-			expect.objectContaining({ method: "POST" }),
-		)
-	})
-
-	test("treats 200 as already paired", async () => {
-		const client = new Smithery({
-			apiKey: "key",
-			fetch: vi.fn(async () => new Response(null, { status: 200 })),
-			maxRetries: 0,
-		})
-
-		await expect(
-			preflightUplinkPair({
-				client,
-				baseURL: "https://uplink.smithery.run",
-				namespace: "ns",
-				connectionId: "conn",
-			}),
-		).resolves.toBe("paired")
-	})
-
-	test.each([
-		[401, "smithery login"],
-		[403, "connections:write"],
-		[404, "Connection not found"],
-		[409, "Uplink already paired. Use --force to take over."],
-	])("formats %i errors", async (status, message) => {
-		const client = new Smithery({
-			apiKey: "key",
-			fetch: vi.fn(async () => new Response(null, { status })),
-			maxRetries: 0,
-		})
-
-		await expect(
-			preflightUplinkPair({
-				client,
-				baseURL: "https://uplink.smithery.run",
-				namespace: "ns",
-				connectionId: "conn",
-			}),
-		).rejects.toThrow(message)
 	})
 })
 

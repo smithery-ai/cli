@@ -228,11 +228,16 @@ export class ConnectSession {
 		triggerName: string,
 		params: Record<string, unknown> = {},
 	): Promise<TriggerInstance> {
-		return this.smitheryClient.connections.triggers.create(triggerName, {
-			namespace: this.namespace,
-			connectionId,
-			params,
-		})
+		return this.smitheryClient.connections.triggers.create(
+			triggerName,
+			{
+				namespace: this.namespace,
+				connectionId,
+			},
+			{
+				body: { params },
+			},
+		)
 	}
 
 	async getTriggerInstance(
@@ -276,13 +281,20 @@ export class ConnectSession {
 		connectionId?: string,
 	): Promise<TriggerSubscription> {
 		if (!connectionId) {
-			return this.smitheryClient.subscriptions.create(this.namespace, { url })
+			return this.smitheryClient.subscriptions.create(this.namespace, {
+				body: { url },
+			})
 		}
 
-		return this.smitheryClient.connections.subscriptions.create(connectionId, {
-			namespace: this.namespace,
-			url,
-		})
+		return this.smitheryClient.connections.subscriptions.create(
+			connectionId,
+			{
+				namespace: this.namespace,
+			},
+			{
+				body: { url },
+			},
+		)
 	}
 
 	async deleteSubscription(

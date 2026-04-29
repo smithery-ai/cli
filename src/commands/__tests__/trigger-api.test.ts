@@ -69,11 +69,16 @@ describe("ConnectSession trigger support", () => {
 			namespace: "my app",
 			connectionId: "notion",
 		})
-		expect(createTrigger).toHaveBeenCalledWith("page.updated", {
-			namespace: "my app",
-			connectionId: "notion",
-			params: { workspace_id: "w_123" },
-		})
+		expect(createTrigger).toHaveBeenCalledWith(
+			"page.updated",
+			{
+				namespace: "my app",
+				connectionId: "notion",
+			},
+			{
+				body: { params: { workspace_id: "w_123" } },
+			},
+		)
 		expect(getTriggerInstance).toHaveBeenCalledWith("trg_123", {
 			namespace: "my app",
 			connectionId: "notion",
@@ -86,15 +91,20 @@ describe("ConnectSession trigger support", () => {
 		})
 		expect(listNamespaceSubscriptions).toHaveBeenCalledWith("my app")
 		expect(createNamespaceSubscription).toHaveBeenCalledWith("my app", {
-			url: "https://example.com/events",
+			body: { url: "https://example.com/events" },
 		})
 		expect(listConnectionSubscriptions).toHaveBeenCalledWith("notion", {
 			namespace: "my app",
 		})
-		expect(createConnectionSubscription).toHaveBeenCalledWith("notion", {
-			namespace: "my app",
-			url: "https://example.com/notion",
-		})
+		expect(createConnectionSubscription).toHaveBeenCalledWith(
+			"notion",
+			{
+				namespace: "my app",
+			},
+			{
+				body: { url: "https://example.com/notion" },
+			},
+		)
 		expect(deleteNamespaceSubscription).toHaveBeenCalledWith("sub_123", {
 			namespace: "my app",
 		})

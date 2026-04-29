@@ -18,8 +18,8 @@ importers:
         specifier: ^1.25.3
         version: 1.25.3(hono@4.11.1)(zod@4.2.1)
       '@smithery/api':
-        specifier: https://pkg.stainless.com/s/smithery-typescript/4f32825a38ef3241f41417c09c736094f5cf6e62/dist.tar.gz
-        version: https://pkg.stainless.com/s/smithery-typescript/4f32825a38ef3241f41417c09c736094f5cf6e62/dist.tar.gz(@modelcontextprotocol/sdk@1.25.3(hono@4.11.1)(zod@4.2.1))
+        specifier: ^0.62.0
+        version: 0.62.0(@modelcontextprotocol/sdk@1.25.3(hono@4.11.1)(zod@4.2.1))
       '@smithery/sdk':
         specifier: ^4.1.0
         version: 4.1.0(@modelcontextprotocol/sdk@1.25.3(hono@4.11.1)(zod@4.2.1))(zod@4.2.1)
@@ -32,6 +32,9 @@ importers:
       '@types/node':
         specifier: ^20.19.27
         version: 20.19.27
+      '@types/ws':
+        specifier: ^8.18.1
+        version: 8.18.1
       commander:
         specifier: ^14.0.0
         version: 14.0.2
@@ -92,6 +95,9 @@ importers:
       vitest:
         specifier: ^3.2.4
         version: 3.2.4(@types/node@20.19.27)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.2)
+      ws:
+        specifier: ^8.20.0
+        version: 8.20.0
       yaml:
         specifier: ^2.3.4
         version: 2.8.2
@@ -800,9 +806,8 @@ packages:
     resolution: {integrity: sha512-P1Cz1dWaFfR4IR+U13mqqiGsLFf1KbayybWwdd2vfctdV6hDpUkgCY0nKOLLTMSoRd/jJNjtbqzf13K8DCCXQw==}
     engines: {node: '>=18'}
 
-  '@smithery/api@https://pkg.stainless.com/s/smithery-typescript/4f32825a38ef3241f41417c09c736094f5cf6e62/dist.tar.gz':
-    resolution: {integrity: sha512-GDxI1coPrrBgkjQwIUmOn40n9M+Kf2C+d97ZCfuGPcjOyarfqbPlj7ZO0Pnh7Ao7tb0CgSy6P49uZvHlj+M5lA==, tarball: https://pkg.stainless.com/s/smithery-typescript/4f32825a38ef3241f41417c09c736094f5cf6e62/dist.tar.gz}
-    version: 0.64.0
+  '@smithery/api@0.62.0':
+    resolution: {integrity: sha512-o+JKSiM8dgLkeugzwZNcMfFi/SblAmUblNo0vFDw9FovDH60O5on6OimoP6fkFXxiSeLLpqygwigmki2MIeiEg==}
     peerDependencies:
       '@modelcontextprotocol/sdk': '>=1.0.0'
     peerDependenciesMeta:
@@ -850,6 +855,9 @@ packages:
 
   '@types/wrap-ansi@3.0.0':
     resolution: {integrity: sha512-ltIpx+kM7g/MLRZfkbL7EsCEjfzCcScLpkg37eXEtx5kmrAKBkTJwd1GIAjDSL8wTpM6Hzn5YO4pSb91BEwu1g==}
+
+  '@types/ws@8.18.1':
+    resolution: {integrity: sha512-ThVF6DCVhA8kUGy+aazFQ4kXQ7E1Ty7A3ypFOe0IcJV8O/M511G99AW24irKrW56Wt44yG9+ij8FaqoBGkuBXg==}
 
   '@vitest/expect@3.2.4':
     resolution: {integrity: sha512-Io0yyORnB6sikFlt8QW5K7slY4OjqNX9jmJQ02QDda8lyM6B5oNgVWoSoKPac8/kgnCUzuHQKrSLtu/uOqqrig==}
@@ -2074,6 +2082,18 @@ packages:
       utf-8-validate:
         optional: true
 
+  ws@8.20.0:
+    resolution: {integrity: sha512-sAt8BhgNbzCtgGbt2OxmpuryO63ZoDk/sqaB/znQm94T4fCEsy/yV+7CdC1kJhOU9lboAEU7R3kquuycDoibVA==}
+    engines: {node: '>=10.0.0'}
+    peerDependencies:
+      bufferutil: ^4.0.1
+      utf-8-validate: '>=5.0.2'
+    peerDependenciesMeta:
+      bufferutil:
+        optional: true
+      utf-8-validate:
+        optional: true
+
   yaml@2.8.2:
     resolution: {integrity: sha512-mplynKqc1C2hTVYxd0PU2xQAc22TI1vShAYGksCCfxbn/dFwnHTNi1bvYsBTkhdUNtGIf5xNOg938rrSSYvS9A==}
     engines: {node: '>= 14.6'}
@@ -2651,7 +2671,7 @@ snapshots:
 
   '@sindresorhus/is@7.2.0': {}
 
-  '@smithery/api@https://pkg.stainless.com/s/smithery-typescript/4f32825a38ef3241f41417c09c736094f5cf6e62/dist.tar.gz(@modelcontextprotocol/sdk@1.25.3(hono@4.11.1)(zod@4.2.1))':
+  '@smithery/api@0.62.0(@modelcontextprotocol/sdk@1.25.3(hono@4.11.1)(zod@4.2.1))':
     optionalDependencies:
       '@modelcontextprotocol/sdk': 1.25.3(hono@4.11.1)(zod@4.2.1)
 
@@ -2702,6 +2722,10 @@ snapshots:
       '@types/node': 20.19.27
 
   '@types/wrap-ansi@3.0.0': {}
+
+  '@types/ws@8.18.1':
+    dependencies:
+      '@types/node': 20.19.27
 
   '@vitest/expect@3.2.4':
     dependencies:
@@ -3992,6 +4016,8 @@ snapshots:
   wrappy@1.0.2: {}
 
   ws@8.18.0: {}
+
+  ws@8.20.0: {}
 
   yaml@2.8.2: {}
 

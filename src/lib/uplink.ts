@@ -10,8 +10,8 @@ import {
 	JSONRPCMessageSchema,
 	LATEST_PROTOCOL_VERSION,
 } from "@modelcontextprotocol/sdk/types.js"
-import { APIError, type Smithery } from "@smithery/api"
 import pc from "picocolors"
+import WebSocket, { type RawData } from "ws"
 import { getRuntimeEnvironment } from "../utils/runtime"
 import { debug } from "./logger"
 import { createSmitheryClient } from "./smithery-client"
@@ -204,7 +204,6 @@ export async function serveUplink(options: {
 	const connect = async (attempt: number) => {
 		const endpoint = getUplinkPairingEndpoint()
 		const socket = await pairUplinkSocket({
-			client,
 			baseURL: endpoint.baseURL,
 			apiKey: client.apiKey,
 			namespace: options.namespace,
@@ -323,30 +322,12 @@ export async function serveUplink(options: {
 }
 
 async function pairUplinkSocket(options: {
-	client: Smithery
 	baseURL: string
 	apiKey: string
 	namespace: string
 	connectionId: string
 	force?: boolean
 }): Promise<WebSocket> {
-	let preflight: "paired" | "disconnected"
-	try {
-		preflight = await preflightUplinkPair(options)
-	} catch (error) {
-		if (
-			!options.force ||
-			!(error instanceof Error) ||
-			error.message !== "Uplink already paired. Use --force to take over."
-		) {
-			throw error
-		}
-		preflight = "paired"
-	}
-	if (preflight === "paired" && !options.force) {
-		throw new Error("Uplink already paired. Use --force to take over.")
-	}
-
 	const url = buildPairUrl(
 		options.baseURL,
 		options.namespace,
@@ -359,12 +340,13 @@ async function pairUplinkSocket(options: {
 			headers: {
 				Authorization: `Bearer ${options.apiKey}`,
 			},
-		} as unknown as ConstructorParameters<typeof WebSocket>[1])
+		})
 
 		const cleanup = () => {
-			socket.removeEventListener("open", onOpen)
-			socket.removeEventListener("error", onError)
-			socket.removeEventListener("close", onClose)
+			socket.off("open", onOpen)
+			socket.off("error", onError)
+			socket.off("close", onClose)
+			socket.off("unexpected-response", onUnexpectedResponse)
 		}
 
 		const onOpen = () => {
@@ -372,52 +354,37 @@ async function pairUplinkSocket(options: {
 			resolve(socket)
 		}
 
-		const onError = () => {
+		const onError = (error: Error) => {
 			cleanup()
-			reject(new Error("Failed to pair uplink."))
+			reject(error)
 		}
 
-		const onClose = (event: Event) => {
+		const onClose = (code: number, reason: Buffer) => {
 			cleanup()
-			const closeEvent = event as CloseEvent
 			reject(
 				new Error(
-					closeEvent.reason ||
-						`Failed to pair uplink (code ${closeEvent.code}).`,
+					reason.toString("utf8") || `Failed to pair uplink (code ${code}).`,
 				),
 			)
 		}
 
-		socket.addEventListener("open", onOpen)
-		socket.addEventListener("error", onError)
-		socket.addEventListener("close", onClose)
-	})
-}
-
-export async function preflightUplinkPair(options: {
-	client: Smithery
-	baseURL: string
-	namespace: string
-	connectionId: string
-}): Promise<"paired" | "disconnected"> {
-	try {
-		await options.client
-			.withOptions({ baseURL: toHttpBaseUrl(options.baseURL) })
-			.uplink.check(
-				options.connectionId,
-				{ namespace: options.namespace },
-				{ maxRetries: 0 },
+		const onUnexpectedResponse = (
+			_request: unknown,
+			response: { statusCode: number; statusMessage: string },
+		) => {
+			cleanup()
+			reject(
+				new Error(
+					`Failed to pair uplink (${response.statusCode} ${response.statusMessage}).`,
+				),
 			)
-		return "paired"
-	} catch (error) {
-		if (error instanceof APIError) {
-			if (error.status === 503) return "disconnected"
-
-			const message = pairStatusError(error.status)
-			if (message) throw new Error(message)
 		}
-		throw error
-	}
+
+		socket.once("open", onOpen)
+		socket.once("error", onError)
+		socket.once("close", onClose)
+		socket.once("unexpected-response", onUnexpectedResponse)
+	})
 }
 
 function createSocketPeer(socket: WebSocket): SocketPeer {
@@ -426,28 +393,33 @@ function createSocketPeer(socket: WebSocket): SocketPeer {
 			socket.send(text)
 		},
 	}
-	socket.addEventListener("message", (event) => {
-		if (typeof event.data === "string" || event.data instanceof ArrayBuffer) {
-			peer.onmessage?.(event.data)
+	socket.on("message", (data) => {
+		if (typeof data === "string" || data instanceof ArrayBuffer) {
+			peer.onmessage?.(data)
 			return
 		}
-		if (ArrayBuffer.isView(event.data)) {
-			const bytes = new Uint8Array(
-				event.data.buffer,
-				event.data.byteOffset,
-				event.data.byteLength,
-			)
-			peer.onmessage?.(Uint8Array.from(bytes).buffer)
-		}
+		peer.onmessage?.(rawDataToArrayBuffer(data))
 	})
-	socket.addEventListener("close", (event) => {
-		peer.onclose?.({ code: event.code, reason: event.reason })
+	socket.on("close", (code, reason) => {
+		peer.onclose?.({ code, reason: reason.toString("utf8") })
 	})
-	socket.addEventListener("error", (event) => {
-		const errorEvent = event as ErrorEvent
-		peer.onerror?.(errorEvent.error ?? new Error(errorEvent.message))
+	socket.on("error", (error) => {
+		peer.onerror?.(error)
 	})
 	return peer
+}
+
+function rawDataToArrayBuffer(data: RawData): ArrayBuffer {
+	if (data instanceof ArrayBuffer) return data
+	if (Array.isArray(data)) {
+		const buffer = Buffer.concat(data)
+		return buffer.buffer.slice(
+			buffer.byteOffset,
+			buffer.byteOffset + buffer.byteLength,
+		) as ArrayBuffer
+	}
+	const bytes = new Uint8Array(data.buffer, data.byteOffset, data.byteLength)
+	return Uint8Array.from(bytes).buffer
 }
 
 function createHttpLocalPeer(mcpUrl: string): LocalPeer {
@@ -737,31 +709,6 @@ export function buildPairUrl(
 	}
 	url.protocol = url.protocol === "https:" ? "wss:" : "ws:"
 	return url.toString()
-}
-
-function toHttpBaseUrl(baseURL: string): string {
-	const url = new URL(baseURL)
-	if (url.protocol === "wss:") url.protocol = "https:"
-	if (url.protocol === "ws:") url.protocol = "http:"
-	return url.toString()
-}
-
-function pairStatusError(status: number): string | undefined {
-	if (status === 401) {
-		return "Authentication failed. Run 'smithery login' to re-authenticate."
-	}
-
-	if (status === 403) {
-		return "Permission denied. Your token needs connections:write on this namespace."
-	}
-
-	if (status === 404) {
-		return "Connection not found."
-	}
-
-	if (status === 409) {
-		return "Uplink already paired. Use --force to take over."
-	}
 }
 
 function describeLocalTarget(target: UplinkTarget): string {
