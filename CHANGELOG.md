@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 
+## [4.11.1](https://github.com/smithery-ai/cli/compare/v4.11.0...v4.11.1) (2026-04-30)
+
+
+### Chores
+
+* add direct uplink pairing ([#745](https://github.com/smithery-ai/cli/issues/745)) ([58a60e3](https://github.com/smithery-ai/cli/commit/58a60e341431923fa7ad1d6e17d9aa1e854dc94d))
+
 ## [4.11.0](https://github.com/smithery-ai/cli/compare/v4.10.0...v4.11.0) (2026-04-28)
 
 
