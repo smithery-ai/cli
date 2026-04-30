@@ -1,5 +1,7 @@
 import { errorMessage, handleMCPAuthError } from "../../lib/cli-error"
+import { verbose } from "../../lib/logger"
 import { isJsonMode, outputJson } from "../../utils/output"
+import { cacheToolSchema } from "../../utils/tool-schema-cache"
 import { ConnectSession } from "./api"
 
 /**
@@ -81,13 +83,30 @@ export async function callTool(
 		const session = await ConnectSession.create(options.namespace)
 		const result = await session.callTool(connection, tool, parsedArgs)
 
+		const mcpResult = result as Record<string, unknown>
+
+		// Cache input + output schemas in background (fire-and-forget)
+		session
+			.getConnection(connection)
+			.then((conn) => session.listToolsForConnection(conn))
+			.then((tools) => {
+				const found = tools.find((t) => t.name === tool)
+				if (found?.inputSchema) {
+					return cacheToolSchema(
+						connection,
+						tool,
+						found.inputSchema as Record<string, unknown>,
+						mcpResult,
+					)
+				}
+			})
+			.catch((err) => verbose(`[Cache] Schema cache failed: ${err}`))
+
 		// --json: pass through the full MCP response as JSON
 		if (isJsonMode()) {
 			outputJson(result)
 			return
 		}
-
-		const mcpResult = result as Record<string, unknown>
 		const { output, isError } = formatToolResult(mcpResult)
 
 		if (isError) {
