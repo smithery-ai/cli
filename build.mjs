@@ -20,6 +20,9 @@ for (const k in process.env) {
 			"XDG_CONFIG_HOME",
 			"SMITHERY_API_KEY",
 			"SMITHERY_BASE_URL",
+			"SMITHERY_UPLINK_BASE_URL",
+			"SMITHERY_DEV_CONNECT_UPLINK_URL",
+			"SMITHERY_MCP_BASE_URL",
 			"ANALYTICS_ENDPOINT",
 		].includes(k)
 	)
@@ -69,7 +72,6 @@ define.__SMITHERY_VERSION__ = JSON.stringify(packageJson.version)
 define.__LAZY_DEPS__ = JSON.stringify({
 	miniflare: packageJson.devDependencies.miniflare,
 	esbuild: packageJson.devDependencies.esbuild,
-	"@ngrok/ngrok": packageJson.devDependencies["@ngrok/ngrok"],
 	keytar: packageJson.devDependencies.keytar,
 })
 
@@ -80,9 +82,8 @@ console.log("✓ Compiled bootstrap files")
 // Transitive native deps (like workerd via miniflare) are handled by their parent package.
 // - keytar: .node native addon for OS keychain
 // - esbuild: platform-specific binaries for bundling
-// - @ngrok/ngrok: native binary for tunneling
 // - miniflare: has complex native deps (workerd) that must resolve at runtime
-const nativePackages = ["@ngrok/ngrok", "esbuild", "keytar", "miniflare"]
+const nativePackages = ["esbuild", "keytar", "miniflare"]
 
 // Build main CLI entry point
 await esbuild.build({

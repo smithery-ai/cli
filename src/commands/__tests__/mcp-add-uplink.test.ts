@@ -20,7 +20,7 @@ const {
 		deleteConnection,
 		getNamespace: () => "calclavia",
 	}))
-	const serveUplink = vi.fn(async () => 0)
+	const serveUplink = vi.fn(async (_options: { onInterrupt?: () => void }) => 0)
 	const resolveServer = vi.fn()
 	const addBundleUplinkServer = vi.fn(async () => {})
 
@@ -102,13 +102,35 @@ describe("mcp add uplink routing", () => {
 			connectionId: "chrome",
 			force: undefined,
 			namespace: "calclavia",
+			onInterrupt: expect.any(Function),
 			target: {
 				kind: "uplink-http",
 				mcpUrl: "http://127.0.0.1:9090/mcp",
 			},
 		})
-		expect(mockDeleteConnection).toHaveBeenCalledWith("chrome")
+		expect(mockDeleteConnection).not.toHaveBeenCalled()
 		expect(mockAddServerImpl).not.toHaveBeenCalled()
+	})
+
+	test("deletes the uplink connection when the session is interrupted", async () => {
+		mockSetConnection.mockResolvedValue({
+			connectionId: "chrome",
+			name: "chrome",
+			transport: "uplink",
+			mcpUrl: null,
+			metadata: null,
+			status: { state: "connected" },
+		})
+		mockServeUplink.mockImplementationOnce(async (options) => {
+			options.onInterrupt?.()
+			return 0
+		})
+
+		await addServer("http://127.0.0.1:9090/mcp", {
+			id: "chrome",
+		})
+
+		expect(mockDeleteConnection).toHaveBeenCalledWith("chrome")
 	})
 
 	test("creates stdio uplink connections from commands passed after --", async () => {
@@ -134,13 +156,14 @@ describe("mcp add uplink routing", () => {
 			connectionId: "uplink-1",
 			force: undefined,
 			namespace: "calclavia",
+			onInterrupt: expect.any(Function),
 			target: {
 				kind: "uplink-stdio",
 				command: "npx",
 				args: ["-y", "@chromedevtools/chrome-devtools-mcp"],
 			},
 		})
-		expect(mockDeleteConnection).toHaveBeenCalledWith("uplink-1")
+		expect(mockDeleteConnection).not.toHaveBeenCalled()
 		expect(mockAddServerImpl).not.toHaveBeenCalled()
 	})
 

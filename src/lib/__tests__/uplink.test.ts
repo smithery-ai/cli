@@ -1,7 +1,10 @@
 import type { JSONRPCMessage } from "@modelcontextprotocol/sdk/types.js"
-import { describe, expect, test, vi } from "vitest"
+import { afterEach, describe, expect, test, vi } from "vitest"
 import {
+	buildPairUrl,
 	formatBridgeError,
+	getUplinkBaseUrl,
+	getUplinkPairingEndpoint,
 	type LocalPeer,
 	type SocketPeer,
 	wireJsonRpcBridge,
@@ -12,6 +15,39 @@ declare global {
 	var __SMITHERY_VERSION__: string
 }
 globalThis.__SMITHERY_VERSION__ = globalThis.__SMITHERY_VERSION__ ?? "test"
+
+const ORIGINAL_UPLINK_BASE_URL = process.env.SMITHERY_UPLINK_BASE_URL
+const ORIGINAL_DEV_UPLINK_URL = process.env.SMITHERY_DEV_CONNECT_UPLINK_URL
+const ORIGINAL_MCP_BASE_URL = process.env.SMITHERY_MCP_BASE_URL
+const ORIGINAL_BASE_URL = process.env.SMITHERY_BASE_URL
+
+afterEach(() => {
+	if (ORIGINAL_UPLINK_BASE_URL === undefined) {
+		delete process.env.SMITHERY_UPLINK_BASE_URL
+	} else {
+		process.env.SMITHERY_UPLINK_BASE_URL = ORIGINAL_UPLINK_BASE_URL
+	}
+
+	if (ORIGINAL_DEV_UPLINK_URL === undefined) {
+		delete process.env.SMITHERY_DEV_CONNECT_UPLINK_URL
+	} else {
+		process.env.SMITHERY_DEV_CONNECT_UPLINK_URL = ORIGINAL_DEV_UPLINK_URL
+	}
+
+	if (ORIGINAL_MCP_BASE_URL === undefined) {
+		delete process.env.SMITHERY_MCP_BASE_URL
+	} else {
+		process.env.SMITHERY_MCP_BASE_URL = ORIGINAL_MCP_BASE_URL
+	}
+
+	if (ORIGINAL_BASE_URL === undefined) {
+		delete process.env.SMITHERY_BASE_URL
+	} else {
+		process.env.SMITHERY_BASE_URL = ORIGINAL_BASE_URL
+	}
+
+	vi.unstubAllGlobals()
+})
 
 interface MockSocketPeer extends SocketPeer {
 	sent: string[]
@@ -69,6 +105,84 @@ function createLocalPeer(options?: {
 	}
 	return peer
 }
+
+describe("uplink pairing urls", () => {
+	test("builds direct websocket pair urls", () => {
+		expect(buildPairUrl("https://uplink.smithery.run", "ns", "conn")).toBe(
+			"wss://uplink.smithery.run/ns/conn",
+		)
+		expect(buildPairUrl("https://uplink.smithery.run", "ns", "team/conn")).toBe(
+			"wss://uplink.smithery.run/ns/team/conn",
+		)
+		expect(
+			buildPairUrl(
+				"https://uplink.smithery.run",
+				"team a",
+				"local/server b",
+				true,
+			),
+		).toBe("wss://uplink.smithery.run/team%20a/local/server%20b?force=1")
+		expect(buildPairUrl("http://localhost:8787", "ns", "conn")).toBe(
+			"ws://localhost:8787/ns/conn",
+		)
+		expect(buildPairUrl("http://uplink.localhost:8787", "ns", "conn")).toBe(
+			"ws://uplink.localhost:8787/ns/conn",
+		)
+		expect(
+			buildPairUrl("https://uplink.smithery.run", "team/a", "conn b"),
+		).toBe("wss://uplink.smithery.run/team%2Fa/conn%20b")
+		expect(buildPairUrl("https://uplink.smithery.run", "ns", "team/a?b")).toBe(
+			"wss://uplink.smithery.run/ns/team/a%3Fb",
+		)
+		expect(
+			buildPairUrl("https://fwd-uplink-f44e-dev.smithery.tools", "ns", "conn"),
+		).toBe("wss://fwd-uplink-f44e-dev.smithery.tools/ns/conn")
+		expect(
+			buildPairUrl(
+				"https://fwd-uplink-f44e-dev.smithery.tools",
+				"ns",
+				"conn",
+				true,
+			),
+		).toBe("wss://fwd-uplink-f44e-dev.smithery.tools/ns/conn?force=1")
+	})
+
+	test("resolves the uplink base independently from the api base", () => {
+		delete process.env.SMITHERY_UPLINK_BASE_URL
+		delete process.env.SMITHERY_DEV_CONNECT_UPLINK_URL
+		delete process.env.SMITHERY_MCP_BASE_URL
+		delete process.env.SMITHERY_BASE_URL
+		expect(getUplinkBaseUrl()).toBe("https://uplink.smithery.run")
+
+		process.env.SMITHERY_UPLINK_BASE_URL = "http://localhost:8787"
+		expect(getUplinkBaseUrl()).toBe("http://localhost:8787")
+		expect(getUplinkPairingEndpoint()).toEqual({
+			baseURL: "http://localhost:8787",
+		})
+
+		delete process.env.SMITHERY_UPLINK_BASE_URL
+		process.env.SMITHERY_DEV_CONNECT_UPLINK_URL =
+			"https://fwd-uplink-f44e-dev.smithery.tools"
+		expect(getUplinkBaseUrl()).toBe(
+			"https://fwd-uplink-f44e-dev.smithery.tools",
+		)
+		expect(getUplinkPairingEndpoint()).toEqual({
+			baseURL: "https://fwd-uplink-f44e-dev.smithery.tools",
+		})
+
+		delete process.env.SMITHERY_DEV_CONNECT_UPLINK_URL
+		process.env.SMITHERY_MCP_BASE_URL = "https://legacy-uplink.example"
+		expect(getUplinkBaseUrl()).toBe("https://legacy-uplink.example")
+
+		process.env.SMITHERY_BASE_URL =
+			"https://fwd-connect-f44e-dev.smithery.tools"
+		delete process.env.SMITHERY_MCP_BASE_URL
+		expect(getUplinkBaseUrl()).toBe("https://uplink.smithery.run")
+
+		process.env.SMITHERY_BASE_URL = "https://api.smithery.ai"
+		expect(getUplinkBaseUrl()).toBe("https://uplink.smithery.run")
+	})
+})
 
 describe("wireJsonRpcBridge", () => {
 	test("forwards frames in both directions without changing payloads", async () => {

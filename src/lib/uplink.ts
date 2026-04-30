@@ -11,6 +11,7 @@ import {
 	LATEST_PROTOCOL_VERSION,
 } from "@modelcontextprotocol/sdk/types.js"
 import pc from "picocolors"
+import WebSocket, { type RawData } from "ws"
 import { getRuntimeEnvironment } from "../utils/runtime"
 import { debug } from "./logger"
 import { createSmitheryClient } from "./smithery-client"
@@ -21,6 +22,7 @@ const MAX_RETRIES = 5
 const RETRY_DELAYS_MS = [250, 500, 1000, 2000, 4000]
 const STDIO_KILL_TIMEOUT_MS = 5000
 const LOCAL_HANDSHAKE_ID = "__smithery_uplink_init__"
+const DEFAULT_UPLINK_BASE_URL = "https://uplink.smithery.run"
 
 export type UplinkTarget =
 	| {
@@ -128,6 +130,7 @@ export async function serveUplink(options: {
 	connectionId: string
 	target: UplinkTarget
 	force?: boolean
+	onInterrupt?: () => void
 }): Promise<number> {
 	const client = await createSmitheryClient()
 	const local: LocalPeer =
@@ -142,6 +145,7 @@ export async function serveUplink(options: {
 	let activeSocket: WebSocket | null = null
 	let disposeBridge: (() => void) | undefined
 	let shuttingDown = false
+	let interrupted = false
 	let pairedOnce = false
 	const done = createDeferred<number>()
 
@@ -173,6 +177,10 @@ export async function serveUplink(options: {
 	}
 
 	const handleSignal = () => {
+		if (!interrupted) {
+			interrupted = true
+			options.onInterrupt?.()
+		}
 		void stop(0)
 	}
 
@@ -194,8 +202,9 @@ export async function serveUplink(options: {
 	}
 
 	const connect = async (attempt: number) => {
+		const endpoint = getUplinkPairingEndpoint()
 		const socket = await pairUplinkSocket({
-			baseURL: client.baseURL,
+			baseURL: endpoint.baseURL,
 			apiKey: client.apiKey,
 			namespace: options.namespace,
 			connectionId: options.connectionId,
@@ -281,15 +290,19 @@ export async function serveUplink(options: {
 
 		if (!pairedOnce) {
 			pairedOnce = true
+			const connectionPath = buildConnectionPath(
+				options.namespace,
+				options.connectionId,
+			)
 			console.log("Pairing uplink ... connected")
 			console.log(`Local MCP: ${describeLocalTarget(options.target)}`)
 			console.log(`Namespace: ${options.namespace}`)
 			console.log(`Connection ID: ${options.connectionId}`)
 			console.log(
-				`MCP: https://mcp.smithery.run/${encodeURIComponent(options.namespace)}/${encodeURIComponent(options.connectionId)}`,
+				`MCP: ${new URL(connectionPath, "https://mcp.smithery.run").toString()}`,
 			)
 			console.log(
-				`REST: https://smithery.run/${encodeURIComponent(options.namespace)}/${encodeURIComponent(options.connectionId)}`,
+				`REST: ${new URL(connectionPath, "https://smithery.run").toString()}`,
 			)
 			console.log("Press Ctrl-C to stop.")
 			return
@@ -315,11 +328,6 @@ async function pairUplinkSocket(options: {
 	connectionId: string
 	force?: boolean
 }): Promise<WebSocket> {
-	const preflight = await preflightUplinkPair(options)
-	if (preflight === "paired" && !options.force) {
-		throw new Error("Uplink already paired. Use --force to take over.")
-	}
-
 	const url = buildPairUrl(
 		options.baseURL,
 		options.namespace,
@@ -332,12 +340,13 @@ async function pairUplinkSocket(options: {
 			headers: {
 				Authorization: `Bearer ${options.apiKey}`,
 			},
-		} as unknown as ConstructorParameters<typeof WebSocket>[1])
+		})
 
 		const cleanup = () => {
-			socket.removeEventListener("open", onOpen)
-			socket.removeEventListener("error", onError)
-			socket.removeEventListener("close", onClose)
+			socket.off("open", onOpen)
+			socket.off("error", onError)
+			socket.off("close", onClose)
+			socket.off("unexpected-response", onUnexpectedResponse)
 		}
 
 		const onOpen = () => {
@@ -345,54 +354,37 @@ async function pairUplinkSocket(options: {
 			resolve(socket)
 		}
 
-		const onError = () => {
+		const onError = (error: Error) => {
 			cleanup()
-			reject(new Error("Failed to pair uplink."))
+			reject(error)
 		}
 
-		const onClose = (event: Event) => {
+		const onClose = (code: number, reason: Buffer) => {
 			cleanup()
-			const closeEvent = event as CloseEvent
 			reject(
 				new Error(
-					closeEvent.reason ||
-						`Failed to pair uplink (code ${closeEvent.code}).`,
+					reason.toString("utf8") || `Failed to pair uplink (code ${code}).`,
 				),
 			)
 		}
 
-		socket.addEventListener("open", onOpen)
-		socket.addEventListener("error", onError)
-		socket.addEventListener("close", onClose)
+		const onUnexpectedResponse = (
+			_request: unknown,
+			response: { statusCode: number; statusMessage: string },
+		) => {
+			cleanup()
+			reject(
+				new Error(
+					`Failed to pair uplink (${response.statusCode} ${response.statusMessage}).`,
+				),
+			)
+		}
+
+		socket.once("open", onOpen)
+		socket.once("error", onError)
+		socket.once("close", onClose)
+		socket.once("unexpected-response", onUnexpectedResponse)
 	})
-}
-
-async function preflightUplinkPair(options: {
-	baseURL: string
-	apiKey: string
-	namespace: string
-	connectionId: string
-}): Promise<"paired" | "disconnected"> {
-	const response = await fetch(
-		buildHttpPairUrl(options.baseURL, options.namespace, options.connectionId),
-		{
-			headers: {
-				Authorization: `Bearer ${options.apiKey}`,
-			},
-		},
-	)
-
-	if (response.status === 200) {
-		await response.body?.cancel()
-		return "paired"
-	}
-
-	if (response.status === 503) {
-		await response.body?.cancel()
-		return "disconnected"
-	}
-
-	throw new Error(await readPairError(response))
 }
 
 function createSocketPeer(socket: WebSocket): SocketPeer {
@@ -401,28 +393,33 @@ function createSocketPeer(socket: WebSocket): SocketPeer {
 			socket.send(text)
 		},
 	}
-	socket.addEventListener("message", (event) => {
-		if (typeof event.data === "string" || event.data instanceof ArrayBuffer) {
-			peer.onmessage?.(event.data)
+	socket.on("message", (data) => {
+		if (typeof data === "string" || data instanceof ArrayBuffer) {
+			peer.onmessage?.(data)
 			return
 		}
-		if (ArrayBuffer.isView(event.data)) {
-			const bytes = new Uint8Array(
-				event.data.buffer,
-				event.data.byteOffset,
-				event.data.byteLength,
-			)
-			peer.onmessage?.(Uint8Array.from(bytes).buffer)
-		}
+		peer.onmessage?.(rawDataToArrayBuffer(data))
 	})
-	socket.addEventListener("close", (event) => {
-		peer.onclose?.({ code: event.code, reason: event.reason })
+	socket.on("close", (code, reason) => {
+		peer.onclose?.({ code, reason: reason.toString("utf8") })
 	})
-	socket.addEventListener("error", (event) => {
-		const errorEvent = event as ErrorEvent
-		peer.onerror?.(errorEvent.error ?? new Error(errorEvent.message))
+	socket.on("error", (error) => {
+		peer.onerror?.(error)
 	})
 	return peer
+}
+
+function rawDataToArrayBuffer(data: RawData): ArrayBuffer {
+	if (data instanceof ArrayBuffer) return data
+	if (Array.isArray(data)) {
+		const buffer = Buffer.concat(data)
+		return buffer.buffer.slice(
+			buffer.byteOffset,
+			buffer.byteOffset + buffer.byteLength,
+		) as ArrayBuffer
+	}
+	const bytes = new Uint8Array(data.buffer, data.byteOffset, data.byteLength)
+	return Uint8Array.from(bytes).buffer
 }
 
 function createHttpLocalPeer(mcpUrl: string): LocalPeer {
@@ -666,58 +663,52 @@ function createStdioLocalPeer(
 	return wrapInitialized(inner)
 }
 
-function buildPairUrl(
+export function getUplinkBaseUrl(): string {
+	return getUplinkPairingEndpoint().baseURL
+}
+
+export function getUplinkPairingEndpoint(): {
+	baseURL: string
+} {
+	if (process.env.SMITHERY_UPLINK_BASE_URL) {
+		return { baseURL: process.env.SMITHERY_UPLINK_BASE_URL }
+	}
+
+	if (process.env.SMITHERY_DEV_CONNECT_UPLINK_URL) {
+		return { baseURL: process.env.SMITHERY_DEV_CONNECT_UPLINK_URL }
+	}
+
+	if (process.env.SMITHERY_MCP_BASE_URL) {
+		return { baseURL: process.env.SMITHERY_MCP_BASE_URL }
+	}
+
+	return { baseURL: DEFAULT_UPLINK_BASE_URL }
+}
+
+function encodePathSegment(value: string): string {
+	return encodeURIComponent(value)
+}
+
+function buildConnectionPath(namespace: string, connectionId: string): string {
+	const encodedConnectionPath = connectionId
+		.split("/")
+		.map(encodePathSegment)
+		.join("/")
+	return `/${encodePathSegment(namespace)}/${encodedConnectionPath}`
+}
+
+export function buildPairUrl(
 	baseURL: string,
 	namespace: string,
 	connectionId: string,
 	force = false,
 ): string {
-	const url = new URL(
-		`/connect/${encodeURIComponent(namespace)}/${encodeURIComponent(connectionId)}/uplink`,
-		baseURL,
-	)
+	const url = new URL(buildConnectionPath(namespace, connectionId), baseURL)
 	if (force) {
 		url.searchParams.set("force", "1")
 	}
 	url.protocol = url.protocol === "https:" ? "wss:" : "ws:"
 	return url.toString()
-}
-
-function buildHttpPairUrl(
-	baseURL: string,
-	namespace: string,
-	connectionId: string,
-): string {
-	return new URL(
-		`/connect/${encodeURIComponent(namespace)}/${encodeURIComponent(connectionId)}/uplink`,
-		baseURL,
-	).toString()
-}
-
-async function readPairError(response: Response): Promise<string> {
-	const text = await response.text().catch(() => "")
-	try {
-		const parsed = JSON.parse(text) as { message?: string }
-		if (parsed.message) {
-			return parsed.message
-		}
-	} catch {
-		// Ignore JSON parse errors and fall back to plain text.
-	}
-
-	if (response.status === 401) {
-		return "Authentication failed. Run 'smithery login' to re-authenticate."
-	}
-
-	if (response.status === 403) {
-		return "Permission denied. Your token needs connections:write on this namespace."
-	}
-
-	if (response.status === 404) {
-		return "Connection not found."
-	}
-
-	return text || `Request failed with status ${response.status}.`
 }
 
 function describeLocalTarget(target: UplinkTarget): string {
