@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 
+## [4.12.0](https://github.com/smithery-ai/cli/compare/v4.11.1...v4.12.0) (2026-04-30)
+
+
+### Features
+
+* add homepage command to manage local dashboard daemon ([6aebb7a](https://github.com/smithery-ai/cli/commit/6aebb7a2d667c5f45e62068539faeb6ca0143933))
+* cache tool input/output schemas as Zod types after mcp call ([b9098e5](https://github.com/smithery-ai/cli/commit/b9098e5fa44f2336b9c58d04b28a40bc634507d9))
+
 ## [4.11.1](https://github.com/smithery-ai/cli/compare/v4.11.0...v4.11.1) (2026-04-30)
 
 
