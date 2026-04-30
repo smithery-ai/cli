@@ -2,8 +2,12 @@ import { afterEach, beforeEach, describe, expect, test, vi } from "vitest"
 
 const { mockCreateSession, mockCallTool, mockOutputJson } = vi.hoisted(() => {
 	const callTool = vi.fn()
+	const getConnection = vi.fn(async () => ({}))
+	const listToolsForConnection = vi.fn(async () => [])
 	const createSession = vi.fn(async () => ({
 		callTool,
+		getConnection,
+		listToolsForConnection,
 	}))
 
 	return {
@@ -26,6 +30,10 @@ vi.mock("../../utils/output", async (importOriginal) => {
 		outputJson: mockOutputJson,
 	}
 })
+
+vi.mock("../../utils/tool-schema-cache", () => ({
+	cacheToolSchema: vi.fn(async () => {}),
+}))
 
 import { setOutputMode } from "../../utils/output"
 import { callTool } from "../mcp/call"

@@ -1242,6 +1242,35 @@ namespace
 		await createNamespace(name)
 	})
 
+// Homepage command
+const homepageCmd = program
+	.command("homepage")
+	.description("Manage the Smithery homepage dashboard")
+
+homepageCmd
+	.command("up")
+	.description("Start the homepage daemon")
+	.action(async () => {
+		const { homepageUp } = await import("./commands/homepage")
+		await homepageUp()
+	})
+
+homepageCmd
+	.command("down")
+	.description("Stop the homepage daemon")
+	.action(async () => {
+		const { homepageDown } = await import("./commands/homepage")
+		homepageDown()
+	})
+
+homepageCmd
+	.command("status")
+	.description("Check if the homepage daemon is running")
+	.action(async () => {
+		const { homepageStatus } = await import("./commands/homepage")
+		homepageStatus()
+	})
+
 // ═══════════════════════════════════════════════════════════════════════════════
 // Hidden backward-compat aliases
 // ═══════════════════════════════════════════════════════════════════════════════

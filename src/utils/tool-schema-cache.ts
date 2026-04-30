@@ -21,7 +21,9 @@ function jsonSchemaTypeToZod(schema: Record<string, unknown>): string {
 	if (schema.enum) {
 		const values = schema.enum as unknown[]
 		const literals = values.map((v) =>
-			typeof v === "string" ? `z.literal(${JSON.stringify(v)})` : `z.literal(${v})`,
+			typeof v === "string"
+				? `z.literal(${JSON.stringify(v)})`
+				: `z.literal(${v})`,
 		)
 		if (literals.length === 1) return literals[0]
 		return `z.union([${literals.join(", ")}])`
@@ -42,8 +44,11 @@ function jsonSchemaTypeToZod(schema: Record<string, unknown>): string {
 			const inner = jsonSchemaTypeToZod({ ...schema, type: nonNull[0] })
 			return type.includes("null") ? `${inner}.nullable()` : inner
 		}
-		const types = nonNull.map((t) => jsonSchemaTypeToZod({ ...schema, type: t }))
-		const union = types.length === 1 ? types[0] : `z.union([${types.join(", ")}])`
+		const types = nonNull.map((t) =>
+			jsonSchemaTypeToZod({ ...schema, type: t }),
+		)
+		const union =
+			types.length === 1 ? types[0] : `z.union([${types.join(", ")}])`
 		return type.includes("null") ? `${union}.nullable()` : union
 	}
 
@@ -177,9 +182,8 @@ function generateSchemaFile(
 	)
 
 	const resultValue = extractResultValue(result)
-	const outputExpr = resultValue != null
-		? inferZodFromValue(resultValue)
-		: "z.unknown()"
+	const outputExpr =
+		resultValue != null ? inferZodFromValue(resultValue) : "z.unknown()"
 
 	return `import { z } from "zod"
 
