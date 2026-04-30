@@ -11,7 +11,11 @@ The Smithery homepage is a TanStack Start app at `~/.smithery/homepage` that ser
 
 If `~/.smithery/homepage` does not exist, scaffold it from scratch:
 
-1. Run `cd /tmp && npx shadcn@latest init --preset b1FSjVe3E --template start --name smithery-homepage` to create the TanStack Start app with shadcn pre-configured, then move the output: `mkdir -p ~/.smithery && mv /tmp/smithery-homepage ~/.smithery/homepage`
+1. Create the directory if needed and scaffold the app in place:
+   ```bash
+   mkdir -p ~/.smithery
+   cd ~/.smithery && npx shadcn@latest init --preset b1FSjVe3E --template start --name homepage
+   ```
 2. Install additional dependencies:
    ```bash
    cd ~/.smithery/homepage
@@ -176,8 +180,11 @@ export async function callMcpTool(
 
   try {
     const result = await client.callTool({ name: toolName, arguments: args })
-    const content = result.content as Array<{ type: string; text?: string }>
-    const textBlock = content?.find((c) => c.type === "text")
+    const content = result.content
+    if (!Array.isArray(content)) return null
+    const textBlock = content.find(
+      (c): c is { type: "text"; text: string } => c.type === "text",
+    )
     return textBlock?.text ? JSON.parse(textBlock.text) : null
   } finally {
     await client.close()
@@ -187,7 +194,7 @@ export async function callMcpTool(
 
 ### Pattern: Creating a tool caller module
 
-**CRITICAL: Always use cached tool schemas for type safety.** The Smithery CLI caches Zod schemas for tool inputs and outputs at `~/.smithery/<connection>__<tool_name>.ts` after each successful tool call. These schemas contain the **real** input and output types — never hand-write or guess tool response types.
+**CRITICAL: Always use cached tool schemas for type safety.** The Smithery CLI caches Zod schemas for tool inputs and outputs at `~/.smithery/<connection>__<tool_name>.ts` after each successful tool call. These schemas contain the **real** input and output types — never hand-write or guess tool response types. **Never use `as` type casting on tool results.** Always parse results through the cached `outputSchema` to get proper types at runtime.
 
 #### Step 1: Ensure the schema exists
 
@@ -197,7 +204,7 @@ Before writing a tool caller module, check if the cached schema file exists at `
 smithery mcp call <connection> <tool_name> [--args '{}']
 ```
 
-This creates the schema file with accurate `inputSchema`, `Input`, `outputSchema`, and `Output` types inferred from the real tool response.
+This creates the schema file with accurate `inputSchema`, `Input`, `outputSchema`, and `Output` types inferred from the real tool response. **You must always run the tool to generate the schema before writing code that depends on it — do not guess or hallucinate tool response shapes.**
 
 #### Step 2: Copy the schema into the homepage project
 
@@ -210,24 +217,26 @@ cp ~/.smithery/<connection>__<tool_name>.ts ~/.smithery/homepage/src/lib/schemas
 
 Also ensure `zod` is installed in the homepage project (`npm install zod` if needed).
 
-#### Step 3: Import types from the schema
+#### Step 3: Import schemas and parse tool results
 
-For each MCP server, create a helper in `src/lib/` that imports the shared MCP helper AND the cached schema types:
+For each MCP server, create a helper in `src/lib/` that imports the shared MCP helper AND the cached schemas. Import `outputSchema` (the Zod schema) to parse results, and `type Input` for compile-time argument checking:
 
 ```typescript
 // src/lib/linear.ts
 import { createServerFn } from "@tanstack/react-start"
 import { queryOptions } from "@tanstack/react-query"
 import { callMcpTool } from "./mcp"
-import type { Input as ListIssuesInput, Output as ListIssuesOutput } from "./schemas/linear__list_issues"
+import type { Input as ListIssuesInput } from "./schemas/linear__list_issues"
+import { outputSchema as listIssuesOutputSchema } from "./schemas/linear__list_issues"
 
 // Server functions (called by React Query from the client)
 export const fetchIssues = createServerFn({ method: "GET" }).handler(
   async () => {
-    const data = await callMcpTool("linear", "list_issues", {
+    const raw = await callMcpTool("linear", "list_issues", {
       assignee: "me",
       includeArchived: false,
-    } satisfies ListIssuesInput) as ListIssuesOutput
+    } satisfies ListIssuesInput)
+    const data = listIssuesOutputSchema.parse(raw)
     return data.issues.filter(
       (i) => i.statusType !== "canceled" && i.statusType !== "completed"
     )
@@ -245,7 +254,7 @@ export const issuesQueryOptions = () =>
 
 **Key points:**
 - Use `satisfies Input` on the args object to catch invalid tool inputs at compile time
-- Cast the result `as Output` to get fully typed response data
+- **Always parse results with `outputSchema.parse(raw)`** — this validates the data at runtime AND gives you the correct TypeScript type. Never use `as` casting on tool results.
 - Never hand-write tool response types — always derive them from the cached schema
 - If a schema file seems stale, re-run the tool (`smithery mcp call ...`) to regenerate it
 
