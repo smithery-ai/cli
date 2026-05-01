@@ -1242,9 +1242,9 @@ namespace
 		await createNamespace(name)
 	})
 
-// Homepage command
+// Homepage command (hidden — not GA, may be removed)
 const homepageCmd = program
-	.command("homepage")
+	.command("homepage", { hidden: true })
 	.description("Manage the Smithery homepage dashboard")
 
 homepageCmd
