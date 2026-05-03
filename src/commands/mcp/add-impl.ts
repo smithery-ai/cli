@@ -6,6 +6,7 @@ import {
 	finalizeAddedConnection,
 } from "./add-flow"
 import { ConnectSession } from "./api"
+import { isInputRequiredStatus } from "./connection-status"
 import { normalizeMcpUrl } from "./normalize-url"
 import { outputConnectionDetail } from "./output-connection"
 import { parseJsonObject } from "./parse-json"
@@ -43,9 +44,16 @@ export async function addServer(
 						`Connection already exists for this URL: ${match.name} (${match.connectionId}, status: ${status})`,
 					),
 				)
-				if (status === "auth_required") {
+				if (isInputRequiredStatus(match.status)) {
+					match = await finalizeAddedConnection(session, match, {
+						name: options.name,
+						metadata: parsedMetadata,
+						headers: parsedHeaders,
+					})
+				}
+				if (match.status?.state === "auth_required") {
 					match = await completeConnectionAuthorization(session, match)
-				} else if (status === "connected") {
+				} else if (match.status?.state === "connected") {
 					console.error(
 						pc.yellow(
 							`Use "smithery tool list ${match.connectionId}" to interact with it.`,
