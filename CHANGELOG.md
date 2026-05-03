@@ -5,6 +5,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 
+## [1.0.1](https://github.com/smithery-ai/cli/compare/v1.0.0...v1.0.1) (2026-05-03)
+
+
+### Bug Fixes
+
+* **mcp add:** resume setup when re-adding incomplete connection ([#756](https://github.com/smithery-ai/cli/issues/756)) ([ddaa2c0](https://github.com/smithery-ai/cli/commit/ddaa2c07a5b93c1ab6fcf5e5782df4d3c0ee0296))
+
+
+### Refactors
+
+* **trigger:** align CLI with MCP Events spec, hide from main help ([#758](https://github.com/smithery-ai/cli/issues/758)) ([6e4e0f0](https://github.com/smithery-ai/cli/commit/6e4e0f0b716b1d3b1c6682b0397a8c8005552369))
+
 ## [1.0.0](https://github.com/smithery-ai/cli/compare/v1.0.0...v1.0.0) (2026-05-01)
 
 
