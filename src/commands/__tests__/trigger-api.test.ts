@@ -2,26 +2,14 @@ import { describe, expect, test, vi } from "vitest"
 import { ConnectSession } from "../mcp/api"
 
 describe("ConnectSession trigger support", () => {
-	test("uses typed trigger and subscription resources", async () => {
+	test("uses typed trigger resources aligned with the MCP Events spec", async () => {
 		const listTriggers = vi.fn().mockResolvedValue([])
 		const getTrigger = vi.fn().mockResolvedValue({ name: "page.updated" })
-		const createTrigger = vi.fn().mockResolvedValue({ id: "trg_123" })
-		const getTriggerInstance = vi.fn().mockResolvedValue({ id: "trg_123" })
-		const deleteTrigger = vi.fn().mockResolvedValue({ success: true })
-		const listNamespaceSubscriptions = vi.fn().mockResolvedValue([])
-		const createNamespaceSubscription = vi.fn().mockResolvedValue({
+		const subscribeTrigger = vi.fn().mockResolvedValue({
 			id: "sub_123",
+			refreshBefore: "2026-05-02T12:00:00.000Z",
 		})
-		const deleteNamespaceSubscription = vi.fn().mockResolvedValue({
-			success: true,
-		})
-		const listConnectionSubscriptions = vi.fn().mockResolvedValue([])
-		const createConnectionSubscription = vi.fn().mockResolvedValue({
-			id: "sub_456",
-		})
-		const deleteConnectionSubscription = vi.fn().mockResolvedValue({
-			success: true,
-		})
+		const unsubscribeTrigger = vi.fn().mockResolvedValue({ success: true })
 
 		const session = new ConnectSession(
 			{
@@ -29,20 +17,9 @@ describe("ConnectSession trigger support", () => {
 					triggers: {
 						list: listTriggers,
 						get: getTrigger,
-						create: createTrigger,
-						getInstance: getTriggerInstance,
-						delete: deleteTrigger,
+						subscribe: subscribeTrigger,
+						unsubscribe: unsubscribeTrigger,
 					},
-					subscriptions: {
-						list: listConnectionSubscriptions,
-						create: createConnectionSubscription,
-						delete: deleteConnectionSubscription,
-					},
-				},
-				subscriptions: {
-					list: listNamespaceSubscriptions,
-					create: createNamespaceSubscription,
-					delete: deleteNamespaceSubscription,
 				},
 			} as never,
 			"my app",
@@ -50,17 +27,21 @@ describe("ConnectSession trigger support", () => {
 
 		await session.listTriggers("notion")
 		await session.getTrigger("notion", "page.updated")
-		await session.createTrigger("notion", "page.updated", {
-			workspace_id: "w_123",
-		})
-		await session.getTriggerInstance("notion", "page.updated", "trg_123")
-		await session.deleteTrigger("notion", "page.updated", "trg_123")
-		await session.listSubscriptions()
-		await session.createSubscription("https://example.com/events")
-		await session.listSubscriptions("notion")
-		await session.createSubscription("https://example.com/notion", "notion")
-		await session.deleteSubscription("sub_123")
-		await session.deleteSubscription("sub_456", "notion")
+		await session.subscribeTrigger(
+			"notion",
+			"page.updated",
+			{ workspace_id: "w_123" },
+			{
+				url: "https://my-app.example.com/events",
+				secret: "whsec_dGVzdF9zZWNyZXRfMjRfYnl0ZXNfbWluaW11bSE=",
+			},
+		)
+		await session.unsubscribeTrigger(
+			"notion",
+			"page.updated",
+			{ workspace_id: "w_123" },
+			"https://my-app.example.com/events",
+		)
 
 		expect(listTriggers).toHaveBeenCalledWith("notion", {
 			namespace: "my app",
@@ -69,48 +50,20 @@ describe("ConnectSession trigger support", () => {
 			namespace: "my app",
 			connectionId: "notion",
 		})
-		expect(createTrigger).toHaveBeenCalledWith(
-			"page.updated",
-			{
-				namespace: "my app",
-				connectionId: "notion",
-			},
-			{
-				body: { params: { workspace_id: "w_123" } },
-			},
-		)
-		expect(getTriggerInstance).toHaveBeenCalledWith("trg_123", {
+		expect(subscribeTrigger).toHaveBeenCalledWith("page.updated", {
 			namespace: "my app",
 			connectionId: "notion",
-			triggerName: "page.updated",
+			delivery: {
+				url: "https://my-app.example.com/events",
+				secret: "whsec_dGVzdF9zZWNyZXRfMjRfYnl0ZXNfbWluaW11bSE=",
+			},
+			params: { workspace_id: "w_123" },
 		})
-		expect(deleteTrigger).toHaveBeenCalledWith("trg_123", {
+		expect(unsubscribeTrigger).toHaveBeenCalledWith("page.updated", {
 			namespace: "my app",
 			connectionId: "notion",
-			triggerName: "page.updated",
-		})
-		expect(listNamespaceSubscriptions).toHaveBeenCalledWith("my app")
-		expect(createNamespaceSubscription).toHaveBeenCalledWith("my app", {
-			body: { url: "https://example.com/events" },
-		})
-		expect(listConnectionSubscriptions).toHaveBeenCalledWith("notion", {
-			namespace: "my app",
-		})
-		expect(createConnectionSubscription).toHaveBeenCalledWith(
-			"notion",
-			{
-				namespace: "my app",
-			},
-			{
-				body: { url: "https://example.com/notion" },
-			},
-		)
-		expect(deleteNamespaceSubscription).toHaveBeenCalledWith("sub_123", {
-			namespace: "my app",
-		})
-		expect(deleteConnectionSubscription).toHaveBeenCalledWith("sub_456", {
-			namespace: "my app",
-			connectionId: "notion",
+			delivery: { url: "https://my-app.example.com/events" },
+			params: { workspace_id: "w_123" },
 		})
 	})
 })

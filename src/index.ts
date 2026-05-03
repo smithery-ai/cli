@@ -283,11 +283,10 @@ async function handleListTriggers(connection: string, options: CliOptions) {
 async function handleGetTrigger(
 	connection: string,
 	name: string,
-	id: string | undefined,
 	options: CliOptions,
 ) {
 	const { getTrigger } = await import("./commands/trigger")
-	await getTrigger(connection, name, id, options)
+	await getTrigger(connection, name, options)
 }
 
 async function handleSubscribeTrigger(
@@ -303,37 +302,11 @@ async function handleSubscribeTrigger(
 async function handleUnsubscribeTrigger(
 	connection: string,
 	name: string,
-	id: string | undefined,
+	params: string | undefined,
 	options: CliOptions,
 ) {
 	const { unsubscribeTrigger } = await import("./commands/trigger")
-	await unsubscribeTrigger(connection, name, id, options)
-}
-
-async function handleListSubscriptions(
-	connection: string | undefined,
-	options: CliOptions,
-) {
-	const { listSubscriptions } = await import("./commands/trigger")
-	await listSubscriptions(connection, options)
-}
-
-async function handleCreateSubscription(
-	url: string,
-	connection: string | undefined,
-	options: CliOptions,
-) {
-	const { createSubscription } = await import("./commands/trigger")
-	await createSubscription(url, connection, options)
-}
-
-async function handleRemoveSubscription(
-	id: string,
-	connection: string | undefined,
-	options: CliOptions,
-) {
-	const { removeSubscription } = await import("./commands/trigger")
-	await removeSubscription(id, connection, options)
+	await unsubscribeTrigger(connection, name, params, options)
 }
 
 async function handleMcpAdd(
@@ -893,11 +866,11 @@ Examples:
 	.action(handleCallTool)
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// Trigger command — Discover and manage trigger webhooks for connections
+// Trigger command (hidden — preview, may change without notice)
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const triggerCmd = program
-	.command("trigger")
+	.command("trigger", { hidden: true })
 	.description("Discover and manage trigger webhooks for connected MCP servers")
 
 triggerCmd
@@ -914,89 +887,53 @@ Examples:
 	.action(handleListTriggers)
 
 triggerCmd
-	.command("get <connection> <name> [id]")
-	.description("Get a trigger schema or trigger instance details")
+	.command("get <connection> <name>")
+	.description("Get a trigger schema")
 	.option("--namespace <ns>", "Namespace for the connection")
 	.addHelpText(
 		"after",
 		`
 Examples:
-  smithery trigger get notion page.updated
-  smithery trigger get notion page.updated trg_01HW...`,
+  smithery trigger get notion page.updated`,
 	)
 	.action(handleGetTrigger)
 
 triggerCmd
 	.command("subscribe <connection> <name> [params]")
-	.description("Create a trigger instance")
+	.description("Subscribe to (or refresh) a trigger")
 	.option("--namespace <ns>", "Namespace for the connection")
-	.option(
-		"--url <url>",
-		"Optionally create or reuse a connection-scoped webhook subscription first",
+	.requiredOption("--url <url>", "HTTPS webhook destination for event delivery")
+	.requiredOption(
+		"--secret <secret>",
+		"Standard Webhooks signing secret (whsec_<base64>)",
 	)
 	.addHelpText(
 		"after",
 		`
 Examples:
-  smithery trigger subscribe notion page.updated '{"workspace_id":"w_123"}'
-  smithery trigger subscribe notion page.updated '{"workspace_id":"w_123"}' --url https://hook.new/i/...`,
+  smithery trigger subscribe notion page.updated '{"workspace_id":"w_123"}' \\
+    --url https://my-app.example.com/events --secret whsec_...
+
+Re-running subscribe with the same params and --url refreshes the TTL.`,
 	)
 	.action(handleSubscribeTrigger)
 
 triggerCmd
-	.command("unsubscribe <connection> <name> [id]")
-	.description("Delete a trigger instance")
+	.command("unsubscribe <connection> <name> [params]")
+	.description("Unsubscribe by subscription key (params + delivery url)")
 	.option("--namespace <ns>", "Namespace for the connection")
+	.requiredOption(
+		"--url <url>",
+		"Delivery URL used at subscribe time (part of the subscription key)",
+	)
 	.addHelpText(
 		"after",
 		`
 Examples:
-  smithery trigger unsubscribe notion page.updated trg_01HW...`,
+  smithery trigger unsubscribe notion page.updated '{"workspace_id":"w_123"}' \\
+    --url https://my-app.example.com/events`,
 	)
 	.action(handleUnsubscribeTrigger)
-
-const subscriptionCmd = triggerCmd
-	.command("subscription")
-	.description("Manage trigger webhook subscriptions")
-
-subscriptionCmd
-	.command("list [connection]")
-	.description("List namespace or connection webhook subscriptions")
-	.option("--namespace <ns>", "Namespace for the subscription")
-	.addHelpText(
-		"after",
-		`
-Examples:
-  smithery trigger subscription list
-  smithery trigger subscription list notion`,
-	)
-	.action(handleListSubscriptions)
-
-subscriptionCmd
-	.command("add <url> [connection]")
-	.description("Create a namespace or connection webhook subscription")
-	.option("--namespace <ns>", "Namespace for the subscription")
-	.addHelpText(
-		"after",
-		`
-Examples:
-  smithery trigger subscription add https://my-app.example.com/events
-  smithery trigger subscription add https://my-app.example.com/events notion`,
-	)
-	.action(handleCreateSubscription)
-
-subscriptionCmd
-	.command("remove <id> [connection]")
-	.description("Delete a namespace or connection webhook subscription")
-	.option("--namespace <ns>", "Namespace for the subscription")
-	.addHelpText(
-		"after",
-		`
-Examples:
-  smithery trigger subscription remove sub_01HW...
-  smithery trigger subscription remove sub_01HW... notion`,
-	)
-	.action(handleRemoveSubscription)
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // Skill command — Search, view, and install Smithery skills
