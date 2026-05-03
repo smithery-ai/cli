@@ -24,18 +24,14 @@ export interface Trigger {
 	payloadSchema?: Record<string, unknown>
 }
 
-export interface TriggerInstance {
-	id: string
-	name: string
-	connection_id?: string
-	params?: Record<string, unknown>
-	created_at?: string
+export interface TriggerDelivery {
+	url: string
+	secret: string
 }
 
 export interface TriggerSubscription {
 	id: string
-	url: string
-	secret?: string
+	refreshBefore: string
 }
 
 export interface ToolInfo extends Tool {
@@ -223,94 +219,31 @@ export class ConnectSession {
 		})
 	}
 
-	async createTrigger(
+	async subscribeTrigger(
 		connectionId: string,
 		triggerName: string,
-		params: Record<string, unknown> = {},
-	): Promise<TriggerInstance> {
-		return this.smitheryClient.connections.triggers.create(
-			triggerName,
-			{
-				namespace: this.namespace,
-				connectionId,
-			},
-			{
-				body: { params },
-			},
-		)
-	}
-
-	async getTriggerInstance(
-		connectionId: string,
-		triggerName: string,
-		triggerId: string,
-	): Promise<TriggerInstance> {
-		return this.smitheryClient.connections.triggers.getInstance(triggerId, {
-			namespace: this.namespace,
-			connectionId,
-			triggerName,
-		})
-	}
-
-	async deleteTrigger(
-		connectionId: string,
-		triggerName: string,
-		triggerId: string,
-	): Promise<void> {
-		await this.smitheryClient.connections.triggers.delete(triggerId, {
-			namespace: this.namespace,
-			connectionId,
-			triggerName,
-		})
-	}
-
-	async listSubscriptions(
-		connectionId?: string,
-	): Promise<TriggerSubscription[]> {
-		if (!connectionId) {
-			return this.smitheryClient.subscriptions.list(this.namespace)
-		}
-
-		return this.smitheryClient.connections.subscriptions.list(connectionId, {
-			namespace: this.namespace,
-		})
-	}
-
-	async createSubscription(
-		url: string,
-		connectionId?: string,
+		params: Record<string, unknown>,
+		delivery: TriggerDelivery,
 	): Promise<TriggerSubscription> {
-		if (!connectionId) {
-			return this.smitheryClient.subscriptions.create(this.namespace, {
-				body: { url },
-			})
-		}
-
-		return this.smitheryClient.connections.subscriptions.create(
-			connectionId,
-			{
-				namespace: this.namespace,
-			},
-			{
-				body: { url },
-			},
-		)
-	}
-
-	async deleteSubscription(
-		subscriptionId: string,
-		connectionId?: string,
-	): Promise<void> {
-		if (!connectionId) {
-			await this.smitheryClient.subscriptions.delete(subscriptionId, {
-				namespace: this.namespace,
-			})
-			return
-		}
-
-		await this.smitheryClient.connections.subscriptions.delete(subscriptionId, {
+		return this.smitheryClient.connections.triggers.subscribe(triggerName, {
 			namespace: this.namespace,
 			connectionId,
+			delivery,
+			params,
+		})
+	}
+
+	async unsubscribeTrigger(
+		connectionId: string,
+		triggerName: string,
+		params: Record<string, unknown>,
+		deliveryUrl: string,
+	): Promise<void> {
+		await this.smitheryClient.connections.triggers.unsubscribe(triggerName, {
+			namespace: this.namespace,
+			connectionId,
+			delivery: { url: deliveryUrl },
+			params,
 		})
 	}
 
