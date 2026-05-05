@@ -61,10 +61,16 @@ smithery auth token --policy '<json>'   # Mint a restricted token
 
 ### Namespaces
 
+Switch between personal and team namespaces without re-authenticating. Your login grants access to all namespaces (personal + team memberships), and you can switch between them instantly.
+
 ```bash
-smithery namespace list                 # List your namespaces
-smithery namespace use <name>           # Set current namespace
+smithery namespace list                 # List available namespaces (shows current)
+smithery namespace use <name>           # Switch to a different namespace
+smithery namespace show                 # Show current namespace
+smithery namespace create <name>        # Create and claim a new namespace
 ```
+
+The active namespace persists in your local config (`~/.config/smithery/settings.json`) and applies to all subsequent commands until you switch again.
 
 ### Publishing
 
