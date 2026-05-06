@@ -408,6 +408,85 @@ const CLIENTS: Record<string, ClientDefinition> = {
 			fieldMappings: { command: "cmd", env: "envs" },
 		},
 	},
+
+	// -------------------------------------------------------------------------
+	// IDEs and desktop apps with file-based MCP config (added 2026-05)
+	// -------------------------------------------------------------------------
+	antigravity: {
+		label: "Antigravity",
+		install: {
+			method: "file",
+			format: "json",
+			// Cross-platform: ~/.gemini/antigravity/mcp_config.json. Used by
+			// Google's `agy` editor; same path on every OS. Confirmed via the
+			// official MCP install guide and github/github-mcp-server docs.
+			path: path.join(homeDir, ".gemini", "antigravity", "mcp_config.json"),
+		},
+		transports: {
+			stdio: {},
+			http: { supportsOAuth: true },
+		},
+		// Antigravity expects `serverUrl` (not `url`) for remote HTTP entries,
+		// matching Windsurf's quirk.
+		format: {
+			fieldMappings: { url: "serverUrl" },
+		},
+	},
+	kiro: {
+		label: "Kiro",
+		install: {
+			method: "file",
+			format: "json",
+			// User-scope. Workspace `<project>/.kiro/settings/mcp.json` takes
+			// precedence when both exist; we always write to user scope so the
+			// install survives across projects.
+			path: path.join(homeDir, ".kiro", "settings", "mcp.json"),
+		},
+		transports: {
+			stdio: {},
+			// Kiro uses the spec-canonical `type: "streamable-http"` (with
+			// hyphen) — distinct from cline's `streamableHttp` (camelCase).
+			http: { typeValue: "streamable-http", supportsOAuth: true },
+		},
+	},
+	zed: {
+		label: "Zed",
+		install: {
+			method: "file",
+			format: "json",
+			// `~/.config/zed/settings.json` on macOS/Linux,
+			// `%APPDATA%\Zed\settings.json` on Windows.
+			path:
+				process.platform === "win32"
+					? path.join(baseDir, "Zed", "settings.json")
+					: path.join(homeDir, ".config", "zed", "settings.json"),
+		},
+		transports: {
+			stdio: {},
+			http: { supportsOAuth: true },
+		},
+		// Zed calls them "context servers", not "MCP servers". The block sits
+		// alongside the rest of the user's settings, so we merge non-
+		// destructively under that key.
+		format: {
+			topLevelKey: "context_servers",
+		},
+	},
+	trae: {
+		label: "Trae",
+		install: {
+			method: "file",
+			format: "json",
+			// Trae is a VS Code fork; user-scope MCP config follows the same
+			// `<App Support>/Trae/User/<file>` layout VS Code uses, except the
+			// MCP block lives in its own `mcp.json` (per docs.trae.ai).
+			path: path.join(baseDir, "Trae", "User", "mcp.json"),
+		},
+		transports: {
+			stdio: {},
+			http: { supportsOAuth: true },
+		},
+	},
 }
 
 // ============================================================================
