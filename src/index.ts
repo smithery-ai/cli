@@ -176,11 +176,42 @@ async function handleInstall(server: string | undefined, options: CliOptions) {
 	const { selectClient, selectServer, parseServerConfig } = await import(
 		"./utils/command-prompts"
 	)
-	const { installServer } = await import("./commands/mcp/install")
+	const {
+		installServer,
+		installRemoteUrlServer,
+		isHttpUrl,
+		deriveAliasFromUrl,
+	} = await import("./commands/mcp/install")
+	const { fatal } = await import("./lib/cli-error")
 
 	const selectedClient = await selectClient(options.client, "Install")
-	const selectedServer = await selectServer(server, selectedClient, undefined)
 	validateClient(selectedClient)
+
+	// URL inputs (e.g. toolbox endpoints, self-hosted MCPs) bypass the
+	// registry. Caller provides `--name` as the alias; we don't try to derive
+	// one because hostname-based names collide too easily across users'
+	// config files.
+	if (server && isHttpUrl(server)) {
+		const alias = options.name
+		if (!alias) {
+			const suggestion = deriveAliasFromUrl(server)
+			fatal(
+				`URL installs require an explicit \`--name <alias>\`${
+					suggestion ? ` (e.g. --name ${suggestion})` : ""
+				}. The alias is the key written under \`mcpServers\` in the client config.`,
+			)
+		}
+		// `fatal` returns `never` but the dynamic import above erases that
+		// signature, so TS can't narrow `alias` here — assert.
+		await installRemoteUrlServer(
+			server,
+			alias as string,
+			selectedClient as ValidClient,
+		)
+		return
+	}
+
+	const selectedServer = await selectServer(server, selectedClient, undefined)
 
 	const config: ServerConfig = options.config
 		? parseServerConfig(options.config)
@@ -611,7 +642,8 @@ Examples:
   smithery mcp add http://localhost:9090/mcp --id chrome
   smithery mcp add --id chrome -- npx -y @chromedevtools/chrome-devtools-mcp
   smithery mcp add https://server.smithery.ai/exa --id exa --name "Exa Search"
-  smithery mcp add anthropic/exa --client claude`,
+  smithery mcp add exa --client claude
+  smithery mcp add https://mcp.smithery.run/arjunkmrm --name toolbox --client librechat`,
 	)
 	.action(handleMcpAdd)
 
