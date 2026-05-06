@@ -1,8 +1,8 @@
 import pc from "picocolors"
 import {
 	getProfile,
-	switchProfile,
 	getProfiles,
+	switchProfile,
 } from "../../utils/smithery-settings"
 
 export async function switchNamespace(name: string): Promise<void> {
@@ -17,9 +17,7 @@ export async function switchNamespace(name: string): Promise<void> {
 
 		if (availableProfiles.length > 0) {
 			console.error(
-				pc.gray(
-					`Available cached profiles: ${availableProfiles.join(", ")}`,
-				),
+				pc.gray(`Available cached profiles: ${availableProfiles.join(", ")}`),
 			)
 			console.error(
 				pc.gray(
@@ -45,8 +43,6 @@ export async function switchNamespace(name: string): Promise<void> {
 
 	console.log(pc.green(`✓ Switched to namespace: ${name}`))
 	if (profile.authOrganization?.name) {
-		console.log(
-			pc.gray(`Organization: ${profile.authOrganization.name}`),
-		)
+		console.log(pc.gray(`Organization: ${profile.authOrganization.name}`))
 	}
 }

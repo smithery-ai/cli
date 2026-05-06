@@ -69,14 +69,10 @@ describe("namespace switch command", () => {
 			},
 		})
 
-		const consoleError = vi
-			.spyOn(console, "error")
-			.mockImplementation(() => {})
-		const processExit = vi
-			.spyOn(process, "exit")
-			.mockImplementation((() => {
-				throw new Error("process.exit called")
-			}) as never)
+		const consoleError = vi.spyOn(console, "error").mockImplementation(() => {})
+		const processExit = vi.spyOn(process, "exit").mockImplementation((() => {
+			throw new Error("process.exit called")
+		}) as never)
 
 		await expect(switchNamespace("missing-org")).rejects.toThrow(
 			"process.exit called",
@@ -105,14 +101,10 @@ describe("namespace switch command", () => {
 			},
 		})
 
-		const consoleError = vi
-			.spyOn(console, "error")
-			.mockImplementation(() => {})
-		const processExit = vi
-			.spyOn(process, "exit")
-			.mockImplementation((() => {
-				throw new Error("process.exit called")
-			}) as never)
+		const consoleError = vi.spyOn(console, "error").mockImplementation(() => {})
+		const processExit = vi.spyOn(process, "exit").mockImplementation((() => {
+			throw new Error("process.exit called")
+		}) as never)
 
 		await expect(switchNamespace("missing")).rejects.toThrow(
 			"process.exit called",
@@ -148,14 +140,10 @@ describe("namespace switch command", () => {
 		mockGetProfiles.mockResolvedValue({})
 		mockGetProfile.mockResolvedValue(undefined)
 
-		const consoleError = vi
-			.spyOn(console, "error")
-			.mockImplementation(() => {})
-		const processExit = vi
-			.spyOn(process, "exit")
-			.mockImplementation((() => {
-				throw new Error("process.exit called")
-			}) as never)
+		const consoleError = vi.spyOn(console, "error").mockImplementation(() => {})
+		const processExit = vi.spyOn(process, "exit").mockImplementation((() => {
+			throw new Error("process.exit called")
+		}) as never)
 
 		await expect(switchNamespace("any-org")).rejects.toThrow(
 			"process.exit called",

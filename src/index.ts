@@ -508,13 +508,16 @@ async function handleLogout(options: CliOptions = {}) {
 							"smithery",
 						),
 					darwin: () =>
-						path.join(os.homedir(), "Library", "Application Support", "smithery"),
+						path.join(
+							os.homedir(),
+							"Library",
+							"Application Support",
+							"smithery",
+						),
 					default: () => path.join(os.homedir(), ".config", "smithery"),
 				}
 
-				return (
-					paths[os.platform() as keyof typeof paths] || paths.default
-				)()
+				return (paths[os.platform() as keyof typeof paths] || paths.default)()
 			}
 
 			const settingsPath = getSettingsPath()
@@ -1180,7 +1183,9 @@ auth
 
 auth
 	.command("logout")
-	.description("Log out from current profile (use --all to remove all profiles)")
+	.description(
+		"Log out from current profile (use --all to remove all profiles)",
+	)
 	.option("--all", "Remove all cached profiles and credentials")
 	.action(handleLogout)
 
