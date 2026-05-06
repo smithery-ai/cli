@@ -404,7 +404,7 @@ async function handleSecretsDelete(server: string, name: string) {
 async function handleLogin(options: CliOptions = {}) {
 	const { executeCliAuthFlow } = await import("./lib/cli-auth")
 	const { validateApiKey } = await import("./lib/registry")
-	const { setAuthOrganization, setNamespace } = await import(
+	const { setAuthOrganization, setNamespace, saveProfile } = await import(
 		"./utils/smithery-settings"
 	)
 
@@ -431,6 +431,20 @@ async function handleLogin(options: CliOptions = {}) {
 			})
 		}
 
+		// Save as a profile for fast switching
+		if (authResult.namespace) {
+			await saveProfile(authResult.namespace, {
+				apiKey,
+				namespace: authResult.namespace,
+				authOrganization: authResult.organization
+					? {
+							id: authResult.organization.id,
+							name: authResult.organization.name,
+						}
+					: undefined,
+			})
+		}
+
 		if (result.success) {
 			console.log(pc.green("✓ Successfully logged in"))
 			if (authResult.organization) {
@@ -453,19 +467,94 @@ async function handleLogin(options: CliOptions = {}) {
 	}
 }
 
-async function handleLogout() {
-	const { clearApiKey, clearAuthOrganization, clearNamespace } = await import(
-		"./utils/smithery-settings"
-	)
+async function handleLogout(options: CliOptions = {}) {
+	const {
+		clearApiKey,
+		clearAuthOrganization,
+		clearNamespace,
+		getNamespace,
+		removeProfile,
+		getProfiles,
+		initializeSettings,
+	} = await import("./utils/smithery-settings")
 	const { clearAllConfigs } = await import("./lib/keychain.js")
 
 	console.log(pc.cyan("Logging out of Smithery..."))
-	await clearApiKey()
-	await clearNamespace()
-	await clearAuthOrganization()
-	await clearAllConfigs()
-	console.log(pc.green("✓ Successfully logged out"))
-	console.log(pc.gray("All local credentials have been removed"))
+
+	if (options.all) {
+		// Clear everything including all profiles
+		await clearApiKey()
+		await clearNamespace()
+		await clearAuthOrganization()
+		await clearAllConfigs()
+
+		// Clear all profiles by directly manipulating settings
+		const initResult = await initializeSettings()
+		if (initResult.success && initResult.data) {
+			// Import the internal functions we need
+			const fs = await import("node:fs/promises")
+			const path = await import("node:path")
+			const os = await import("node:os")
+
+			const getSettingsPath = (): string => {
+				if (process.env.SMITHERY_CONFIG_PATH)
+					return process.env.SMITHERY_CONFIG_PATH
+
+				const paths = {
+					win32: () =>
+						path.join(
+							process.env.APPDATA ||
+								path.join(os.homedir(), "AppData", "Roaming"),
+							"smithery",
+						),
+					darwin: () =>
+						path.join(os.homedir(), "Library", "Application Support", "smithery"),
+					default: () => path.join(os.homedir(), ".config", "smithery"),
+				}
+
+				return (
+					paths[os.platform() as keyof typeof paths] || paths.default
+				)()
+			}
+
+			const settingsPath = getSettingsPath()
+			const settingsData = { ...initResult.data, profiles: {} }
+			await fs.writeFile(
+				path.join(settingsPath, "settings.json"),
+				JSON.stringify(settingsData, null, 2),
+			)
+		}
+
+		console.log(pc.green("✓ Successfully logged out from all profiles"))
+		console.log(pc.gray("All local credentials have been removed"))
+	} else {
+		// Only remove current profile
+		const currentNamespace = await getNamespace()
+		if (currentNamespace) {
+			await removeProfile(currentNamespace)
+			console.log(pc.green(`✓ Logged out from profile: ${currentNamespace}`))
+
+			// Check if there are other profiles
+			const profiles = await getProfiles()
+			const remainingProfiles = Object.keys(profiles)
+			if (remainingProfiles.length > 0) {
+				console.log(
+					pc.gray(
+						`Other profiles still available: ${remainingProfiles.join(", ")}`,
+					),
+				)
+				console.log(
+					pc.gray("Use 'smithery auth logout --all' to remove all profiles"),
+				)
+			}
+		}
+
+		// Clear current session
+		await clearApiKey()
+		await clearNamespace()
+		await clearAuthOrganization()
+		await clearAllConfigs()
+	}
 }
 
 async function handleWhoami(options: CliOptions) {
@@ -481,7 +570,7 @@ async function handleWhoami(options: CliOptions) {
 		if (options.full) {
 			console.log(`SMITHERY_API_KEY=${apiKey}`)
 		} else {
-			const { getAuthOrganization, getNamespace } = await import(
+			const { getAuthOrganization, getNamespace, getProfiles } = await import(
 				"./utils/smithery-settings"
 			)
 			const masked = `${apiKey.slice(0, 8)}...${apiKey.slice(-4)}`
@@ -497,6 +586,27 @@ async function handleWhoami(options: CliOptions) {
 			if (namespace) {
 				console.log(pc.cyan("Namespace:"), namespace)
 			}
+
+			// Show available cached profiles
+			const profiles = await getProfiles()
+			const profileNames = Object.keys(profiles).filter((p) => p !== namespace)
+			if (profileNames.length > 0) {
+				console.log()
+				console.log(pc.cyan("Available profiles:"))
+				for (const profileName of profileNames) {
+					const profile = profiles[profileName]
+					const orgLabel = profile.authOrganization?.name || ""
+					console.log(
+						pc.gray(`  • ${profileName}${orgLabel ? ` (${orgLabel})` : ""}`),
+					)
+				}
+				console.log(
+					pc.gray(
+						"\nUse 'smithery namespace switch <name>' to switch profiles.",
+					),
+				)
+			}
+
 			console.log(pc.gray("Use --full to display the complete token"))
 		}
 	} catch (_error) {
@@ -1070,7 +1180,8 @@ auth
 
 auth
 	.command("logout")
-	.description("Log out and remove all local credentials")
+	.description("Log out from current profile (use --all to remove all profiles)")
+	.option("--all", "Remove all cached profiles and credentials")
 	.action(handleLogout)
 
 const whoamiCmd = auth
@@ -1193,6 +1304,14 @@ namespace
 	.action(async (name) => {
 		const { useNamespace } = await import("./commands/namespace")
 		await useNamespace(name)
+	})
+
+namespace
+	.command("switch <name>")
+	.description("Switch to a cached profile without re-authenticating")
+	.action(async (name) => {
+		const { switchNamespace } = await import("./commands/namespace")
+		await switchNamespace(name)
 	})
 
 namespace

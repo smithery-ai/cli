@@ -62,9 +62,14 @@ smithery auth token --policy '<json>'   # Mint a restricted token
 ### Namespaces
 
 ```bash
-smithery namespace list                 # List your namespaces
+smithery namespace list                 # List your namespaces (shows cached profiles)
 smithery namespace use <name>           # Set current namespace
+smithery namespace switch <name>        # Switch to a cached profile without re-authenticating
 ```
+
+The CLI now supports multiple profiles for fast switching between personal and team namespaces. When you log in with `smithery auth login`, your credentials are automatically saved as a profile. Use `smithery namespace switch <name>` to instantly switch between already-authenticated namespaces without going through the login flow again.
+
+Use `smithery auth whoami` to see your current namespace and all available cached profiles. Use `smithery auth logout` to remove the current profile, or `smithery auth logout --all` to clear all cached profiles.
 
 ### Publishing
 

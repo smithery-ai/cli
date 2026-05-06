@@ -1,4 +1,5 @@
 export { createNamespace } from "./create"
 export { listNamespaces } from "./list"
 export { showNamespace } from "./show"
+export { switchNamespace } from "./switch"
 export { useNamespace } from "./use"

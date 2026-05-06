@@ -5,6 +5,15 @@ import pc from "picocolors"
 import { v4 as uuidv4 } from "uuid"
 import { verbose } from "../lib/logger"
 
+interface Profile {
+	apiKey: string
+	namespace: string
+	authOrganization?: {
+		id: string
+		name?: string
+	}
+}
+
 interface Settings {
 	userId: string
 	analyticsConsent: boolean
@@ -15,6 +24,7 @@ interface Settings {
 		id: string
 		name?: string
 	}
+	profiles?: Record<string, Profile>
 	cache?: {
 		servers?: Record<
 			string,
@@ -353,6 +363,79 @@ export const setAuthOrganization = async (
 	}
 
 	settingsData = { ...initResult.data, authOrganization: organization }
+
+	return await saveSettings(settingsData, getSettingsPath())
+}
+
+// ─── Profile Management ─────────────────────────────────────────────────────
+
+export const getProfiles = async (): Promise<Record<string, Profile>> => {
+	await initializeSettings()
+	return settingsData?.profiles || {}
+}
+
+export const getProfile = async (
+	namespace: string,
+): Promise<Profile | undefined> => {
+	const profiles = await getProfiles()
+	return profiles[namespace]
+}
+
+export const saveProfile = async (
+	namespace: string,
+	profile: Profile,
+): Promise<SettingsResult> => {
+	const initResult = await initializeSettings()
+	if (!initResult.success || !initResult.data) {
+		return initResult
+	}
+
+	const profiles = initResult.data.profiles || {}
+	profiles[namespace] = profile
+
+	settingsData = { ...initResult.data, profiles }
+
+	return await saveSettings(settingsData, getSettingsPath())
+}
+
+export const switchProfile = async (
+	namespace: string,
+): Promise<SettingsResult> => {
+	const profile = await getProfile(namespace)
+	if (!profile) {
+		return {
+			success: false,
+			error: `Profile "${namespace}" not found in local cache`,
+		}
+	}
+
+	const initResult = await initializeSettings()
+	if (!initResult.success || !initResult.data) {
+		return initResult
+	}
+
+	settingsData = {
+		...initResult.data,
+		apiKey: profile.apiKey,
+		namespace: profile.namespace,
+		authOrganization: profile.authOrganization,
+	}
+
+	return await saveSettings(settingsData, getSettingsPath())
+}
+
+export const removeProfile = async (
+	namespace: string,
+): Promise<SettingsResult> => {
+	const initResult = await initializeSettings()
+	if (!initResult.success || !initResult.data) {
+		return initResult
+	}
+
+	const profiles = { ...(initResult.data.profiles || {}) }
+	delete profiles[namespace]
+
+	settingsData = { ...initResult.data, profiles }
 
 	return await saveSettings(settingsData, getSettingsPath())
 }
