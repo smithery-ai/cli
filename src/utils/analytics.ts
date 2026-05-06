@@ -1,4 +1,4 @@
-import inquirer from "inquirer"
+import * as readline from "node:readline"
 import pc from "picocolors"
 import { uuidv7 } from "uuidv7"
 import { ANALYTICS_ENDPOINT } from "../constants"
@@ -10,6 +10,24 @@ import {
 	initializeSettings,
 	setAnalyticsConsent,
 } from "./smithery-settings"
+
+// One-line Y/N prompt using node:readline. Avoids inquirer 8.x's readline
+// pause-after-close path which throws ERR_USE_AFTER_CLOSE on Node 24+.
+function promptYesNo(message: string, defaultYes: boolean): Promise<boolean> {
+	return new Promise((resolve) => {
+		const rl = readline.createInterface({
+			input: process.stdin,
+			output: process.stdout,
+		})
+		const suffix = defaultYes ? " (Y/n) " : " (y/N) "
+		rl.question(`${message}${suffix}`, (answer) => {
+			rl.close()
+			const trimmed = answer.trim().toLowerCase()
+			if (trimmed === "") return resolve(defaultYes)
+			resolve(trimmed === "y" || trimmed === "yes")
+		})
+	})
+}
 
 // Session management
 type Session = {
@@ -94,17 +112,22 @@ export async function checkAnalyticsConsent(): Promise<void> {
 
 		/* Only ask if we haven't asked before and consent is false */
 		if (!askedConsent) {
-			try {
-				const { EnableAnalytics } = await inquirer.prompt([
-					{
-						type: "confirm",
-						name: "EnableAnalytics",
-						message: `Would you like to help improve Smithery by sending anonymized usage data?`,
-						default: true,
-					},
-				])
+			// Non-interactive shells (CI, piped stdin) can't answer the prompt.
+			// Persist `askedConsent: true` with consent=false so we don't keep
+			// asking on every invocation, and so the early return on the next
+			// run skips this whole block.
+			if (!process.stdin.isTTY) {
+				verbose("Non-interactive stdin — defaulting analytics consent to false")
+				await setAnalyticsConsent(false)
+				return
+			}
 
-				const result = await setAnalyticsConsent(EnableAnalytics)
+			try {
+				const enable = await promptYesNo(
+					"Would you like to help improve Smithery by sending anonymized usage data?",
+					true,
+				)
+				const result = await setAnalyticsConsent(enable)
 				if (!result.success) {
 					console.warn(
 						pc.yellow("[Smithery] Failed to save preference:"),
@@ -115,7 +138,6 @@ export async function checkAnalyticsConsent(): Promise<void> {
 					)
 				}
 			} catch (error) {
-				// Handle potential inquirer errors
 				console.warn(
 					pc.yellow("[Smithery] Failed to prompt for consent:"),
 					error instanceof Error ? error.message : String(error),

@@ -4,6 +4,7 @@ import type { ValidClient } from "../../config/clients"
 import { getClientConfiguration } from "../../config/clients"
 import { fatal } from "../../lib/cli-error"
 import {
+	formatRemoteUrlConfig,
 	formatServerConfig,
 	readConfig,
 	runConfigCommand,
@@ -143,5 +144,98 @@ export async function installServer(
 			`Installation error: ${error instanceof Error ? error.stack : JSON.stringify(error)}`,
 		)
 		fatal("Failed to install server", error)
+	}
+}
+
+/**
+ * Installs an arbitrary remote MCP URL into a client's config under a
+ * caller-provided alias. Skips registry resolution entirely — this is the
+ * path for toolboxes (`https://mcp.smithery.run/<ns>`) and any other
+ * self-hosted MCP endpoint that doesn't live in the Smithery registry.
+ *
+ * The client must support an `http` transport. OAuth-capable clients get a
+ * native `{type: "http", url}` block; non-OAuth clients fall back to
+ * mcp-remote so the URL is reachable via stdio.
+ */
+export async function installRemoteUrlServer(
+	url: string,
+	alias: string,
+	client: ValidClient,
+): Promise<void> {
+	verbose(`Starting URL install of ${url} as ${alias} for client ${client}`)
+
+	await checkAnalyticsConsent()
+
+	const clientConfig = getClientConfiguration(client)
+	const httpTransport = clientConfig.transports?.http
+	if (!httpTransport) {
+		fatal(
+			`Client "${client}" does not support remote MCP URLs. Use a qualified server name (\`<namespace>/<server>\`) instead.`,
+		)
+	}
+
+	const transportType: "http-oauth" | "http-proxy" = httpTransport.supportsOAuth
+		? "http-oauth"
+		: "http-proxy"
+	const serverConfig = formatRemoteUrlConfig(url, transportType)
+	verbose(`Formatted server config: ${JSON.stringify(serverConfig, null, 2)}`)
+
+	try {
+		if (clientConfig.install.method === "command") {
+			runConfigCommand({ mcpServers: { [alias]: serverConfig } }, clientConfig)
+		} else {
+			const config = readConfig(client)
+			config.mcpServers[alias] = serverConfig
+			writeConfig(config, client)
+		}
+
+		if (isJsonMode()) {
+			console.log(
+				JSON.stringify({
+					success: true,
+					url,
+					alias,
+					client,
+					transport: transportType,
+					hint: `Restart ${client} to apply changes.`,
+				}),
+			)
+		} else {
+			console.log()
+			console.log(
+				pc.green(`✓ ${alias} (${url}) successfully installed for ${client}`),
+			)
+			showPostInstallHint(client)
+			await promptForRestart(client)
+		}
+		process.exit(0)
+	} catch (error) {
+		verbose(
+			`Installation error: ${error instanceof Error ? error.stack : JSON.stringify(error)}`,
+		)
+		fatal("Failed to install server", error)
+	}
+}
+
+export function isHttpUrl(value: string): boolean {
+	return value.startsWith("http://") || value.startsWith("https://")
+}
+
+/**
+ * Best-effort alias derivation when `--name` is omitted on a URL install.
+ * Returns null if no sensible alias can be derived — caller should fatal.
+ *
+ * Heuristic: take the URL hostname's first label minus a trailing TLD —
+ * `mcp.smithery.run` → `mcp`, `api.example.com` → `api`. Good enough for
+ * suggesting in an error message; we still require the caller to pass one
+ * explicitly because hostname-derived names collide easily.
+ */
+export function deriveAliasFromUrl(url: string): string | null {
+	try {
+		const host = new URL(url).hostname
+		const label = host.split(".")[0]
+		return label && label !== "" ? label : null
+	} catch {
+		return null
 	}
 }

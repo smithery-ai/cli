@@ -697,3 +697,24 @@ export function formatServerConfig(
 			return createStdioConfig(qualifiedName)
 	}
 }
+
+/**
+ * Creates server configuration for an arbitrary remote MCP URL.
+ *
+ * For OAuth-capable clients, writes a direct `{type: "http", url}` block — the
+ * client handles auth on first connection. For non-OAuth clients, falls back
+ * to mcp-remote so the URL is reachable via stdio.
+ */
+export function formatRemoteUrlConfig(
+	url: string,
+	transportType: "http-oauth" | "http-proxy",
+): ConfiguredServer {
+	if (transportType === "http-oauth") {
+		return { type: "http", url, headers: {} }
+	}
+	const args = ["-y", "mcp-remote", url]
+	if (process.platform === "win32") {
+		return { command: "cmd", args: ["/c", "npx", ...args] }
+	}
+	return { command: "npx", args }
+}
