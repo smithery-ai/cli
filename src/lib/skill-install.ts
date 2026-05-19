@@ -1,10 +1,40 @@
+import type { Smithery } from "@smithery/api"
 import pc from "picocolors"
-import { fatal } from "../../lib/cli-error"
-import {
-	createPublicSkillsClient,
-	getSkillUrl,
-	parseSkillIdentifier,
-} from "./shared.js"
+import { fatal } from "./cli-error"
+import { createPublicClient } from "./smithery-client"
+
+/**
+ * Skill installation passthrough.
+ *
+ * The user-facing `smithery skill` command was removed (SMI-1682) in favor of
+ * the upstream `npx skills` installer — install-count attribution is tracked
+ * server-side when the skill is fetched from smithery.ai, not in this CLI.
+ * The `setup` command still needs to install the Smithery CLI's own skill, so
+ * this thin resolve-then-delegate helper is retained here.
+ */
+
+interface ParsedSkillIdentifier {
+	namespace: string
+	slug: string
+}
+
+function parseSkillIdentifier(identifier: string): ParsedSkillIdentifier {
+	const match = identifier.match(/^([^/]+)\/(.+)$/)
+	if (!match) {
+		throw new Error(
+			`Invalid skill identifier: ${identifier}. Use format namespace/slug.`,
+		)
+	}
+	return { namespace: match[1], slug: match[2] }
+}
+
+function getSkillUrl(namespace: string, slug: string): string {
+	return `https://smithery.ai/skills/${namespace}/${slug}`
+}
+
+function createPublicSkillsClient(): Smithery {
+	return createPublicClient()
+}
 
 async function resolveSkillUrl(identifier: string): Promise<string> {
 	if (identifier.startsWith("http")) {

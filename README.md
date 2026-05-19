@@ -33,20 +33,11 @@ smithery tool call <connection> <tool> [args]  # Call a tool
 
 ### Skills
 
-Browse and install skills from the [Smithery Skills Registry](https://smithery.ai/skills).
+Browse skills on the [Smithery Skills Registry](https://smithery.ai/skills) and
+install them with the upstream installer:
 
 ```bash
-smithery skill search [query]                        # Search skills
-smithery skill add <skill> --agent <name>             # Add a skill
-smithery skill upvote <skill>                        # Upvote a skill
-smithery skill downvote <skill>                      # Downvote a skill
-
-# Reviews
-smithery skill review list <skill>                   # List reviews
-smithery skill review add <skill> --up -b "text"     # Add review + vote
-smithery skill review remove <skill>                 # Remove your review
-smithery skill review upvote <skill> <review-id>     # Upvote a review
-smithery skill review downvote <skill> <review-id>   # Downvote a review
+npx skills add <skill>   # e.g. npx skills add smithery-ai/cli
 ```
 
 ### Auth
