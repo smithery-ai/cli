@@ -968,86 +968,6 @@ Examples:
 	.action(handleUnsubscribeTrigger)
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// Skill command — Search, view, and install Smithery skills
-// ═══════════════════════════════════════════════════════════════════════════════
-
-const skillCmd = program
-	.command("skill")
-	.description("Search, view, and install Smithery skills")
-
-skillCmd
-	.command("agents")
-	.description("List available agents for skill installation")
-	.action(() => {
-		console.log(pc.bold("Available agents:"))
-		console.log()
-		for (const agent of SKILL_AGENTS) {
-			console.log(`  ${agent}`)
-		}
-		console.log()
-		console.log(
-			pc.dim("See https://github.com/vercel-labs/skills for more info"),
-		)
-	})
-
-skillCmd
-	.command("search <query>")
-	.description("Search for skills in the Smithery registry")
-	.option("-i, --interactive", "Interactive search mode")
-	.option("--limit <number>", "Maximum number of results to show", "10")
-	.option("--page <number>", "Page number", "1")
-	.option("--namespace <namespace>", "Filter by namespace")
-	.action(async (query, options) => {
-		const { searchSkills } = await import("./commands/skill")
-		await searchSkills(query, {
-			interactive: options.interactive,
-			limit: Number.parseInt(options.limit, 10),
-			page: Number.parseInt(options.page, 10),
-			namespace: options.namespace,
-		})
-	})
-
-skillCmd
-	.command("view <identifier>")
-	.description("View a skill's documentation without installing")
-	.action(async (identifier) => {
-		const { viewSkill } = await import("./commands/skill")
-		await viewSkill(identifier)
-	})
-
-skillCmd
-	.command("add <skill>")
-	.description("Add a skill to your agent")
-	.option(
-		"-a, --agent <name>",
-		`Target agent (${SKILL_AGENTS.slice(0, 5).join(", ")}, ...)`,
-	)
-	.option(
-		"-g, --global",
-		"Install globally (user-level) instead of project-level",
-	)
-	.action(async (skill, options) => {
-		const { installSkill } = await import("./commands/skill")
-		await installSkill(skill, options.agent, {
-			global: options.global,
-			yes: !!options.agent,
-		})
-	})
-
-skillCmd
-	.command("publish [path]")
-	.description("Publish a skill from a directory, zip file, or GitHub URL")
-	.option("-n, --name <slug>", "Skill slug (defaults to name from SKILL.md)")
-	.option("--namespace <namespace>", "Target namespace")
-	.action(async (path, options) => {
-		const { publishSkill } = await import("./commands/skill")
-		await publishSkill(path, {
-			name: options.name,
-			namespace: options.namespace,
-		})
-	})
-
-// ═══════════════════════════════════════════════════════════════════════════════
 // Auth command — Authentication and permissions
 // ═══════════════════════════════════════════════════════════════════════════════
 
@@ -1166,7 +1086,7 @@ program
 		"Install globally (user-level) instead of project-level",
 	)
 	.action(async (options) => {
-		const { installSkill } = await import("./commands/skill")
+		const { installSkill } = await import("./lib/skill-install")
 		await installSkill("smithery-ai/cli", options.agent, {
 			global: options.global ?? true,
 			yes: true,
@@ -1332,7 +1252,6 @@ export async function main(argv = process.argv.slice()) {
 	// Backward compat: accept plural forms
 	const COMMAND_ALIASES: Record<string, string> = {
 		tools: "tool",
-		skills: "skill",
 	}
 	if (argv[2] && argv[2] in COMMAND_ALIASES) {
 		argv[2] = COMMAND_ALIASES[argv[2]]
