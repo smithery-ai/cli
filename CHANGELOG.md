@@ -5,7 +5,7 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 
-## [1.1.0](https://github.com/smithery-ai/cli/compare/v1.0.1...v1.1.0) (2026-05-19)
+## [1.1.0](https://github.com/smithery-ai/cli/compare/v1.0.1...v1.1.0) (2026-05-06)
 
 
 ### ⚠ BREAKING CHANGES
@@ -188,7 +188,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Chores
 
-* **cli:** remove `smithery skill` subcommand (SMI-1682) ([#771](https://github.com/smithery-ai/cli/issues/771)) ([87e196c](https://github.com/smithery-ai/cli/commit/87e196cfdc0f7a46362b44a0075fcadfb5ea11cc))
 * add direct uplink pairing ([#745](https://github.com/smithery-ai/cli/issues/745)) ([58a60e3](https://github.com/smithery-ai/cli/commit/58a60e341431923fa7ad1d6e17d9aa1e854dc94d))
 * add hidden mcp secrets subcommands ([#650](https://github.com/smithery-ai/cli/issues/650)) ([35c9b0a](https://github.com/smithery-ai/cli/commit/35c9b0aa82549e4d642f983539ddd875a2b215fa))
 * add mcp ls alias ([#730](https://github.com/smithery-ai/cli/issues/730)) ([806061b](https://github.com/smithery-ai/cli/commit/806061b8d3ad4cac9b75f403d23e47be66ad6486))

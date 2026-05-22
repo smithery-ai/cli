@@ -16,7 +16,7 @@
 		{ "type": "perf", "section": "Performance Improvements" },
 		{ "type": "revert", "section": "Reverts" },
 		{ "type": "docs", "section": "Documentation" },
-		{ "type": "chore", "section": "Chores", "hidden": true },
+		{ "type": "chore", "section": "Chores" },
 		{ "type": "refactor", "section": "Refactors" },
 		{ "type": "test", "section": "Tests", "hidden": true },
 		{ "type": "build", "section": "Build System", "hidden": true },
