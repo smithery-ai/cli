@@ -15,7 +15,6 @@ import {
 } from "../../utils/smithery-settings"
 
 export type { Connection, ConnectionsListResponse }
-export type ConnectionTransport = NonNullable<Connection["transport"]>
 export type ConnectionTarget =
 	| (Required<Pick<ConnectionCreateParams, "mcpUrl">> & { server?: never })
 	| (Required<Pick<ConnectionCreateParams, "server">> & { mcpUrl?: never })
