@@ -44,6 +44,10 @@ vi.mock("../mcp/api", () => ({
 	ConnectSession: {
 		create: mockCreateSession,
 	},
+	connectionTargetFromInput: (input: string) =>
+		input.startsWith("http://") || input.startsWith("https://")
+			? { mcpUrl: input }
+			: { server: input },
 }))
 
 vi.mock("../../lib/uplink", async () => {

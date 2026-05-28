@@ -69,7 +69,7 @@ smithery mcp publish <bundle.mcpb> -n <org/server>  # Publish an MCP bundle
 ```bash
 # Search and connect to an MCP server
 smithery mcp search "github"
-smithery mcp add https://server.smithery.ai/github --id github
+smithery mcp add github --id github
 
 # Find and call tools from your connected MCP servers
 smithery tool find "create issue"

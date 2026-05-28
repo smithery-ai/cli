@@ -5,9 +5,8 @@ import {
 	completeConnectionAuthorization,
 	finalizeAddedConnection,
 } from "./add-flow"
-import { ConnectSession } from "./api"
+import { ConnectSession, connectionTargetFromInput } from "./api"
 import { isInputRequiredStatus } from "./connection-status"
-import { normalizeMcpUrl } from "./normalize-url"
 import { outputConnectionDetail } from "./output-connection"
 import { parseJsonObject } from "./parse-json"
 
@@ -29,13 +28,15 @@ export async function addServer(
 			true,
 		)
 
-		const normalizedUrl = normalizeMcpUrl(mcpUrl)
+		const target = connectionTargetFromInput(mcpUrl)
 		const session = await ConnectSession.create(options.namespace)
 
-		// Check for existing connections with the same URL
-		if (!options.force) {
-			const { connections: existing } =
-				await session.listConnectionsByUrl(normalizedUrl)
+		// URL inputs can still be checked exactly. Registry-name inputs are sent
+		// as `server` so Connect owns canonical URL resolution.
+		if (!options.force && target.mcpUrl) {
+			const { connections: existing } = await session.listConnectionsByUrl(
+				target.mcpUrl,
+			)
 			if (existing.length > 0) {
 				let match = existing[0]
 				const status = match.status?.state ?? "unknown"
@@ -76,7 +77,7 @@ export async function addServer(
 			}
 		}
 
-		const connection = await session.createConnection(normalizedUrl, {
+		const connection = await session.createConnection(target, {
 			name: options.name,
 			metadata: parsedMetadata,
 			headers: parsedHeaders,

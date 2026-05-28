@@ -28,6 +28,26 @@ describe("ConnectSession uplink compatibility", () => {
 		})
 	})
 
+	test("creates registry connections with server targets", async () => {
+		const create = vi.fn().mockResolvedValue({
+			connectionId: "exa",
+			name: "exa",
+			mcpUrl: "https://server.smithery.ai/exa",
+			metadata: null,
+			status: { state: "connected" },
+		})
+
+		const session = new ConnectSession(
+			{ connections: { create } } as never,
+			"calclavia",
+		)
+		await session.createConnection({ server: "exa" })
+
+		expect(create).toHaveBeenCalledWith("calclavia", {
+			server: "exa",
+		})
+	})
+
 	test("does not replace conflicting uplink connections on 409", async () => {
 		const conflict = new ConflictError(409, {}, undefined, new Headers())
 		const set = vi.fn().mockRejectedValueOnce(conflict)
@@ -77,6 +97,27 @@ describe("ConnectSession uplink compatibility", () => {
 		expect(set).toHaveBeenNthCalledWith(2, "remote-http", {
 			namespace: "calclavia",
 			mcpUrl: "https://server.smithery.ai/exa",
+		})
+	})
+
+	test("sets registry connections with server targets", async () => {
+		const set = vi.fn().mockResolvedValue({
+			connectionId: "exa",
+			name: "exa",
+			mcpUrl: "https://server.smithery.ai/exa",
+			metadata: null,
+			status: { state: "connected" },
+		})
+
+		const session = new ConnectSession(
+			{ connections: { set } } as never,
+			"calclavia",
+		)
+		await session.setConnection("exa", { server: "exa" })
+
+		expect(set).toHaveBeenCalledWith("exa", {
+			namespace: "calclavia",
+			server: "exa",
 		})
 	})
 
