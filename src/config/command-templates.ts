@@ -19,7 +19,7 @@ export function claudeCodeStdioCommand(
 /**
  * Claude Code HTTP command template
  * Generates: claude mcp add --transport http <name> <url>
- * Example: claude mcp add --transport http upstash-context-7-mcp "https://server.smithery.ai/@upstash/context7-mcp/mcp"
+ * Example: claude mcp add --transport http upstash-context-7-mcp "https://mcp.example.com/mcp"
  */
 export function claudeCodeHttpCommand(name: string, url: string): string[] {
 	return ["mcp", "add", "--transport", "http", name, url]
@@ -41,7 +41,7 @@ export function vscodeStdioCommand(
 /**
  * VS Code HTTP command template
  * Generates: code --add-mcp '{"name":"server","type":"http","url":"https://..."}'
- * Example: code --add-mcp '{"name":"upstash-context","type":"http","url":"https://server.smithery.ai/@upstash/context7-mcp/mcp"}'
+ * Example: code --add-mcp '{"name":"example","type":"http","url":"https://mcp.example.com/mcp"}'
  */
 export function vscodeHttpCommand(name: string, url: string): string[] {
 	return ["--add-mcp", JSON.stringify({ name, type: "http", url })]
@@ -63,7 +63,7 @@ export function geminiCliStdioCommand(
 /**
  * Gemini CLI HTTP command template
  * Generates: gemini mcp add --transport http <server-name> "<url>"
- * Example: gemini mcp add --transport http upstash-context "https://server.smithery.ai/@upstash/context7-mcp/mcp"
+ * Example: gemini mcp add --transport http example "https://mcp.example.com/mcp"
  */
 export function geminiCliHttpCommand(name: string, url: string): string[] {
 	return ["mcp", "add", "--transport", "http", name, url]
@@ -85,7 +85,7 @@ export function codexStdioCommand(
 /**
  * Codex HTTP command template
  * Generates: codex mcp add <server-name> --url <url>
- * Example: codex mcp add upstash-context --url "https://server.smithery.ai/@upstash/context7-mcp/mcp"
+ * Example: codex mcp add example --url "https://mcp.example.com/mcp"
  */
 export function codexHttpCommand(name: string, url: string): string[] {
 	return ["mcp", "add", name, "--url", url]
