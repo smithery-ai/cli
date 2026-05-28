@@ -5,6 +5,7 @@ import type {
 	Connection,
 	ConnectionCreateParams,
 	ConnectionListParams,
+	ConnectionSetParams,
 	ConnectionsListResponse,
 } from "@smithery/api/resources/connections.js"
 import { createSmitheryClient } from "../../lib/smithery-client"
@@ -15,6 +16,9 @@ import {
 
 export type { Connection, ConnectionsListResponse }
 export type ConnectionTransport = NonNullable<Connection["transport"]>
+export type ConnectionTarget =
+	| (Required<Pick<ConnectionCreateParams, "mcpUrl">> & { server?: never })
+	| (Required<Pick<ConnectionCreateParams, "server">> & { mcpUrl?: never })
 
 export interface Trigger {
 	name: string
@@ -156,12 +160,12 @@ export class ConnectSession {
 	}
 
 	async createConnection(
-		mcpUrl?: string,
+		target?: string | ConnectionTarget,
 		options: ConnectionWriteOptions = {},
 	): Promise<Connection> {
 		return this.smitheryClient.connections.create(
 			this.namespace,
-			buildConnectionBody(mcpUrl, options) as ConnectionCreateParams,
+			buildConnectionBody(target, options),
 		)
 	}
 
@@ -171,20 +175,20 @@ export class ConnectSession {
 	 */
 	async setConnection(
 		connectionId: string,
-		mcpUrl?: string,
+		target?: string | ConnectionTarget,
 		options: ConnectionWriteOptions = {},
 	): Promise<Connection> {
 		try {
 			return await this.smitheryClient.connections.set(
 				connectionId,
-				buildConnectionSetParams(this.namespace, mcpUrl, options),
+				buildConnectionSetParams(this.namespace, target, options),
 			)
 		} catch (error) {
 			if (error instanceof ConflictError && options.transport !== "uplink") {
 				await this.deleteConnection(connectionId)
 				return this.smitheryClient.connections.set(
 					connectionId,
-					buildConnectionSetParams(this.namespace, mcpUrl, options),
+					buildConnectionSetParams(this.namespace, target, options),
 				)
 			}
 			throw error
@@ -255,29 +259,44 @@ export class ConnectSession {
 	}
 }
 
+export function connectionTargetFromInput(input: string): ConnectionTarget {
+	return isHttpUrl(input) ? { mcpUrl: input } : { server: input }
+}
+
 function buildConnectionBody(
-	mcpUrl: string | undefined,
+	target: string | ConnectionTarget | undefined,
 	options: ConnectionWriteOptions,
-): Record<string, unknown> {
-	const body = {
-		...(mcpUrl ? { mcpUrl } : {}),
+): ConnectionCreateParams {
+	return {
+		...normalizeConnectionTarget(target),
 		...(options.name ? { name: options.name } : {}),
 		...(options.metadata ? { metadata: options.metadata } : {}),
 		...(options.headers ? { headers: options.headers } : {}),
 		...(options.transport ? { transport: options.transport } : {}),
 	}
-	return body
 }
 
 function buildConnectionSetParams(
 	namespace: string,
-	mcpUrl: string | undefined,
+	target: string | ConnectionTarget | undefined,
 	options: ConnectionWriteOptions,
-) {
+): ConnectionSetParams {
 	return {
 		namespace,
-		...buildConnectionBody(mcpUrl, options),
+		...buildConnectionBody(target, options),
 	}
+}
+
+function normalizeConnectionTarget(
+	target: string | ConnectionTarget | undefined,
+): Pick<ConnectionCreateParams, "mcpUrl" | "server"> {
+	if (!target) return {}
+	if (typeof target === "string") return { mcpUrl: target }
+	return target
+}
+
+function isHttpUrl(value: string): boolean {
+	return value.startsWith("http://") || value.startsWith("https://")
 }
 
 function namespacePath(namespace: string): string {

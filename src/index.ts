@@ -125,7 +125,6 @@ async function handleSearch(term: string | undefined, options: CliOptions) {
 		qualifiedName: server.qualifiedName,
 		description: server.description ?? "",
 		useCount: server.useCount,
-		connectionUrl: `https://server.smithery.ai/${server.qualifiedName}`,
 	}))
 
 	const page = parseInt(options.page ?? "1", 10) || 1
@@ -146,7 +145,7 @@ async function handleSearch(term: string | undefined, options: CliOptions) {
 		json,
 		jsonData: { servers: data, page, hasMore },
 		pagination: { page, hasMore },
-		tip: "Use smithery mcp add <connectionUrl> to connect a server.",
+		tip: "Use smithery mcp add <server> to connect a server.",
 	})
 }
 
@@ -638,10 +637,10 @@ mcpCmd
 		"after",
 		`
 Examples:
-  smithery mcp add https://server.smithery.ai/exa
+  smithery mcp add exa
   smithery mcp add http://localhost:9090/mcp --id chrome
   smithery mcp add --id chrome -- npx -y @chromedevtools/chrome-devtools-mcp
-  smithery mcp add https://server.smithery.ai/exa --id exa --name "Exa Search"
+  smithery mcp add exa --id exa --name "Exa Search"
   smithery mcp add exa --client claude
   smithery mcp add https://mcp.smithery.run/arjunkmrm --name toolbox --client librechat`,
 	)

@@ -36,6 +36,10 @@ vi.mock("../mcp/api", () => ({
 	ConnectSession: {
 		create: mockCreateSession,
 	},
+	connectionTargetFromInput: (input: string) =>
+		input.startsWith("http://") || input.startsWith("https://")
+			? { mcpUrl: input }
+			: { server: input },
 }))
 
 vi.mock("../mcp/output-connection", () => ({
@@ -97,7 +101,10 @@ describe("mcp add duplicate handling", () => {
 			],
 		})
 
-		await addServer("calclavia/test-input-required-two", {})
+		await addServer(
+			"https://server.smithery.ai/calclavia/test-input-required-two",
+			{},
+		)
 
 		expect(mockCreateConnection).not.toHaveBeenCalled()
 		expect(mockOutputConnectionDetail).toHaveBeenCalledWith(
@@ -109,6 +116,30 @@ describe("mcp add duplicate handling", () => {
 					"smithery mcp remove test-input-required-two",
 				),
 			}),
+		)
+	})
+
+	test("creates registry connections with the server target", async () => {
+		mockCreateConnection.mockResolvedValue({
+			connectionId: "github",
+			name: "github",
+			mcpUrl: "https://server.smithery.ai/github",
+			metadata: null,
+			status: {
+				state: "connected",
+			},
+		})
+
+		await addServer("github", {})
+
+		expect(mockListConnectionsByUrl).not.toHaveBeenCalled()
+		expect(mockCreateConnection).toHaveBeenCalledWith(
+			{ server: "github" },
+			{
+				name: undefined,
+				metadata: undefined,
+				headers: undefined,
+			},
 		)
 	})
 

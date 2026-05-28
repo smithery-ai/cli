@@ -12,8 +12,7 @@ import {
 	addBundleUplinkServer,
 	type BundleAddTarget,
 } from "./add-uplink-bundle"
-import { ConnectSession } from "./api"
-import { normalizeMcpUrl } from "./normalize-url"
+import { ConnectSession, connectionTargetFromInput } from "./api"
 import { outputConnectionDetail } from "./output-connection"
 import { parseJsonObject } from "./parse-json"
 import { classifyAddTarget } from "./uplink-target"
@@ -69,7 +68,7 @@ export async function addServer(
 			const session = await ConnectSession.create(options.namespace)
 			const connection = await session.setConnection(
 				options.id,
-				normalizeMcpUrl(mcpUrl),
+				connectionTargetFromInput(mcpUrl),
 				{
 					name,
 					metadata: parsedMetadata,
