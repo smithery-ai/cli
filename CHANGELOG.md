@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 
+## [1.1.2](https://github.com/smithery-ai/cli/compare/v1.1.1...v1.1.2) (2026-05-28)
+
+
+### Bug Fixes
+
+* **SMI-2021:** use server target for mcp add ([#782](https://github.com/smithery-ai/cli/issues/782)) ([fff74b1](https://github.com/smithery-ai/cli/commit/fff74b17a3d47e3fd6bb52e100c3d430813faffb))
+
 ## [1.1.1](https://github.com/smithery-ai/cli/compare/v1.1.0...v1.1.1) (2026-05-22)
 
 
