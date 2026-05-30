@@ -1,8 +1,12 @@
 import { ConflictError } from "@smithery/api"
-import { describe, expect, test, vi } from "vitest"
+import { afterEach, describe, expect, test, vi } from "vitest"
 import { ConnectSession } from "../mcp/api"
 
 describe("ConnectSession uplink compatibility", () => {
+	afterEach(() => {
+		vi.unstubAllGlobals()
+	})
+
 	test("creates uplink connections without an mcpUrl", async () => {
 		const create = vi.fn().mockResolvedValue({
 			connectionId: "local-dev",
@@ -234,6 +238,62 @@ describe("ConnectSession uplink compatibility", () => {
 		])
 	})
 
+	test("lists dynamic module tools over the MCP endpoint", async () => {
+		const fetch = vi.fn().mockResolvedValue({
+			ok: true,
+			text: async () =>
+				JSON.stringify({
+					jsonrpc: "2.0",
+					id: 1,
+					result: {
+						tools: [
+							{
+								name: "proof_ping",
+								description: "proof_ping",
+								inputSchema: { type: "object" },
+							},
+						],
+					},
+				}),
+		})
+		vi.stubGlobal("fetch", fetch)
+		const session = new ConnectSession(
+			{ apiKey: "smry_test" } as never,
+			"calclavia",
+		)
+
+		const tools = await session.listToolsForConnection({
+			connectionId: "codex-pipe-proof",
+			name: "Codex Pipe Proof",
+			mcpUrl:
+				"https://dynamic-mcp-module.smithery.internal/calclavia/codex-pipe-proof",
+		} as never)
+
+		expect(fetch).toHaveBeenCalledWith(
+			"https://mcp.smithery.run/calclavia/codex-pipe-proof",
+			expect.objectContaining({
+				method: "POST",
+				headers: expect.objectContaining({
+					authorization: "Bearer smry_test",
+				}),
+				body: JSON.stringify({
+					jsonrpc: "2.0",
+					id: 1,
+					method: "tools/list",
+				}),
+			}),
+		)
+		expect(tools).toEqual([
+			{
+				connectionId: "codex-pipe-proof",
+				connectionName: "Codex Pipe Proof",
+				name: "proof_ping",
+				description: "proof_ping",
+				inputSchema: { type: "object" },
+			},
+		])
+	})
+
 	test("calls dotted tools through hierarchical REST paths", async () => {
 		const getConnection = vi.fn().mockResolvedValue({
 			connectionId: "github",
@@ -257,5 +317,61 @@ describe("ConnectSession uplink compatibility", () => {
 			body: { query: "mcp" },
 			defaultBaseURL: "https://smithery.run",
 		})
+	})
+
+	test("calls dynamic module tools over the MCP endpoint", async () => {
+		const getConnection = vi.fn().mockResolvedValue({
+			connectionId: "codex-pipe-proof",
+			name: "Codex Pipe Proof",
+			mcpUrl:
+				"https://dynamic-mcp-module.smithery.internal/calclavia/codex-pipe-proof",
+			status: { state: "connected" },
+		})
+		const fetch = vi.fn().mockResolvedValue({
+			ok: true,
+			text: async () =>
+				JSON.stringify({
+					jsonrpc: "2.0",
+					id: 1,
+					result: {
+						structuredContent: { ok: "true" },
+					},
+				}),
+		})
+		vi.stubGlobal("fetch", fetch)
+		const session = new ConnectSession(
+			{
+				apiKey: "smry_test",
+				connections: { get: getConnection },
+			} as never,
+			"calclavia",
+		)
+
+		const result = await session.callTool("codex-pipe-proof", "proof_ping", {
+			echo: "pipe invocation",
+		})
+
+		expect(getConnection).toHaveBeenCalledWith("codex-pipe-proof", {
+			namespace: "calclavia",
+		})
+		expect(fetch).toHaveBeenCalledWith(
+			"https://mcp.smithery.run/calclavia/codex-pipe-proof",
+			expect.objectContaining({
+				method: "POST",
+				headers: expect.objectContaining({
+					authorization: "Bearer smry_test",
+				}),
+				body: JSON.stringify({
+					jsonrpc: "2.0",
+					id: 1,
+					method: "tools/call",
+					params: {
+						name: "proof_ping",
+						arguments: { echo: "pipe invocation" },
+					},
+				}),
+			}),
+		)
+		expect(result).toEqual({ structuredContent: { ok: "true" } })
 	})
 })

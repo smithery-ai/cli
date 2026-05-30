@@ -64,6 +64,8 @@ type ConnectionsListQuery = ConnectionListParams &
 	Record<`metadata.${string}`, string>
 
 const SMITHERY_RUN_BASE_URL = "https://smithery.run"
+const SMITHERY_MCP_BASE_URL = "https://mcp.smithery.run"
+const DYNAMIC_MCP_MODULE_ORIGIN = "https://dynamic-mcp-module.smithery.internal"
 
 /**
  * Session for Connect operations that reuses clients within a command.
@@ -139,6 +141,18 @@ export class ConnectSession {
 	async listToolsForConnection(connection: Connection): Promise<ToolInfo[]> {
 		throwIfAuthRequired(connection)
 
+		if (isDynamicMcpModuleConnection(connection)) {
+			const result = await this.callDynamicMcpMethod<{ tools?: Tool[] }>(
+				connection.connectionId,
+				"tools/list",
+			)
+			return (result.tools ?? []).map((tool) => ({
+				...tool,
+				connectionId: connection.connectionId,
+				connectionName: connection.name,
+			}))
+		}
+
 		const result = await this.smitheryClient.get<{ tools?: Tool[] }>(
 			toolCollectionPath(this.namespace, connection.connectionId),
 			{
@@ -157,7 +171,15 @@ export class ConnectSession {
 		toolName: string,
 		args: Record<string, unknown>,
 	): Promise<unknown> {
-		throwIfAuthRequired(await this.getConnection(connectionId))
+		const connection = await this.getConnection(connectionId)
+		throwIfAuthRequired(connection)
+
+		if (isDynamicMcpModuleConnection(connection)) {
+			return this.callDynamicMcpMethod(connectionId, "tools/call", {
+				name: toolName,
+				arguments: args,
+			})
+		}
 
 		return this.smitheryClient.post<unknown>(
 			toolItemPath(this.namespace, connectionId, toolName),
@@ -166,6 +188,42 @@ export class ConnectSession {
 				defaultBaseURL: SMITHERY_RUN_BASE_URL,
 			},
 		)
+	}
+
+	private async callDynamicMcpMethod<T = unknown>(
+		connectionId: string,
+		method: string,
+		params?: Record<string, unknown>,
+	): Promise<T> {
+		const response = await fetch(dynamicMcpUrl(this.namespace, connectionId), {
+			method: "POST",
+			headers: {
+				authorization: `Bearer ${this.smitheryClient.apiKey}`,
+				"content-type": "application/json",
+				accept: "application/json, text/event-stream",
+			},
+			body: JSON.stringify({
+				jsonrpc: "2.0",
+				id: 1,
+				method,
+				...(params ? { params } : {}),
+			}),
+		})
+		const bodyText = await response.text()
+		if (!response.ok) {
+			throw new Error(
+				`Dynamic MCP request failed (${response.status}): ${bodyText}`,
+			)
+		}
+
+		const body = JSON.parse(bodyText) as {
+			result?: T
+			error?: { message?: string }
+		}
+		if (body.error) {
+			throw new Error(body.error.message ?? "Dynamic MCP request failed")
+		}
+		return body.result as T
 	}
 
 	async createConnection(
@@ -312,6 +370,14 @@ function isSourceTarget(
 	target: string | ConnectionTarget | undefined,
 ): target is Required<Pick<ConnectionCreateParams, "source">> {
 	return typeof target === "object" && target !== null && "source" in target
+}
+
+function isDynamicMcpModuleConnection(connection: Connection): boolean {
+	return connection.mcpUrl?.startsWith(DYNAMIC_MCP_MODULE_ORIGIN) === true
+}
+
+function dynamicMcpUrl(namespace: string, connectionId: string): string {
+	return `${SMITHERY_MCP_BASE_URL}/${encodeURIComponent(namespace)}/${encodeURIComponent(connectionId)}`
 }
 
 function isHttpUrl(value: string): boolean {
