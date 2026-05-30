@@ -4,6 +4,7 @@ import type { ConnectionCreateParams } from "@smithery/api/resources/connections
 
 const SOURCE_EXTENSIONS = new Set([".ts", ".tsx", ".mts", ".cts"])
 const MAX_SOURCE_FILE_BYTES = 128 * 1024
+const STDIN_SOURCE_PATH = "stdin.ts"
 const RELATIVE_IMPORT_PATTERN =
 	/\b(?:import|export)\s+(?:type\s+)?(?:[^'"]*?\s+from\s+)?["'](\.{1,2}\/[^"']+)["']|\bimport\s*\(\s*["'](\.{1,2}\/[^"']+)["']\s*\)/g
 
@@ -14,7 +15,16 @@ export type DynamicMcpModuleSource = NonNullable<
 export async function loadDynamicMcpModuleSource(
 	sourcePath: string,
 	cwd = process.cwd(),
+	readStdin = readStdinSource,
 ): Promise<DynamicMcpModuleSource> {
+	if (sourcePath === "-") {
+		if (readStdin === readStdinSource && process.stdin.isTTY) {
+			throw new Error("--source - requires TypeScript source on stdin.")
+		}
+		const contents = await readStdin()
+		return buildModuleSource(STDIN_SOURCE_PATH, contents)
+	}
+
 	const absolutePath = path.resolve(cwd, sourcePath)
 	const [realCwd, realSourcePath] = await Promise.all([
 		realpath(cwd),
@@ -41,6 +51,17 @@ export async function loadDynamicMcpModuleSource(
 
 	const relativePath = toPosixPath(path.relative(realCwd, realSourcePath))
 	const contents = await readFile(realSourcePath, "utf8")
+	return buildModuleSource(relativePath, contents)
+}
+
+function buildModuleSource(
+	entrypoint: string,
+	contents: string,
+): DynamicMcpModuleSource {
+	if (Buffer.byteLength(contents, "utf8") > MAX_SOURCE_FILE_BYTES) {
+		throw new Error("Source file must be 128KB or smaller.")
+	}
+
 	const relativeImport = findRelativeImport(contents)
 	if (relativeImport) {
 		throw new Error(
@@ -50,14 +71,22 @@ export async function loadDynamicMcpModuleSource(
 
 	return {
 		kind: "module",
-		entrypoint: relativePath,
+		entrypoint,
 		sourceFiles: [
 			{
-				path: relativePath,
+				path: entrypoint,
 				contents,
 			},
 		],
 	}
+}
+
+async function readStdinSource(): Promise<string> {
+	const chunks: Buffer[] = []
+	for await (const chunk of process.stdin) {
+		chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk))
+	}
+	return Buffer.concat(chunks).toString("utf8")
 }
 
 function isPathInside(filePath: string, rootPath: string): boolean {
