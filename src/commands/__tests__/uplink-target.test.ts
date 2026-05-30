@@ -35,6 +35,22 @@ describe("extractAddInvocation", () => {
 		})
 	})
 
+	test("does not treat hidden --source value as a server operand", () => {
+		const result = extractAddInvocation([
+			"node",
+			"smithery",
+			"mcp",
+			"add",
+			"--source",
+			"src/support.ts",
+		])
+
+		expect(result).toEqual({
+			server: undefined,
+			commandTokens: [],
+		})
+	})
+
 	test("extracts a stdio command passed after -- without inventing a server", () => {
 		const result = extractAddInvocation([
 			"node",
