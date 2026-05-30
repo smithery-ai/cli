@@ -6,7 +6,7 @@ import pc from "picocolors"
 
 const brandOrange = (text: string) => `\x1b[38;2;234;88;12m${text}\x1b[39m`
 
-import { Command } from "commander"
+import { Command, Option } from "commander"
 import { z } from "zod"
 import { ConstraintSchema, constraintJsonSchema } from "./commands/auth/token"
 import { SKILL_AGENTS } from "./config/agents"
@@ -39,6 +39,7 @@ interface CliOptions {
 	organization?: string
 	metadata?: string
 	headers?: string
+	source?: string
 	agent?: string
 	global?: boolean
 	yes?: boolean
@@ -353,6 +354,9 @@ async function handleMcpAdd(
 		invocation.commandTokens.length > 0 ? invocation.server : server
 
 	if (options.client) {
+		if (options.source) {
+			fatal("--source is not supported with --client.")
+		}
 		if (invocation.commandTokens.length > 0) {
 			fatal("Local commands passed after -- are not supported with --client.")
 		}
@@ -620,6 +624,12 @@ mcpCmd
 	.option("--name <name>", "Human-readable name for the server")
 	.option("--metadata <json>", "Custom metadata as JSON object")
 	.option("--headers <json>", "Custom headers as JSON object (stored securely)")
+	.addOption(
+		new Option(
+			"--source <path>",
+			"TypeScript module source file for a dynamic MCP",
+		).hideHelp(),
+	)
 	.option("--namespace <ns>", "Target namespace")
 	.option(
 		"--force",

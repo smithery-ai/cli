@@ -15,6 +15,7 @@ import {
 import { ConnectSession, connectionTargetFromInput } from "./api"
 import { outputConnectionDetail } from "./output-connection"
 import { parseJsonObject } from "./parse-json"
+import { loadDynamicMcpModuleSource } from "./source"
 import { classifyAddTarget } from "./uplink-target"
 
 interface AddServerOptions {
@@ -25,6 +26,7 @@ interface AddServerOptions {
 	headers?: string
 	config?: string
 	force?: boolean
+	source?: string
 	uplinkCommand?: string[]
 }
 
@@ -32,6 +34,10 @@ export async function addServer(
 	server: string | undefined,
 	options: AddServerOptions,
 ): Promise<void> {
+	if (options.source) {
+		return addSourceServer(server, options)
+	}
+
 	const target = await classifyAddTarget({
 		server,
 		commandTokens: options.uplinkCommand,
@@ -95,6 +101,64 @@ export async function addServer(
 	}
 	// Use create for auto-generated ID
 	return addServerImpl(mcpUrl, { ...options, name })
+}
+
+async function addSourceServer(
+	server: string | undefined,
+	options: AddServerOptions,
+): Promise<void> {
+	try {
+		if (!options.source) {
+			throw new Error("--source requires a TypeScript source file.")
+		}
+		if (server) {
+			throw new Error("--source cannot be used with a server argument.")
+		}
+		if (options.uplinkCommand && options.uplinkCommand.length > 0) {
+			throw new Error("--source cannot be used with a local command.")
+		}
+		if (options.headers !== undefined) {
+			throw new Error(
+				"--headers is not supported for source-backed connections.",
+			)
+		}
+		if (options.config !== undefined) {
+			throw new Error(
+				"--config is not supported for source-backed connections.",
+			)
+		}
+		if (options.force) {
+			throw new Error("--force is not supported for source-backed connections.")
+		}
+
+		const parsedMetadata = parseJsonObject(options.metadata, "Metadata")
+		const source = await loadDynamicMcpModuleSource(options.source)
+		const session = await ConnectSession.create(options.namespace)
+		const name = options.name ?? options.id
+		const connection = options.id
+			? await session.setConnection(
+					options.id,
+					{ source },
+					{
+						name,
+						metadata: parsedMetadata,
+					},
+				)
+			: await session.createConnection(
+					{ source },
+					{
+						name,
+						metadata: parsedMetadata,
+					},
+				)
+
+		outputConnectionDetail({
+			connection,
+			tip: `Use smithery tool list ${connection.connectionId} to view tools.`,
+		})
+	} catch (error) {
+		fatal("Failed to add source-backed connection", error)
+	}
 }
 
 function isHttpUrl(value: string): boolean {

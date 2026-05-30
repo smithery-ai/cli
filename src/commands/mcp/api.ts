@@ -16,8 +16,18 @@ import {
 
 export type { Connection, ConnectionsListResponse }
 export type ConnectionTarget =
-	| (Required<Pick<ConnectionCreateParams, "mcpUrl">> & { server?: never })
-	| (Required<Pick<ConnectionCreateParams, "server">> & { mcpUrl?: never })
+	| (Required<Pick<ConnectionCreateParams, "mcpUrl">> & {
+			server?: never
+			source?: never
+	  })
+	| (Required<Pick<ConnectionCreateParams, "server">> & {
+			mcpUrl?: never
+			source?: never
+	  })
+	| (Required<Pick<ConnectionCreateParams, "source">> & {
+			mcpUrl?: never
+			server?: never
+	  })
 
 export interface Trigger {
 	name: string
@@ -183,7 +193,11 @@ export class ConnectSession {
 				buildConnectionSetParams(this.namespace, target, options),
 			)
 		} catch (error) {
-			if (error instanceof ConflictError && options.transport !== "uplink") {
+			if (
+				error instanceof ConflictError &&
+				options.transport !== "uplink" &&
+				!isSourceTarget(target)
+			) {
 				await this.deleteConnection(connectionId)
 				return this.smitheryClient.connections.set(
 					connectionId,
@@ -288,10 +302,16 @@ function buildConnectionSetParams(
 
 function normalizeConnectionTarget(
 	target: string | ConnectionTarget | undefined,
-): Pick<ConnectionCreateParams, "mcpUrl" | "server"> {
+): Pick<ConnectionCreateParams, "mcpUrl" | "server" | "source"> {
 	if (!target) return {}
 	if (typeof target === "string") return { mcpUrl: target }
 	return target
+}
+
+function isSourceTarget(
+	target: string | ConnectionTarget | undefined,
+): target is Required<Pick<ConnectionCreateParams, "source">> {
+	return typeof target === "object" && target !== null && "source" in target
 }
 
 function isHttpUrl(value: string): boolean {

@@ -48,6 +48,32 @@ describe("ConnectSession uplink compatibility", () => {
 		})
 	})
 
+	test("creates source-backed connections with module source targets", async () => {
+		const source = {
+			kind: "module" as const,
+			entrypoint: "support.ts",
+			sourceFiles: [{ path: "support.ts", contents: "export {}\n" }],
+		}
+		const create = vi.fn().mockResolvedValue({
+			connectionId: "support",
+			name: "Support tools",
+			mcpUrl: "https://dynamic-mcp-module.smithery.internal/calclavia/support",
+			metadata: null,
+			status: { state: "connected" },
+		})
+
+		const session = new ConnectSession(
+			{ connections: { create } } as never,
+			"calclavia",
+		)
+		await session.createConnection({ source }, { name: "Support tools" })
+
+		expect(create).toHaveBeenCalledWith("calclavia", {
+			source,
+			name: "Support tools",
+		})
+	})
+
 	test("does not replace conflicting uplink connections on 409", async () => {
 		const conflict = new ConflictError(409, {}, undefined, new Headers())
 		const set = vi.fn().mockRejectedValueOnce(conflict)
@@ -66,6 +92,31 @@ describe("ConnectSession uplink compatibility", () => {
 		expect(set).toHaveBeenCalledWith("local-dev", {
 			namespace: "calclavia",
 			transport: "uplink",
+		})
+		expect(del).not.toHaveBeenCalled()
+	})
+
+	test("does not replace conflicting source-backed connections on 409", async () => {
+		const conflict = new ConflictError(409, {}, undefined, new Headers())
+		const set = vi.fn().mockRejectedValueOnce(conflict)
+		const del = vi.fn().mockResolvedValue({ success: true })
+		const source = {
+			kind: "module" as const,
+			entrypoint: "support.ts",
+			sourceFiles: [{ path: "support.ts", contents: "export {}\n" }],
+		}
+
+		const session = new ConnectSession(
+			{ connections: { set, delete: del } } as never,
+			"calclavia",
+		)
+		await expect(session.setConnection("support", { source })).rejects.toBe(
+			conflict,
+		)
+
+		expect(set).toHaveBeenCalledWith("support", {
+			namespace: "calclavia",
+			source,
 		})
 		expect(del).not.toHaveBeenCalled()
 	})
@@ -118,6 +169,37 @@ describe("ConnectSession uplink compatibility", () => {
 		expect(set).toHaveBeenCalledWith("exa", {
 			namespace: "calclavia",
 			server: "exa",
+		})
+	})
+
+	test("sets source-backed connections with module source targets", async () => {
+		const source = {
+			kind: "module" as const,
+			entrypoint: "support.ts",
+			sourceFiles: [{ path: "support.ts", contents: "export {}\n" }],
+		}
+		const set = vi.fn().mockResolvedValue({
+			connectionId: "support",
+			name: "Support tools",
+			mcpUrl: "https://dynamic-mcp-module.smithery.internal/calclavia/support",
+			metadata: null,
+			status: { state: "connected" },
+		})
+
+		const session = new ConnectSession(
+			{ connections: { set } } as never,
+			"calclavia",
+		)
+		await session.setConnection(
+			"support",
+			{ source },
+			{ name: "Support tools" },
+		)
+
+		expect(set).toHaveBeenCalledWith("support", {
+			namespace: "calclavia",
+			source,
+			name: "Support tools",
 		})
 	})
 

@@ -61,6 +61,10 @@ export function createError(error: unknown, context: string): Error {
 		return new Error(`${context}: ${errorMessage}`, { cause: error })
 	}
 	if (error instanceof BadRequestError) {
+		const invalidModuleMessage = formatInvalidModuleError(error.error)
+		if (invalidModuleMessage) {
+			return new Error(`${context}: ${invalidModuleMessage}`, { cause: error })
+		}
 		const errorMessage = getErrorMessage(error, "Invalid request")
 		return new Error(`${context}: ${errorMessage}`, { cause: error })
 	}
@@ -71,4 +75,46 @@ export function createError(error: unknown, context: string): Error {
 	// Format unknown errors
 	const errorMessage = getErrorMessage(error, context)
 	return new Error(errorMessage)
+}
+
+function formatInvalidModuleError(errorBody: unknown): string | undefined {
+	if (!isRecord(errorBody) || !isRecord(errorBody.error)) {
+		return undefined
+	}
+	const payload = errorBody.error
+	if (payload.code !== "invalid_module") {
+		return undefined
+	}
+
+	const message =
+		typeof payload.message === "string"
+			? payload.message
+			: "The submitted module could not be installed."
+	const diagnostics = Array.isArray(payload.diagnostics)
+		? payload.diagnostics
+				.map(formatDynamicModuleDiagnostic)
+				.filter((diagnostic) => diagnostic.length > 0)
+		: []
+
+	if (diagnostics.length === 0) {
+		return message
+	}
+
+	return `${message}\n${diagnostics.join("\n")}`
+}
+
+function formatDynamicModuleDiagnostic(value: unknown): string {
+	if (!isRecord(value)) {
+		return ""
+	}
+	const path = typeof value.path === "string" ? value.path : "<unknown>"
+	const line = typeof value.line === "number" ? value.line : 1
+	const column = typeof value.column === "number" ? value.column : 1
+	const message =
+		typeof value.message === "string" ? value.message : "Invalid module source."
+	return `${path}:${line}:${column} ${message}`
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+	return typeof value === "object" && value !== null
 }

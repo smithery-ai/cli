@@ -31,6 +31,7 @@ const OPTIONS_WITH_VALUES = new Set([
 	"--metadata",
 	"--headers",
 	"--namespace",
+	"--source",
 	"-c",
 	"--client",
 	"--config",
