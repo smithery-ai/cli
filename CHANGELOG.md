@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 
+## [1.2.0](https://github.com/smithery-ai/cli/compare/v1.1.2...v1.2.0) (2026-05-30)
+
+
+### Features
+
+* **SMI-1814:** support internal source-backed connections ([#784](https://github.com/smithery-ai/cli/issues/784)) ([f0a8422](https://github.com/smithery-ai/cli/commit/f0a84226582a63006c0f0b9aa798868d3659372f))
+
 ## [1.1.2](https://github.com/smithery-ai/cli/compare/v1.1.1...v1.1.2) (2026-05-28)
 
 
