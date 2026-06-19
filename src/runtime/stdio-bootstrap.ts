@@ -167,7 +167,12 @@ async function startMcpServer() {
 			typeof config === "object" &&
 			Object.keys(config as Record<string, unknown>).length > 0
 		) {
-			logger.info({ config }, "Configuration loaded")
+			// config commonly carries secrets (e.g. API keys, passwords) and this
+			// logger writes to stderr, so log only the keys, never the values.
+			logger.info(
+				{ configKeys: Object.keys(config as Record<string, unknown>) },
+				"Configuration loaded",
+			)
 		}
 	} catch (error) {
 		logger.error({ error }, "Failed to start MCP server")
