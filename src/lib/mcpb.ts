@@ -659,6 +659,18 @@ interface BundleManifest {
 	user_config?: Record<string, Partial<McpbUserConfigurationOption>>
 }
 
+function getBundleDeployTools(
+	tools: NonNullable<BundleManifest["tools"]>,
+): ServerCard["tools"] {
+	return tools.map((tool) => ({
+		name: tool.name as string,
+		...(typeof tool.description === "string"
+			? { description: tool.description }
+			: {}),
+		inputSchema: { type: "object" },
+	}))
+}
+
 function readBundleArchive(bundlePath: string) {
 	const { size } = fs.statSync(bundlePath)
 	if (size > MAX_BUNDLE_SIZE_BYTES) {
@@ -757,7 +769,7 @@ export function getBundleDeployPayload(bundlePath: string): StdioDeployPayload {
 				version: manifest.version,
 			},
 			...(manifest.tools
-				? { tools: manifest.tools as unknown as ServerCard["tools"] }
+				? { tools: getBundleDeployTools(manifest.tools) }
 				: {}),
 			...(manifest.prompts ? { prompts: manifest.prompts } : {}),
 			...(manifest.resources ? { resources: manifest.resources } : {}),

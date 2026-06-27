@@ -2,12 +2,21 @@ import { mkdtempSync } from "node:fs"
 import { rm, writeFile } from "node:fs/promises"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
+import { strToU8, zipSync } from "fflate"
 import { afterEach, beforeEach, describe, expect, it } from "vitest"
 import {
 	getBundleCommand,
+	getBundleDeployPayload,
 	getHydratedBundleCommand,
 	hydrateBundleCommand,
 } from "../../mcpb.js"
+
+function createBundleBuffer(manifest: unknown): Buffer {
+	const zip = zipSync({
+		"manifest.json": strToU8(JSON.stringify(manifest)),
+	})
+	return Buffer.from(zip.buffer, zip.byteOffset, zip.byteLength)
+}
 
 describe("Bundle Manager End-to-End", () => {
 	let tempDir: string
@@ -115,5 +124,33 @@ describe("Bundle Manager End-to-End", () => {
 			DATABASE_URL: "localhost:5432",
 			LOG_FILE: `${tempDir}/logs/app.log`,
 		})
+	})
+
+	it("should add default input schemas to MCPB tools for deploy payloads", async () => {
+		const bundlePath = join(tempDir, "server.mcpb")
+		await writeFile(
+			bundlePath,
+			createBundleBuffer({
+				name: "tool-bundle",
+				version: "1.0.0",
+				server: {
+					type: "node",
+					mcp_config: {
+						command: "node",
+					},
+				},
+				tools: [{ name: "ping", description: "Ping" }],
+			}),
+		)
+
+		const payload = getBundleDeployPayload(bundlePath)
+
+		expect(payload.serverCard!.tools).toEqual([
+			{
+				name: "ping",
+				description: "Ping",
+				inputSchema: { type: "object" },
+			},
+		])
 	})
 })
