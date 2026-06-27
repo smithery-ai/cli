@@ -756,9 +756,7 @@ export function getBundleDeployPayload(bundlePath: string): StdioDeployPayload {
 				name: manifest.name,
 				version: manifest.version,
 			},
-			...(manifest.tools
-				? { tools: manifest.tools as unknown as ServerCard["tools"] }
-				: {}),
+			tools: (manifest.tools ?? []) as unknown as ServerCard["tools"],
 			...(manifest.prompts ? { prompts: manifest.prompts } : {}),
 			...(manifest.resources ? { resources: manifest.resources } : {}),
 		},
