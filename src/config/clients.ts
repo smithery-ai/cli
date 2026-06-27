@@ -5,6 +5,7 @@
 
 import os from "node:os"
 import path from "node:path"
+import { resolveNpmCliCommand } from "../utils/resolve-cli-command.js"
 import {
 	claudeCodeHttpCommand,
 	claudeCodeStdioCommand,
@@ -137,7 +138,7 @@ const CLIENTS: Record<string, ClientDefinition> = {
 		label: "Claude Code",
 		install: {
 			method: "command",
-			command: "claude",
+			command: resolveNpmCliCommand("claude"),
 			templates: {
 				stdio: claudeCodeStdioCommand,
 				http: claudeCodeHttpCommand,
@@ -183,7 +184,7 @@ const CLIENTS: Record<string, ClientDefinition> = {
 		label: "Gemini CLI",
 		install: {
 			method: "command",
-			command: "gemini",
+			command: resolveNpmCliCommand("gemini"),
 			templates: {
 				stdio: geminiCliStdioCommand,
 				http: geminiCliHttpCommand,
@@ -198,7 +199,7 @@ const CLIENTS: Record<string, ClientDefinition> = {
 		label: "Codex",
 		install: {
 			method: "command",
-			command: "codex",
+			command: resolveNpmCliCommand("codex"),
 			templates: {
 				stdio: codexStdioCommand,
 				http: codexHttpCommand,
