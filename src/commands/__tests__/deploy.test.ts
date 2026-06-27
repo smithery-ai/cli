@@ -523,7 +523,13 @@ describe("deploy command", () => {
 							name: "test-bundle",
 							version: "1.2.3",
 						},
-						tools: [{ name: "ping", description: "Ping" }],
+						tools: [
+							{
+								name: "ping",
+								description: "Ping",
+								inputSchema: { type: "object" },
+							},
+						],
 						prompts: [{ name: "draft", text: "Hello" }],
 						resources: [{ name: "docs", uri: "file:///docs" }],
 					},
