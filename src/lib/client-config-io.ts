@@ -370,7 +370,7 @@ export function runConfigCommand(
 
 			if (error && (error as NodeJS.ErrnoException).code === "ENOENT") {
 				throw new Error(
-					`Command '${command}' not found. Make sure ${command} is installed and on your PATH`,
+					`Could not run ${clientConfig.label}: '${command}' was not found on PATH. Install the ${clientConfig.label} CLI and ensure it is available in your shell.`,
 				)
 			}
 
