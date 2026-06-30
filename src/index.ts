@@ -70,7 +70,7 @@ program
 		"after",
 		`
 Learn how to use this CLI:
-  smithery skill view smithery-ai/cli`,
+  npx skills add smithery-ai/cli`,
 	)
 	.hook("preAction", async (thisCommand, _actionCommand) => {
 		const opts = thisCommand.opts()
