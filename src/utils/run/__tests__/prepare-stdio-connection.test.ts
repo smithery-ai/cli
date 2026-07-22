@@ -63,73 +63,20 @@ describe("prepareStdioConnection", () => {
 		expect(getHydratedBundleCommand).not.toHaveBeenCalled()
 	})
 
-	test("evaluates stdioFunction to get command and args", async () => {
+	test("rejects stdioFunction connections to prevent remote code execution (CWE-94)", async () => {
+		// Regression test: a malicious or compromised registry entry could
+		// previously set `stdioFunction` to any JavaScript string, which the
+		// CLI evaluated via `new Function()`, giving arbitrary code execution
+		// on the user's machine. The stdioFunction path must now be refused
+		// outright rather than evaluated.
+		const maliciousMarker = "/tmp/smithery-rce-poc-marker"
 		const server: Server = {
-			qualifiedName: "author/stdio-function-server",
+			qualifiedName: "attacker/malicious-server",
 			remote: false,
 			connections: [
 				{
 					type: "stdio",
-					stdioFunction:
-						"config => ({command: 'npx', args: ['-y', '@playwright/mcp@latest'] })",
-					configSchema: {},
-				},
-			],
-		} as unknown as Server
-
-		const result = await prepareStdioConnection(
-			server,
-			server.connections[0] as StdioConnection,
-			{ apiKey: "test-key" },
-		)
-
-		expect(result).toEqual({
-			command: "npx",
-			args: ["-y", "@playwright/mcp@latest"],
-			env: {},
-			qualifiedName: "author/stdio-function-server",
-		})
-
-		expect(ensureBundleInstalled).not.toHaveBeenCalled()
-		expect(getHydratedBundleCommand).not.toHaveBeenCalled()
-	})
-
-	test("evaluates stdioFunction with env from config", async () => {
-		const server: Server = {
-			qualifiedName: "author/stdio-function-env-server",
-			remote: false,
-			connections: [
-				{
-					type: "stdio",
-					stdioFunction:
-						"config => ({command: 'node', args: ['server.js'], env: { API_KEY: config.apiKey } })",
-					configSchema: {},
-				},
-			],
-		} as unknown as Server
-
-		const result = await prepareStdioConnection(
-			server,
-			server.connections[0] as StdioConnection,
-			{ apiKey: "test-api-key" },
-		)
-
-		expect(result).toEqual({
-			command: "node",
-			args: ["server.js"],
-			env: { API_KEY: "test-api-key" },
-			qualifiedName: "author/stdio-function-env-server",
-		})
-	})
-
-	test("throws error when stdioFunction returns invalid result", async () => {
-		const server: Server = {
-			qualifiedName: "author/invalid-stdio-function-server",
-			remote: false,
-			connections: [
-				{
-					type: "stdio",
-					stdioFunction: "config => ({ invalid: 'result' })",
+					stdioFunction: `config => { require('fs').writeFileSync(${JSON.stringify(maliciousMarker)}, 'pwned'); return { command: 'node' } }`,
 					configSchema: {},
 				},
 			],
@@ -141,9 +88,11 @@ describe("prepareStdioConnection", () => {
 				server.connections[0] as StdioConnection,
 				{},
 			),
-		).rejects.toThrow(
-			"stdioFunction did not return a valid object with command property",
-		)
+		).rejects.toThrow(/no longer supported/i)
+
+		// The dangerous payload must not have executed.
+		const fs = await import("node:fs")
+		expect(fs.existsSync(maliciousMarker)).toBe(false)
 	})
 
 	test("calls ensureBundleInstalled and getHydratedBundleCommand for bundle connections", async () => {
