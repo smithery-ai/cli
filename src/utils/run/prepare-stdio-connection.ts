@@ -8,32 +8,13 @@ import {
 	ensureBundleInstalled,
 	getHydratedBundleCommand,
 } from "../../lib/mcpb.js"
-import type {
-	StdioConnection as LocalStdioConnection,
-	ServerConfig,
-} from "../../types/registry.js"
+import type { ServerConfig } from "../../types/registry.js"
 
 export interface PreparedStdioConnection {
 	command: string
 	args: string[]
 	env: Record<string, string>
 	qualifiedName: string
-}
-
-/**
- * Type guard to check if a value is a valid StdioConnection.
- * The stdioFunction is a string that, when evaluated, should be a function
- * that takes a ServerConfig and returns a StdioConnection.
- */
-function isValidStdioConnection(
-	result: unknown,
-): result is LocalStdioConnection {
-	return (
-		result !== null &&
-		typeof result === "object" &&
-		"command" in result &&
-		typeof result.command === "string"
-	)
 }
 
 type ConnectionType = "command" | "stdioFunction" | "bundle"
@@ -86,37 +67,27 @@ export async function prepareStdioConnection(
 		}
 
 		/**
-		 * @deprecated stdioFunction connections are deprecated. Use bundle connections instead.
+		 * @deprecated stdioFunction connections are no longer supported.
+		 *
+		 * Previously the CLI evaluated the server-provided `stdioFunction`
+		 * string with `new Function()` in order to derive the launch command.
+		 * Because the string is fetched from the Smithery registry (i.e. remote,
+		 * untrusted input from the perspective of the local machine), a
+		 * malicious or compromised registry entry could achieve arbitrary code
+		 * execution on any user who ran the server (CWE-94). The `config`
+		 * argument passed to the evaluated function also exposed user secrets
+		 * to the attacker-controlled code.
+		 *
+		 * Rather than attempt to sandbox arbitrary JavaScript, this path has
+		 * been removed. Servers relying on `stdioFunction` must be republished
+		 * as bundle connections.
 		 */
 		case "stdioFunction": {
-			try {
-				// Evaluate the stdioFunction string as a function
-				// eslint-disable-next-line @typescript-eslint/no-implied-eval
-				const stdioFn = new Function(
-					"config",
-					`return (${bundleConnection.stdioFunction})(config)`,
-				)
-				const result = stdioFn(config) as unknown
-
-				if (isValidStdioConnection(result)) {
-					return {
-						command: result.command,
-						args: Array.isArray(result.args) ? result.args : [],
-						env: (result.env && typeof result.env === "object"
-							? result.env
-							: {}) as Record<string, string>,
-						qualifiedName: serverDetails.qualifiedName,
-					}
-				}
-
-				throw new Error(
-					"stdioFunction did not return a valid object with command property",
-				)
-			} catch (error) {
-				throw new Error(
-					`Failed to evaluate stdioFunction: ${error instanceof Error ? error.message : String(error)}`,
-				)
-			}
+			throw new Error(
+				`Server "${serverDetails.qualifiedName}" uses a deprecated stdioFunction connection, ` +
+					"which is no longer supported for security reasons (remote code execution risk). " +
+					"Please ask the server author to republish it as a bundle connection.",
+			)
 		}
 
 		case "bundle": {
