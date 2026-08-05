@@ -1,5 +1,7 @@
 # Smithery CLI [![NPM Version](https://img.shields.io/npm/v/smithery)](https://www.npmjs.com/package/smithery) [![NPM Downloads](https://img.shields.io/npm/dt/smithery)](https://www.npmjs.com/package/smithery)
 
+[![MCP Toplist](https://mcptoplist.com/badge/mcp.so%2Fcli%2Fsmithery-ai.svg)](https://mcptoplist.com/server/mcp.so%2Fcli%2Fsmithery-ai)
+
 Smithery CLI connects your agents to thousands of skills and MCP servers directly from the command line. To get started, simply run `npx skills add smithery/cli`.
 
 ## Installation
