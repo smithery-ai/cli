@@ -721,7 +721,7 @@ function detectBundleRuntime(
 	if (command === "bun") {
 		return "bun"
 	}
-	if (manifest.server?.type === "python") {
+	if (manifest.server?.type === "python" || manifest.server?.type === "uv") {
 		return "python"
 	}
 	if (manifest.server?.type === "node") {
