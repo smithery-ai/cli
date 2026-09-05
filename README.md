@@ -76,8 +76,8 @@ smithery tool find "create issue"
 smithery tool call github create_issue '{"title":"Bug fix","body":"..."}'
 
 # Browse and install skills
-smithery skill search "frontend" --json --page 2
-smithery skill add anthropics/frontend-design --agent claude-code
+npx skills add anthropics/frontend-design --agent claude-code
+smithery setup --agent claude-code
 
 # Publish your MCP server URL
 smithery mcp publish https://my-mcp-server.com -n myorg/my-server
